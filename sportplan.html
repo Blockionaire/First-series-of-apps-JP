@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Sportplan JP">
+<title>Sportplan 2026 — JP</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; padding-bottom: 2rem; }
+
+  .app-header { background: #fff; border-bottom: 0.5px solid #e0e0d8; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .app-header h1 { font-size: 17px; font-weight: 600; }
+  .app-header p { font-size: 12px; color: #888; margin-top: 1px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: #E1F5EE; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #085041; flex-shrink: 0; }
+
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin: 1.5rem 0 0.5rem; padding: 0 1rem; }
+
+  .week-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 1rem; }
+  .day-card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 14px; padding: 12px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+  .day-card.rest { opacity: 0.5; cursor: default; }
+  .day-card.active { border-color: #1D9E75; background: #E1F5EE; }
+  .day-name { font-size: 11px; color: #aaa; font-weight: 500; margin-bottom: 2px; }
+  .day-type { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .day-sub { font-size: 11px; color: #888; margin-top: 3px; }
+  .badge { font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
+  .badge-gym { background: #E6F1FB; color: #0C447C; }
+  .badge-cardio { background: #EAF3DE; color: #27500A; }
+  .badge-rest { background: #f0f0ec; color: #aaa; }
+
+  .exercises-panel { margin: 0.5rem 1rem 0; background: #fff; border: 0.5px solid #e0e0d8; border-radius: 14px; overflow: hidden; }
+  .ex-header { background: #E1F5EE; padding: 10px 14px; font-size: 13px; font-weight: 600; color: #085041; display: flex; align-items: center; justify-content: space-between; }
+  .ex-group { padding: 10px 14px; border-top: 0.5px solid #f0f0ec; }
+  .ex-group-name { font-size: 11px; color: #aaa; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .ex-item { display: flex; align-items: center; gap: 8px; padding: 7px 0; font-size: 14px; cursor: pointer; user-select: none; border-bottom: 0.5px solid #f7f7f4; }
+  .ex-item:last-child { border-bottom: none; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: #1D9E75; flex-shrink: 0; }
+  .ex-label { flex: 1; color: #1a1a1a; transition: color 0.15s; }
+  .ex-item.done .ex-label { color: #bbb; text-decoration: line-through; }
+  .check-btn { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #ddd; background: transparent; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s, border-color 0.15s; }
+  .ex-item.done .check-btn { background: #1D9E75; border-color: #1D9E75; }
+  .check-icon { display: none; color: white; font-size: 14px; }
+  .ex-item.done .check-icon { display: block; }
+  .progress-pill { font-size: 11px; background: rgba(255,255,255,0.6); color: #085041; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+  .hint { padding: 0.4rem 1rem; font-size: 12px; color: #bbb; }
+
+  .macro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 1rem; }
+  .macro-card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 12px; text-align: center; }
+  .macro-val { font-size: 16px; font-weight: 700; }
+  .macro-label { font-size: 11px; color: #888; margin-top: 3px; }
+
+  .supp-list { padding: 0 1rem; display: flex; flex-direction: column; gap: 8px; }
+  .supp-item { display: flex; align-items: center; background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 12px 14px; font-size: 14px; cursor: pointer; user-select: none; gap: 10px; transition: background 0.15s; }
+  .supp-item.done { background: #f9f9f7; }
+  .supp-name { flex: 1; font-weight: 500; color: #1a1a1a; transition: color 0.15s; }
+  .supp-item.done .supp-name { color: #bbb; text-decoration: line-through; }
+  .supp-dose { font-size: 12px; color: #999; transition: color 0.15s; }
+  .supp-item.done .supp-dose { color: #ccc; text-decoration: line-through; }
+
+  .reset-btn { display: block; margin: 1.5rem auto 0; background: none; border: 0.5px solid #ddd; border-radius: 8px; padding: 8px 20px; font-size: 13px; color: #999; cursor: pointer; }
+  .reset-btn:active { background: #f5f5f0; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div>
+    <h1>Sportplan 2026</h1>
+    <p>Joost Prins</p>
+  </div>
+  <div class="avatar">JP</div>
+</div>
+
+<div class="section-label">Weekschema</div>
+<div class="week-grid" id="week-grid"></div>
+<div id="ex-panel"></div>
+
+<div class="section-label">Voeding</div>
+<div class="macro-grid">
+  <div class="macro-card"><div class="macro-val" style="color:#0C447C;">130–145g</div><div class="macro-label">Proteïne</div></div>
+  <div class="macro-card"><div class="macro-val" style="color:#854F0B;">55–65g</div><div class="macro-label">Vetten</div></div>
+  <div class="macro-card"><div class="macro-val" style="color:#27500A;">Veel!</div><div class="macro-label">Koolhydraten</div></div>
+</div>
+
+<div class="section-label" id="supp-label">Supplementen</div>
+<div class="supp-list" id="supp-list"></div>
+
+<button class="reset-btn" id="reset-btn">↺ Reset alle vinkjes</button>
+
+<script>
+const days = [
+  { name: 'Maandag', type: 'Push', badge: 'gym', sub: 'Borst · Schouders · Triceps', key: 'push' },
+  { name: 'Dinsdag', type: 'Legs', badge: 'gym', sub: 'Benen · Billen · Core', key: 'legs' },
+  { name: 'Woensdag', type: 'Rust', badge: 'rest', sub: '', key: 'rest' },
+  { name: 'Donderdag', type: 'Pull', badge: 'gym', sub: 'Rug · Biceps', key: 'pull' },
+  { name: 'Vrijdag', type: 'Zwemmen', badge: 'cardio', sub: '30 minuten', key: null },
+  { name: 'Zaterdag', type: 'Hardlopen', badge: 'cardio', sub: '5 km', key: null },
+  { name: 'Zondag', type: 'Rust', badge: 'rest', sub: '', key: 'rest' },
+];
+
+const exercises = {
+  push: [
+    { group: 'Borst', items: ['Bench press (4×10)', 'Incline dumbbell press', 'Cable flyes'] },
+    { group: 'Triceps', items: ['Tricep pushdowns', 'Dips', 'Overhead tricep extension'] },
+    { group: 'Schouders', items: ['Overhead shoulder press', 'Lateral raises', 'Forward dumbbells'] },
+  ],
+  legs: [
+    { group: 'Benen', items: ['Squat / Leg press', 'Deadlift', 'Lunges', 'Leg curls', 'Calf raises'] },
+    { group: 'Core', items: ['Plank', 'Crunches'] },
+  ],
+  pull: [
+    { group: 'Rug', items: ['Lat pulldown', 'Dumbbell row', 'Seated cable row', 'Face pulls'] },
+    { group: 'Bicep', items: ['Bicep curls / Hammer curls', 'Cable curls', 'Incline dumbbell curls'] },
+  ],
+};
+
+const supps = [
+  { name: 'Creatine', dose: '5g per dag' },
+  { name: 'Vitamine D3', dose: '1 pilletje' },
+  { name: 'Omega 3', dose: '1 pilletje' },
+];
+
+const STORAGE_KEY = 'sportplan_jp_2026';
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return { checked: { push: {}, legs: {}, pull: {} }, suppChecked: {}, activeIdx: null };
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ checked, suppChecked, activeIdx })); } catch(e) {}
+}
+
+let { checked, suppChecked, activeIdx } = loadState();
+
+function totalFor(key) { return exercises[key].reduce((a, g) => a + g.items.length, 0); }
+function doneFor(key) { return Object.values(checked[key]).filter(Boolean).length; }
+
+function renderSupps() {
+  const doneSup = supps.filter(s => suppChecked[s.name]).length;
+  document.getElementById('supp-label').textContent = `Supplementen ${doneSup}/${supps.length}`;
+  const list = document.getElementById('supp-list');
+  list.innerHTML = supps.map(s => `
+    <div class="supp-item${suppChecked[s.name] ? ' done' : ''}" data-supp="${s.name}">
+      <span class="supp-name">${s.name}</span>
+      <span class="supp-dose">${s.dose}</span>
+      <span class="check-btn"><i class="ti ti-check check-icon"></i></span>
+    </div>
+  `).join('');
+  list.querySelectorAll('.supp-item').forEach(el => {
+    el.addEventListener('click', () => {
+      suppChecked[el.dataset.supp] = !suppChecked[el.dataset.supp];
+      saveState(); renderSupps();
+    });
+  });
+}
+
+function render() {
+  const grid = document.getElementById('week-grid');
+  grid.innerHTML = '';
+  days.forEach((d, i) => {
+    const card = document.createElement('div');
+    card.className = 'day-card' + (d.badge === 'rest' ? ' rest' : '') + (activeIdx === i ? ' active' : '');
+    const progress = d.key && d.key !== 'rest' ? ` <span style="font-size:11px;color:#aaa;">${doneFor(d.key)}/${totalFor(d.key)}</span>` : '';
+    card.innerHTML = `
+      <div class="day-name">${d.name}</div>
+      <div class="day-type">${d.type} <span class="badge badge-${d.badge}">${d.badge === 'gym' ? 'Gym' : d.badge === 'cardio' ? 'Cardio' : 'Rust'}</span></div>
+      ${d.sub ? `<div class="day-sub">${d.sub}${progress}</div>` : ''}
+    `;
+    if (d.key && d.key !== 'rest') {
+      card.onclick = () => { activeIdx = activeIdx === i ? null : i; saveState(); render(); };
+    }
+    grid.appendChild(card);
+  });
+
+  const panel = document.getElementById('ex-panel');
+  if (activeIdx !== null && days[activeIdx].key && days[activeIdx].key !== 'rest') {
+    const day = days[activeIdx];
+    const key = day.key;
+    const exs = exercises[key];
+    panel.innerHTML = `<div class="exercises-panel">
+      <div class="ex-header">
+        <span><i class="ti ti-list-check" style="margin-right:6px;font-size:14px;vertical-align:-1px;"></i>${day.type} — oefeningen</span>
+        <span class="progress-pill">${doneFor(key)}/${totalFor(key)}</span>
+      </div>
+      ${exs.map(g => `
+        <div class="ex-group">
+          <div class="ex-group-name">${g.group}</div>
+          ${g.items.map(it => `
+            <div class="ex-item${checked[key][it] ? ' done' : ''}" data-key="${key}" data-item="${it}">
+              <span class="dot"></span>
+              <span class="ex-label">${it}</span>
+              <span class="check-btn"><i class="ti ti-check check-icon"></i></span>
+            </div>`).join('')}
+        </div>`).join('')}
+    </div>`;
+    panel.querySelectorAll('.ex-item').forEach(el => {
+      el.addEventListener('click', () => {
+        checked[el.dataset.key][el.dataset.item] = !checked[el.dataset.key][el.dataset.item];
+        saveState(); render();
+      });
+    });
+  } else {
+    panel.innerHTML = '<div class="hint">Tik op een gymdag voor de oefeningen</div>';
+  }
+
+  renderSupps();
+}
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if (confirm('Alle vinkjes resetten?')) {
+    checked = { push: {}, legs: {}, pull: {} };
+    Object.keys(suppChecked).forEach(k => suppChecked[k] = false);
+    saveState(); render();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
