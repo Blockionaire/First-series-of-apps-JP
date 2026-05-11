@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Verbouwing huisje OVS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f0e8;
+  --surface: #ede8de;
+  --surface2: #e5dfd3;
+  --surface3: #dbd4c6;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.15);
+  --text: #111111;
+  --text2: #555550;
+  --text3: #999990;
+  --red: #b83232;
+  --red-dim: rgba(184,50,50,0.10);
+  --amber: #9a6200;
+  --amber-dim: rgba(154,98,0,0.10);
+  --green: #1a6b1a;
+  --green-dim: rgba(26,107,26,0.10);
+  --blue: #1a4f8a;
+  --blue-dim: rgba(26,79,138,0.10);
+  --purple: #6b2fa0;
+  --purple-dim: rgba(107,47,160,0.10);
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.5; min-height: 100vh; max-width: 480px; margin: 0 auto; }
+
+.app-header { padding: 52px 20px 16px; border-bottom: 0.5px solid var(--border); }
+.app-header h1 { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+.app-header p { color: var(--text3); font-size: 13px; margin-top: 2px; }
+
+.dashboard { padding: 20px; border-bottom: 0.5px solid var(--border); }
+.dash-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 14px; }
+
+.blutmeter { background: var(--surface); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 12px; cursor: pointer; }
+.blutmeter-label { font-size: 12px; color: var(--text3); margin-bottom: 4px; }
+.blutmeter-amount { font-family: 'Syne', sans-serif; font-size: 38px; font-weight: 700; letter-spacing: -1.5px; }
+.blutmeter-amount.pos { color: var(--green); }
+.blutmeter-amount.neg { color: var(--red); }
+.blutmeter-sub { font-size: 11px; color: var(--text3); margin-top: 5px; }
+
+.progress-bar-wrap { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px; }
+.progress-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text3); margin-bottom: 8px; }
+.progress-track { background: var(--surface3); border-radius: 99px; height: 6px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 99px; background: #1a1a1a; transition: width 0.4s ease; }
+.progress-fill.over { background: var(--red); }
+
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.dash-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 13px 14px; cursor: pointer; }
+.dash-card:active { border-color: var(--border2); }
+.dash-card.selected .dc-label { opacity: 0.65; }
+.dash-wide.selected .dc-label { opacity: 0.65; }
+.blutmeter.selected .blutmeter-label { opacity: 0.65; }
+.blutmeter.selected .blutmeter-sub { opacity: 0.5; }
+.dash-card.red.selected { background: var(--red-dim); border-color: var(--red); }
+.dash-card.red.selected .dc-amount { color: var(--red) !important; }
+.dash-card.amber.selected { background: var(--amber-dim); border-color: var(--amber); }
+.dash-card.amber.selected .dc-amount { color: var(--amber) !important; }
+.dash-card.purple.selected { background: var(--purple-dim); border-color: var(--purple); }
+.dash-card.purple.selected .dc-amount { color: var(--purple) !important; }
+.dash-wide.green.selected { background: var(--green-dim); border-color: var(--green); }
+.dash-wide.green.selected .dc-amount { color: var(--green) !important; }
+.dash-wide.blue.selected { background: var(--blue-dim); border-color: var(--blue); }
+.dash-wide.blue.selected .dc-amount { color: var(--blue) !important; }
+.dash-wide.amber.selected { background: var(--amber-dim); border-color: var(--amber); }
+.dash-wide.amber.selected .dc-amount { color: var(--amber) !important; }
+.blutmeter.selected { background: var(--surface2); border-color: var(--border2); }
+.dc-label { font-size: 11px; color: var(--text3); margin-bottom: 5px; line-height: 1.3; }
+.dc-amount { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+.dash-card.red .dc-amount { color: var(--red); }
+.dash-card.amber .dc-amount { color: var(--amber); }
+.dash-card.purple .dc-amount { color: var(--purple); }
+
+.dash-wide { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 13px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.dash-wide .dc-label { font-size: 12px; color: var(--text2); margin-bottom: 0; }
+.dash-wide .dc-amount { font-size: 17px; }
+.dash-wide.green .dc-amount { color: var(--green); }
+.dash-wide.blue .dc-amount { color: var(--blue); }
+
+
+.tab-nav-wrap { position: sticky; top: 0; z-index: 10; background: var(--bg); display: flex; align-items: center; border-bottom: 0.5px solid var(--border); }
+.tab-arrow { flex-shrink: 0; width: 36px; height: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; color: var(--text2); font-size: 20px; padding: 0; }
+.tab-arrow:active { color: var(--text); }
+.tab-arrow:disabled { color: var(--text3); cursor: default; }
+.tab-nav { flex: 1; display: flex; overflow-x: auto; scrollbar-width: none; border-bottom: none; }
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn { flex-shrink: 0; padding: 13px 15px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 400; color: var(--text3); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; }
+.tab-btn.active { color: #111; border-bottom-color: #111; font-weight: 500; }
+
+.section { display: none; padding: 20px; }
+.section.active { display: block; }
+.section-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.section-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 600; }
+.section-updated { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.btn-add { background: rgba(0,0,0,0.06); color: #111; border: 0.5px solid rgba(0,0,0,0.2); border-radius: var(--radius-sm); padding: 7px 12px; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+
+.sub-header { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text3); margin: 18px 0 8px; }
+
+.items-list { display: flex; flex-direction: column; gap: 8px; }
+.item-row { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 13px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.item-row:active { border-color: var(--border2); }
+.item-info { flex: 1; min-width: 0; }
+.item-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.item-amount { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 600; letter-spacing: -0.3px; flex-shrink: 0; }
+.item-amount.red { color: var(--red); }
+.item-amount.amber { color: var(--amber); }
+.item-amount.green { color: var(--green); }
+.item-amount.blue { color: var(--blue); }
+.item-amount.purple { color: var(--purple); }
+
+.badge { display: inline-flex; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 500; margin-top: 4px; }
+.badge.open { background: var(--amber-dim); color: var(--amber); }
+.badge.paid { background: var(--green-dim); color: var(--green); }
+.badge.partial { background: var(--blue-dim); color: var(--blue); }
+.badge.cadeau { background: var(--purple-dim); color: var(--purple); }
+.badge.wacht { background: rgba(0,0,0,0.06); color: var(--text3); }
+
+.section-total { margin-top: 14px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 13px 14px; display: flex; justify-content: space-between; align-items: center; }
+.st-label { font-size: 12px; color: var(--text2); }
+.st-amount { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 600; }
+.st-amount.red { color: var(--red); }
+.st-amount.amber { color: var(--amber); }
+.st-amount.green { color: var(--green); }
+.st-amount.blue { color: var(--blue); }
+.st-amount.purple { color: var(--purple); }
+
+.meubel-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.meubel-stat {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+.meubel-stat:active { opacity: 0.8; }
+.meubel-stat.selected {
+  background: #111;
+  border-color: #111;
+}
+.meubel-stat.selected .ms-label { color: rgba(245,240,232,0.6); }
+.meubel-stat.selected .ms-val { color: #f5f0e8 !important; }
+.ms-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; }
+.ms-val { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 600; }
+.ms-val.amber { color: var(--amber); }
+.ms-val.red { color: var(--red); }
+.ms-val.green { color: var(--green); }
+.ms-val.blue { color: var(--blue); }
+
+.streep-block { background: var(--surface2); border-radius: var(--radius); padding: 18px 20px; }
+.streep-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; font-size: 14px; }
+.streep-row:not(:last-child) { border-bottom: 0.5px solid var(--border); }
+.sr-label { color: var(--text2); }
+.sr-val { font-weight: 500; font-family: 'Syne', sans-serif; font-size: 15px; }
+.streep-row.sr-total .sr-label { color: var(--text); font-weight: 500; }
+.streep-row.sr-total .sr-val { font-size: 22px; font-weight: 700; }
+.streep-row.sr-total .sr-val.pos { color: var(--green); }
+.streep-row.sr-total .sr-val.neg { color: var(--red); }
+.streep-row.sr-sub .sr-label { font-size: 12px; color: var(--text3); padding-left: 10px; }
+.streep-row.sr-sub .sr-val { font-size: 13px; color: var(--text3); }
+.divider { height: 0.5px; background: var(--border2); margin: 4px 0; }
+
+.info-box { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 14px; font-size: 12px; color: var(--text2); line-height: 1.7; }
+.info-box strong { color: var(--text); font-weight: 500; }
+
+.modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: flex-end; justify-content: center; }
+.modal-backdrop.open { display: flex; }
+.modal { background: var(--surface); border: 0.5px solid var(--border2); border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; padding: 24px 20px 40px; max-height: 90vh; overflow-y: auto; }
+.modal-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 600; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+.modal-close { background: var(--surface3); border: none; color: #111; border-radius: 50%; width: 28px; height: 28px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 12px; color: var(--text3); margin-bottom: 6px; display: block; }
+.form-input { width: 100%; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 11px 12px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; }
+.form-input:focus { border-color: #111; }
+.form-select { width: 100%; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 11px 12px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; appearance: none; }
+.modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+.btn-primary { flex: 1; background: #111; color: #f5f0e8; border: none; border-radius: var(--radius-sm); padding: 13px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-danger { background: var(--red-dim); color: var(--red); border: 0.5px solid var(--red); border-radius: var(--radius-sm); padding: 13px 16px; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; }
+.empty-state { text-align: center; padding: 28px 0; color: var(--text3); font-size: 13px; }
+
+  /* PLANNING */
+  .planning-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .pf-select {
+    flex: 1;
+    min-width: 120px;
+    background: var(--surface);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    appearance: none;
+  }
+  .pf-select:focus { border-color: #111; }
+  .week-group { margin-bottom: 18px; }
+  .week-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text3);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .week-label .wl-date { font-weight: 400; color: var(--text3); }
+  .plan-row {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .plan-row:active { border-color: var(--border2); }
+  .plan-row.status-klaar { border-left: 3px solid var(--green); }
+  .plan-row.status-bezig { border-left: 3px solid var(--amber); }
+  .plan-row.status-gepland { border-left: 3px solid var(--border2); }
+  .plan-row.status-uitgesteld { border-left: 3px solid var(--text3); }
+  .plan-info { flex: 1; min-width: 0; }
+  .plan-taak { font-size: 14px; font-weight: 500; }
+  .plan-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .plan-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+  .plan-badge {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 99px;
+  }
+  .pb-cat { background: var(--blue-dim); color: var(--blue); }
+  .pb-wie { background: var(--surface2); color: var(--text2); }
+  .pb-klaar { background: var(--green-dim); color: var(--green); }
+  .pb-bezig { background: var(--amber-dim); color: var(--amber); }
+  .pb-gepland { background: rgba(0,0,0,0.06); color: var(--text3); }
+  .pb-uitgesteld { background: rgba(0,0,0,0.06); color: var(--text3); }
+  .plan-stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .plan-stat {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 10px;
+    text-align: center;
+  }
+  .plan-stat .ps-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 600; }
+  .plan-stat .ps-label { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .plan-stat.klaar .ps-val { color: var(--green); }
+  .plan-stat.bezig .ps-val { color: var(--amber); }
+  .plan-stat.gepland .ps-val { color: var(--text2); }
+  .plan-stat.totaal .ps-val { color: var(--blue); }
+  .plan-stat { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+  .plan-stat.selected { background: #111; border-color: #111; }
+  .plan-stat.selected .ps-val { color: #f5f0e8 !important; }
+  .plan-stat.selected .ps-label { color: rgba(245,240,232,0.55); }
+  .current-week-marker {
+    background: var(--amber-dim);
+    border: 0.5px solid var(--amber);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--amber);
+    font-weight: 500;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  /* PAGE NAV */
+  .page-nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    padding: 0 20px;
+    gap: 0;
+  }
+  .page-nav-btn {
+    flex: 1;
+    padding: 13px 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text3);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .page-nav-btn.active {
+    color: #111;
+    border-bottom-color: #111;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <h1>Verbouwing huisje OVS</h1>
+  <p id="header-sub">Laden...</p>
+</div>
+<nav class="page-nav">
+  <button class="page-nav-btn active" id="pnav-budget" onclick="goToPage('finance')">Budget</button>
+  <button class="page-nav-btn" id="pnav-planning" onclick="goToPage('planning')">Planning</button>
+</nav>
+
+<div id="page-finance">
+
+<div class="dashboard">
+  <div class="dash-label">Totaaloverzicht</div>
+  <div class="blutmeter" id="dcard-streep" onclick="selectDash(this,'streep')">
+    <div class="blutmeter-label">Netto positie (blutmeter)</div>
+    <div class="blutmeter-amount" id="d-netto">€ –</div>
+    <div class="blutmeter-sub" id="d-netto-sub">–</div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-row"><span>Verbouwbudget gebruikt</span><span id="d-pct">0%</span></div>
+    <div class="progress-track"><div class="progress-fill" id="d-pfill" style="width:0%"></div></div>
+  </div>
+  <div class="dash-grid">
+    <div class="dash-card red" id="dcard-gemaakte-kosten" onclick="selectDash(this,'gemaakte-kosten')">
+      <div class="dc-label">Gemaakte kosten</div>
+      <div class="dc-amount" id="d-gemaakt" style="color:var(--red)">€ –</div>
+    </div>
+    <div class="dash-card amber" id="dcard-nog-te-maken" onclick="selectDash(this,'nog-te-maken')">
+      <div class="dc-label">Nog te maken kosten</div>
+      <div class="dc-amount" id="d-te-maken" style="color:var(--amber)">€ –</div>
+    </div>
+    <div class="dash-card amber" id="dcard-meubels" onclick="selectDash(this,'meubels')">
+      <div class="dc-label">Meubels (nog te betalen)</div>
+      <div class="dc-amount" id="d-meubels" style="color:var(--amber)">€ –</div>
+    </div>
+    <div class="dash-card purple" id="dcard-bruiloft" onclick="selectDash(this,'bruiloft')">
+      <div class="dc-label">Bruiloft (nog te betalen)</div>
+      <div class="dc-amount" id="d-bruiloft" style="color:var(--purple)">€ –</div>
+    </div>
+  </div>
+  <div class="dash-wide green" id="dcard-vermogen" onclick="selectDash(this,'vermogen')">
+    <span class="dc-label">Liquide middelen</span>
+    <span class="dc-amount" id="d-vermogen" style="color:var(--green)">€ –</span>
+  </div>
+  <div class="dash-wide blue" id="dcard-te-ontvangen" onclick="selectDash(this,'te-ontvangen')">
+    <span class="dc-label">Te ontvangen</span>
+    <span class="dc-amount" id="d-te-ontv" style="color:var(--green)">€ –</span>
+  </div>
+  <div class="dash-wide amber" id="dcard-sparen" onclick="selectDash(this,'streep')" style="margin-bottom:0">
+    <span class="dc-label">Nog te sparen mei–juli</span>
+    <span class="dc-amount" id="d-sparen" style="color:var(--amber)">€ 6.750</span>
+  </div>
+</div>
+
+<div class="tab-nav-wrap">
+  <button class="tab-arrow" id="tab-prev" onclick="stepTab(-1)" disabled>&#8249;</button>
+  <nav class="tab-nav" id="tab-nav">
+    <button class="tab-btn active" data-tab="gemaakte-kosten">Gemaakte kosten</button>
+    <button class="tab-btn" data-tab="nog-te-maken">Nog te maken</button>
+    <button class="tab-btn" data-tab="meubels">Meubels</button>
+    <button class="tab-btn" data-tab="bruiloft">Bruiloft</button>
+    <button class="tab-btn" data-tab="vermogen">Vermogen</button>
+    <button class="tab-btn" data-tab="te-ontvangen">Te ontvangen</button>
+    <button class="tab-btn" data-tab="streep">Streep</button>
+  </nav>
+  <button class="tab-arrow" id="tab-next" onclick="stepTab(1)">&#8250;</button>
+</div>
+
+<!-- GEMAAKTE KOSTEN -->
+<section class="section active" id="tab-gemaakte-kosten">
+  <div class="section-header">
+    <div><div class="section-title">Gemaakte kosten</div><div class="section-updated" id="upd-gemaakte-kosten">–</div></div>
+    <button class="btn-add" onclick="openModal('gemaakte-kosten')">+ Toevoegen</button>
+  </div>
+  <div class="sub-header">DDO facturen</div>
+  <div class="items-list" id="list-gemaakte-kosten-ddo"></div>
+  <div class="sub-header">Overige kosten</div>
+  <div class="items-list" id="list-gemaakte-kosten-overig"></div>
+  <div class="section-total"><span class="st-label">Totaal gemaakte kosten</span><span class="st-amount red" id="total-gemaakte-kosten">€ 0</span></div>
+</section>
+
+<!-- NOG TE MAKEN -->
+<section class="section" id="tab-nog-te-maken">
+  <div class="section-header">
+    <div><div class="section-title">Nog te maken kosten</div><div class="section-updated" id="upd-nog-te-maken">–</div></div>
+    <button class="btn-add" onclick="openModal('nog-te-maken')">+ Toevoegen</button>
+  </div>
+  <div class="sub-header">Verbouwing DDO</div>
+  <div class="items-list" id="list-nog-te-maken-ddo"></div>
+  <div class="sub-header">Overige kosten</div>
+  <div class="items-list" id="list-nog-te-maken-overig"></div>
+  <div class="section-total"><span class="st-label">Totaal nog te maken</span><span class="st-amount amber" id="total-nog-te-maken">€ 0</span></div>
+</section>
+
+<!-- MEUBELS -->
+<section class="section" id="tab-meubels">
+  <div class="section-header">
+    <div><div class="section-title">Meubels</div><div class="section-updated" id="upd-meubels">–</div></div>
+    <button class="btn-add" onclick="openModal('meubels')">+ Toevoegen</button>
+  </div>
+  <div class="meubel-stats" style="grid-template-columns:1fr 1fr;">
+    <div class="meubel-stat" id="mstat-begroot" onclick="filterMeubels('begroot')"><div class="ms-label">Begroot</div><div class="ms-val amber" id="ms-begroot">€ 0</div></div>
+    <div class="meubel-stat" id="mstat-werkelijk" onclick="filterMeubels('werkelijk')"><div class="ms-label">Werkelijk gekocht</div><div class="ms-val blue" id="ms-werkelijk">€ 0</div></div>
+    <div class="meubel-stat" id="mstat-betaald" onclick="filterMeubels('betaald')"><div class="ms-label">Al betaald</div><div class="ms-val green" id="ms-betaald">€ 0</div></div>
+    <div class="meubel-stat" id="mstat-nog" onclick="filterMeubels('nog')"><div class="ms-label">Nog te betalen</div><div class="ms-val red" id="ms-nog">€ 0</div></div>
+  </div>
+  <div class="sub-header" id="meubels-sub-gekocht">Gekocht</div>
+  <div class="items-list" id="list-meubels-gekocht"></div>
+  <div class="sub-header" id="meubels-sub-deels">Gedeeltelijk gekocht</div>
+  <div class="items-list" id="list-meubels-deels"></div>
+  <div class="sub-header" id="meubels-sub-nog">Nog aan te schaffen</div>
+  <div class="items-list" id="list-meubels-nog"></div>
+  <div class="section-total"><span class="st-label">Totaal nog te betalen</span><span class="st-amount amber" id="total-meubels">€ 0</span></div>
+</section>
+
+<!-- BRUILOFT -->
+<section class="section" id="tab-bruiloft">
+  <div class="section-header">
+    <div><div class="section-title">Bruiloft</div><div class="section-updated" id="upd-bruiloft">–</div></div>
+    <button class="btn-add" onclick="openModal('bruiloft')">+ Toevoegen</button>
+  </div>
+  <div class="items-list" id="list-bruiloft"></div>
+  <div class="section-total"><span class="st-label">Nog te betalen bruiloft</span><span class="st-amount purple" id="total-bruiloft">€ 0</span></div>
+  <div class="info-box">Rekening gehouden met cadeaus die definitief zijn (taart / jurk / pak).</div>
+</section>
+
+<!-- VERMOGEN -->
+<section class="section" id="tab-vermogen">
+  <div class="section-header">
+    <div><div class="section-title">Liquide middelen</div><div class="section-updated" id="upd-vermogen">–</div></div>
+    <button class="btn-add" onclick="openModal('vermogen')">+ Toevoegen</button>
+  </div>
+  <div class="sub-header">Joost</div>
+  <div class="items-list" id="list-vermogen-joost"></div>
+  <div class="sub-header">Merel</div>
+  <div class="items-list" id="list-vermogen-merel"></div>
+  <div class="sub-header">Beiden</div>
+  <div class="items-list" id="list-vermogen-beiden"></div>
+  <div class="section-total"><span class="st-label">Totaal beschikbaar</span><span class="st-amount green" id="total-vermogen">€ 0</span></div>
+</section>
+
+<!-- TE ONTVANGEN -->
+<section class="section" id="tab-te-ontvangen">
+  <div class="section-header">
+    <div><div class="section-title">Te ontvangen</div><div class="section-updated" id="upd-te-ontvangen">–</div></div>
+    <button class="btn-add" onclick="openModal('te-ontvangen')">+ Toevoegen</button>
+  </div>
+  <div class="items-list" id="list-te-ontvangen"></div>
+  <div class="section-total"><span class="st-label">Totaal te ontvangen</span><span class="st-amount green" id="total-te-ontvangen">€ 0</span></div>
+</section>
+
+<!-- STREEP -->
+<section class="section" id="tab-streep">
+  <div class="section-header">
+    <div><div class="section-title">Onder aan de streep</div><div class="section-updated">Automatisch berekend</div></div>
+  </div>
+  <div class="streep-block">
+    <div class="streep-row"><span class="sr-label">Liquide middelen</span><span class="sr-val" id="s-vermogen">€ 0</span></div>
+    <div class="streep-row"><span class="sr-label">+ Te ontvangen</span><span class="sr-val" id="s-te-ontv">€ 0</span></div>
+    <div class="streep-row"><span class="sr-label">+ Nog te sparen mei–juli</span><span class="sr-val" id="s-sparen">€ 6.750</span></div>
+    <div class="divider"></div>
+    <div class="streep-row sr-sub"><span class="sr-label">Gemaakte kosten verbouwing</span><span class="sr-val" id="s-gemaakt">€ 0</span></div>
+    <div class="streep-row sr-sub"><span class="sr-label">Nog te maken verbouwing</span><span class="sr-val" id="s-te-maken">€ 0</span></div>
+    <div class="streep-row sr-sub"><span class="sr-label">Meubels (nog te betalen)</span><span class="sr-val" id="s-meubels">€ 0</span></div>
+    <div class="streep-row sr-sub"><span class="sr-label">Bruiloft (nog te betalen)</span><span class="sr-val" id="s-bruiloft">€ 0</span></div>
+    <div class="divider"></div>
+    <div class="streep-row sr-total"><span class="sr-label">Netto positie</span><span class="sr-val" id="s-netto">€ 0</span></div>
+  </div>
+  <div class="info-box" style="margin-top:14px;">
+    <strong>Netto</strong> = Vermogen + Te ontvangen + Nog te sparen − Gemaakte kosten − Nog te maken − Meubels − Bruiloft
+  </div>
+  <div style="margin-top:14px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:14px;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);margin-bottom:10px;">Eventueel uitstellen</div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;"><span style="color:var(--text2);">Taatsdeur</span><span style="font-family:'Syne',sans-serif;font-weight:500;">€ 1.750</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-top:0.5px solid var(--border);"><span style="color:var(--text2);">Walnoot dressoir</span><span style="font-family:'Syne',sans-serif;font-weight:500;">€ 300</span></div>
+  </div>
+</section>
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="closeModalBg(event)">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modal-title-text">Toevoegen</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Omschrijving</label>
+      <input class="form-input" type="text" id="form-name" placeholder="bijv. Bank, schilderwerk...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Bedrag (€)</label>
+      <input class="form-input" type="number" id="form-amount" placeholder="0" inputmode="decimal">
+    </div>
+    <div class="form-group" id="form-cat-group" style="display:none">
+      <label class="form-label">Categorie</label>
+      <select class="form-select" id="form-cat"></select>
+    </div>
+    <div class="form-group" id="form-status-group" style="display:none">
+      <label class="form-label">Status</label>
+      <select class="form-select" id="form-status">
+        <option value="gekocht">Gekocht (groen)</option>
+        <option value="deels">Gedeeltelijk gekocht (oranje)</option>
+        <option value="nog">Nog aan te schaffen (rood)</option>
+        <option value="cadeau">Cadeau gekregen</option>
+        <option value="wacht">Wachten</option>
+      </select>
+    </div>
+    <div class="form-group" id="form-merk-group" style="display:none">
+      <label class="form-label">Merk / winkel</label>
+      <input class="form-input" type="text" id="form-merk" placeholder="bijv. Goossens, IKEA...">
+    </div>
+    <div class="form-group" id="form-begroot-group" style="display:none">
+      <label class="form-label">Begroot (€)</label>
+      <input class="form-input" type="number" id="form-begroot" placeholder="0" inputmode="decimal">
+    </div>
+    <div class="form-group" id="form-werkelijk-group" style="display:none">
+      <label class="form-label">Werkelijk bedrag (€)</label>
+      <input class="form-input" type="number" id="form-werkelijk" placeholder="0" inputmode="decimal">
+    </div>
+    <div class="form-group" id="form-betaald-group" style="display:none">
+      <label class="form-label">Al betaald (€)</label>
+      <input class="form-input" type="number" id="form-betaald" placeholder="0" inputmode="decimal">
+    </div>
+    <div class="form-group" id="form-nogopen-group" style="display:none">
+      <label class="form-label">Nog te betalen (€)</label>
+      <input class="form-input" type="number" id="form-nogopen" placeholder="0" inputmode="decimal">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notitie (optioneel)</label>
+      <input class="form-input" type="text" id="form-note" placeholder="Extra info...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="saveItem()">Opslaan</button>
+      <button class="btn-danger" id="btn-delete" style="display:none" onclick="deleteItem()">Verwijder</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TABS = ['gemaakte-kosten','nog-te-maken','meubels','bruiloft','vermogen','te-ontvangen','streep'];
+const CAT_OPTIONS = {
+  'gemaakte-kosten': [{v:'ddo',l:'DDO factuur'},{v:'overig',l:'Overige kosten'}],
+  'nog-te-maken':    [{v:'ddo',l:'Verbouwing DDO'},{v:'overig',l:'Overige kosten'}],
+  'meubels':         [{v:'gekocht',l:'Gekocht'},{v:'nog',l:'Nog aan te schaffen'}],
+  'vermogen':        [{v:'joost',l:'Joost'},{v:'merel',l:'Merel'},{v:'beiden',l:'Beiden'}]
+};
+
+let state = {items:{},updated:{}};
+let curSection = null, editIndex = null;
+
+const SEED = {
+  items: {
+    'gemaakte-kosten': [
+      {name:'Factuur 1 DDO',amount:15000,cat:'ddo',note:'Betaald'},
+      {name:'Factuur 2 DDO',amount:10000,cat:'ddo',note:'Betaald'},
+      {name:'Factuur 3 DDO',amount:10000,cat:'ddo',note:'Betaald'},
+      {name:'Factuur 4 DDO',amount:10000,cat:'ddo',note:'Betaald'},
+      {name:'Factuur 5 DDO',amount:10000,cat:'ddo',note:'Verrekend met creditnota'},
+      {name:'Factuur 6 DDO (3/5 JP)',amount:932,cat:'ddo',note:'Betaald'},
+      {name:'Factuur 6 DDO (2/5 PJ)',amount:621,cat:'ddo',note:'Betaald'},
+      {name:'Factuur 7 DDO (3/5 JP)',amount:13500,cat:'ddo',note:'Betaald'},
+      {name:'Factuur 8 DDO (creditnota)',amount:-9362,cat:'ddo',note:'Verrekend met factuur 5'},
+      {name:'Factuur keuken Kvik',amount:13453,cat:'overig',note:''},
+      {name:'Factuur badkamer Maxaro',amount:7894,cat:'overig',note:''},
+    ],
+    'nog-te-maken': [
+      {name:"Aanschaf & plaatsen airco's",amount:5000,cat:'ddo',note:'Voor nu uitgesteld',status:'wacht'},
+      {name:'Aanschaf & plaatsen rolluik',amount:1250,cat:'ddo',note:'Zelf regelen?',status:'open'},
+      {name:'Spotjes badkamer en slaapkamer',amount:250,cat:'ddo',note:'Besteld, nog plaatsen DDO',status:'open'},
+      {name:'Afzuiging badkamer',amount:1000,cat:'ddo',note:'',status:'open'},
+      {name:'Aanschaf & plaatsen dakraam',amount:3000,cat:'ddo',note:'Kosten nagaan Daniel',status:'open'},
+      {name:'Arbeidskosten badkamer',amount:750,cat:'ddo',note:'Budget nagaan Daniel',status:'open'},
+      {name:'Arbeidskosten plaatsen keuken',amount:1200,cat:'ddo',note:'Laatste week juni',status:'open'},
+      {name:'PVC vloer - Donkersloot',amount:2400,cat:'overig',note:'',status:'open'},
+      {name:'Behang',amount:1500,cat:'overig',note:'',status:'open'},
+      {name:'Verf (materiaal)',amount:1500,cat:'overig',note:'',status:'open'},
+      {name:'Verf (uren) - Martijn',amount:3500,cat:'overig',note:'',status:'open'},
+      {name:'Vloer egaliseren',amount:1500,cat:'overig',note:'',status:'open'},
+      {name:'Vloer leggen',amount:1500,cat:'overig',note:'',status:'open'},
+      {name:'Buiten accessoires',amount:500,cat:'overig',note:'Huisnummer, brievenbus, deurmat, lampje',status:'open'},
+      {name:'Verf trap, voordeur en kozijn',amount:150,cat:'overig',note:'',status:'open'},
+      {name:'Stopcontacten + afdekstukken',amount:1000,cat:'overig',note:'',status:'open'},
+      {name:'Nieuwe handgreep + slot voordeur',amount:300,cat:'overig',note:'',status:'open'},
+      {name:'Taatsdeur',amount:1750,cat:'overig',note:'Eventueel uitstellen',status:'wacht'}
+    ],
+    'meubels': [
+      {name:'Dweil',begroot:110,werkelijk:93,merk:'Bol.com',betaald:93,nogOpen:0,cat:'gekocht',note:''},
+      {name:'Fateuil zithoek (2 stuks)',begroot:0,werkelijk:0,merk:'Bommel',betaald:0,nogOpen:0,cat:'gekocht',note:'Cadeau van Merel\'s moeder'},
+      {name:'Bank',begroot:1500,werkelijk:1892,merk:'Goossens',betaald:1750,nogOpen:142,cat:'gekocht',note:''},
+      {name:'Vloerkleed',begroot:500,werkelijk:425,merk:'Goossens',betaald:0,nogOpen:425,cat:'gekocht',note:''},
+      {name:'Salontafel',begroot:500,werkelijk:693,merk:'Goossens',betaald:0,nogOpen:693,cat:'gekocht',note:''},
+      {name:'Eettafel',begroot:1000,werkelijk:1457,merk:'Goossens',betaald:0,nogOpen:1457,cat:'gekocht',note:''},
+      {name:'Bed',begroot:2000,werkelijk:1994,merk:'Goossens',betaald:0,nogOpen:1994,cat:'gekocht',note:''},
+      {name:'Lamp slaapkamer',begroot:150,werkelijk:270,merk:'Karwei',betaald:270,nogOpen:0,cat:'gekocht',note:'Lamp + 2 hangspotjes'},
+      {name:'Plafondlamp hal',begroot:0,werkelijk:32,merk:'Karwei',betaald:32,nogOpen:0,cat:'gekocht',note:''},
+      {name:'Lamp zithoek',begroot:150,werkelijk:230,merk:'Lights & Living',betaald:230,nogOpen:0,cat:'gekocht',note:''},
+      {name:'Lamp eethoek',begroot:300,werkelijk:180,merk:'Lights & Living',betaald:180,nogOpen:0,cat:'gekocht',note:''},
+      {name:'Wandlamp trapgat',begroot:0,werkelijk:66,merk:'Lights & Living',betaald:66,nogOpen:0,cat:'gekocht',note:''},
+      {name:'Poefje',begroot:0,werkelijk:263,merk:'Loods5',betaald:263,nogOpen:0,cat:'gekocht',note:''},
+      {name:'Kledingkasten Merel',begroot:1300,werkelijk:0,merk:'Nog kopen',betaald:0,nogOpen:1300,cat:'nog',note:''},
+      {name:'Matrassen',begroot:1000,werkelijk:0,merk:'Nog kopen',betaald:0,nogOpen:1000,cat:'nog',note:''},
+      {name:'Spiegels',begroot:150,werkelijk:0,merk:'Nog kopen',betaald:0,nogOpen:150,cat:'nog',note:'Slaapkamer & trapgat'},
+      {name:'Raambekleding hele huis',begroot:2000,werkelijk:0,merk:'Nog kopen',betaald:0,nogOpen:2000,cat:'nog',note:''},
+      {name:'Raambekleding dakraam',begroot:250,werkelijk:0,merk:'Nog kopen',betaald:0,nogOpen:250,cat:'nog',note:''},
+      {name:'Accessoires',begroot:2500,werkelijk:0,merk:'Nog kopen',betaald:0,nogOpen:2500,cat:'nog',note:''},
+      {name:'Wasmachine en droger',begroot:1600,werkelijk:0,merk:'Nog kopen',betaald:0,nogOpen:1600,cat:'nog',note:'Krijgen we cadeau?'},
+      {name:'Vloerkleed slaapkamer',begroot:200,werkelijk:0,merk:'Nog kopen',betaald:0,nogOpen:200,cat:'nog',note:'230x80'},
+      {name:'Trapleuningen',begroot:200,werkelijk:0,merk:'Nog kopen',betaald:0,nogOpen:200,cat:'nog',note:''},
+      {name:'Deurmat',begroot:150,werkelijk:0,merk:'Nog kopen',betaald:0,nogOpen:150,cat:'nog',note:''},
+      {name:'Vloerlamp',begroot:100,werkelijk:0,merk:'Nog kopen',betaald:0,nogOpen:100,cat:'nog',note:''},
+      {name:'Lamp keuken',begroot:300,werkelijk:300,merk:'Online',betaald:300,nogOpen:0,cat:'gekocht',note:''},
+      {name:'Sonos boxen (3 stuks)',begroot:800,werkelijk:0,merk:'Sonos',betaald:0,nogOpen:0,cat:'gekocht',note:'Cadeau van ouders Joost'},
+      {name:'Eettafelstoelen',begroot:500,werkelijk:900,merk:'Table du Sud',betaald:0,nogOpen:900,cat:'gekocht',note:''},
+      {name:'Eettafelbankje',begroot:1000,werkelijk:2400,merk:'Table du Sud',betaald:0,nogOpen:2400,cat:'gekocht',note:''},
+      {name:'Dekbed & kussens',begroot:350,werkelijk:168,merk:'Wehkamp',betaald:168,nogOpen:182,cat:'deels',note:'Dekbed gekocht, kussens nog niet'},
+      {name:'Beddengoed',begroot:200,werkelijk:200,merk:'Wehkamp',betaald:200,nogOpen:0,cat:'gekocht',note:'2 stuks'},
+      {name:'Droogrek',begroot:80,werkelijk:80,merk:'Wehkamp',betaald:80,nogOpen:0,cat:'gekocht',note:''},
+      {name:'Lamp toilet',begroot:0,werkelijk:67,merk:'Zara home',betaald:67,nogOpen:0,cat:'gekocht',note:''}
+    ],
+    'bruiloft': [
+      {name:'Nog te betalen bruiloft',amount:23000,note:'Rekening gehouden met definitieve cadeaus'}
+    ],
+    'vermogen': [
+      {name:'Spaargeld Joost',amount:10500,cat:'joost',note:''},
+      {name:'Crypto Joost',amount:20000,cat:'joost',note:''},
+      {name:'Edelmetalen Joost',amount:750,cat:'joost',note:''},
+      {name:'Vakantiegeld Joost',amount:2750,cat:'joost',note:'Uitbetaald 20 mei'},
+      {name:'Spaargeld Merel',amount:6000,cat:'merel',note:''},
+      {name:'Aandelen Merel',amount:750,cat:'merel',note:''},
+      {name:'Crypto Merel',amount:750,cat:'merel',note:''},
+      {name:'Contant geld',amount:400,cat:'beiden',note:''},
+      {name:'Bouwdepot',amount:68200,cat:'beiden',note:'Totaal verbouwbudget via hypotheek'},
+      {name:'Lening',amount:14500,cat:'beiden',note:''}
+    ],
+    'te-ontvangen': [
+      {name:'ISDE subsidie',amount:6500,note:'Aanvraag ingediend, hopelijk eind mei'},
+      {name:'Teruggave hypotheekkosten',amount:3800,note:'Allebei 1.900 - komt juni/juli'},
+    ]
+  },
+  updated: {
+    'gemaakte-kosten':'2026-05-11T00:00:00.000Z',
+    'nog-te-maken':'2026-05-11T00:00:00.000Z',
+    'meubels':'2026-05-11T00:00:00.000Z',
+    'bruiloft':'2026-05-11T00:00:00.000Z',
+    'vermogen':'2026-05-11T00:00:00.000Z',
+    'te-ontvangen':'2026-05-11T00:00:00.000Z'
+  }
+};
+
+const SPAREN = 6750;
+
+let activeDashCard = null;
+
+function selectDash(el, tab) {
+  if (activeDashCard && activeDashCard !== el) {
+    activeDashCard.classList.remove('selected');
+  }
+  if (activeDashCard === el) {
+    el.classList.remove('selected');
+    activeDashCard = null;
+  } else {
+    el.classList.add('selected');
+    activeDashCard = el;
+  }
+  switchTab(tab);
+}
+
+let activeMeubelFilter = null;
+
+function filterMeubels(filter) {
+  if (activeMeubelFilter === filter) { activeMeubelFilter = null; }
+  else { activeMeubelFilter = filter; }
+
+  document.querySelectorAll('.meubel-stat').forEach(el => el.classList.remove('selected'));
+
+  const allItems = state.items['meubels'] || [];
+  const catLabel = {gekocht:'Gekocht', deels:'Deels gekocht', nog:'Nog kopen', cadeau:'Cadeau'};
+  const catBadge = {gekocht:'paid', deels:'partial', nog:'open', cadeau:'cadeau', wacht:'wacht'};
+
+  function rowHtml(item) {
+    const ri = allItems.indexOf(item);
+    const badge = `<span class="badge ${catBadge[item.cat]||'open'}">${catLabel[item.cat]||item.cat}</span>`;
+    const sub = [item.merk, item.note].filter(Boolean).join(' – ');
+    return `<div class="item-row" onclick="openEdit('meubels',${ri})">
+      <div class="item-info">
+        <div class="item-name">${esc(item.name)}</div>
+        ${sub ? `<div class="item-meta">${esc(sub)}</div>` : ''}
+        ${badge}
+      </div>
+      <div class="item-amount AMTCLS">AMTVAL</div>
+    </div>`;
+  }
+
+  function setFiltered(title, filteredItems, amtFn, amtCls) {
+    ['meubels-sub-deels','list-meubels-deels','meubels-sub-nog','list-meubels-nog'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.style.display = 'none';
+    });
+    document.getElementById('meubels-sub-gekocht').textContent = title;
+    const listG = document.getElementById('list-meubels-gekocht');
+    listG.innerHTML = filteredItems.map(item => {
+      const val = amtFn(item);
+      return rowHtml(item)
+        .replace('AMTCLS', amtCls)
+        .replace('AMTVAL', fmt(val));
+    }).join('') || '<div class="empty-state">Niets gevonden</div>';
+  }
+
+  if (!activeMeubelFilter) {
+    // Reset: show all three sub-lists
+    ['meubels-sub-gekocht','meubels-sub-deels','list-meubels-deels','meubels-sub-nog','list-meubels-nog'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.style.display = '';
+    });
+    document.getElementById('meubels-sub-gekocht').textContent = 'Gekocht';
+    renderLists('meubels',[
+      {id:'list-meubels-gekocht', cat:'gekocht', color:'amber', showStatus:true},
+      {id:'list-meubels-deels',   cat:'deels',   color:'amber', showStatus:true},
+      {id:'list-meubels-nog',     cat:'nog',      color:'amber', showStatus:true}
+    ]);
+    return;
+  }
+
+  if (activeMeubelFilter === 'begroot') {
+    document.getElementById('mstat-begroot').classList.add('selected');
+    setFiltered(
+      'Alle meubels – begrote prijs',
+      allItems.filter(i => parseFloat(i.begroot||0) > 0),
+      i => i.begroot,
+      'amber'
+    );
+  } else if (activeMeubelFilter === 'werkelijk') {
+    document.getElementById('mstat-werkelijk').classList.add('selected');
+    setFiltered(
+      'Werkelijk gekochte meubels',
+      allItems.filter(i => parseFloat(i.werkelijk||0) > 0),
+      i => i.werkelijk,
+      'blue'
+    );
+  } else if (activeMeubelFilter === 'betaald') {
+    document.getElementById('mstat-betaald').classList.add('selected');
+    setFiltered(
+      'Al betaalde meubels',
+      allItems.filter(i => parseFloat(i.betaald||0) > 0),
+      i => i.betaald,
+      'green'
+    );
+  } else if (activeMeubelFilter === 'nog') {
+    document.getElementById('mstat-nog').classList.add('selected');
+    setFiltered(
+      'Nog te betalen',
+      allItems.filter(i => parseFloat(i.nogOpen||0) > 0),
+      i => i.nogOpen,
+      'red'
+    );
+  }
+}
+
+
+function clearMeubels() {
+  if (!confirm('Alle meubels verwijderen?')) return;
+  state.items['meubels'] = [];
+  state.updated['meubels'] = new Date().toISOString();
+  save(); render();
+}
+
+
+
+let currentPage = 'finance';
+function goToPage(page) {
+  currentPage = page;
+  document.getElementById('page-finance').style.display = page === 'finance' ? 'block' : 'none';
+  document.getElementById('page-planning').style.display = page === 'planning' ? 'block' : 'none';
+  document.getElementById('pnav-budget').classList.toggle('active', page === 'finance');
+  document.getElementById('pnav-planning').classList.toggle('active', page === 'planning');
+  if (page === 'planning') renderPlanning();
+  window.scrollTo(0,0);
+}
+function togglePage() { goToPage(currentPage === 'finance' ? 'planning' : 'finance'); }
+
+// ── PLANNING ──────────────────────────────────────────────────────────────
+
+const PLANNING_SEED = [
+  // Week 17
+  {week:'17',weekEnd:null,cat:'Gipsen/Stucen',taak:'Gipsen halletje afmaken',wie:'Joost',status:'klaar',note:''},
+  {week:'17',weekEnd:null,cat:'Gipsen/Stucen',taak:'Gipsen wand trapgat',wie:'Joost',status:'klaar',note:''},
+  {week:'17',weekEnd:null,cat:'Keuken',taak:'Isoleren stukje keuken',wie:'Joost',status:'klaar',note:''},
+  {week:'17',weekEnd:null,cat:'Keuken',taak:'Folie in keuken?',wie:'Joost',status:'klaar',note:''},
+  {week:'17',weekEnd:null,cat:'Dakwerk',taak:'Pannen boven leggen',wie:'Joost',status:'klaar',note:'120-130 stuks'},
+  {week:'17',weekEnd:null,cat:'Overig',taak:'Overig binnen',wie:'Joost',status:'klaar',note:''},
+  {week:'17',weekEnd:null,cat:'Keuken',taak:'Wandje afmaken keuken',wie:'Patrick',status:'klaar',note:'Woensdag 22-04'},
+  {week:'17',weekEnd:null,cat:'Elektra',taak:'Centraaldoos WC',wie:'Patrick',status:'klaar',note:'Woensdag 22-04'},
+  {week:'17',weekEnd:null,cat:'Elektra',taak:'Meterkast afwerken',wie:'Patrick',status:'klaar',note:'Woensdag 22-04'},
+  {week:'17',weekEnd:null,cat:'Overig',taak:'Raamkozijn voorraam bovenin links',wie:'Patrick',status:'klaar',note:'Woensdag 22-04'},
+  {week:'17',weekEnd:null,cat:'Keuken',taak:'Tussenschot kast keuken',wie:'Patrick',status:'klaar',note:'Woensdag 22-04'},
+  {week:'17',weekEnd:null,cat:'Gipsen/Stucen',taak:'Gipsen wandje keuken',wie:'Joost',status:'klaar',note:'Gemaakt door Patrick 22-04'},
+  {week:'17',weekEnd:null,cat:'Dakwerk',taak:'Dakpannen leggen',wie:'Joost',status:'klaar',note:''},
+  // Week 18
+  {week:'18',weekEnd:null,cat:'Dakwerk',taak:'Dakpannen leggen',wie:'Joost',status:'klaar',note:''},
+  {week:'18',weekEnd:null,cat:'Overig',taak:'Trap dichtmaken & voordeur schuren',wie:'Joost',status:'gepland',note:'Zaterdag samen met Jacco'},
+  // Week 18-20
+  {week:'18',weekEnd:'20',cat:'Gipsen/Stucen',taak:'Hele huis stucen',wie:'Stukadoor',status:'bezig',note:'Week werk, 2 weken drogen'},
+  // Week 19
+  {week:'19',weekEnd:null,cat:'Dakwerk',taak:'Dakramen plaatsen',wie:'Bedrijf',status:'gepland',note:'Woensdag 06-05'},
+  // Week 20-21
+  {week:'20',weekEnd:'21',cat:'Gipsen/Stucen',taak:'Stucwerk drogen',wie:'Niemand',status:'gepland',note:''},
+  // Week 20
+  {week:'20',weekEnd:null,cat:'Overig',taak:'Bouwdroger neerzetten',wie:'Joost',status:'klaar',note:'Zaterdag 09-05 opgehaald'},
+];
+
+let planEditIndex = null;
+
+function getWeekNumber(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 3 - (d.getDay()+6)%7);
+  const w = new Date(d.getFullYear(),0,4);
+  return 1 + Math.round(((d-w)/86400000 - 3 + (w.getDay()+6)%7)/7);
+}
+
+function getCurrentWeek() {
+  return getWeekNumber(new Date());
+}
+
+function weekToDateRange(weekNum) {
+  const year = 2026;
+  const jan4 = new Date(year, 0, 4);
+  const startOfWeek = new Date(jan4);
+  startOfWeek.setDate(jan4.getDate() + (weekNum - 1) * 7 - (jan4.getDay() + 6) % 7);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  const fmt = d => d.toLocaleDateString('nl-NL', {day:'numeric', month:'short'});
+  return fmt(startOfWeek) + ' – ' + fmt(endOfWeek);
+}
+
+function filterByPlanStat(stat) {
+  const statusSel = document.getElementById('pf-status');
+  if (statusSel.value === stat && stat !== 'totaal') {
+    statusSel.value = '';
+  } else {
+    statusSel.value = stat === 'totaal' ? '' : stat;
+  }
+  document.querySelectorAll('.plan-stat').forEach(el => el.classList.remove('selected'));
+  const active = stat === 'totaal'
+    ? document.getElementById('pstat-totaal')
+    : document.getElementById('pstat-' + (statusSel.value || 'totaal'));
+  if (statusSel.value || stat === 'totaal') active.classList.add('selected');
+  renderPlanning();
+}
+
+function initPlanningWeekFilter() {
+  const sel = document.getElementById('pf-week');
+  if (!sel || sel.options.length > 1) return;
+  for (let w = 1; w <= 34; w++) {
+    const opt = document.createElement('option');
+    opt.value = w;
+    opt.textContent = 'Week ' + w;
+    sel.appendChild(opt);
+  }
+}
+
+function renderPlanning() {
+  if (!state.planning) return;
+  initPlanningWeekFilter();
+
+  const filterStatus = document.getElementById('pf-status').value;
+  const filterWie = document.getElementById('pf-wie').value;
+  const filterCat = document.getElementById('pf-cat').value;
+  const filterWeek = document.getElementById('pf-week').value;
+
+  const curWeek = getCurrentWeek();
+  const banner = document.getElementById('current-week-banner');
+  banner.textContent = 'Huidige week: ' + curWeek + ' (' + weekToDateRange(curWeek) + ')';
+
+  let tasks = state.planning;
+
+  if (filterStatus) tasks = tasks.filter(t => t.status === filterStatus);
+  if (filterWie) tasks = tasks.filter(t => t.wie === filterWie);
+  if (filterCat) tasks = tasks.filter(t => t.cat === filterCat);
+  if (filterWeek) tasks = tasks.filter(t => {
+    const w = parseInt(filterWeek);
+    const start = parseInt(t.week);
+    const end = t.weekEnd ? parseInt(t.weekEnd) : start;
+    return w >= start && w <= end;
+  });
+
+  // Stats (always from full list)
+  const all = state.planning;
+  setText('ps-totaal', all.length);
+  setText('ps-klaar', all.filter(t=>t.status==='klaar').length);
+  setText('ps-bezig', all.filter(t=>t.status==='bezig').length);
+  setText('ps-gepland', all.filter(t=>t.status==='gepland').length);
+  // Sync selected tile with status dropdown
+  const activeStatus = document.getElementById('pf-status').value;
+  document.querySelectorAll('.plan-stat').forEach(el => el.classList.remove('selected'));
+  if (!activeStatus) document.getElementById('pstat-totaal').classList.add('selected');
+  else { const el = document.getElementById('pstat-' + activeStatus); if(el) el.classList.add('selected'); }
+
+  // Group by week
+  const groups = {};
+  tasks.forEach(t => {
+    const key = t.weekEnd ? t.week + '-' + t.weekEnd : t.week;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+
+  const sortedKeys = Object.keys(groups).sort((a,b) => parseInt(a)-parseInt(b));
+
+  const statusBadge = {
+    klaar: '<span class="plan-badge pb-klaar">Klaar</span>',
+    bezig: '<span class="plan-badge pb-bezig">Bezig</span>',
+    gepland: '<span class="plan-badge pb-gepland">Gepland</span>',
+    uitgesteld: '<span class="plan-badge pb-uitgesteld">Uitgesteld</span>'
+  };
+
+  const list = document.getElementById('planning-list');
+  if (!sortedKeys.length) { list.innerHTML = '<div class="empty-state">Geen taken gevonden</div>'; return; }
+
+  list.innerHTML = sortedKeys.map(key => {
+    const weekTasks = groups[key];
+    const [wStart, wEnd] = key.split('-');
+    const isMulti = !!wEnd;
+    const weekLabel = isMulti ? 'Week ' + wStart + '–' + wEnd : 'Week ' + wStart;
+    const dateRange = weekToDateRange(parseInt(wStart));
+    const isCurrent = parseInt(wStart) <= curWeek && (!wEnd || parseInt(wEnd) >= curWeek);
+
+    const rowsHtml = weekTasks.map(t => {
+      const ri = state.planning.indexOf(t);
+      return `<div class="plan-row status-${t.status}" onclick="openPlanEdit(${ri})">
+        <div class="plan-info">
+          <div class="plan-taak">${esc(t.taak)}</div>
+          ${t.note ? `<div class="plan-meta">${esc(t.note)}</div>` : ''}
+          <div class="plan-badges">
+            <span class="plan-badge pb-cat">${esc(t.cat)}</span>
+            <span class="plan-badge pb-wie">${esc(t.wie)}</span>
+            ${statusBadge[t.status]||''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="week-group">
+      <div class="week-label" style="${isCurrent ? 'color:var(--amber)' : ''}">
+        ${weekLabel}
+        <span class="wl-date">${dateRange}</span>
+        ${isCurrent ? '<span style="font-size:10px;background:var(--amber-dim);color:var(--amber);padding:2px 8px;border-radius:99px;">Nu</span>' : ''}
+      </div>
+      ${rowsHtml}
+    </div>`;
+  }).join('');
+
+  setText('upd-planning', updFmt(state.updatedPlanning));
+}
+
+function openPlanModal(editIdx) {
+  planEditIndex = editIdx !== undefined ? editIdx : null;
+  const t = planEditIndex !== null ? state.planning[planEditIndex] : null;
+  setText('plan-modal-title', t ? 'Taak bewerken' : 'Taak toevoegen');
+  document.getElementById('pf-week-input').value = t ? (t.weekEnd ? t.week+'-'+t.weekEnd : t.week) : '';
+  document.getElementById('pf-cat-input').value = t ? t.cat : 'Overig';
+  document.getElementById('pf-taak-input').value = t ? t.taak : '';
+  document.getElementById('pf-wie-input').value = t ? t.wie : 'Joost';
+  document.getElementById('pf-status-input').value = t ? t.status : 'gepland';
+  document.getElementById('pf-note-input').value = t ? (t.note||'') : '';
+  document.getElementById('plan-btn-delete').style.display = planEditIndex !== null ? 'block' : 'none';
+  document.getElementById('plan-modal-backdrop').classList.add('open');
+  setTimeout(() => document.getElementById('pf-taak-input').focus(), 80);
+}
+
+function openPlanEdit(idx) { openPlanModal(idx); }
+function closePlanModal() { document.getElementById('plan-modal-backdrop').classList.remove('open'); }
+function closePlanModalBg(e) { if (e.target === document.getElementById('plan-modal-backdrop')) closePlanModal(); }
+
+function savePlanItem() {
+  const weekRaw = document.getElementById('pf-week-input').value.trim();
+  const taak = document.getElementById('pf-taak-input').value.trim();
+  if (!weekRaw || !taak) return;
+  const parts = weekRaw.split('-');
+  const item = {
+    week: parts[0].trim(),
+    weekEnd: parts[1] ? parts[1].trim() : null,
+    cat: document.getElementById('pf-cat-input').value,
+    taak,
+    wie: document.getElementById('pf-wie-input').value,
+    status: document.getElementById('pf-status-input').value,
+    note: document.getElementById('pf-note-input').value.trim()
+  };
+  if (!state.planning) state.planning = [];
+  if (planEditIndex !== null) { state.planning[planEditIndex] = item; }
+  else { state.planning.push(item); }
+  state.updatedPlanning = new Date().toISOString();
+  save(); renderPlanning(); closePlanModal();
+}
+
+function deletePlanItem() {
+  if (planEditIndex === null) return;
+  state.planning.splice(planEditIndex, 1);
+  state.updatedPlanning = new Date().toISOString();
+  save(); renderPlanning(); closePlanModal();
+}
+
+function load() {
+  try {
+    // Try current key first
+    let s = localStorage.getItem('ovs-v12');
+    // Fall back to previous keys to preserve user edits
+    if (!s) s = localStorage.getItem('ovs-v11');
+    if (!s) s = localStorage.getItem('ovs-v10');
+    if (!s) s = localStorage.getItem('ovs-v9');
+    if (s) {
+      state = JSON.parse(s);
+      // Only add planning if missing, never wipe user data
+      if (!state.planning || state.planning.length === 0) {
+        state.planning = JSON.parse(JSON.stringify(PLANNING_SEED));
+      }
+      // Migrate lening amount if still old value
+      const vermogen = state.items && state.items.vermogen;
+      if (vermogen) {
+        const lening = vermogen.find(i => i.name === 'Lening');
+        if (lening && lening.amount === 13500) lening.amount = 14500;
+      }
+      save();
+    } else {
+      state = JSON.parse(JSON.stringify(SEED));
+      state.planning = JSON.parse(JSON.stringify(PLANNING_SEED));
+      save();
+    }
+  } catch(e) {
+    state = JSON.parse(JSON.stringify(SEED));
+    state.planning = JSON.parse(JSON.stringify(PLANNING_SEED));
+  }
+  render();
+}
+function save() { localStorage.setItem('ovs-v12', JSON.stringify(state)); }
+
+function fmt(n) { return '\u20ac\u202f' + Math.round(n).toLocaleString('nl-NL'); }
+function updFmt(ts) {
+  if (!ts) return 'Nooit bijgewerkt';
+  const d = new Date(ts);
+  return 'Bijgewerkt ' + d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'}) + ' ' + d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+}
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function sumArr(arr, fn) { return (fn ? arr.filter(fn) : arr).reduce((a,b) => a+(parseFloat(b.amount)||0), 0); }
+function setText(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
+
+function render() {
+  renderLists('gemaakte-kosten',[
+    {id:'list-gemaakte-kosten-ddo',cat:'ddo',color:'red'},
+    {id:'list-gemaakte-kosten-overig',cat:'overig',color:'red'}
+  ]);
+  renderLists('nog-te-maken',[
+    {id:'list-nog-te-maken-ddo',cat:'ddo',color:'amber',showStatus:true},
+    {id:'list-nog-te-maken-overig',cat:'overig',color:'amber',showStatus:true}
+  ]);
+  renderLists('meubels',[
+    {id:'list-meubels-gekocht',cat:'gekocht',color:'amber',showStatus:true},
+    {id:'list-meubels-deels',cat:'deels',color:'amber',showStatus:true},
+    {id:'list-meubels-nog',cat:'nog',color:'amber',showStatus:true}
+  ]);
+  renderLists('bruiloft',[{id:'list-bruiloft',cat:null,color:'purple'}]);
+  renderLists('te-ontvangen',[{id:'list-te-ontvangen',cat:null,color:'green'}]);
+  renderLists('vermogen',[
+    {id:'list-vermogen-joost',cat:'joost',color:'blue'},
+    {id:'list-vermogen-merel',cat:'merel',color:'blue'},
+    {id:'list-vermogen-beiden',cat:'beiden',color:'blue'}
+  ]);
+
+  const items = s => state.items[s] || [];
+  const gemaaktTotal = sumArr(items('gemaakte-kosten'));
+  const teMakenTotal = sumArr(items('nog-te-maken'));
+  const meubelsBegroot     = (items('meubels')||[]).reduce((a,b)=>a+(parseFloat(b.begroot||0)),0);
+  const meubelsWerkelijkGekocht = (items('meubels')||[]).reduce((a,b)=>a+(parseFloat(b.werkelijk||0)),0);
+  const meubelsBetaald     = (items('meubels')||[]).reduce((a,b)=>a+(parseFloat(b.betaald||0)),0);
+  const meubelsTotal       = (items('meubels')||[]).reduce((a,b)=>a+(parseFloat(b.nogOpen||0)),0);
+  const bruiloftTotal = sumArr(items('bruiloft'));
+  const vermogenTotal = sumArr(items('vermogen'));
+  const teOntvTotal = sumArr(items('te-ontvangen'));
+
+  setText('total-gemaakte-kosten', fmt(gemaaktTotal));
+  setText('total-nog-te-maken', fmt(teMakenTotal));
+  setText('ms-begroot',  fmt(meubelsBegroot));
+  setText('ms-werkelijk', fmt(meubelsWerkelijkGekocht));
+  setText('ms-betaald',  fmt(meubelsBetaald));
+  setText('ms-nog',      fmt(meubelsTotal));
+  setText('total-meubels', fmt(meubelsTotal));
+  setText('total-bruiloft', fmt(bruiloftTotal));
+  setText('total-vermogen', fmt(vermogenTotal));
+  setText('total-te-ontvangen', fmt(teOntvTotal));
+
+  ['gemaakte-kosten','nog-te-maken','meubels','bruiloft','vermogen','te-ontvangen'].forEach(sec => {
+    setText('upd-' + sec, updFmt((state.updated||{})[sec]));
+  });
+
+  const totaalBudget = 68200;
+  const pct = Math.min(100, Math.round(gemaaktTotal / totaalBudget * 100));
+  const netto = vermogenTotal + teOntvTotal + SPAREN - gemaaktTotal - teMakenTotal - meubelsTotal - bruiloftTotal;
+
+  const netEl = document.getElementById('d-netto');
+  if (netEl) { netEl.textContent = fmt(netto); netEl.className = 'blutmeter-amount ' + (netto >= 0 ? 'pos' : 'neg'); }
+  setText('d-netto-sub', fmt(vermogenTotal) + ' vermogen + ' + fmt(teOntvTotal) + ' te ontvangen + ' + fmt(SPAREN) + ' sparen');
+  setText('d-gemaakt', fmt(gemaaktTotal));
+  setText('d-te-maken', fmt(teMakenTotal));
+  setText('d-meubels', fmt(meubelsTotal));
+  setText('d-bruiloft', fmt(bruiloftTotal));
+  setText('d-vermogen', fmt(vermogenTotal));
+  setText('d-te-ontv', fmt(teOntvTotal));
+  setText('d-pct', pct + '%');
+  const fill = document.getElementById('d-pfill');
+  if (fill) { fill.style.width = pct + '%'; fill.className = 'progress-fill' + (pct > 100 ? ' over' : ''); }
+
+  setText('s-vermogen', fmt(vermogenTotal));
+  setText('s-te-ontv', fmt(teOntvTotal));
+  setText('s-sparen', fmt(SPAREN));
+  setText('s-gemaakt', fmt(gemaaktTotal));
+  setText('s-te-maken', fmt(teMakenTotal));
+  setText('s-meubels', fmt(meubelsTotal));
+  setText('s-bruiloft', fmt(bruiloftTotal));
+  const sNetto = document.getElementById('s-netto');
+  if (sNetto) { sNetto.textContent = fmt(netto); sNetto.className = 'sr-val ' + (netto >= 0 ? 'pos' : 'neg'); }
+
+  setText('header-sub', new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'}));
+}
+
+function renderLists(sec, lists) {
+  const items = state.items[sec] || [];
+  const statusLabel = {open:'Open',paid:'Betaald',cadeau:'Cadeau',wacht:'Wachten',partial:'Deels'};
+  lists.forEach(({id, cat, color, showStatus}) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const filtered = cat ? items.filter(i => i.cat === cat) : items;
+    if (!filtered.length) { el.innerHTML = '<div class="empty-state">Niets ingevoerd</div>'; return; }
+    el.innerHTML = filtered.map(item => {
+      const ri = items.indexOf(item);
+      const neg = parseFloat(item.amount||0) < 0;
+      const amtCls = neg ? 'red' : color;
+      const badge = showStatus && item.status ? `<span class="badge ${item.status}">${statusLabel[item.status]||item.status}</span>` : '';
+      return `<div class="item-row" onclick="openEdit('${sec}',${ri})">
+        <div class="item-info">
+          <div class="item-name">${esc(item.name)}</div>
+          ${item.note ? `<div class="item-meta">${esc(item.note)}</div>` : ''}
+          ${badge}
+        </div>
+        <div class="item-amount ${amtCls}">${fmt(item.amount)}</div>
+      </div>`;
+    }).join('');
+  });
+}
+
+function openModal(section, editIdx) {
+  curSection = section;
+  editIndex = editIdx !== undefined ? editIdx : null;
+  const item = editIndex !== null ? (state.items[section]||[])[editIndex] : null;
+  const titles = {'gemaakte-kosten':'Gemaakte kost','nog-te-maken':'Nog te maken','meubels':'Meubelpost','bruiloft':'Bruiloft post','vermogen':'Vermogensbron','te-ontvangen':'Te ontvangen'};
+  setText('modal-title-text', item ? 'Bewerken' : (titles[section]||'Toevoegen'));
+  document.getElementById('form-name').value = item ? item.name : '';
+  document.getElementById('form-amount').value = item ? item.amount : '';
+  document.getElementById('form-note').value = item ? (item.note||'') : '';
+
+  const catOpts = CAT_OPTIONS[section];
+  const catGrp = document.getElementById('form-cat-group');
+  if (catOpts) {
+    catGrp.style.display = 'block';
+    document.getElementById('form-cat').innerHTML = catOpts.map(o => `<option value="${o.v}">${o.l}</option>`).join('');
+    if (item && item.cat) document.getElementById('form-cat').value = item.cat;
+  } else { catGrp.style.display = 'none'; }
+
+  const showStatus = ['nog-te-maken'].includes(section);
+  document.getElementById('form-status-group').style.display = showStatus ? 'block' : 'none';
+  if (showStatus) document.getElementById('form-status').value = item ? (item.status||'open') : 'open';
+
+  const isMeubel = section === 'meubels';
+  ['merk','begroot','werkelijk','betaald','nogopen'].forEach(f => {
+    const g = document.getElementById('form-' + f + '-group');
+    if (g) g.style.display = isMeubel ? 'block' : 'none';
+  });
+  if (isMeubel && item) {
+    document.getElementById('form-merk').value = item.merk||'';
+    document.getElementById('form-begroot').value = item.begroot||0;
+    document.getElementById('form-werkelijk').value = item.werkelijk||0;
+    document.getElementById('form-betaald').value = item.betaald||0;
+    document.getElementById('form-nogopen').value = item.nogOpen||0;
+  } else if (isMeubel) {
+    ['form-merk','form-begroot','form-werkelijk','form-betaald','form-nogopen'].forEach(id => { const e = document.getElementById(id); if(e) e.value = id === 'form-merk' ? '' : 0; });
+  }
+  document.getElementById('btn-delete').style.display = editIndex !== null ? 'block' : 'none';
+  document.getElementById('modal-backdrop').classList.add('open');
+  setTimeout(() => document.getElementById('form-name').focus(), 80);
+}
+
+function openEdit(section, idx) { openModal(section, idx); }
+function closeModal() { document.getElementById('modal-backdrop').classList.remove('open'); }
+function closeModalBg(e) { if (e.target === document.getElementById('modal-backdrop')) closeModal(); }
+
+function saveItem() {
+  const name = document.getElementById('form-name').value.trim();
+  const amount = parseFloat(document.getElementById('form-amount').value) || 0;
+  const note = document.getElementById('form-note').value.trim();
+  const catEl = document.getElementById('form-cat');
+  const cat = catEl && document.getElementById('form-cat-group').style.display !== 'none' ? catEl.value : undefined;
+  const statusEl = document.getElementById('form-status');
+  const status = document.getElementById('form-status-group').style.display !== 'none' ? statusEl.value : undefined;
+  if (!name) { document.getElementById('form-name').focus(); return; }
+  const item = {name, amount, note};
+  if (cat !== undefined) item.cat = cat;
+  if (status !== undefined) item.status = status;
+  if (curSection === 'meubels') {
+    item.merk = document.getElementById('form-merk').value.trim();
+    item.begroot = parseFloat(document.getElementById('form-begroot').value)||0;
+    item.werkelijk = parseFloat(document.getElementById('form-werkelijk').value)||0;
+    item.betaald = parseFloat(document.getElementById('form-betaald').value)||0;
+    item.nogOpen = parseFloat(document.getElementById('form-nogopen').value)||0;
+    item.amount = item.nogOpen || item.begroot;
+  }
+  if (!state.items[curSection]) state.items[curSection] = [];
+  if (editIndex !== null) { state.items[curSection][editIndex] = item; } else { state.items[curSection].push(item); }
+  if (!state.updated) state.updated = {};
+  state.updated[curSection] = new Date().toISOString();
+  save(); render(); closeModal();
+}
+
+function deleteItem() {
+  if (editIndex === null) return;
+  state.items[curSection].splice(editIndex, 1);
+  state.updated[curSection] = new Date().toISOString();
+  save(); render(); closeModal();
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+  if (btn) { btn.classList.add('active'); btn.scrollIntoView({inline:'center',behavior:'smooth'}); }
+  const sec = document.getElementById('tab-' + tab);
+  if (sec) sec.classList.add('active');
+  
+  const idx = TABS.indexOf(tab);
+  document.getElementById('tab-prev').disabled = idx <= 0;
+  document.getElementById('tab-next').disabled = idx >= TABS.length - 1;
+}
+
+function stepTab(dir) {
+  const active = document.querySelector('.tab-btn.active');
+  if (!active) return;
+  const cur = TABS.indexOf(active.dataset.tab);
+  const next = cur + dir;
+  if (next >= 0 && next < TABS.length) switchTab(TABS[next]);
+}
+
+document.getElementById('tab-nav').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (btn) switchTab(btn.dataset.tab);
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && document.getElementById('modal-backdrop').classList.contains('open')) {
+    if (document.activeElement.tagName !== 'BUTTON') saveItem();
+  }
+});
+
+(function(){
+  let sx = 0;
+  document.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, {passive:true});
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) > 60) stepTab(dx < 0 ? 1 : -1);
+  }, {passive:true});
+})();
+
+load();
+</script>
+
+</div>
+
+<div id="page-planning" style="display:none">
+
+<!-- PLANNING -->
+<section id="tab-planning" style="padding:20px;">
+  <div class="section-header">
+    <div><div class="section-title">Planning 2026</div><div class="section-updated" id="upd-planning">–</div></div>
+    <button class="btn-add" onclick="openPlanModal()">+ Taak</button>
+  </div>
+
+  <div class="plan-stat-row">
+    <div class="plan-stat totaal" id="pstat-totaal" onclick="filterByPlanStat('totaal')"><div class="ps-val" id="ps-totaal">0</div><div class="ps-label">Totaal</div></div>
+    <div class="plan-stat klaar" id="pstat-klaar" onclick="filterByPlanStat('klaar')"><div class="ps-val" id="ps-klaar">0</div><div class="ps-label">Klaar</div></div>
+    <div class="plan-stat bezig" id="pstat-bezig" onclick="filterByPlanStat('bezig')"><div class="ps-val" id="ps-bezig">0</div><div class="ps-label">Bezig</div></div>
+    <div class="plan-stat gepland" id="pstat-gepland" onclick="filterByPlanStat('gepland')"><div class="ps-val" id="ps-gepland">0</div><div class="ps-label">Gepland</div></div>
+  </div>
+
+  <div id="current-week-banner" class="current-week-marker"></div>
+
+  <div class="planning-filters">
+    <select class="pf-select" id="pf-status" onchange="renderPlanning()">
+      <option value="">Alle statussen</option>
+      <option value="gepland">Gepland</option>
+      <option value="bezig">Bezig</option>
+      <option value="klaar">Klaar</option>
+      <option value="uitgesteld">Uitgesteld</option>
+    </select>
+    <select class="pf-select" id="pf-wie" onchange="renderPlanning()">
+      <option value="">Iedereen</option>
+      <option value="Joost">Joost</option>
+      <option value="Merel">Merel</option>
+      <option value="Patrick">Patrick</option>
+      <option value="Stukadoor">Stukadoor</option>
+      <option value="Bedrijf">Bedrijf</option>
+      <option value="Niemand">Niemand</option>
+    </select>
+    <select class="pf-select" id="pf-cat" onchange="renderPlanning()">
+      <option value="">Alle categorieën</option>
+      <option value="Gipsen/Stucen">Gipsen/Stucen</option>
+      <option value="Dakwerk">Dakwerk</option>
+      <option value="Elektra">Elektra</option>
+      <option value="Keuken">Keuken</option>
+      <option value="Badkamer">Badkamer</option>
+      <option value="Vloer">Vloer</option>
+      <option value="Schilderen">Schilderen</option>
+      <option value="Overig">Overig</option>
+    </select>
+    <select class="pf-select" id="pf-week" onchange="renderPlanning()">
+      <option value="">Alle weken</option>
+    </select>
+  </div>
+
+  <div id="planning-list"></div>
+</section>
+
+</div>
+
+
+
+<script>
+
+
