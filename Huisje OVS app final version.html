@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#f5f0e8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Huisje OVS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -518,6 +519,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 <div class="app-header">
   <h1 onclick="goToPage('overzicht')" style="cursor:pointer;">Verbouwing huisje OVS</h1>
   <p id="header-sub">Laden...</p>
+  <p id="sync-indicator" style="font-size:10px;color:var(--text3);margin-top:1px;">⟳ Laden...</p>
 </div>
 <nav class="page-nav">
   <button class="page-nav-btn active" id="pnav-overzicht" onclick="goToPage('overzicht')">Overzicht</button>
@@ -847,6 +849,125 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 </div>
 
 <script>
+// ── SUPABASE ────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://dqwkbtsstvakcvlnwvwk.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxd2tidHNzdHZha2N2bG53dndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODAwNjIsImV4cCI6MjA5NDE1NjA2Mn0.IfZQoWzrZRmvRY44zBjjHXwC8T3UnsXj2VS95jf8m6w';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let supabaseConnected = false;
+let realtimeChannel = null;
+
+async function supabaseSave(stateData) {
+  try {
+    const { error } = await sb.from('ovs_state').upsert({
+      id: 'main',
+      data: stateData,
+      updated_at: new Date().toISOString()
+    });
+    if (!error) {
+      supabaseConnected = true;
+      updateSyncIndicator('saved');
+    } else {
+      console.warn('Supabase save error:', error);
+      updateSyncIndicator('error');
+    }
+  } catch(e) {
+    console.warn('Supabase offline:', e);
+    updateSyncIndicator('offline');
+  }
+}
+
+async function supabaseLoad() {
+  try {
+    const { data, error } = await sb.from('ovs_state').select('data').eq('id','main').single();
+    if (!error && data && data.data && Object.keys(data.data).length > 0) {
+      supabaseConnected = true;
+      return data.data;
+    }
+  } catch(e) {
+    console.warn('Supabase load failed:', e);
+  }
+  return null;
+}
+
+function setupRealtime() {
+  if (realtimeChannel) realtimeChannel.unsubscribe();
+  realtimeChannel = sb.channel('ovs-changes')
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'ovs_state',
+      filter: 'id=eq.main'
+    }, (payload) => {
+      // Only update if change came from someone else
+      const incoming = payload.new.data;
+      if (JSON.stringify(incoming) !== JSON.stringify(state)) {
+        state = mergeIncoming(incoming);
+        render();
+        if (currentPage === 'overzicht') renderOverzicht();
+        if (currentPage === 'planning') renderPlanning();
+        if (currentPage === 'klusdagen') renderKlusdagen();
+        updateSyncIndicator('received');
+        setTimeout(() => updateSyncIndicator('connected'), 2000);
+      }
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        supabaseConnected = true;
+        updateSyncIndicator('connected');
+      }
+    });
+}
+
+function mergeIncoming(incoming) {
+  // Always take full incoming state but preserve local SEED merges
+  const merged = JSON.parse(JSON.stringify(incoming));
+  if (!merged.planning || merged.planning.length === 0) merged.planning = JSON.parse(JSON.stringify(PLANNING_SEED));
+  else {
+    PLANNING_SEED.forEach(seedTask => {
+      const exists = merged.planning.find(t => t.taak === seedTask.taak && t.week === seedTask.week);
+      if (!exists) merged.planning.push(JSON.parse(JSON.stringify(seedTask)));
+    });
+  }
+  if (!merged.uitstellen || merged.uitstellen.length === 0) merged.uitstellen = JSON.parse(JSON.stringify(UITSTELLEN_SEED));
+  else {
+    UITSTELLEN_SEED.forEach(seedItem => {
+      if (!merged.uitstellen.find(i => i.name === seedItem.name)) merged.uitstellen.unshift(seedItem);
+    });
+  }
+  if (!merged.sparen || merged.sparen.length === 0) merged.sparen = JSON.parse(JSON.stringify(SPAREN_SEED));
+  if (!merged.klusdagen) merged.klusdagen = JSON.parse(JSON.stringify(KLUSDAGEN_SEED));
+  merged.items['gemaakte-kosten'] = JSON.parse(JSON.stringify(SEED.items['gemaakte-kosten']));
+  merged.items['nog-te-maken'] = JSON.parse(JSON.stringify(SEED.items['nog-te-maken']));
+  merged.items['bruiloft'] = JSON.parse(JSON.stringify(SEED.items['bruiloft']));
+  return merged;
+}
+
+function updateSyncIndicator(status) {
+  const el = document.getElementById('sync-indicator');
+  if (!el) return;
+  const icons = {
+    'connected': '🟢',
+    'saved': '✓',
+    'received': '↓',
+    'offline': '🔴',
+    'error': '⚠️',
+    'loading': '⟳'
+  };
+  const labels = {
+    'connected': 'Gesynchroniseerd',
+    'saved': 'Opgeslagen',
+    'received': 'Update ontvangen',
+    'offline': 'Offline',
+    'error': 'Sync fout',
+    'loading': 'Laden...'
+  };
+  el.textContent = icons[status] + ' ' + labels[status];
+  el.style.color = status === 'offline' || status === 'error' ? 'var(--red)' : 'var(--text3)';
+}
+
+// ── END SUPABASE ──────────────────────────────────────────────────────────────
+
 const TABS = ['streep','gemaakte-kosten','nog-te-maken','meubels','bruiloft','vermogen','te-ontvangen','sparen'];
 const CAT_OPTIONS = {
   'gemaakte-kosten': [{v:'ddo',l:'DDO factuur'},{v:'overig',l:'Overige kosten'}],
@@ -1962,7 +2083,22 @@ function deleteKlusdag() {
   save(); renderKlusdagen(); renderOverzicht(); closeKlusdagModal();
 }
 
-function load() {
+async function load() {
+  updateSyncIndicator('loading');
+  try {
+    // Try Supabase first (most up to date)
+    const sbData = await supabaseLoad();
+    if (sbData && Object.keys(sbData).length > 0) {
+      state = mergeIncoming(sbData);
+      localStorage.setItem('ovs-v16', JSON.stringify(state));
+      render();
+      renderOverzicht();
+      setupRealtime();
+      return;
+    }
+  } catch(e) {
+    console.warn('Supabase unavailable, using localStorage');
+  }
   try {
     // Try current key first
     let s = localStorage.getItem('ovs-v16');
@@ -2031,8 +2167,12 @@ function load() {
   }
   render();
   renderOverzicht();
+  setupRealtime();
 }
-function save() { localStorage.setItem('ovs-v16', JSON.stringify(state)); }
+function save() {
+  localStorage.setItem('ovs-v16', JSON.stringify(state));
+  supabaseSave(state);
+}
 
 function fmt(n) { return '\u20ac\u202f' + Math.round(n).toLocaleString('nl-NL'); }
 function updFmt(ts) {
