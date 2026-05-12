@@ -1205,6 +1205,12 @@ function filterByPlanStat(stat) {
 function initPlanningWeekFilter() {
   const sel = document.getElementById('pf-week');
   if (!sel || sel.options.length > 1) return;
+  // Add achterstallig first
+  const ach = document.createElement('option');
+  ach.value = 'achterstallig';
+  ach.textContent = 'Achterstallig';
+  sel.appendChild(ach);
+  // Then week 1–34
   for (let w = 1; w <= 34; w++) {
     const opt = document.createElement('option');
     opt.value = w;
@@ -1244,12 +1250,20 @@ function renderPlanning() {
   if (filterStatus) tasks = tasks.filter(t => t.status === filterStatus);
   if (filterWie) tasks = tasks.filter(t => t.wie === filterWie);
   if (filterCat) tasks = tasks.filter(t => t.cat === filterCat);
-  if (filterWeek) tasks = tasks.filter(t => {
-    const w = parseInt(filterWeek);
-    const start = parseInt(t.week);
-    const end = t.weekEnd ? parseInt(t.weekEnd) : start;
-    return w >= start && w <= end;
-  });
+  const curWeekNow = getCurrentWeek();
+  if (filterWeek === 'achterstallig') {
+    tasks = tasks.filter(t => {
+      const end = t.weekEnd ? parseInt(t.weekEnd) : parseInt(t.week);
+      return end < curWeekNow && t.status !== 'klaar' && t.status !== 'uitgesteld';
+    });
+  } else if (filterWeek) {
+    tasks = tasks.filter(t => {
+      const w = parseInt(filterWeek);
+      const start = parseInt(t.week);
+      const end = t.weekEnd ? parseInt(t.weekEnd) : start;
+      return w >= start && w <= end;
+    });
+  }
 
   // Stats (always from full list)
   const all = state.planning;
