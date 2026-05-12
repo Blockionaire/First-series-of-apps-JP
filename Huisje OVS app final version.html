@@ -976,17 +976,10 @@ function mergeIncoming(incoming) {
       if (!exists) merged.planning.push(JSON.parse(JSON.stringify(seedTask)));
     });
   }
-  if (!merged.uitstellen || merged.uitstellen.length === 0) merged.uitstellen = JSON.parse(JSON.stringify(UITSTELLEN_SEED));
-  else {
-    UITSTELLEN_SEED.forEach(seedItem => {
-      if (!merged.uitstellen.find(i => i.name === seedItem.name)) merged.uitstellen.unshift(seedItem);
-    });
-  }
+  if (!merged.uitstellen) merged.uitstellen = [];
   if (!merged.sparen || merged.sparen.length === 0) merged.sparen = JSON.parse(JSON.stringify(SPAREN_SEED));
   if (!merged.klusdagen) merged.klusdagen = JSON.parse(JSON.stringify(KLUSDAGEN_SEED));
-  merged.items['gemaakte-kosten'] = JSON.parse(JSON.stringify(SEED.items['gemaakte-kosten']));
-  merged.items['nog-te-maken'] = JSON.parse(JSON.stringify(SEED.items['nog-te-maken']));
-  merged.items['bruiloft'] = JSON.parse(JSON.stringify(SEED.items['bruiloft']));
+
   return merged;
 }
 
@@ -2201,10 +2194,7 @@ async function load() {
     if (!s) s = localStorage.getItem('ovs-v10');
     if (s) {
       state = JSON.parse(s);
-      // Always sync admin-managed sections from SEED (gemaakte-kosten, nog-te-maken, bruiloft)
-      state.items['gemaakte-kosten'] = JSON.parse(JSON.stringify(SEED.items['gemaakte-kosten']));
-      state.items['nog-te-maken'] = JSON.parse(JSON.stringify(SEED.items['nog-te-maken']));
-      state.items['bruiloft'] = JSON.parse(JSON.stringify(SEED.items['bruiloft']));
+
       // Sync planning: add seed tasks not yet in state (match by taak)
       if (!state.planning || state.planning.length === 0) {
         state.planning = JSON.parse(JSON.stringify(PLANNING_SEED));
