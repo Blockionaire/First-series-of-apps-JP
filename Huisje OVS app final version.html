@@ -1183,21 +1183,69 @@ function closeConfirm() {
 let contactEditId = null;
 let keuzeCatFilter = '';
 
+let contactSortAsc = true;
+let contactRolFilter = '';
+
+function toggleContactSort() {
+  contactSortAsc = !contactSortAsc;
+  const btn = document.getElementById('contact-sort-btn');
+  if (btn) btn.textContent = contactSortAsc ? 'A → Z' : 'Z → A';
+  renderContacten();
+}
+
+function setContactRolFilter(rol) {
+  contactRolFilter = contactRolFilter === rol ? '' : rol;
+  renderContacten();
+}
+
 function renderContacten() {
-  const contacten = state.contacten || [];
+  let contacten = [...(state.contacten || [])];
   const list = document.getElementById('list-contacten');
   if (!list) return;
   setText('upd-contacten', updFmt(state.updatedContacten));
-  if (!contacten.length) { list.innerHTML = '<div class="empty-state">Nog geen contacten toegevoegd</div>'; return; }
-  list.innerHTML = contacten.map((c, i) => {
-    const telBtn = c.tel ? `<a class="contact-btn" href="tel:${esc(c.tel)}">📞 Bellen</a>` : '';
-    const mailBtn = c.email ? `<a class="contact-btn" href="mailto:${esc(c.email)}">✉️ Mail</a>` : '';
-    const waBtn = c.tel ? `<a class="contact-btn" href="https://wa.me/${c.tel.replace(/[^0-9]/g,'')}" target="_blank">💬 WhatsApp</a>` : '';
+
+  // Update role filter chips dynamically
+  const rolFiltersEl = document.getElementById('contact-role-filters');
+  if (rolFiltersEl) {
+    const rollen = [...new Set(contacten.map(c => c.rol).filter(Boolean))].sort();
+    rolFiltersEl.innerHTML = rollen.map(rol =>
+      `<button onclick="setContactRolFilter('${esc(rol)}')" style="padding:5px 12px;border-radius:99px;font-size:12px;border:0.5px solid ${contactRolFilter === rol ? '#111' : 'var(--border2)'};background:${contactRolFilter === rol ? '#111' : 'var(--surface)'};color:${contactRolFilter === rol ? '#f5f0e8' : 'var(--text2)'};cursor:pointer;white-space:nowrap;">${esc(rol)}</button>`
+    ).join('');
+  }
+
+  // Apply search
+  const query = (document.getElementById('contact-search')?.value||'').toLowerCase().trim();
+  if (query) contacten = contacten.filter(ct =>
+    ct.naam.toLowerCase().includes(query) ||
+    (ct.rol||'').toLowerCase().includes(query) ||
+    (ct.note||'').toLowerCase().includes(query)
+  );
+
+  // Apply role filter
+  if (contactRolFilter) contacten = contacten.filter(ct => ct.rol === contactRolFilter);
+
+  // Apply sort
+  contacten.sort((a, b) => contactSortAsc
+    ? a.naam.localeCompare(b.naam, 'nl')
+    : b.naam.localeCompare(a.naam, 'nl')
+  );
+
+  if (!contacten.length) {
+    list.innerHTML = '<div class="empty-state">Geen contacten gevonden</div>';
+    return;
+  }
+
+  list.innerHTML = contacten.map(ct => {
+    const i = (state.contacten||[]).indexOf(ct);
+    const telBtn = ct.tel ? `<a class="contact-btn" href="tel:${esc(ct.tel)}" onclick="event.stopPropagation()">📞 Bellen</a>` : '';
+    const mailBtn = ct.email ? `<a class="contact-btn" href="mailto:${esc(ct.email)}" onclick="event.stopPropagation()">✉️ Mail</a>` : '';
+    const waNum = ct.tel ? ct.tel.replace(/[^0-9+]/g,'').replace(/^\+/,'').replace(/^0/,'31') : '';
+    const waBtn = ct.tel ? `<a class="contact-btn" href="https://wa.me/${waNum}" target="_blank" onclick="event.stopPropagation()">💬 WhatsApp</a>` : '';
     return `<div class="contact-card" onclick="openContactModal(${i})">
-      <div class="contact-naam">${esc(c.naam)}</div>
-      <div class="contact-rol">${esc(c.rol||'')}</div>
+      <div class="contact-naam">${esc(ct.naam)}</div>
+      <div class="contact-rol">${esc(ct.rol||'')}</div>
       <div class="contact-actions">${telBtn}${mailBtn}${waBtn}</div>
-      ${c.note ? `<div class="contact-note">${esc(c.note)}</div>` : ''}
+      ${ct.note ? `<div class="contact-note">${esc(ct.note)}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -2850,7 +2898,7 @@ function render() {
 
 function renderLists(sec, lists) {
   const items = state.items[sec] || [];
-  const statusLabel = {open:'Open',paid:'Betaald',cadeau:'Cadeau',wacht:'Wachten',partial:'Deels',gekocht:'Gekocht',deels:'Deels',nog:'Nog kopen',verwacht:'Verwacht',gedeeltelijk:'Deels ontvangen',ontvangen:'Ontvangen'};
+  const statusLabel = {open:'Open',paid:'Betaald',cadeau:'Cadeau',wacht:'Wachten',partial:'Deels',gekocht:'Gekocht',deels:'Deels',nog:'Nog aan te schaffen',verwacht:'Verwacht',gedeeltelijk:'Gedeeltelijk betaald',ontvangen:'Ontvangen',betaald:'Betaald'};
   const catBadge = {gekocht:'paid',deels:'partial',nog:'open',cadeau:'cadeau',wacht:'wacht',verwacht:'open',gedeeltelijk:'partial',ontvangen:'paid'};
   lists.forEach(({id, cat, color, showStatus}) => {
     const el = document.getElementById(id);
@@ -2917,7 +2965,7 @@ function openModal(section, editIdx) {
     if (item && item.cat) document.getElementById('form-cat').value = item.cat;
   } else { catGrp.style.display = 'none'; }
 
-  const showStatus = ['nog-te-maken','te-ontvangen'].includes(section);
+  const showStatus = ['nog-te-maken','gemaakte-kosten','te-ontvangen'].includes(section);
   document.getElementById('form-status-group').style.display = showStatus ? 'block' : 'none';
   // Set options based on section
   const statusSel = document.getElementById('form-status');
@@ -2926,22 +2974,33 @@ function openModal(section, editIdx) {
       <option value="verwacht">Verwacht</option>
       <option value="gedeeltelijk">Gedeeltelijk ontvangen</option>
       <option value="ontvangen">Ontvangen</option>`;
+  } else if (['nog-te-maken','gemaakte-kosten'].includes(section)) {
+    statusSel.innerHTML = `
+      <option value="nog">Nog aan te schaffen</option>
+      <option value="wacht">Wachten</option>
+      <option value="gedeeltelijk">Gedeeltelijk betaald</option>
+      <option value="betaald">Betaald</option>
+      <option value="cadeau">Cadeau gekregen</option>`;
   } else {
     statusSel.innerHTML = `
-      <option value="gekocht">Gekocht (groen)</option>
-      <option value="deels">Gedeeltelijk gekocht (oranje)</option>
-      <option value="nog">Nog aan te schaffen (rood)</option>
-      <option value="cadeau">Cadeau gekregen</option>
+      <option value="nog">Nog aan te schaffen</option>
       <option value="wacht">Wachten</option>`;
   }
-  if (showStatus) statusSel.value = item ? (item.status||'verwacht') : (section === 'te-ontvangen' ? 'verwacht' : 'open');
-  // Show/hide partial amount field
-  const isPartial = section === 'te-ontvangen' && statusSel.value === 'gedeeltelijk';
-  document.getElementById('form-partial-group').style.display = isPartial ? 'block' : 'none';
-  if (isPartial) document.getElementById('form-partial-amount').value = item ? (item.ontvangen||'') : '';
+  const defaultStatus = section === 'te-ontvangen' ? 'verwacht' : (section === 'gemaakte-kosten' ? 'betaald' : 'nog');
+  if (showStatus) statusSel.value = item ? (item.status || defaultStatus) : defaultStatus;
+  // Show/hide partial betaald field for nog-te-maken / gemaakte-kosten
+  const isPartialKosten = ['nog-te-maken','gemaakte-kosten'].includes(section) && statusSel.value === 'gedeeltelijk';
+  const isPartialOntv = section === 'te-ontvangen' && statusSel.value === 'gedeeltelijk';
+  document.getElementById('form-partial-group').style.display = (isPartialKosten || isPartialOntv) ? 'block' : 'none';
+  const partialLabel = document.querySelector('#form-partial-group .form-label');
+  if (partialLabel) partialLabel.textContent = section === 'te-ontvangen' ? 'Ontvangen bedrag (€)' : 'Al betaald bedrag (€)';
+  if (isPartialKosten) document.getElementById('form-partial-amount').value = item ? (item.betaald||'') : '';
+  if (isPartialOntv) document.getElementById('form-partial-amount').value = item ? (item.ontvangen||'') : '';
   statusSel.onchange = function() {
     const pg = document.getElementById('form-partial-group');
-    if (section === 'te-ontvangen') {
+    if (['nog-te-maken','gemaakte-kosten'].includes(section)) {
+      pg.style.display = this.value === 'gedeeltelijk' ? 'block' : 'none';
+    } else if (section === 'te-ontvangen') {
       pg.style.display = this.value === 'gedeeltelijk' ? 'block' : 'none';
     }
   };
@@ -2978,9 +3037,12 @@ function saveItem() {
   const statusEl = document.getElementById('form-status');
   const status = document.getElementById('form-status-group').style.display !== 'none' ? statusEl.value : undefined;
   if (!name) { document.getElementById('form-name').focus(); return; }
+
   const item = {name, amount, note};
   if (cat !== undefined) item.cat = cat;
   if (status !== undefined) item.status = status;
+
+  // ── MEUBELS ──
   if (curSection === 'meubels') {
     item.merk = document.getElementById('form-merk').value.trim();
     item.begroot = parseFloat(document.getElementById('form-begroot').value)||0;
@@ -2989,7 +3051,8 @@ function saveItem() {
     item.nogOpen = parseFloat(document.getElementById('form-nogopen').value)||0;
     item.amount = item.nogOpen || item.begroot;
   }
-  // For te-ontvangen: handle partial/ontvangen status
+
+  // ── TE ONTVANGEN ──
   if (curSection === 'te-ontvangen') {
     if (status === 'gedeeltelijk') {
       item.ontvangen = parseFloat(document.getElementById('form-partial-amount').value) || 0;
@@ -2998,52 +3061,134 @@ function saveItem() {
     } else {
       item.ontvangen = 0;
     }
-    // Auto-add ontvangen amount to vermogen if newly ontvangen or amount changed
     const prev = editIndex !== null ? (state.items[curSection]||[])[editIndex] : null;
     const prevOntvangen = prev ? (prev.ontvangen||0) : 0;
     const newOntvangen = item.ontvangen || 0;
-    const diff = newOntvangen - prevOntvangen;
-    if (diff !== 0 && newOntvangen > 0) {
+    if (newOntvangen > 0) {
       if (!state.items.vermogen) state.items.vermogen = [];
-      // Check if there's already an auto-entry for this item
       const autoKey = 'auto_ontv_' + (editIndex !== null ? editIndex : Date.now());
       item.autoKey = prev ? (prev.autoKey || autoKey) : autoKey;
       const existingIdx = state.items.vermogen.findIndex(v => v.autoKey === item.autoKey);
-      if (existingIdx >= 0) {
-        state.items.vermogen[existingIdx].amount = newOntvangen;
-        state.items.vermogen[existingIdx].name = item.name + ' (ontvangen)';
-      } else {
-        state.items.vermogen.push({name: item.name + ' (ontvangen)', amount: newOntvangen, cat: 'beiden', note: 'Automatisch toegevoegd vanuit te ontvangen', autoKey: item.autoKey});
-      }
+      if (existingIdx >= 0) { state.items.vermogen[existingIdx].amount = newOntvangen; state.items.vermogen[existingIdx].name = item.name + ' (ontvangen)'; }
+      else { state.items.vermogen.push({name: item.name + ' (ontvangen)', amount: newOntvangen, cat: 'beiden', note: 'Automatisch vanuit te ontvangen', autoKey: item.autoKey}); }
       state.updated['vermogen'] = new Date().toISOString();
     } else if (newOntvangen === 0 && prev && prev.autoKey) {
-      // Remove from vermogen if set back to verwacht
       item.autoKey = prev.autoKey;
       const existingIdx = state.items.vermogen ? state.items.vermogen.findIndex(v => v.autoKey === item.autoKey) : -1;
       if (existingIdx >= 0) state.items.vermogen.splice(existingIdx, 1);
     }
   }
+
+  // ── NOG TE MAKEN / GEMAAKTE KOSTEN STATUS LOGIC ──
+  if (['nog-te-maken','gemaakte-kosten'].includes(curSection) && status) {
+    const prev = editIndex !== null ? (state.items[curSection]||[])[editIndex] : null;
+    const autoKey = prev ? (prev.autoKey || ('ak_' + Date.now())) : ('ak_' + Date.now());
+    item.autoKey = autoKey;
+
+    // Handle gedeeltelijk: save betaald amount
+    if (status === 'gedeeltelijk') {
+      item.betaald = parseFloat(document.getElementById('form-partial-amount').value) || 0;
+      item.nogBetalen = amount - item.betaald;
+    }
+
+    // Determine target section based on status
+    const moveToGemaakt = ['betaald','cadeau'].includes(status);
+    const moveToNog = ['nog','wacht'].includes(status);
+    const isGedeel = status === 'gedeeltelijk';
+
+    if (moveToGemaakt && curSection === 'nog-te-maken') {
+      // Move to gemaakte kosten
+      cleanupAutoKey(autoKey, 'nog-te-maken');
+      if (editIndex !== null) state.items['nog-te-maken'].splice(editIndex, 1);
+      if (!state.items['gemaakte-kosten']) state.items['gemaakte-kosten'] = [];
+      item.amount = status === 'cadeau' ? 0 : amount;
+      state.items['gemaakte-kosten'].push(item);
+      state.updated['gemaakte-kosten'] = new Date().toISOString();
+      state.updated['nog-te-maken'] = new Date().toISOString();
+      save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
+      return;
+    }
+
+    if (moveToNog && curSection === 'gemaakte-kosten') {
+      // Move back to nog-te-maken
+      cleanupAutoKey(autoKey, 'gemaakte-kosten');
+      if (editIndex !== null) state.items['gemaakte-kosten'].splice(editIndex, 1);
+      if (!state.items['nog-te-maken']) state.items['nog-te-maken'] = [];
+      state.items['nog-te-maken'].push(item);
+      state.updated['nog-te-maken'] = new Date().toISOString();
+      state.updated['gemaakte-kosten'] = new Date().toISOString();
+      // Handle wachten -> auto-add to uitstellen
+      handleWachtenStatus(item, true);
+      save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
+      return;
+    }
+
+    if (isGedeel) {
+      // Keep remainder in current section, add betaald part to gemaakte kosten
+      const betaaldItem = {name: item.name + ' (betaald deel)', amount: item.betaald, note: item.note, cat: cat||'overig', status: 'betaald', autoKey: autoKey + '_betaald'};
+      // Remove old auto betaald entry if exists
+      const oldBetaaldIdx = (state.items['gemaakte-kosten']||[]).findIndex(i => i.autoKey === autoKey + '_betaald');
+      if (oldBetaaldIdx >= 0) state.items['gemaakte-kosten'][oldBetaaldIdx] = betaaldItem;
+      else { if (!state.items['gemaakte-kosten']) state.items['gemaakte-kosten'] = []; state.items['gemaakte-kosten'].push(betaaldItem); }
+      state.updated['gemaakte-kosten'] = new Date().toISOString();
+      // Keep item in nog-te-maken with remaining amount
+      item.amount = item.nogBetalen;
+    }
+
+    // Handle wachten: sync with uitstellen
+    if (status === 'wacht') handleWachtenStatus(item, true);
+    else if (prev && prev.status === 'wacht') handleWachtenStatus(prev, false);
+  }
+
   if (!state.items[curSection]) state.items[curSection] = [];
   if (editIndex !== null) { state.items[curSection][editIndex] = item; } else { state.items[curSection].push(item); }
   if (!state.updated) state.updated = {};
   state.updated[curSection] = new Date().toISOString();
-  save(); render(); if(currentPage==="overzicht") renderOverzicht(); closeModal();
+  save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
+}
+
+function cleanupAutoKey(autoKey, section) {
+  if (!autoKey) return;
+  const items = state.items[section] || [];
+  const idx = items.findIndex(i => i.autoKey === autoKey + '_betaald');
+  if (idx >= 0) items.splice(idx, 1);
+}
+
+function handleWachtenStatus(item, addToUitst) {
+  if (!state.uitstellen) state.uitstellen = [];
+  const existing = state.uitstellen.findIndex(u => u.autoKey === item.autoKey);
+  if (addToUitst) {
+    if (existing >= 0) {
+      state.uitstellen[existing].amount = item.amount;
+      state.uitstellen[existing].name = item.name;
+      state.uitstellen[existing].uitgesteld = true;
+    } else {
+      state.uitstellen.push({name: item.name, amount: item.amount, note: item.note||'', uitgesteld: true, autoKey: item.autoKey});
+    }
+  } else {
+    if (existing >= 0) state.uitstellen.splice(existing, 1);
+  }
 }
 
 function deleteItem() {
   if (editIndex === null) return;
-  // If deleting a te-ontvangen item that had auto-added to vermogen, clean it up
-  if (curSection === 'te-ontvangen') {
-    const item = (state.items[curSection]||[])[editIndex];
-    if (item && item.autoKey && state.items.vermogen) {
-      const vIdx = state.items.vermogen.findIndex(v => v.autoKey === item.autoKey);
-      if (vIdx >= 0) state.items.vermogen.splice(vIdx, 1);
-      state.updated['vermogen'] = new Date().toISOString();
-    }
+  const item = (state.items[curSection]||[])[editIndex];
+  // Clean up te-ontvangen auto vermogen entry
+  if (curSection === 'te-ontvangen' && item && item.autoKey && state.items.vermogen) {
+    const vIdx = state.items.vermogen.findIndex(v => v.autoKey === item.autoKey);
+    if (vIdx >= 0) state.items.vermogen.splice(vIdx, 1);
+    state.updated['vermogen'] = new Date().toISOString();
   }
+  // Clean up kosten: remove gedeeltelijk auto-entry from gemaakte kosten
+  if (curSection === 'nog-te-maken' && item && item.autoKey) {
+    const gIdx = (state.items['gemaakte-kosten']||[]).findIndex(i => i.autoKey === item.autoKey + '_betaald');
+    if (gIdx >= 0) { state.items['gemaakte-kosten'].splice(gIdx, 1); state.updated['gemaakte-kosten'] = new Date().toISOString(); }
+  }
+  // Remove from uitstellen if wachten item
+  if (item && item.autoKey) handleWachtenStatus(item, false);
   state.items[curSection].splice(editIndex, 1);
   state.updated[curSection] = new Date().toISOString();
-  save(); render(); if(currentPage==="overzicht") renderOverzicht(); closeModal();
+  save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
 }
 
 function switchTab(tab) {
@@ -3227,6 +3372,11 @@ load();
       <div><div class="section-title">Contacten</div><div class="section-updated" id="upd-contacten">–</div></div>
       <button class="btn-add" onclick="openContactModal()">+ Toevoegen</button>
     </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input class="form-input" type="text" id="contact-search" placeholder="🔍  Zoeken..." oninput="renderContacten()" style="flex:1;padding:9px 12px;font-size:13px;">
+      <button id="contact-sort-btn" onclick="toggleContactSort()" style="background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;font-size:12px;color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0;">A → Z</button>
+    </div>
+    <div id="contact-role-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
     <div id="list-contacten"><div class="empty-state">Nog geen contacten</div></div>
   </div>
 </div>
