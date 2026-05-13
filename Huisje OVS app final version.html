@@ -1314,7 +1314,7 @@ function goToPage(page, tab) {
   if (page === 'planning') renderPlanning();
   if (page === 'klusdagen') { klusWeekOffset = 0; renderKlusdagen(); }
   if (page === 'overzicht') renderOverzicht();
-  if (page === 'finance' && tab) switchTab(tab);
+  if (page === 'finance' && tab) { switchTab(tab); return; }
   window.scrollTo(0,0);
 }
 function togglePage() { goToPage(currentPage === 'finance' ? 'planning' : 'finance'); }
@@ -2574,13 +2574,21 @@ function deleteItem() {
 }
 
 function switchTab(tab) {
+  const scrollY = window.scrollY;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
-  if (btn) { btn.classList.add('active'); btn.scrollIntoView({inline:'center',behavior:'smooth'}); }
+  if (btn) btn.classList.add('active');
+  const nav = document.getElementById('tab-nav');
+  if (btn && nav) {
+    const btnLeft = btn.offsetLeft;
+    const btnWidth = btn.offsetWidth;
+    const navWidth = nav.offsetWidth;
+    nav.scrollLeft = btnLeft - navWidth/2 + btnWidth/2;
+  }
   const sec = document.getElementById('tab-' + tab);
   if (sec) sec.classList.add('active');
-  
+  window.scrollTo(0, scrollY);
   const idx = TABS.indexOf(tab);
   document.getElementById('tab-prev').disabled = idx <= 0;
   document.getElementById('tab-next').disabled = idx >= TABS.length - 1;
