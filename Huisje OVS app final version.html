@@ -721,6 +721,34 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   [data-theme="dark"] .toggle-slider { background-color: #48484a; }
   [data-theme="dark"] .toggle-switch input:checked + .toggle-slider { background-color: #e5e5ea; }
   [data-theme="dark"] .toggle-switch input:checked + .toggle-slider::before { background-color: #1c1c1e; }
+
+  /* COLLAPSIBLE SUB-HEADERS */
+  .sub-header-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+  }
+  .sub-header-toggle .sh-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text3); }
+  .sh-right { display: flex; align-items: center; gap: 8px; }
+  .sh-count { font-size: 10px; color: var(--text3); background: var(--surface2); border-radius: 99px; padding: 2px 7px; }
+  .sh-arrow { font-size: 11px; color: var(--text3); transition: transform 0.2s; display: inline-block; }
+  .sh-arrow.collapsed { transform: rotate(-90deg); }
+  .collapsible-list { overflow: hidden; }
+  .collapsible-list.collapsed { max-height: 0 !important; }
+
+  /* VALIDATION */
+  .form-input.invalid, .form-select.invalid {
+    border-color: var(--red) !important;
+    background: var(--red-dim) !important;
+    animation: shake 0.3s ease;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
 </style>
 </head>
 <body>
@@ -876,10 +904,20 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <div><div class="section-title">Gemaakte kosten</div><div class="section-updated" id="upd-gemaakte-kosten">–</div></div>
     <button class="btn-add" onclick="openModal('gemaakte-kosten')">+ Toevoegen</button>
   </div>
-  <div class="sub-header">DDO facturen</div>
-  <div class="items-list" id="list-gemaakte-kosten-ddo"></div>
-  <div class="sub-header">Overige kosten</div>
-  <div class="items-list" id="list-gemaakte-kosten-overig"></div>
+  <div class="sub-header sub-header-toggle" onclick="toggleCollapse('gemaakte-kosten-ddo')">
+    <span class="sh-label">DDO facturen</span>
+    <span class="sh-right"><span class="sh-count" id="sh-count-gemaakte-kosten-ddo">0</span><span class="sh-arrow" id="sh-arrow-gemaakte-kosten-ddo">▾</span></span>
+  </div>
+  <div class="collapsible-list" id="collapse-gemaakte-kosten-ddo">
+    <div class="items-list" id="list-gemaakte-kosten-ddo"></div>
+  </div>
+  <div class="sub-header sub-header-toggle" onclick="toggleCollapse('gemaakte-kosten-overig')" style="margin-top:18px;">
+    <span class="sh-label">Overige kosten</span>
+    <span class="sh-right"><span class="sh-count" id="sh-count-gemaakte-kosten-overig">0</span><span class="sh-arrow" id="sh-arrow-gemaakte-kosten-overig">▾</span></span>
+  </div>
+  <div class="collapsible-list" id="collapse-gemaakte-kosten-overig">
+    <div class="items-list" id="list-gemaakte-kosten-overig"></div>
+  </div>
   <div class="section-total"><span class="st-label">Totaal gemaakte kosten</span><span class="st-amount red" id="total-gemaakte-kosten">€ 0</span></div>
 </section>
 
@@ -889,10 +927,20 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <div><div class="section-title">Nog te maken kosten</div><div class="section-updated" id="upd-nog-te-maken">–</div></div>
     <button class="btn-add" onclick="openModal('nog-te-maken')">+ Toevoegen</button>
   </div>
-  <div class="sub-header">Verbouwing DDO</div>
-  <div class="items-list" id="list-nog-te-maken-ddo"></div>
-  <div class="sub-header">Overige kosten</div>
-  <div class="items-list" id="list-nog-te-maken-overig"></div>
+  <div class="sub-header sub-header-toggle" onclick="toggleCollapse('nog-te-maken-ddo')">
+    <span class="sh-label">Verbouwing DDO</span>
+    <span class="sh-right"><span class="sh-count" id="sh-count-nog-te-maken-ddo">0</span><span class="sh-arrow" id="sh-arrow-nog-te-maken-ddo">▾</span></span>
+  </div>
+  <div class="collapsible-list" id="collapse-nog-te-maken-ddo">
+    <div class="items-list" id="list-nog-te-maken-ddo"></div>
+  </div>
+  <div class="sub-header sub-header-toggle" onclick="toggleCollapse('nog-te-maken-overig')" style="margin-top:18px;">
+    <span class="sh-label">Overige kosten</span>
+    <span class="sh-right"><span class="sh-count" id="sh-count-nog-te-maken-overig">0</span><span class="sh-arrow" id="sh-arrow-nog-te-maken-overig">▾</span></span>
+  </div>
+  <div class="collapsible-list" id="collapse-nog-te-maken-overig">
+    <div class="items-list" id="list-nog-te-maken-overig"></div>
+  </div>
   <div class="section-total"><span class="st-label">Totaal nog te maken</span><span class="st-amount amber" id="total-nog-te-maken">€ 0</span></div>
 </section>
 
@@ -1021,7 +1069,10 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     </div>
     <div class="form-group" id="form-cat-group" style="display:none">
       <label class="form-label">Categorie</label>
-      <select class="form-select" id="form-cat"></select>
+      <select class="form-select" id="form-cat" onchange="handleCatChange(this)"></select>
+      <div id="form-cat-new-wrap" style="display:none;margin-top:8px;">
+        <input class="form-input" type="text" id="form-cat-new" placeholder="Naam nieuwe categorie...">
+      </div>
     </div>
     <div class="form-group" id="form-status-group" style="display:none">
       <label class="form-label">Status</label>
@@ -1266,9 +1317,37 @@ function openContactModal(editIdx) {
 function closeContactModal() { document.getElementById('contact-modal').classList.remove('open'); }
 function closeContactModalBg(e) { if (e.target === document.getElementById('contact-modal')) closeContactModal(); }
 
+
+// ── VALIDATION ────────────────────────────────────────────────────────────────
+function validateFields(ids) {
+  let valid = true;
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const empty = !el.value || !el.value.trim();
+    if (empty) {
+      el.classList.add('invalid');
+      el.addEventListener('input', () => el.classList.remove('invalid'), {once:true});
+      el.addEventListener('change', () => el.classList.remove('invalid'), {once:true});
+      valid = false;
+    } else {
+      el.classList.remove('invalid');
+    }
+  });
+  if (!valid) {
+    const first = ids.find(id => {
+      const el = document.getElementById(id);
+      return el && (!el.value || !el.value.trim());
+    });
+    if (first) document.getElementById(first).focus();
+  }
+  return valid;
+}
+// ── END VALIDATION ─────────────────────────────────────────────────────────────
+
 function saveContact() {
   const naam = document.getElementById('c-naam').value.trim();
-  if (!naam) { document.getElementById('c-naam').focus(); return; }
+  if (!validateFields(['c-naam'])) return;
   const ct = {
     naam,
     rol: document.getElementById('c-rol').value.trim(),
@@ -1349,7 +1428,7 @@ function closeKeuzeModalBg(e) { if (e.target === document.getElementById('keuze-
 
 function saveKeuze() {
   const naam = document.getElementById('k-naam').value.trim();
-  if (!naam) { document.getElementById('k-naam').focus(); return; }
+  if (!validateFields(['k-naam'])) return;
   const k = {
     naam,
     cat: document.getElementById('k-cat').value,
@@ -2084,7 +2163,9 @@ function openPlanModal(editIdx) {
   planEditIndex = editIdx !== undefined ? editIdx : null;
   const t = planEditIndex !== null ? state.planning[planEditIndex] : null;
   setText('plan-modal-title', t ? 'Taak bewerken' : 'Taak toevoegen');
-  document.getElementById('pf-week-input').value = t ? (t.weekEnd ? t.week+'-'+t.weekEnd : t.week) : '';
+  const curW = getCurrentWeek();
+  document.getElementById('pf-week-van').value = t ? t.week : String(curW);
+  document.getElementById('pf-week-tot').value = t ? (t.weekEnd || '') : '';
   document.getElementById('pf-cat-input').value = t ? t.cat : 'Overig';
   document.getElementById('pf-taak-input').value = t ? t.taak : '';
   document.getElementById('pf-wie-input').value = t ? t.wie : 'Joost';
@@ -2100,13 +2181,14 @@ function closePlanModal() { document.getElementById('plan-modal-backdrop').class
 function closePlanModalBg(e) { if (e.target === document.getElementById('plan-modal-backdrop')) closePlanModal(); }
 
 function savePlanItem() {
-  const weekRaw = document.getElementById('pf-week-input').value.trim();
+  const weekVan = document.getElementById('pf-week-van').value;
+  const weekTot = document.getElementById('pf-week-tot').value;
   const taak = document.getElementById('pf-taak-input').value.trim();
-  if (!weekRaw || !taak) return;
-  const parts = weekRaw.split('-');
+  if (!taak) { validateFields(['pf-taak-input']); return; }
+  if (!weekVan) return;
   const item = {
-    week: parts[0].trim(),
-    weekEnd: parts[1] ? parts[1].trim() : null,
+    week: weekVan,
+    weekEnd: weekTot || null,
     cat: document.getElementById('pf-cat-input').value,
     taak,
     wie: document.getElementById('pf-wie-input').value,
@@ -2197,7 +2279,7 @@ function saveSparenItem() {
   const maand = document.getElementById('sparen-maand').value.trim();
   const wie = document.getElementById('sparen-wie').value.trim();
   const amount = parseFloat(document.getElementById('sparen-amount').value) || 0;
-  if (!maand || !wie) return;
+  if (!validateFields(['sparen-maand'])) return;
   if (!state.sparen) state.sparen = [];
   const item = {maand, wie, amount};
   if (sparenEditIndex !== null) { state.sparen[sparenEditIndex] = item; }
@@ -2267,7 +2349,7 @@ function closeUitstelModalBg(e) { if (e.target === document.getElementById('uits
 function saveUitstelItem() {
   const name = document.getElementById('uitstel-name').value.trim();
   const amount = parseFloat(document.getElementById('uitstel-amount').value) || 0;
-  if (!name) return;
+  if (!validateFields(['uitstel-name'])) return;
   const item = {name, amount, uitgesteld: false};
   if (!state.uitstellen) state.uitstellen = [];
   if (uitstelEditIndex !== null) { state.uitstellen[uitstelEditIndex] = item; }
@@ -2592,15 +2674,49 @@ function toggleKlusTaak(kdId, taakIdx) {
 
 let kdEditId = null;
 
+function renderKdPlanTaken() {
+  const planList = document.getElementById('kd-planning-tasks');
+  if (!planList) return;
+  const query = (document.getElementById('kd-plan-search')?.value || '').toLowerCase().trim();
+  const curWeek = getCurrentWeek();
+  let taken = [...(state.planning||[])].filter(t => t.status !== 'uitgesteld');
+  // Sort: open first by week proximity, klaar at bottom
+  taken.sort((a,b) => {
+    const aKlaar = a.status === 'klaar', bKlaar = b.status === 'klaar';
+    if (aKlaar !== bKlaar) return aKlaar ? 1 : -1;
+    return Math.abs(parseInt(a.week) - curWeek) - Math.abs(parseInt(b.week) - curWeek);
+  });
+  if (query) taken = taken.filter(t =>
+    t.taak.toLowerCase().includes(query) ||
+    (t.wie||'').toLowerCase().includes(query) ||
+    (t.cat||'').toLowerCase().includes(query)
+  );
+  planList.innerHTML = taken.map(t => {
+    const checked = kdSelectedPlanningTaken.includes(t.taak);
+    const isKlaar = t.status === 'klaar';
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:5px 0;border-bottom:0.5px solid var(--border);${isKlaar?'opacity:0.45;':''}">
+      <input type="checkbox" value="${esc(t.taak)}" ${checked?'checked':''} onchange="toggleKdPlanTaak(this)" style="width:16px;height:16px;cursor:pointer;accent-color:#111;flex-shrink:0;">
+      <span style="flex:1;">${esc(t.taak)} <span style="color:var(--text3);font-size:11px;">· w${t.week}${t.weekEnd?'–'+t.weekEnd:''} · ${esc(t.wie||'')}</span></span>
+    </label>`;
+  }).join('') || '<div style="color:var(--text3);font-size:12px;padding:8px 0;">Geen taken gevonden</div>';
+}
+
 function openKlusdagModal(editId) {
   kdEditId = editId || null;
   const kd = kdEditId ? (state.klusdagen||[]).find(k => k.id === kdEditId) : null;
 
   setText('klusdag-modal-title', kd ? 'Klusdag bewerken' : 'Klusdag toevoegen');
-  document.getElementById('kd-datum').value = kd ? kd.datum : (() => {
-    const {mon} = getKlusWeekDates(klusWeekOffset);
-    return mon.toISOString().split('T')[0];
-  })();
+  // Set datum - use today if no existing datum
+  const today = new Date();
+  const todayStr = today.getFullYear() + '-' +
+    String(today.getMonth()+1).padStart(2,'0') + '-' +
+    String(today.getDate()).padStart(2,'0');
+  document.getElementById('kd-datum').value = kd ? kd.datum : todayStr;
+  // Reset validation styles
+  document.getElementById('kd-datum').style.borderColor = '';
+  document.getElementById('kd-datum').style.background = '';
+  document.getElementById('kd-wie').style.borderColor = '';
+  document.getElementById('kd-wie').style.background = '';
   document.getElementById('kd-wie').value = kd ? kd.wie : '';
   document.getElementById('kd-note').value = kd ? (kd.note||'') : '';
   document.getElementById('kd-btn-delete').style.display = kd ? 'block' : 'none';
@@ -2611,15 +2727,9 @@ function openKlusdagModal(editId) {
   renderKdLosseTaken();
 
   // Render planning tasks checklist
-  const planList = document.getElementById('kd-planning-tasks');
-  const openTaken = (state.planning||[]).filter(t => t.status !== 'uitgesteld');
-  planList.innerHTML = openTaken.map(t => {
-    const checked = kdSelectedPlanningTaken.includes(t.taak);
-    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:4px 0;">
-      <input type="checkbox" value="${esc(t.taak)}" ${checked ? 'checked' : ''} onchange="toggleKdPlanTaak(this)" style="width:16px;height:16px;cursor:pointer;">
-      <span>${esc(t.taak)} <span style="color:var(--text3);font-size:11px;">w${t.week}${t.weekEnd?'-'+t.weekEnd:''}</span></span>
-    </label>`;
-  }).join('') || '<div style="color:var(--text3);font-size:12px;">Geen taken in planning</div>';
+  const searchEl = document.getElementById('kd-plan-search');
+  if (searchEl) searchEl.value = '';
+  renderKdPlanTaken();
 
   document.getElementById('klusdag-modal').classList.add('open');
 }
@@ -2657,7 +2767,22 @@ function saveKlusdag() {
   const datum = document.getElementById('kd-datum').value;
   const wie = document.getElementById('kd-wie').value.trim();
   const note = document.getElementById('kd-note').value.trim();
-  if (!datum || !wie) return;
+  // Validate required fields with visual feedback
+  let valid = true;
+  const datumEl = document.getElementById('kd-datum');
+  const wieEl = document.getElementById('kd-wie');
+  if (!datum) {
+    datumEl.style.borderColor = 'var(--red)';
+    datumEl.style.background = 'var(--red-dim)';
+    valid = false;
+  }
+  if (!wie) {
+    wieEl.style.borderColor = 'var(--red)';
+    wieEl.style.background = 'var(--red-dim)';
+    wieEl.focus();
+    valid = false;
+  }
+  if (!valid) return;
 
   if (!state.klusdagen) state.klusdagen = [];
 
@@ -2686,6 +2811,41 @@ function deleteKlusdag() {
   state.klusdagen = (state.klusdagen||[]).filter(k => k.id !== kdEditId);
   save(); renderKlusdagen(); renderOverzicht(); closeKlusdagModal();
 }
+
+
+// ── COLLAPSIBLE ───────────────────────────────────────────────────────────────
+const collapseState = {};
+
+function toggleCollapse(id) {
+  collapseState[id] = !collapseState[id];
+  applyCollapse(id);
+}
+
+function applyCollapse(id) {
+  const wrapper = document.getElementById('collapse-' + id);
+  const arrow = document.getElementById('sh-arrow-' + id);
+  if (!wrapper) return;
+  const collapsed = collapseState[id];
+  if (collapsed) {
+    wrapper.style.maxHeight = '0';
+    wrapper.classList.add('collapsed');
+  } else {
+    wrapper.style.maxHeight = 'none';
+    wrapper.classList.remove('collapsed');
+  }
+  if (arrow) arrow.classList.toggle('collapsed', collapsed);
+}
+
+function updateCollapseCounts() {
+  ['gemaakte-kosten-ddo','gemaakte-kosten-overig','nog-te-maken-ddo','nog-te-maken-overig'].forEach(id => {
+    const list = document.getElementById('list-' + id);
+    const countEl = document.getElementById('sh-count-' + id);
+    if (list && countEl) {
+      countEl.textContent = list.querySelectorAll('.item-row').length;
+    }
+  });
+}
+// ── END COLLAPSIBLE ───────────────────────────────────────────────────────────
 
 async function load() {
   loadSettings();
@@ -2892,6 +3052,7 @@ function render() {
   if (sNetto) { sNetto.textContent = fmt(netto); sNetto.className = 'sr-val ' + (netto >= 0 ? 'pos' : 'neg'); }
 
   setText('header-sub', new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'}));
+  updateCollapseCounts();
   renderUitstellenList();
   renderSparenList();
 }
@@ -2961,8 +3122,15 @@ function openModal(section, editIdx) {
   const catGrp = document.getElementById('form-cat-group');
   if (catOpts) {
     catGrp.style.display = 'block';
-    document.getElementById('form-cat').innerHTML = catOpts.map(o => `<option value="${o.v}">${o.l}</option>`).join('');
+    const customCats = (state.customCats && state.customCats[section]) || [];
+    const allOpts = [...catOpts.map(o => ({v:o.v, l:o.l})), ...customCats.map(cc => ({v:cc, l:cc}))];
+    document.getElementById('form-cat').innerHTML =
+      allOpts.map(o => `<option value="${o.v}">${o.l}</option>`).join('') +
+      '<option value="__new__">+ Nieuwe categorie...</option>';
+    const newWrap = document.getElementById('form-cat-new-wrap');
+    if (newWrap) newWrap.style.display = 'none';
     if (item && item.cat) document.getElementById('form-cat').value = item.cat;
+    else document.getElementById('form-cat').value = catOpts[0].v;
   } else { catGrp.style.display = 'none'; }
 
   const showStatus = ['nog-te-maken','gemaakte-kosten','te-ontvangen'].includes(section);
@@ -3028,15 +3196,34 @@ function openEdit(section, idx) { openModal(section, idx); }
 function closeModal() { document.getElementById('modal-backdrop').classList.remove('open'); }
 function closeModalBg(e) { if (e.target === document.getElementById('modal-backdrop')) closeModal(); }
 
+function handleCatChange(sel) {
+  const wrap = document.getElementById('form-cat-new-wrap');
+  if (!wrap) return;
+  if (sel.value === '__new__') {
+    wrap.style.display = 'block';
+    setTimeout(() => document.getElementById('form-cat-new').focus(), 50);
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
 function saveItem() {
   const name = document.getElementById('form-name').value.trim();
   const amount = parseFloat(document.getElementById('form-amount').value) || 0;
   const note = document.getElementById('form-note').value.trim();
   const catEl = document.getElementById('form-cat');
-  const cat = catEl && document.getElementById('form-cat-group').style.display !== 'none' ? catEl.value : undefined;
+  let cat = catEl && document.getElementById('form-cat-group').style.display !== 'none' ? catEl.value : undefined;
+  if (cat === '__new__') {
+    const newCatEl = document.getElementById('form-cat-new');
+    cat = newCatEl ? newCatEl.value.trim() : '';
+    if (!cat) { newCatEl.style.borderColor='var(--red)'; newCatEl.focus(); return; }
+    if (!state.customCats) state.customCats = {};
+    if (!state.customCats[curSection]) state.customCats[curSection] = [];
+    if (!state.customCats[curSection].includes(cat)) state.customCats[curSection].push(cat);
+  }
   const statusEl = document.getElementById('form-status');
   const status = document.getElementById('form-status-group').style.display !== 'none' ? statusEl.value : undefined;
-  if (!name) { document.getElementById('form-name').focus(); return; }
+  if (!validateFields(['form-name'])) return;
 
   const item = {name, amount, note};
   if (cat !== undefined) item.cat = cat;
@@ -3082,7 +3269,7 @@ function saveItem() {
   // ── NOG TE MAKEN / GEMAAKTE KOSTEN STATUS LOGIC ──
   if (['nog-te-maken','gemaakte-kosten'].includes(curSection) && status) {
     const prev = editIndex !== null ? (state.items[curSection]||[])[editIndex] : null;
-    const autoKey = prev ? (prev.autoKey || ('ak_' + Date.now())) : ('ak_' + Date.now());
+    const autoKey = (prev && prev.autoKey) ? prev.autoKey : ('ak_' + Date.now());
     item.autoKey = autoKey;
 
     // Handle gedeeltelijk: save betaald amount
@@ -3097,6 +3284,8 @@ function saveItem() {
     const isGedeel = status === 'gedeeltelijk';
 
     if (moveToGemaakt && curSection === 'nog-te-maken') {
+      // Remove from uitstellen if it was a wachten item
+      if (prev && prev.status === 'wacht') handleWachtenStatus(prev, false);
       // Move to gemaakte kosten
       cleanupAutoKey(autoKey, 'nog-te-maken');
       if (editIndex !== null) state.items['nog-te-maken'].splice(editIndex, 1);
@@ -3156,16 +3345,25 @@ function cleanupAutoKey(autoKey, section) {
 
 function handleWachtenStatus(item, addToUitst) {
   if (!state.uitstellen) state.uitstellen = [];
-  const existing = state.uitstellen.findIndex(u => u.autoKey === item.autoKey);
+  // Match by autoKey OR by name as fallback (for items without autoKey)
+  const findIdx = () => state.uitstellen.findIndex(u =>
+    (item.autoKey && u.autoKey === item.autoKey) ||
+    (!item.autoKey && u.name === item.name && u.autoKey && u.autoKey.startsWith('ak_'))
+  );
   if (addToUitst) {
+    // Ensure item has an autoKey for future matching
+    if (!item.autoKey) item.autoKey = 'ak_' + Date.now();
+    const existing = findIdx();
     if (existing >= 0) {
       state.uitstellen[existing].amount = item.amount;
       state.uitstellen[existing].name = item.name;
       state.uitstellen[existing].uitgesteld = true;
+      state.uitstellen[existing].autoKey = item.autoKey;
     } else {
       state.uitstellen.push({name: item.name, amount: item.amount, note: item.note||'', uitgesteld: true, autoKey: item.autoKey});
     }
   } else {
+    const existing = findIdx();
     if (existing >= 0) state.uitstellen.splice(existing, 1);
   }
 }
@@ -3515,6 +3713,7 @@ load();
     </div>
     <div class="form-group">
       <label class="form-label">Taken uit planning (meerdere mogelijk)</label>
+      <input class="form-input" type="text" id="kd-plan-search" placeholder="🔍  Zoeken in taken..." oninput="renderKdPlanTaken()" style="margin-bottom:6px;font-size:13px;padding:8px 12px;">
       <div id="kd-planning-tasks" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;"></div>
     </div>
     <div class="form-group">
@@ -3569,8 +3768,13 @@ load();
       <button class="modal-close" onclick="closePlanModal()">&#215;</button>
     </div>
     <div class="form-group">
-      <label class="form-label">Week(s) — bijv. 17 of 18-20</label>
-      <input class="form-input" type="text" id="pf-week-input" placeholder="bijv. 17 of 18-20">
+      <label class="form-label">Week</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <select class="form-select" id="pf-week-van" style="flex:1;"><option value="1">Week 1</option><option value="2">Week 2</option><option value="3">Week 3</option><option value="4">Week 4</option><option value="5">Week 5</option><option value="6">Week 6</option><option value="7">Week 7</option><option value="8">Week 8</option><option value="9">Week 9</option><option value="10">Week 10</option><option value="11">Week 11</option><option value="12">Week 12</option><option value="13">Week 13</option><option value="14">Week 14</option><option value="15">Week 15</option><option value="16">Week 16</option><option value="17">Week 17</option><option value="18">Week 18</option><option value="19">Week 19</option><option value="20">Week 20</option><option value="21">Week 21</option><option value="22">Week 22</option><option value="23">Week 23</option><option value="24">Week 24</option><option value="25">Week 25</option><option value="26">Week 26</option><option value="27">Week 27</option><option value="28">Week 28</option><option value="29">Week 29</option><option value="30">Week 30</option><option value="31">Week 31</option><option value="32">Week 32</option><option value="33">Week 33</option><option value="34">Week 34</option><option value="35">Week 35</option><option value="36">Week 36</option><option value="37">Week 37</option><option value="38">Week 38</option><option value="39">Week 39</option><option value="40">Week 40</option><option value="41">Week 41</option><option value="42">Week 42</option><option value="43">Week 43</option><option value="44">Week 44</option><option value="45">Week 45</option><option value="46">Week 46</option><option value="47">Week 47</option><option value="48">Week 48</option><option value="49">Week 49</option><option value="50">Week 50</option><option value="51">Week 51</option><option value="52">Week 52</option></select>
+        <span style="font-size:13px;color:var(--text3);flex-shrink:0;">t/m</span>
+        <select class="form-select" id="pf-week-tot" style="flex:1;">
+          <option value="">—</option><option value="1">Week 1</option><option value="2">Week 2</option><option value="3">Week 3</option><option value="4">Week 4</option><option value="5">Week 5</option><option value="6">Week 6</option><option value="7">Week 7</option><option value="8">Week 8</option><option value="9">Week 9</option><option value="10">Week 10</option><option value="11">Week 11</option><option value="12">Week 12</option><option value="13">Week 13</option><option value="14">Week 14</option><option value="15">Week 15</option><option value="16">Week 16</option><option value="17">Week 17</option><option value="18">Week 18</option><option value="19">Week 19</option><option value="20">Week 20</option><option value="21">Week 21</option><option value="22">Week 22</option><option value="23">Week 23</option><option value="24">Week 24</option><option value="25">Week 25</option><option value="26">Week 26</option><option value="27">Week 27</option><option value="28">Week 28</option><option value="29">Week 29</option><option value="30">Week 30</option><option value="31">Week 31</option><option value="32">Week 32</option><option value="33">Week 33</option><option value="34">Week 34</option><option value="35">Week 35</option><option value="36">Week 36</option><option value="37">Week 37</option><option value="38">Week 38</option><option value="39">Week 39</option><option value="40">Week 40</option><option value="41">Week 41</option><option value="42">Week 42</option><option value="43">Week 43</option><option value="44">Week 44</option><option value="45">Week 45</option><option value="46">Week 46</option><option value="47">Week 47</option><option value="48">Week 48</option><option value="49">Week 49</option><option value="50">Week 50</option><option value="51">Week 51</option><option value="52">Week 52</option></select>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Categorie</label>
