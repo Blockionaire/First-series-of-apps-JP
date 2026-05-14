@@ -759,6 +759,124 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   [data-theme="dark"] .toggle-slider { background-color:#48484a; }
   [data-theme="dark"] .toggle-switch input:checked + .toggle-slider { background-color:#e5e5ea; }
   [data-theme="dark"] .toggle-switch input:checked + .toggle-slider::before { background-color:#1c1c1e; }
+
+  /* TIJDLIJN */
+  .ov-timeline-wrap {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 16px 14px;
+    margin-top: 10px;
+    cursor: pointer;
+  }
+  .ov-timeline-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 10px;
+  }
+  .ov-timeline-track {
+    position: relative;
+    height: 6px;
+    background: var(--surface3);
+    border-radius: 99px;
+    overflow: visible;
+  }
+  .ov-timeline-done {
+    position: absolute;
+    left: 0; top: 0; height: 6px;
+    background: var(--green);
+    border-radius: 99px;
+    transition: width 0.6s cubic-bezier(.4,0,.2,1);
+  }
+  .ov-timeline-now {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    background: var(--text);
+    border: 2.5px solid var(--bg);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--text);
+    transition: left 0.6s cubic-bezier(.4,0,.2,1);
+    z-index: 2;
+  }
+  .ov-timeline-weeks {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+  .ov-timeline-week-marker {
+    font-size: 10px;
+    color: var(--text3);
+    text-align: center;
+  }
+  .ov-timeline-week-marker.current {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .ov-timeline-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 0.5px solid var(--border);
+  }
+  .ov-timeline-stat { text-align: center; }
+  .ov-timeline-stat .ts-val { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 600; color: var(--text); }
+  .ov-timeline-stat .ts-label { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* PULL TO REFRESH */
+  .ptr-indicator {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: var(--surface);
+    border-bottom: 0.5px solid var(--border);
+    text-align: center;
+    font-size: 12px;
+    color: var(--text3);
+    padding: 12px;
+    z-index: 150;
+    transition: top 0.2s;
+    top: -50px;
+  }
+  .ptr-indicator.visible { top: 0; }
+
+  /* BUDGET WARNING */
+  .budget-warning-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .budget-warning-backdrop.open { display: flex; }
+  .budget-warning-box {
+    background: var(--surface);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 22px 20px;
+    width: 100%;
+    max-width: 340px;
+  }
+  .bw-icon { font-size: 28px; margin-bottom: 10px; }
+  .bw-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .bw-msg { font-size: 13px; color: var(--text2); line-height: 1.5; margin-bottom: 16px; }
+  .bw-suppress { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; cursor: pointer; }
+  .bw-suppress input { width: 16px; height: 16px; cursor: pointer; accent-color: #111; }
+  .bw-suppress span { font-size: 13px; color: var(--text2); }
+  .bw-actions { display: flex; gap: 8px; }
+  .bw-btn-ok { flex: 1; padding: 11px; border-radius: var(--radius-sm); border: none; background: var(--red); color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .bw-btn-cancel { flex: 1; padding: 11px; border-radius: var(--radius-sm); border: 0.5px solid var(--border2); background: var(--surface2); font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text2); cursor: pointer; }
 </style>
 </head>
 <body>
@@ -780,6 +898,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   <button class="page-nav-btn" id="pnav-keuzes" onclick="goToPage('keuzes')" style="display:none">Keuzes</button>
 </nav>
 
+<div class="ptr-indicator" id="ptr-indicator">⟳ Loslaten om te verversen...</div>
 <div id="page-overzicht">
   <!-- KERN -->
   <div class="ov-section">
@@ -788,9 +907,41 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
       <div class="ov-hero-recap" id="ov-hero-recap">–</div>
       <div class="ov-hero-sub" id="ov-hero-sub">–</div>
     </div>
+    <div class="ov-timeline-wrap" onclick="goToPage('planning')">
+      <div class="ov-timeline-label">
+        <span id="tl-start">Start</span>
+        <span id="tl-now-label">Nu</span>
+        <span id="tl-end">Oplevering</span>
+      </div>
+      <div class="ov-timeline-track" id="tl-track">
+        <div class="ov-timeline-done" id="tl-done"></div>
+        <div class="ov-timeline-now" id="tl-now"></div>
+      </div>
+      <div class="ov-timeline-weeks" id="tl-weeks"></div>
+      <div class="ov-timeline-stats">
+        <div class="ov-timeline-stat">
+          <div class="ts-val" id="tl-taken-klaar">–</div>
+          <div class="ts-label">taken klaar</div>
+        </div>
+        <div class="ov-timeline-stat">
+          <div class="ts-val" id="tl-pct-klaar">–</div>
+          <div class="ts-label">voortgang taken</div>
+        </div>
+        <div class="ov-timeline-stat">
+          <div class="ts-val" id="tl-weken-geweest">–</div>
+          <div class="ts-label">weken voorbij</div>
+        </div>
+        <div class="ov-timeline-stat">
+          <div class="ts-val" id="tl-pct-weken">–</div>
+          <div class="ts-label">voortgang weken</div>
+        </div>
+      </div>
+    </div>
+
     <div class="ov-progress-wrap" style="margin-top:10px;cursor:pointer;" onclick="goToPage('finance','streep')">
       <div class="ov-progress-row"><span>Kosten vs. budget</span><span id="ov-pct">–</span></div>
       <div class="progress-track"><div class="progress-fill" id="ov-pfill" style="width:0%"></div></div>
+      <div id="ov-top-kosten" style="margin-top:10px;"></div>
     </div>
   </div>
 
@@ -827,6 +978,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
       <button class="btn-add" onclick="goToPage('klusdagen')">Alle klusdagen</button>
     </div>
     <div id="ov-klusdagen-week"></div>
+    <div id="ov-meubel-levering"></div>
     <div id="ov-planning-week"></div>
   </div>
 
@@ -1090,8 +1242,15 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
       <select class="form-select" id="form-status"></select>
     </div>
     <div class="form-group" id="form-partial-group" style="display:none">
-      <label class="form-label">Ontvangen bedrag (€)</label>
+      <label class="form-label" id="form-partial-label">Ontvangen bedrag (€)</label>
       <input class="form-input" type="number" id="form-partial-amount" placeholder="0" inputmode="decimal">
+    </div>
+    <div class="form-group" id="form-vermogen-correctie-group" style="display:none">
+      <label class="form-label">Betaald vanuit</label>
+      <select class="form-select" id="form-vermogen-correctie">
+        <option value="">— Niet corrigeren —</option>
+      </select>
+      <div style="font-size:11px;color:var(--text3);margin-top:5px;" id="form-vermogen-correctie-info"></div>
     </div>
     <div class="form-group" id="form-merk-group" style="display:none">
       <label class="form-label">Merk / winkel</label>
@@ -1113,6 +1272,18 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
       <label class="form-label">Nog te betalen (€)</label>
       <input class="form-input" type="number" id="form-nogopen" placeholder="0" inputmode="decimal">
     </div>
+    <div class="form-group" id="form-levering-group" style="display:none">
+      <label class="form-label">Levering / ophalen</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button type="button" id="form-levering-geen" onclick="setLeverType('geen')" style="flex:1;padding:8px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">Geen</button>
+        <button type="button" id="form-levering-levering" onclick="setLeverType('levering')" style="flex:1;padding:8px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">Levering</button>
+        <button type="button" id="form-levering-ophalen" onclick="setLeverType('ophalen')" style="flex:1;padding:8px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">Ophalen</button>
+      </div>
+      <div id="form-leverdatum-wrap" style="display:none;">
+        <label class="form-label">Datum</label>
+        <input class="form-input" type="date" id="form-leverdatum">
+      </div>
+    </div>
     <div class="form-group">
       <label class="form-label">Notitie (optioneel)</label>
       <input class="form-input" type="text" id="form-note" placeholder="Extra info...">
@@ -1128,7 +1299,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 
 // ── INSTELLINGEN ─────────────────────────────────────────────────────────────
 
-let appSettings = { opleverweek: 29, theme: 'light', appnaam: 'Verbouwing huisje OVS' };
+let appSettings = { startweek: 17, opleverweek: 29, theme: 'light', appnaam: 'Verbouwing huisje OVS' };
 
 function loadSettings() {
   try {
@@ -1140,7 +1311,13 @@ function loadSettings() {
   applyPageToggles();
 }
 
+function toggleBudgetWarning(el) {
+  appSettings.budgetWarningSuppressed = !el.checked;
+  localStorage.setItem('ovs-settings', JSON.stringify(appSettings));
+}
+
 function saveSettings() {
+  appSettings.startweek = parseInt(document.getElementById('settings-startweek').value) || 1;
   appSettings.opleverweek = parseInt(document.getElementById('settings-opleverweek').value) || 29;
   const naamInput = document.getElementById('settings-appnaam');
   if (naamInput) appSettings.appnaam = naamInput.value.trim() || 'Verbouwing huisje OVS';
@@ -1174,11 +1351,15 @@ function updateThemeBtns() {
 }
 
 function openSettings() {
+  document.getElementById('settings-startweek').value = appSettings.startweek || 17;
   document.getElementById('settings-opleverweek').value = appSettings.opleverweek;
   document.getElementById('settings-appnaam').value = appSettings.appnaam || 'Verbouwing huisje OVS';
   updateThemeBtns();
   const syncEl = document.getElementById('settings-sync-status');
   if (syncEl) syncEl.textContent = supabaseConnected ? '🟢 Verbonden' : '🔴 Niet verbonden';
+  // Budget warning toggle: ON = waarschuwing actief, OFF = onderdrukt
+  const bwToggle = document.getElementById('settings-budget-warning');
+  if (bwToggle) bwToggle.checked = !appSettings.budgetWarningSuppressed;
   document.getElementById('settings-backdrop').classList.add('open');
   setTimeout(() => applyPageToggles(), 50);
 }
@@ -1246,7 +1427,6 @@ let contactEditId = null;
 let keuzeCatFilter = '';
 
 let contactSortAsc = true;
-let contactRolFilter = '';
 
 function toggleContactSort() {
   contactSortAsc = !contactSortAsc;
@@ -1255,10 +1435,6 @@ function toggleContactSort() {
   renderContacten();
 }
 
-function setContactRolFilter(rol) {
-  contactRolFilter = contactRolFilter === rol ? '' : rol;
-  renderContacten();
-}
 
 function renderContacten() {
   let contacten = [...(state.contacten || [])];
@@ -1266,14 +1442,7 @@ function renderContacten() {
   if (!list) return;
   setText('upd-contacten', updFmt(state.updatedContacten));
 
-  // Update role filter chips dynamically
-  const rolFiltersEl = document.getElementById('contact-role-filters');
-  if (rolFiltersEl) {
-    const rollen = [...new Set(contacten.map(c => c.rol).filter(Boolean))].sort();
-    rolFiltersEl.innerHTML = rollen.map(rol =>
-      `<button onclick="setContactRolFilter('${esc(rol)}')" style="padding:5px 12px;border-radius:99px;font-size:12px;border:0.5px solid ${contactRolFilter === rol ? '#111' : 'var(--border2)'};background:${contactRolFilter === rol ? '#111' : 'var(--surface)'};color:${contactRolFilter === rol ? '#f5f0e8' : 'var(--text2)'};cursor:pointer;white-space:nowrap;">${esc(rol)}</button>`
-    ).join('');
-  }
+
 
   // Apply search
   const query = (document.getElementById('contact-search')?.value||'').toLowerCase().trim();
@@ -1283,8 +1452,6 @@ function renderContacten() {
     (ct.note||'').toLowerCase().includes(query)
   );
 
-  // Apply role filter
-  if (contactRolFilter) contacten = contacten.filter(ct => ct.rol === contactRolFilter);
 
   // Apply sort
   contacten.sort((a, b) => contactSortAsc
@@ -2380,6 +2547,34 @@ function deleteSparenItem() {
 
 // ── UITSTELLEN ─────────────────────────────────────────────────────────────
 
+function renderMeubelLeveringWeek() {
+  const el = document.getElementById('meubel-levering-week');
+  if (!el) return;
+  const {mon, sun} = getKlusWeekDates(0);
+  const meubels = state.items['meubels'] || [];
+  const thisWeek = meubels.filter(m => {
+    if (!m.leverType || !m.leverdatum) return false;
+    const parts = m.leverdatum.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    return d >= mon && d <= sun;
+  });
+  if (!thisWeek.length) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `<div class="sub-header" style="margin-bottom:8px;">📦 Levering / ophalen deze week</div>` +
+    thisWeek.map(m => {
+      const typeLabel = m.leverType === 'levering' ? '🚚 Levering' : '🏪 Ophalen';
+      const d = new Date(m.leverdatum.split('-')[0], m.leverdatum.split('-')[1]-1, m.leverdatum.split('-')[2]);
+      const datumStr = d.toLocaleDateString('nl-NL', {weekday:'short', day:'numeric', month:'short'});
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:0.5px solid var(--border);">
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--text);">${esc(m.name)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">${typeLabel} · ${datumStr}</div>
+        </div>
+        <span style="font-size:11px;color:var(--text3);">${esc(m.merk||'')}</span>
+      </div>`;
+    }).join('');
+}
+
 function renderUitstellenList() {
   const list = document.getElementById('uitstellen-list');
   if (!list) return;
@@ -2444,6 +2639,55 @@ function saveUitstelItem() {
 
 // ── OVERZICHT ────────────────────────────────────────────────────────────────
 
+function renderTimeline() {
+  const opleverWeek = appSettings.opleverweek || 29;
+  const curWeek = getCurrentWeek();
+
+  // Use configured start week (fallback to earliest planning week)
+  const allWeeks = (state.planning||[]).map(t => parseInt(t.week)).filter(Boolean);
+  const startWeek = appSettings.startweek || (allWeeks.length ? Math.min(...allWeeks) : 1);
+  const totalWeeks = Math.max(opleverWeek - startWeek, 1);
+  const weeksIn = Math.max(0, curWeek - startWeek);
+  const weeksLeft = Math.max(0, opleverWeek - curWeek);
+  const pct = Math.min(100, Math.round(weeksIn / totalWeeks * 100));
+
+  // Tasks
+  const allTaken = state.planning || [];
+  const takenKlaar = allTaken.filter(t => t.status === 'klaar').length;
+  const takenTotaal = allTaken.length;
+  const takenPct = takenTotaal > 0 ? Math.round(takenKlaar / takenTotaal * 100) : 0;
+
+  // Update labels
+  setText('tl-start', 'Week ' + startWeek);
+  setText('tl-end', 'Week ' + opleverWeek);
+  setText('tl-now-label', 'Week ' + curWeek);
+  const weeksPct = Math.round(Math.min(100, weeksIn / totalWeeks * 100));
+  setText('tl-taken-klaar', takenKlaar + '/' + takenTotaal);
+  setText('tl-pct-klaar', takenPct + '%');
+  setText('tl-weken-geweest', weeksIn + '/' + totalWeeks);
+  setText('tl-pct-weken', weeksPct + '%');
+
+  // Progress bar
+  const done = document.getElementById('tl-done');
+  const now = document.getElementById('tl-now');
+  if (done) done.style.width = pct + '%';
+  if (now) now.style.left = pct + '%';
+
+  // Week markers — show every ~5 weeks
+  const weeksEl = document.getElementById('tl-weeks');
+  if (weeksEl) {
+    const step = totalWeeks <= 15 ? 2 : totalWeeks <= 25 ? 4 : 5;
+    let markers = [];
+    for (let w = startWeek; w <= opleverWeek; w += step) {
+      const pos = Math.round((w - startWeek) / totalWeeks * 100);
+      markers.push(`<div class="ov-timeline-week-marker ${w === curWeek ? 'current' : ''}" style="position:absolute;left:${pos}%;transform:translateX(-50%);">w${w}</div>`);
+    }
+    weeksEl.style.position = 'relative';
+    weeksEl.style.height = '16px';
+    weeksEl.innerHTML = markers.join('');
+  }
+}
+
 function renderOverzicht() {
   const items = s => state.items[s] || [];
 
@@ -2470,6 +2714,40 @@ function renderOverzicht() {
   const fill = document.getElementById('ov-pfill');
   if (fill) { fill.style.width = Math.min(100,pct) + '%'; fill.className = 'progress-fill' + (pct > 100 ? ' over' : ''); }
 
+  // Top kosten breakdown (only show when over budget)
+  const topKostenEl = document.getElementById('ov-top-kosten');
+  if (topKostenEl) {
+    if (pct > 100) {
+      // Collect all cost categories with totals
+      const kostenBreak = [
+        { label: 'Gemaakte kosten', amount: gemaaktTotal, tab: 'gemaakte-kosten' },
+        { label: 'Nog te betalen', amount: teMakenEff, tab: 'nog-te-maken' },
+        { label: 'Meubels', amount: meubelsTotal, tab: 'meubels' },
+        { label: 'Bruiloft', amount: bruiloftTotal, tab: 'bruiloft' }
+      ].filter(k => k.amount > 0).sort((a,b) => b.amount - a.amount).slice(0,3);
+      topKostenEl.innerHTML =
+        '<div style="border-top:0.5px solid var(--border);margin-top:8px;padding-top:8px;">' +
+        '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);margin-bottom:6px;">Grootste kostenposten</div>' +
+        kostenBreak.map(k => {
+          const kPct = totaalBudget > 0 ? Math.round(k.amount / totaalBudget * 100) : 0;
+          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;" onclick="event.stopPropagation();goToPage('finance','${k.tab}')">
+            <div style="flex:1;">
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:3px;">
+                <span>${esc(k.label)}</span>
+                <span>${fmt(k.amount)} <span style="color:var(--text3);">(${kPct}%)</span></span>
+              </div>
+              <div style="height:4px;background:var(--surface3);border-radius:99px;overflow:hidden;">
+                <div style="height:4px;background:${kPct > 40 ? 'var(--red)' : kPct > 25 ? 'var(--amber)' : 'var(--blue)'};width:${Math.min(100,kPct)}%;border-radius:99px;"></div>
+              </div>
+            </div>
+          </div>`;
+        }).join('') +
+        '</div>';
+    } else {
+      topKostenEl.innerHTML = '';
+    }
+  }
+
   // Financieel cards
   setText('ov-te-betalen', fmt(nogTeBetalen));
   setText('ov-liquide', fmt(vermogenTotal));
@@ -2480,10 +2758,12 @@ function renderOverzicht() {
   const weeksLeft = Math.max(0, (appSettings.opleverweek||29) - curWeek);
 
   setText('ov-hero-week', 'Week ' + curWeek + ' · ' + weekLabel(0).range);
+  renderTimeline();
 
   // Build recap sentence
   const kdThisWeek = (state.klusdagen||[]).filter(kd => {
-    const d = new Date(kd.datum);
+    const parts = kd.datum.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
     const {mon, sun: sunDay} = getKlusWeekDates(0);
     return d >= mon && d <= sunDay;
   });
@@ -2552,6 +2832,33 @@ function renderOverzicht() {
     kdEl.innerHTML = '<div style="font-size:13px;color:var(--text3);margin-bottom:10px;">Geen klusdagen gepland deze week</div>';
   }
 
+  // Meubel levering/ophalen deze week
+  const meubelLevEl = document.getElementById('ov-meubel-levering');
+  if (meubelLevEl) {
+    const meubels = state.items['meubels'] || [];
+    const leverWeek = meubels.filter(m => {
+      if (!m.leverType || !m.leverdatum) return false;
+      const parts = m.leverdatum.split('-');
+      const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+      return d >= mon && d <= sun;
+    }).sort((a,b) => new Date(a.leverdatum) - new Date(b.leverdatum));
+    if (leverWeek.length) {
+      meubelLevEl.innerHTML = '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin:10px 0 8px;">Levering & ophalen</div>' +
+        leverWeek.map(m => {
+          const typeLabel = m.leverType === 'levering' ? '🚚 Levering' : '🏪 Ophalen';
+          const parts = m.leverdatum.split('-');
+          const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+          const datumStr = d.toLocaleDateString('nl-NL', {weekday:'long', day:'numeric', month:'short'});
+          return `<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);padding:6px 0;border-top:0.5px solid var(--border);" onclick="goToPage('finance','meubels')">
+            <span style="flex:1;"><strong>${esc(m.name)}</strong></span>
+            <span style="font-size:11px;color:var(--text3);">${typeLabel} · ${datumStr}</span>
+          </div>`;
+        }).join('');
+    } else {
+      meubelLevEl.innerHTML = '';
+    }
+  }
+
   // Planning taken deze week
   const planWeek = (state.planning||[]).filter(t => {
     const ws = parseInt(t.week), we = t.weekEnd ? parseInt(t.weekEnd) : ws;
@@ -2589,6 +2896,7 @@ function renderOverzicht() {
 
   // 2. Achterstallige planningstaken: gepland voor een week die al voorbij is
   const thisWeek = getCurrentWeek();
+  const nextWeek = thisWeek + 1;
   (state.planning||[])
     .filter(t => {
       const eindWeek = t.weekEnd ? parseInt(t.weekEnd) : parseInt(t.week);
@@ -2604,6 +2912,32 @@ function renderOverzicht() {
       });
     });
 
+  // 3. Taken volgende week zonder klusdag
+  const volgendeWeekTaken = (state.planning||[]).filter(t => {
+    const ws = parseInt(t.week);
+    const we = t.weekEnd ? parseInt(t.weekEnd) : ws;
+    return ws <= nextWeek && we >= nextWeek && t.status !== 'klaar' && t.status !== 'uitgesteld';
+  });
+  if (volgendeWeekTaken.length > 0) {
+    // Check which are covered by a klusdag next week
+    const {mon: nMon, sun: nSun} = getKlusWeekDates(1);
+    const nextWeekKlusdagen = (state.klusdagen||[]).filter(kd => {
+      const parts = kd.datum.split('-');
+      const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+      return d >= nMon && d <= nSun;
+    });
+    const kdTaken = nextWeekKlusdagen.flatMap(kd => (kd.taken||[]).map(t => t.planningTaak).filter(Boolean));
+    const uncovered = volgendeWeekTaken.filter(t => !kdTaken.includes(t.taak));
+    if (uncovered.length > 0) {
+      aandacht.push({
+        label: uncovered.length + (uncovered.length === 1 ? ' taak' : ' taken') + ' volgende week zonder klusdag',
+        sub: 'Week ' + nextWeek + ' · ' + uncovered.map(t => t.taak).slice(0,2).join(', ') + (uncovered.length > 2 ? ' +' + (uncovered.length-2) : ''),
+        page: 'klusdagen', tab: null,
+        tag: 'klusdag'
+      });
+    }
+  }
+
   const aEl = document.getElementById('ov-aandacht-list');
   if (!aandacht.length) {
     aEl.innerHTML = '<div style="font-size:13px;color:var(--text3);">Geen aandachtspunten 🎉</div>';
@@ -2611,8 +2945,8 @@ function renderOverzicht() {
   }
 
   // Group: show te-ontvangen first, then overdue tasks
-  const tagLabel = {'te-ontvangen':'Te ontvangen', 'planning':'Achterstallig'};
-  const tagColor = {'te-ontvangen':'var(--blue)', 'planning':'var(--red)'};
+  const tagLabel = {'te-ontvangen':'Te ontvangen', 'planning':'Achterstallig', 'klusdag':'Volgende week'};
+  const tagColor = {'te-ontvangen':'var(--blue)', 'planning':'var(--red)', 'klusdag':'var(--amber)'};
   let lastTag = null;
   const rows = aandacht.map(a => {
     let header = '';
@@ -2665,8 +2999,10 @@ function getKlusWeekDates(offset) {
   const dow = (now.getDay() + 6) % 7;
   const mon = new Date(now);
   mon.setDate(now.getDate() - dow + offset * 7);
+  mon.setHours(0, 0, 0, 0); // start of day
   const sun = new Date(mon);
   sun.setDate(mon.getDate() + 6);
+  sun.setHours(23, 59, 59, 999); // end of day
   return {mon, sun};
 }
 
@@ -2703,7 +3039,9 @@ function renderKlusdagen() {
   const klusdagen = state.klusdagen || [];
   // Filter to current week
   const weekDagen = klusdagen.filter(kd => {
-    const d = new Date(kd.datum);
+    // Parse as local date (YYYY-MM-DD) to avoid timezone issues
+    const parts = kd.datum.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
     return d >= mon && d <= sun;
   }).sort((a,b) => new Date(a.datum) - new Date(b.datum));
 
@@ -2929,6 +3267,135 @@ function updateCollapseCounts() {
   });
 }
 // ── END COLLAPSIBLE ───────────────────────────────────────────────────────────
+
+
+// ── PULL TO REFRESH ───────────────────────────────────────────────────────────
+(function() {
+  let startY = 0;
+  let pulling = false;
+  let triggered = false;
+  const threshold = 80;
+
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY === 0) {
+      startY = e.touches[0].clientY;
+      pulling = true;
+      triggered = false;
+    }
+  }, {passive: true});
+
+  document.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    const dist = e.touches[0].clientY - startY;
+    if (dist > 20 && window.scrollY === 0) {
+      const indicator = document.getElementById('ptr-indicator');
+      if (indicator) {
+        if (dist > threshold) {
+          indicator.classList.add('visible');
+          indicator.textContent = '↓ Loslaten om te verversen...';
+          triggered = true;
+        } else {
+          indicator.classList.add('visible');
+          indicator.textContent = '↓ Trek omlaag om te verversen...';
+          triggered = false;
+        }
+      }
+    }
+  }, {passive: true});
+
+  document.addEventListener('touchend', () => {
+    if (!pulling) return;
+    pulling = false;
+    const indicator = document.getElementById('ptr-indicator');
+    if (triggered) {
+      if (indicator) indicator.textContent = '⟳ Verversen...';
+      // Sync with Supabase
+      supabaseLoad().then(data => {
+        if (data && Object.keys(data).length > 0) {
+          state = mergeIncoming(data);
+          render();
+          renderOverzicht();
+          if (currentPage === 'planning') renderPlanning();
+          if (currentPage === 'klusdagen') renderKlusdagen();
+          updateSyncIndicator('received');
+          setTimeout(() => updateSyncIndicator('connected'), 2000);
+        }
+        if (indicator) {
+          indicator.textContent = '✓ Bijgewerkt';
+          setTimeout(() => indicator.classList.remove('visible'), 1200);
+        }
+      }).catch(() => {
+        if (indicator) {
+          indicator.textContent = '✕ Geen verbinding';
+          setTimeout(() => indicator.classList.remove('visible'), 1500);
+        }
+      });
+    } else {
+      if (indicator) indicator.classList.remove('visible');
+    }
+  }, {passive: true});
+})();
+// ── END PULL TO REFRESH ────────────────────────────────────────────────────────
+
+
+// ── BUDGET WARNING ────────────────────────────────────────────────────────────
+let budgetWarningSaveFn = null;
+
+function checkBudgetAndSave(saveFn, newAmount) {
+  // Skip if warning suppressed
+  if (appSettings.budgetWarningSuppressed) { saveFn(); return; }
+
+  // Calculate current budget state
+  const items = s => state.items[s] || [];
+  const sumArr = arr => arr.reduce((a,b) => a + (parseFloat(b.amount)||0), 0);
+  const gemaaktTotal = sumArr(items('gemaakte-kosten'));
+  const uitstellenAftrek = (state.uitstellen||[]).filter(i=>i.uitgesteld).reduce((a,b)=>a+(parseFloat(b.amount)||0),0);
+  const teMakenEff = sumArr(items('nog-te-maken')) - uitstellenAftrek;
+  const meubelsTotal = (items('meubels')||[]).reduce((a,b)=>a+(parseFloat(b.nogOpen||0)),0);
+  const bruiloftTotal = sumArr(items('bruiloft'));
+  const vermogenTotal = sumArr(items('vermogen'));
+  const teOntvTotal = (items('te-ontvangen')||[]).reduce((a,b)=>{
+    if(b.status==='ontvangen') return a;
+    if(b.status==='gedeeltelijk') return a+(parseFloat(b.amount)||0)-(parseFloat(b.ontvangen)||0);
+    return a+(parseFloat(b.amount)||0);
+  },0);
+  const sparenTotal = getSparenTotal();
+  const totaalBudget = vermogenTotal + teOntvTotal + sparenTotal;
+  const totaalKosten = gemaaktTotal + teMakenEff + meubelsTotal + bruiloftTotal;
+  const currentPct = totaalBudget > 0 ? totaalKosten / totaalBudget * 100 : 0;
+  const newPct = totaalBudget > 0 ? (totaalKosten + newAmount) / totaalBudget * 100 : 0;
+
+  // Show warning whenever budget is or will be over 100%
+  if (newPct > 100) {
+    const over = totaalKosten + newAmount - totaalBudget;
+    const overBudget = totaalKosten - totaalBudget;
+    if (currentPct > 100) {
+      document.getElementById('bw-msg').textContent =
+        'Je zit al ' + fmt(overBudget) + ' boven budget (' + Math.round(currentPct) + '%). Dit item voegt nog ' + fmt(newAmount) + ' toe (' + Math.round(newPct) + '% totaal).';
+    } else {
+      document.getElementById('bw-msg').textContent =
+        'Dit item duwt je totale kosten ' + fmt(over) + ' boven je budget (' + Math.round(newPct) + '% in totaal).';
+    }
+    document.getElementById('bw-suppress-check').checked = false;
+    budgetWarningSaveFn = saveFn;
+    document.getElementById('budget-warning').classList.add('open');
+    return;
+  }
+  // No warning needed
+  saveFn();
+}
+
+function closeBudgetWarning(proceed) {
+  const suppress = document.getElementById('bw-suppress-check').checked;
+  if (suppress) {
+    appSettings.budgetWarningSuppressed = true;
+    localStorage.setItem('ovs-settings', JSON.stringify(appSettings));
+  }
+  document.getElementById('budget-warning').classList.remove('open');
+  if (proceed && budgetWarningSaveFn) budgetWarningSaveFn();
+  budgetWarningSaveFn = null;
+}
+// ── END BUDGET WARNING ─────────────────────────────────────────────────────────
 
 async function load() {
   loadSettings();
@@ -3243,21 +3710,42 @@ function openModal(section, editIdx) {
   const isPartialKosten = ['nog-te-maken','gemaakte-kosten'].includes(section) && statusSel.value === 'gedeeltelijk';
   const isPartialOntv = section === 'te-ontvangen' && statusSel.value === 'gedeeltelijk';
   document.getElementById('form-partial-group').style.display = (isPartialKosten || isPartialOntv) ? 'block' : 'none';
+  const vcg = document.getElementById('form-vermogen-correctie-group');
+  const showVcg = (
+    (['nog-te-maken','gemaakte-kosten'].includes(section) && ['betaald','gedeeltelijk'].includes(statusSel.value)) ||
+    (section === 'meubels' && item && ['gekocht','deels'].includes(item.cat))
+  );
+  if (vcg) vcg.style.display = showVcg ? 'block' : 'none';
+  if (showVcg) {
+    populateVermogenCorrectie();
+    if (item && item.vermogenCorrectieKey) {
+      setTimeout(() => {
+        const s = document.getElementById('form-vermogen-correctie');
+        if (s) s.value = item.vermogenCorrectieKey;
+        updateVermogenCorrectieInfo();
+      }, 50);
+    }
+  }
   const partialLabel = document.querySelector('#form-partial-group .form-label');
   if (partialLabel) partialLabel.textContent = section === 'te-ontvangen' ? 'Ontvangen bedrag (€)' : 'Al betaald bedrag (€)';
   if (isPartialKosten) document.getElementById('form-partial-amount').value = item ? (item.betaald||'') : '';
   if (isPartialOntv) document.getElementById('form-partial-amount').value = item ? (item.ontvangen||'') : '';
   statusSel.onchange = function() {
     const pg = document.getElementById('form-partial-group');
+    const vcg = document.getElementById('form-vermogen-correctie-group');
     if (['nog-te-maken','gemaakte-kosten'].includes(section)) {
       pg.style.display = this.value === 'gedeeltelijk' ? 'block' : 'none';
+      const showCorr = ['betaald','gedeeltelijk'].includes(this.value);
+      if (vcg) vcg.style.display = showCorr ? 'block' : 'none';
+      if (showCorr) populateVermogenCorrectie();
     } else if (section === 'te-ontvangen') {
       pg.style.display = this.value === 'gedeeltelijk' ? 'block' : 'none';
+      if (vcg) vcg.style.display = 'none';
     }
   };
 
   const isMeubel = section === 'meubels';
-  ['merk','begroot','werkelijk','betaald','nogopen'].forEach(f => {
+  ['merk','begroot','werkelijk','betaald','nogopen','levering'].forEach(f => {
     const g = document.getElementById('form-' + f + '-group');
     if (g) g.style.display = isMeubel ? 'block' : 'none';
   });
@@ -3267,8 +3755,22 @@ function openModal(section, editIdx) {
     document.getElementById('form-werkelijk').value = item.werkelijk||0;
     document.getElementById('form-betaald').value = item.betaald||0;
     document.getElementById('form-nogopen').value = item.nogOpen||0;
+    setLeverType(item.leverType||'geen');
+    document.getElementById('form-leverdatum').value = item.leverdatum||'';
+    // Show vermogen correctie for meubels always (user decides)
+    if (vcg) { vcg.style.display = 'block'; populateVermogenCorrectie(); }
+    if (item.vermogenCorrectieKey) {
+      setTimeout(() => {
+        const s = document.getElementById('form-vermogen-correctie');
+        if (s) s.value = item.vermogenCorrectieKey;
+        updateVermogenCorrectieInfo();
+      }, 50);
+    }
   } else if (isMeubel) {
     ['form-merk','form-begroot','form-werkelijk','form-betaald','form-nogopen'].forEach(id => { const e = document.getElementById(id); if(e) e.value = id === 'form-merk' ? '' : 0; });
+    setLeverType('geen');
+    document.getElementById('form-leverdatum').value = '';
+    if (vcg) { vcg.style.display = 'block'; populateVermogenCorrectie(); }
   }
   document.getElementById('btn-delete').style.display = editIndex !== null ? 'block' : 'none';
   document.getElementById('modal-backdrop').classList.add('open');
@@ -3278,6 +3780,52 @@ function openModal(section, editIdx) {
 function openEdit(section, idx) { openModal(section, idx); }
 function closeModal() { document.getElementById('modal-backdrop').classList.remove('open'); }
 function closeModalBg(e) { if (e.target === document.getElementById('modal-backdrop')) closeModal(); }
+
+function setLeverType(type) {
+  ['geen','levering','ophalen'].forEach(t => {
+    const btn = document.getElementById('form-levering-' + t);
+    if (!btn) return;
+    btn.dataset.active = (t === type).toString();
+    btn.style.background = t === type ? '#111' : 'var(--surface)';
+    btn.style.color = t === type ? '#f5f0e8' : 'var(--text2)';
+    btn.style.borderColor = t === type ? '#111' : 'var(--border2)';
+  });
+  const wrap = document.getElementById('form-leverdatum-wrap');
+  if (wrap) wrap.style.display = type !== 'geen' ? 'block' : 'none';
+}
+
+function populateVermogenCorrectie() {
+  const sel = document.getElementById('form-vermogen-correctie');
+  if (!sel) return;
+  const vermogen = state.items['vermogen'] || [];
+  // Only show positive balance items (not auto-entries)
+  const opts = vermogen.filter(v => parseFloat(v.amount) > 0 && !v.autoKey?.startsWith('sp_'));
+  const curVal = sel.value;
+  sel.innerHTML = '<option value="">— Niet corrigeren —</option>' +
+    opts.map(v => `<option value="${esc(v.name)}">${esc(v.name)} (${fmt(v.amount)})</option>`).join('');
+  if (curVal) sel.value = curVal;
+  updateVermogenCorrectieInfo();
+  sel.onchange = updateVermogenCorrectieInfo;
+}
+
+function updateVermogenCorrectieInfo() {
+  const sel = document.getElementById('form-vermogen-correctie');
+  const info = document.getElementById('form-vermogen-correctie-info');
+  if (!sel || !info) return;
+  if (!sel.value) { info.textContent = ''; return; }
+  const amountEl = document.getElementById('form-amount');
+  const partialEl = document.getElementById('form-partial-amount');
+  const statusEl = document.getElementById('form-status');
+  const status = statusEl ? statusEl.value : '';
+  const betaald = status === 'gedeeltelijk'
+    ? (parseFloat(partialEl?.value) || 0)
+    : (parseFloat(amountEl?.value) || 0);
+  const v = (state.items['vermogen']||[]).find(v => v.name === sel.value);
+  if (!v) return;
+  const newBal = parseFloat(v.amount) - betaald;
+  info.textContent = `${sel.value}: ${fmt(v.amount)} → ${fmt(newBal)}`;
+  info.style.color = newBal < 0 ? 'var(--red)' : 'var(--text3)';
+}
 
 function handleCatChange(sel) {
   const wrap = document.getElementById('form-cat-new-wrap');
@@ -3320,6 +3868,65 @@ function saveItem() {
     item.betaald = parseFloat(document.getElementById('form-betaald').value)||0;
     item.nogOpen = parseFloat(document.getElementById('form-nogopen').value)||0;
     item.amount = item.nogOpen || item.begroot;
+    const leverGeen = document.getElementById('form-levering-geen');
+    const leverLev = document.getElementById('form-levering-levering');
+    const leverOph = document.getElementById('form-levering-ophalen');
+    if (leverLev?.dataset.active === 'true') item.leverType = 'levering';
+    else if (leverOph?.dataset.active === 'true') item.leverType = 'ophalen';
+    else item.leverType = null;
+    item.leverdatum = item.leverType ? (document.getElementById('form-leverdatum')?.value || null) : null;
+  }
+
+  // Apply vermogen correction for cost sections + meubels
+  const corrSel = document.getElementById('form-vermogen-correctie-group');
+  if (corrSel && corrSel.style.display !== 'none') {
+    const corrKey = document.getElementById('form-vermogen-correctie').value;
+    const prevItem = editIndex !== null ? (state.items[curSection]?.[editIndex]) : null;
+    const prevCorrKey = prevItem?.vermogenCorrectieKey || null;
+
+    // Determine new correction amount
+    let corrAmount = 0;
+    if (corrKey) {
+      if (curSection === 'meubels') {
+        corrAmount = parseFloat(document.getElementById('form-betaald')?.value) || 0;
+      } else if (status === 'gedeeltelijk') {
+        corrAmount = parseFloat(document.getElementById('form-partial-amount')?.value) || 0;
+      } else {
+        corrAmount = parseFloat(document.getElementById('form-amount')?.value) || item.amount || 0;
+      }
+    }
+
+    // Determine previous correction amount
+    let prevAmount = 0;
+    if (prevCorrKey) {
+      if (curSection === 'meubels') {
+        prevAmount = parseFloat(prevItem?.betaald) || 0;
+      } else {
+        prevAmount = parseFloat(prevItem?.betaald || prevItem?.amount) || 0;
+      }
+    }
+
+    // Step 1: Undo previous correction (restore to old vermogen post)
+    if (prevCorrKey) {
+      const prevVIdx = (state.items['vermogen']||[]).findIndex(v => v.name === prevCorrKey);
+      if (prevVIdx >= 0) {
+        state.items['vermogen'][prevVIdx].amount = parseFloat(state.items['vermogen'][prevVIdx].amount) + prevAmount;
+        state.updated['vermogen'] = new Date().toISOString();
+      }
+    }
+
+    // Step 2: Apply new correction (deduct from new vermogen post)
+    if (corrKey && corrAmount > 0) {
+      const newVIdx = (state.items['vermogen']||[]).findIndex(v => v.name === corrKey);
+      if (newVIdx >= 0) {
+        state.items['vermogen'][newVIdx].amount = Math.max(0, parseFloat(state.items['vermogen'][newVIdx].amount) - corrAmount);
+        state.updated['vermogen'] = new Date().toISOString();
+      }
+      item.vermogenCorrectieKey = corrKey;
+    } else {
+      // No correction chosen - clear the key
+      item.vermogenCorrectieKey = null;
+    }
   }
 
   // ── TE ONTVANGEN ──
@@ -3374,6 +3981,19 @@ function saveItem() {
       if (editIndex !== null) state.items['nog-te-maken'].splice(editIndex, 1);
       if (!state.items['gemaakte-kosten']) state.items['gemaakte-kosten'] = [];
       item.amount = status === 'cadeau' ? 0 : amount;
+      // Apply vermogen correction
+      const corrSel2 = document.getElementById('form-vermogen-correctie-group');
+      if (corrSel2 && corrSel2.style.display !== 'none' && status !== 'cadeau') {
+        const corrKey2 = document.getElementById('form-vermogen-correctie').value;
+        if (corrKey2) {
+          const vIdx2 = (state.items['vermogen']||[]).findIndex(v => v.name === corrKey2);
+          if (vIdx2 >= 0) {
+            state.items['vermogen'][vIdx2].amount = Math.max(0, parseFloat(state.items['vermogen'][vIdx2].amount) - amount);
+            state.updated['vermogen'] = new Date().toISOString();
+            item.vermogenCorrectieKey = corrKey2;
+          }
+        }
+      }
       state.items['gemaakte-kosten'].push(item);
       state.updated['gemaakte-kosten'] = new Date().toISOString();
       state.updated['nog-te-maken'] = new Date().toISOString();
@@ -3413,6 +4033,21 @@ function saveItem() {
   }
 
   if (!state.items[curSection]) state.items[curSection] = [];
+
+  // Check budget before saving (only for cost sections, not edits of existing items)
+  const isCostSection = ['nog-te-maken','gemaakte-kosten','meubels','bruiloft'].includes(curSection);
+  if (isCostSection && editIndex === null) {
+    const newAmt = parseFloat(item.amount) || 0;
+    checkBudgetAndSave(() => {
+      if (!state.items[curSection]) state.items[curSection] = [];
+      state.items[curSection].push(item);
+      if (!state.updated) state.updated = {};
+      state.updated[curSection] = new Date().toISOString();
+      save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
+    }, newAmt);
+    return;
+  }
+
   if (editIndex !== null) { state.items[curSection][editIndex] = item; } else { state.items[curSection].push(item); }
   if (!state.updated) state.updated = {};
   state.updated[curSection] = new Date().toISOString();
@@ -3657,7 +4292,6 @@ load();
       <input class="form-input" type="text" id="contact-search" placeholder="🔍  Zoeken..." oninput="renderContacten()" style="flex:1;padding:9px 12px;font-size:13px;">
       <button id="contact-sort-btn" onclick="toggleContactSort()" style="background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;font-size:12px;color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0;">A → Z</button>
     </div>
-    <div id="contact-role-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
     <div id="list-contacten"><div class="empty-state">Nog geen contacten</div></div>
   </div>
 </div>
@@ -3968,6 +4602,16 @@ load();
       <div class="settings-section-label">Oplevering</div>
       <div class="settings-row">
         <div>
+          <div class="settings-row-label">Startweek verbouwing</div>
+          <div class="settings-row-sub">Begin van de voortgangstijdlijn</div>
+        </div>
+        <div class="settings-row-action" style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:13px;color:var(--text3);">Week</span>
+          <input type="number" id="settings-startweek" min="1" max="52" style="width:56px;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;text-align:center;" onchange="saveSettings()">
+        </div>
+      </div>
+      <div class="settings-row">
+        <div>
           <div class="settings-row-label">Opleverweek</div>
           <div class="settings-row-sub">Wordt gebruikt in countdown en overzicht</div>
         </div>
@@ -3999,6 +4643,23 @@ load();
             <button class="theme-btn" id="theme-btn-light" onclick="setTheme('light')">☀️ Licht</button>
             <button class="theme-btn" id="theme-btn-dark" onclick="setTheme('dark')">🌙 Donker</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Budget waarschuwing -->
+    <div class="settings-section">
+      <div class="settings-section-label">Meldingen</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Budgetwaarschuwing</div>
+          <div class="settings-row-sub">Melding bij overschrijding budget</div>
+        </div>
+        <div class="settings-row-action">
+          <label class="toggle-switch">
+            <input type="checkbox" id="settings-budget-warning" onchange="toggleBudgetWarning(this)">
+            <span class="toggle-slider"></span>
+          </label>
         </div>
       </div>
     </div>
@@ -4087,6 +4748,23 @@ load();
     <div class="confirm-actions">
       <button class="confirm-cancel" onclick="closeConfirm()">Annuleer</button>
       <button class="confirm-ok" id="confirm-ok-btn">Verwijder</button>
+    </div>
+  </div>
+</div>
+
+<!-- BUDGET WARNING -->
+<div class="budget-warning-backdrop" id="budget-warning">
+  <div class="budget-warning-box">
+    <div class="bw-icon">⚠️</div>
+    <div class="bw-title">Budget overschreden</div>
+    <div class="bw-msg" id="bw-msg">Dit item duwt je budget over 100%.</div>
+    <label class="bw-suppress">
+      <input type="checkbox" id="bw-suppress-check">
+      <span>Waarschuwing niet meer tonen</span>
+    </label>
+    <div class="bw-actions">
+      <button class="bw-btn-cancel" onclick="closeBudgetWarning(false)">Annuleer</button>
+      <button class="bw-btn-ok" onclick="closeBudgetWarning(true)">Toch opslaan</button>
     </div>
   </div>
 </div>
