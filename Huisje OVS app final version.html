@@ -749,6 +749,16 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     25% { transform: translateX(-4px); }
     75% { transform: translateX(4px); }
   }
+
+  .toggle-switch { display:inline-block; position:relative; width:40px; height:24px; flex-shrink:0; }
+  .toggle-switch input { position:absolute; opacity:0; width:0; height:0; margin:0; }
+  .toggle-slider { position:absolute; top:0; left:0; right:0; bottom:0; background-color:#c7c7cc; border-radius:24px; cursor:pointer; transition:background-color 0.2s; }
+  .toggle-slider::before { content:""; position:absolute; height:20px; width:20px; left:2px; bottom:2px; background-color:white; border-radius:50%; box-shadow:0 2px 4px rgba(0,0,0,0.3); transition:transform 0.2s; }
+  .toggle-switch input:checked + .toggle-slider { background-color:#111111; }
+  .toggle-switch input:checked + .toggle-slider::before { transform:translateX(16px); }
+  [data-theme="dark"] .toggle-slider { background-color:#48484a; }
+  [data-theme="dark"] .toggle-switch input:checked + .toggle-slider { background-color:#e5e5ea; }
+  [data-theme="dark"] .toggle-switch input:checked + .toggle-slider::before { background-color:#1c1c1e; }
 </style>
 </head>
 <body>
@@ -950,6 +960,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <div><div class="section-title">Meubels</div><div class="section-updated" id="upd-meubels">–</div></div>
     <button class="btn-add" onclick="openModal('meubels')">+ Toevoegen</button>
   </div>
+  <input class="form-input" type="text" id="meubel-search" placeholder="🔍  Zoeken op naam, merk..." oninput="renderMeubelsSearch()" style="margin-bottom:12px;font-size:13px;padding:9px 12px;">
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
     <div class="meubel-stat" id="mstat-begroot" onclick="filterMeubels('begroot')"><div class="ms-label">Begroot</div><div class="ms-val amber" id="ms-begroot">€ 0</div></div>
     <div class="meubel-stat" id="mstat-werkelijk" onclick="filterMeubels('werkelijk')"><div class="ms-label">Werkelijk</div><div class="ms-val blue" id="ms-werkelijk">€ 0</div></div>
@@ -1723,7 +1734,7 @@ const SPAREN_SEED = [
   {maand:'Juni',wie:'Merel',amount:1250},
   {maand:'Juli',wie:'Merel',amount:1250}
 ];
-function getSparenTotal() { return (state.sparen && state.sparen.length > 0) ? state.sparen.reduce((a,b)=>a+(parseFloat(b.amount)||0),0) : SPAREN; }
+function getSparenTotal() { if (!state.sparen || !state.sparen.length) return SPAREN; return state.sparen.filter(i=>!i.gespaard).reduce((a,b)=>a+(parseFloat(b.amount)||0),0); }
 const UITSTELLEN_SEED = [
   {name:'Taatsdeur', amount:1750, uitgesteld:false, note:''},
   {name:'Walnoot dressoir', amount:300, uitgesteld:false, note:''},
@@ -1799,7 +1810,54 @@ function clearPlanFilters() {
   renderPlanning();
 }
 
+function renderMeubelsSearch() {
+  const query = (document.getElementById('meubel-search')?.value || '').toLowerCase().trim();
+  if (!query) {
+    if (activeMeubelFilter) filterMeubels(activeMeubelFilter);
+    else filterMeubels(null);
+    return;
+  }
+  const items = state.items['meubels'] || [];
+  const filtered = items.filter(item =>
+    item.name.toLowerCase().includes(query) ||
+    (item.merk||'').toLowerCase().includes(query) ||
+    (item.note||'').toLowerCase().includes(query)
+  );
+  // Show results in first list, hide others
+  const lists = ['list-meubels-gekocht','list-meubels-deels','list-meubels-nog'];
+  lists.forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = ''; });
+  const subHdrs = ['meubels-sub-gekocht','meubels-sub-deels','meubels-sub-nog'];
+  subHdrs.forEach((id,i) => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = i === 0 ? 'block' : 'none';
+  });
+  const firstSub = document.getElementById('meubels-sub-gekocht');
+  if (firstSub) firstSub.textContent = 'Zoekresultaten (' + filtered.length + ')';
+  const list = document.getElementById('list-meubels-gekocht');
+  if (!list) return;
+  if (!filtered.length) { list.innerHTML = '<div class="empty-state">Geen meubels gevonden</div>'; return; }
+  const statusLabel = {open:'Open',paid:'Betaald',cadeau:'Cadeau',wacht:'Wachten',partial:'Deels',gekocht:'Gekocht',deels:'Deels',nog:'Nog kopen'};
+  const catBadge = {gekocht:'paid',deels:'partial',nog:'open',cadeau:'cadeau',wacht:'wacht'};
+  list.innerHTML = filtered.map(item => {
+    const ri = items.indexOf(item);
+    const bc = catBadge[item.cat] || 'open';
+    const badge = `<span class="badge ${bc}">${statusLabel[item.cat]||item.cat}</span>`;
+    const sub = [item.merk, item.note].filter(Boolean).join(' · ');
+    const displayAmt = parseFloat(item.nogOpen||0) > 0 ? item.nogOpen : (item.betaald > 0 ? item.betaald : item.begroot||0);
+    const amtCls = parseFloat(item.nogOpen||0) > 0 ? 'amber' : (item.betaald > 0 ? 'green' : 'red');
+    return `<div class="item-row" onclick="openEdit('meubels',${ri})">
+      <div class="item-info">
+        <div class="item-name">${esc(item.name)}</div>
+        ${sub ? `<div class="item-meta">${esc(sub)}</div>` : ''}
+        ${badge}
+      </div>
+      <div class="item-amount ${amtCls}">${fmt(displayAmt)}</div>
+    </div>`;
+  }).join('');
+}
+
 function filterMeubels(filter) {
+  const srch = document.getElementById('meubel-search'); if(srch) srch.value = '';
   if (activeMeubelFilter === filter) { activeMeubelFilter = null; }
   else { activeMeubelFilter = filter; }
 
@@ -2241,19 +2299,24 @@ function renderSparenList() {
   } else {
     list.innerHTML = filtered.map(item => {
       const i = items.indexOf(item);
+      const gespaard = item.gespaard === true;
+      const badge = gespaard
+        ? `<span class="badge paid" style="margin-top:4px;">Gespaard</span>`
+        : `<span class="badge open" style="margin-top:4px;background:var(--blue-dim);color:var(--blue);">Te sparen</span>`;
       return `<div class="item-row" onclick="openSparenModal(${i})">
         <div class="item-info">
-          <div class="item-name">${esc(item.maand)}</div>
+          <div class="item-name" style="${gespaard?'color:var(--text2)':''}">${esc(item.maand)}</div>
           <div class="item-meta">${esc(item.wie)}</div>
+          ${badge}
         </div>
-        <div class="item-amount blue">${fmt(item.amount)}</div>
+        <div class="item-amount ${gespaard?'green':'blue'}">${fmt(item.amount)}</div>
       </div>`;
     }).join('');
   }
 
-  const joostTotal = items.filter(i=>i.wie==='Joost').reduce((a,b)=>a+(parseFloat(b.amount)||0),0);
-  const merelTotal = items.filter(i=>i.wie==='Merel').reduce((a,b)=>a+(parseFloat(b.amount)||0),0);
-  const total = items.reduce((a,b)=>a+(parseFloat(b.amount)||0),0);
+  const joostTotal = items.filter(i=>i.wie==='Joost'&&!i.gespaard).reduce((a,b)=>a+(parseFloat(b.amount)||0),0);
+  const merelTotal = items.filter(i=>i.wie==='Merel'&&!i.gespaard).reduce((a,b)=>a+(parseFloat(b.amount)||0),0);
+  const total = items.filter(i=>!i.gespaard).reduce((a,b)=>a+(parseFloat(b.amount)||0),0);
   setText('sparen-joost-total', fmt(joostTotal));
   setText('sparen-merel-total', fmt(merelTotal));
   setText('total-sparen', fmt(total));
@@ -2268,6 +2331,7 @@ function openSparenModal(editIdx) {
   document.getElementById('sparen-maand').value = item ? item.maand : '';
   document.getElementById('sparen-wie').value = item ? item.wie : 'Joost';
   document.getElementById('sparen-amount').value = item ? item.amount : '';
+  document.getElementById('sparen-gespaard').checked = item ? (item.gespaard === true) : false;
   document.getElementById('sparen-btn-delete').style.display = sparenEditIndex !== null ? 'block' : 'none';
   document.getElementById('sparen-modal').classList.add('open');
   setTimeout(() => document.getElementById('sparen-maand').focus(), 80);
@@ -2281,7 +2345,21 @@ function saveSparenItem() {
   const amount = parseFloat(document.getElementById('sparen-amount').value) || 0;
   if (!validateFields(['sparen-maand'])) return;
   if (!state.sparen) state.sparen = [];
-  const item = {maand, wie, amount};
+  const prev = sparenEditIndex !== null ? state.sparen[sparenEditIndex] : null;
+  const gespaard = document.getElementById('sparen-gespaard').checked;
+  const autoKey = prev ? (prev.autoKey || ('sp_' + Date.now())) : ('sp_' + Date.now());
+  const item = {maand, wie, amount, gespaard, autoKey};
+  // Sync to vermogen
+  if (!state.items.vermogen) state.items.vermogen = [];
+  const vIdx = state.items.vermogen.findIndex(v => v.autoKey === autoKey);
+  if (gespaard) {
+    const vItem = {name:'Gespaard ' + maand + ' (' + wie + ')', amount, cat: wie==='Joost'?'joost':wie==='Merel'?'merel':'beiden', note:'Automatisch vanuit spaaroverzicht', autoKey};
+    if (vIdx >= 0) state.items.vermogen[vIdx] = vItem;
+    else state.items.vermogen.push(vItem);
+    state.updated['vermogen'] = new Date().toISOString();
+  } else {
+    if (vIdx >= 0) { state.items.vermogen.splice(vIdx, 1); state.updated['vermogen'] = new Date().toISOString(); }
+  }
   if (sparenEditIndex !== null) { state.sparen[sparenEditIndex] = item; }
   else { state.sparen.push(item); }
   state.updatedSparen = new Date().toISOString();
@@ -2290,6 +2368,11 @@ function saveSparenItem() {
 
 function deleteSparenItem() {
   if (sparenEditIndex === null) return;
+  const item = state.sparen[sparenEditIndex];
+  if (item && item.autoKey) {
+    const vIdx = (state.items.vermogen||[]).findIndex(v => v.autoKey === item.autoKey);
+    if (vIdx >= 0) { state.items.vermogen.splice(vIdx, 1); state.updated['vermogen'] = new Date().toISOString(); }
+  }
   state.sparen.splice(sparenEditIndex, 1);
   state.updatedSparen = new Date().toISOString();
   save(); render(); if(currentPage==="overzicht") renderOverzicht(); closeSparenModal();
@@ -3854,6 +3937,16 @@ load();
     <div class="form-group">
       <label class="form-label">Bedrag (€)</label>
       <input class="form-input" type="number" id="sparen-amount" placeholder="0" inputmode="decimal">
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px;">
+      <div>
+        <div style="font-size:14px;color:var(--text);">Gespaard</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">Wordt toegevoegd aan vermogen</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="sparen-gespaard">
+        <span class="toggle-slider"></span>
+      </label>
     </div>
     <div class="modal-actions">
       <button class="btn-primary" onclick="saveSparenItem()">Opslaan</button>
