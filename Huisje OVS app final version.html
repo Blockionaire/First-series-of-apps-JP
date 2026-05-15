@@ -877,6 +877,29 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   .bw-actions { display: flex; gap: 8px; }
   .bw-btn-ok { flex: 1; padding: 11px; border-radius: var(--radius-sm); border: none; background: var(--red); color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
   .bw-btn-cancel { flex: 1; padding: 11px; border-radius: var(--radius-sm); border: 0.5px solid var(--border2); background: var(--surface2); font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text2); cursor: pointer; }
+
+  .to-filter {
+    padding: 5px 12px;
+    border-radius: 99px;
+    font-size: 12px;
+    border: 0.5px solid var(--border2);
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .to-filter.active {
+    background: #111;
+    border-color: #111;
+    color: #f5f0e8;
+    font-weight: 500;
+  }
+  [data-theme="dark"] .to-filter.active {
+    background: var(--text);
+    border-color: var(--text);
+    color: var(--bg);
+  }
 </style>
 </head>
 <body>
@@ -1089,6 +1112,9 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <div><div class="section-title">Nog te maken kosten</div><div class="section-updated" id="upd-nog-te-maken">–</div></div>
     <button class="btn-add" onclick="openModal('nog-te-maken')">+ Toevoegen</button>
   </div>
+  <input class="form-input" type="text" id="nog-te-maken-search" placeholder="🔍  Zoeken..." oninput="renderNogTeMakenSearch()" style="margin-bottom:12px;font-size:13px;padding:9px 12px;">
+  <div id="nog-te-maken-search-results" style="display:none;"></div>
+  <div id="nog-te-maken-normal">
   <div class="sub-header sub-header-toggle" onclick="toggleCollapse('nog-te-maken-ddo')">
     <span class="sh-label">Verbouwing DDO</span>
     <span class="sh-right"><span class="sh-count" id="sh-count-nog-te-maken-ddo">0</span><span class="sh-arrow" id="sh-arrow-nog-te-maken-ddo">▾</span></span>
@@ -1162,6 +1188,12 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   <div class="section-header">
     <div><div class="section-title">Te ontvangen</div><div class="section-updated" id="upd-te-ontvangen">–</div></div>
     <button class="btn-add" onclick="openModal('te-ontvangen')">+ Toevoegen</button>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;" id="te-ontv-filters">
+    <button class="to-filter active" data-val="" onclick="setTeOntvFilter(this,'')">Alle</button>
+    <button class="to-filter" data-val="verwacht" onclick="setTeOntvFilter(this,'verwacht')">Verwacht</button>
+    <button class="to-filter" data-val="gedeeltelijk" onclick="setTeOntvFilter(this,'gedeeltelijk')">Gedeeltelijk</button>
+    <button class="to-filter" data-val="ontvangen" onclick="setTeOntvFilter(this,'ontvangen')">Ontvangen</button>
   </div>
   <div class="items-list" id="list-te-ontvangen"></div>
   <div class="section-total"><span class="st-label">Totaal te ontvangen</span><span class="st-amount green" id="total-te-ontvangen">€ 0</span></div>
@@ -1251,6 +1283,13 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
         <option value="">— Niet corrigeren —</option>
       </select>
       <div style="font-size:11px;color:var(--text3);margin-top:5px;" id="form-vermogen-correctie-info"></div>
+    </div>
+    <div class="form-group" id="form-ontvangen-vermogen-group" style="display:none">
+      <label class="form-label">Toevoegen aan vermogen</label>
+      <select class="form-select" id="form-ontvangen-vermogen">
+        <option value="__nieuw__">— Los toevoegen (eigen naam) —</option>
+      </select>
+      <div style="font-size:11px;color:var(--text3);margin-top:5px;" id="form-ontvangen-vermogen-info"></div>
     </div>
     <div class="form-group" id="form-merk-group" style="display:none">
       <label class="form-label">Merk / winkel</label>
@@ -1930,6 +1969,13 @@ let activeMeubelFilter = null;
 // Multi-select filter state for planning
 const planFilters = { status: new Set(), wie: new Set(), cat: new Set(), week: new Set() };
 
+function setTeOntvFilter(btn, val) {
+  window._teOntvFilter = val;
+  document.querySelectorAll('.to-filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
 function toggleMsd(group) {
   // Close all others
   ['status','wie','cat','week'].forEach(g => {
@@ -2019,6 +2065,53 @@ function renderMeubelsSearch() {
         ${badge}
       </div>
       <div class="item-amount ${amtCls}">${fmt(displayAmt)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderNogTeMakenSearch() {
+  const query = (document.getElementById('nog-te-maken-search')?.value || '').toLowerCase().trim();
+  const normal = document.getElementById('nog-te-maken-normal');
+  const results = document.getElementById('nog-te-maken-search-results');
+  if (!normal || !results) return;
+
+  if (!query) {
+    normal.style.display = 'block';
+    results.style.display = 'none';
+    results.innerHTML = '';
+    return;
+  }
+
+  normal.style.display = 'none';
+  results.style.display = 'block';
+
+  const items = state.items['nog-te-maken'] || [];
+  const filtered = items.filter(item =>
+    item.name.toLowerCase().includes(query) ||
+    (item.cat||'').toLowerCase().includes(query) ||
+    (item.note||'').toLowerCase().includes(query)
+  );
+
+  if (!filtered.length) {
+    results.innerHTML = '<div class="empty-state">Geen items gevonden</div>';
+    return;
+  }
+
+  const statusLabel = {nog:'Nog aan te schaffen', wacht:'Wachten', gedeeltelijk:'Gedeeltelijk betaald', betaald:'Betaald', cadeau:'Cadeau'};
+  results.innerHTML = filtered.map(item => {
+    const ri = items.indexOf(item);
+    const catDisplay = item.cat ? item.cat.charAt(0).toUpperCase() + item.cat.slice(1) : '';
+    const sub = [catDisplay, item.note].filter(Boolean).join(' · ');
+    const statusBadge = item.status && item.status !== 'nog'
+      ? `<span class="badge ${item.status === 'wacht' ? 'wacht' : 'partial'}" style="margin-top:3px;">${statusLabel[item.status]||item.status}</span>`
+      : '';
+    return `<div class="item-row" onclick="openEdit('nog-te-maken',${ri})">
+      <div class="item-info">
+        <div class="item-name">${esc(item.name)}</div>
+        ${sub ? `<div class="item-meta">${esc(sub)}</div>` : ''}
+        ${statusBadge}
+      </div>
+      <div class="item-amount amber">${fmt(item.amount)}</div>
     </div>`;
   }).join('');
 }
@@ -2139,7 +2232,6 @@ function goToPage(page, tab) {
   if (page === 'finance' && tab) { switchTab(tab); return; }
   window.scrollTo(0,0);
 }
-function togglePage() { goToPage(currentPage === 'finance' ? 'planning' : 'finance'); }
 
 // ── PLANNING ──────────────────────────────────────────────────────────────
 
@@ -2455,28 +2547,69 @@ function filterSparen(wie) {
   renderSparenList();
 }
 
+
+const MAAND_ORDER = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+function maandSort(a, b) {
+  const ai = MAAND_ORDER.findIndex(m => a.maand.toLowerCase().includes(m));
+  const bi = MAAND_ORDER.findIndex(m => b.maand.toLowerCase().includes(m));
+  return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+}
+
+const sparenCollapsed = {};
+
+function toggleSparenGroup(wie) {
+  sparenCollapsed[wie] = !sparenCollapsed[wie];
+  renderSparenList();
+}
+
 function renderSparenList() {
   const items = state.sparen || [];
   const list = document.getElementById('list-sparen');
   if (!list) return;
 
-  const filtered = activeSparenFilter ? items.filter(i => i.wie === activeSparenFilter) : items;
-  if (!filtered.length) {
+  // Get unique persons in order
+  const personen = [...new Set(items.map(i => i.wie).filter(Boolean))].sort();
+
+  if (!items.length) {
     list.innerHTML = '<div class="empty-state">Nog niets toegevoegd</div>';
   } else {
-    list.innerHTML = filtered.map(item => {
-      const i = items.indexOf(item);
-      const gespaard = item.gespaard === true;
-      const badge = gespaard
-        ? `<span class="badge paid" style="margin-top:4px;">Gespaard</span>`
-        : `<span class="badge open" style="margin-top:4px;background:var(--blue-dim);color:var(--blue);">Te sparen</span>`;
-      return `<div class="item-row" onclick="openSparenModal(${i})">
-        <div class="item-info">
-          <div class="item-name" style="${gespaard?'color:var(--text2)':''}">${esc(item.maand)}</div>
-          <div class="item-meta">${esc(item.wie)}</div>
-          ${badge}
+    list.innerHTML = personen.map(wie => {
+      const wieItems = items.filter(i => i.wie === wie).sort(maandSort);
+      const wieTotal = wieItems.filter(i=>!i.gespaard).reduce((a,b)=>a+(parseFloat(b.amount)||0),0);
+      const wieTotalGespaard = wieItems.filter(i=>i.gespaard).reduce((a,b)=>a+(parseFloat(b.amount)||0),0);
+      const allGespaard = wieItems.every(i=>i.gespaard);
+      const collapsed = sparenCollapsed[wie];
+      const arrow = collapsed ? '›' : '▾';
+
+      const itemsHtml = wieItems.map(item => {
+        const i = items.indexOf(item);
+        const gespaard = item.gespaard === true;
+        const badge = gespaard
+          ? `<span class="badge paid" style="margin-top:3px;">Gespaard</span>`
+          : `<span class="badge open" style="margin-top:3px;background:var(--blue-dim);color:var(--blue);">Te sparen</span>`;
+        return `<div class="item-row" onclick="openSparenModal(${i})" style="padding-left:8px;">
+          <div class="item-info">
+            <div class="item-name" style="${gespaard?'color:var(--text2)':''}">${esc(item.maand)}</div>
+            ${badge}
+          </div>
+          <div class="item-amount ${gespaard?'green':'blue'}">${fmt(item.amount)}</div>
+        </div>`;
+      }).join('');
+
+      return `<div style="margin-bottom:4px;">
+        <div onclick="toggleSparenGroup('${esc(wie)}')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 4px 10px;cursor:pointer;border-bottom:0.5px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;color:var(--text3);transition:transform 0.2s;display:inline-block;transform:${collapsed?'rotate(-90deg)':'rotate(0deg)'};">${arrow}</span>
+            <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:600;color:var(--text);">${esc(wie)}</span>
+          </div>
+          <div style="text-align:right;">
+            ${wieTotal > 0 ? `<div style="font-size:13px;color:var(--blue);font-weight:500;">${fmt(wieTotal)} te sparen</div>` : ''}
+            ${wieTotalGespaard > 0 ? `<div style="font-size:11px;color:var(--green);">+ ${fmt(wieTotalGespaard)} gespaard</div>` : ''}
+          </div>
         </div>
-        <div class="item-amount ${gespaard?'green':'blue'}">${fmt(item.amount)}</div>
+        <div style="display:${collapsed?'none':'block'};">
+          ${itemsHtml}
+        </div>
       </div>`;
     }).join('');
   }
@@ -2516,16 +2649,35 @@ function saveSparenItem() {
   const gespaard = document.getElementById('sparen-gespaard').checked;
   const autoKey = prev ? (prev.autoKey || ('sp_' + Date.now())) : ('sp_' + Date.now());
   const item = {maand, wie, amount, gespaard, autoKey};
-  // Sync to vermogen
+  // Sync to vermogen: add to existing spaargeld post for this person
   if (!state.items.vermogen) state.items.vermogen = [];
-  const vIdx = state.items.vermogen.findIndex(v => v.autoKey === autoKey);
+  const prevGespaard = prev ? (prev.gespaard === true) : false;
+  const prevAmount = prev ? (parseFloat(prev.amount) || 0) : 0;
+
+  // Find the spaargeld vermogen post for this person (by name, case-insensitive)
+  const wieKey = wie.toLowerCase();
+  const spaargeldIdx = state.items.vermogen.findIndex(v =>
+    v.name.toLowerCase().includes('spaargeld') &&
+    (wieKey === 'joost' ? v.name.toLowerCase().includes('joost') :
+     wieKey === 'merel' ? v.name.toLowerCase().includes('merel') :
+     true)
+  );
+
   if (gespaard) {
-    const vItem = {name:'Gespaard ' + maand + ' (' + wie + ')', amount, cat: wie==='Joost'?'joost':wie==='Merel'?'merel':'beiden', note:'Automatisch vanuit spaaroverzicht', autoKey};
-    if (vIdx >= 0) state.items.vermogen[vIdx] = vItem;
-    else state.items.vermogen.push(vItem);
-    state.updated['vermogen'] = new Date().toISOString();
-  } else {
-    if (vIdx >= 0) { state.items.vermogen.splice(vIdx, 1); state.updated['vermogen'] = new Date().toISOString(); }
+    // Add amount to spaargeld post (undo previous if was already gespaard)
+    const undoAmount = prevGespaard ? prevAmount : 0;
+    if (spaargeldIdx >= 0) {
+      state.items.vermogen[spaargeldIdx].amount =
+        (parseFloat(state.items.vermogen[spaargeldIdx].amount) || 0) - undoAmount + amount;
+      state.updated['vermogen'] = new Date().toISOString();
+    }
+  } else if (prevGespaard) {
+    // Was gespaard, now unchecked: subtract the old amount back
+    if (spaargeldIdx >= 0) {
+      state.items.vermogen[spaargeldIdx].amount =
+        Math.max(0, (parseFloat(state.items.vermogen[spaargeldIdx].amount) || 0) - prevAmount);
+      state.updated['vermogen'] = new Date().toISOString();
+    }
   }
   if (sparenEditIndex !== null) { state.sparen[sparenEditIndex] = item; }
   else { state.sparen.push(item); }
@@ -2536,9 +2688,19 @@ function saveSparenItem() {
 function deleteSparenItem() {
   if (sparenEditIndex === null) return;
   const item = state.sparen[sparenEditIndex];
-  if (item && item.autoKey) {
-    const vIdx = (state.items.vermogen||[]).findIndex(v => v.autoKey === item.autoKey);
-    if (vIdx >= 0) { state.items.vermogen.splice(vIdx, 1); state.updated['vermogen'] = new Date().toISOString(); }
+  if (item && item.gespaard) {
+    const wieKey = (item.wie||'').toLowerCase();
+    const sIdx = (state.items.vermogen||[]).findIndex(v =>
+      v.name.toLowerCase().includes('spaargeld') &&
+      (wieKey === 'joost' ? v.name.toLowerCase().includes('joost') :
+       wieKey === 'merel' ? v.name.toLowerCase().includes('merel') : true)
+    );
+    if (sIdx >= 0) {
+      state.items.vermogen[sIdx].amount = Math.max(0,
+        (parseFloat(state.items.vermogen[sIdx].amount) || 0) - (parseFloat(item.amount) || 0)
+      );
+      state.updated['vermogen'] = new Date().toISOString();
+    }
   }
   state.sparen.splice(sparenEditIndex, 1);
   state.updatedSparen = new Date().toISOString();
@@ -2718,27 +2880,55 @@ function renderOverzicht() {
   const topKostenEl = document.getElementById('ov-top-kosten');
   if (topKostenEl) {
     if (pct > 100) {
-      // Collect all cost categories with totals
-      const kostenBreak = [
-        { label: 'Gemaakte kosten', amount: gemaaktTotal, tab: 'gemaakte-kosten' },
-        { label: 'Nog te betalen', amount: teMakenEff, tab: 'nog-te-maken' },
-        { label: 'Meubels', amount: meubelsTotal, tab: 'meubels' },
-        { label: 'Bruiloft', amount: bruiloftTotal, tab: 'bruiloft' }
-      ].filter(k => k.amount > 0).sort((a,b) => b.amount - a.amount).slice(0,3);
+      // Build category breakdown from actual item categories
+      const catTotals = {};
+
+      // Helper to add to category
+      const addCat = (label, amount, tab) => {
+        if (!amount || amount <= 0) return;
+        const key = label + '||' + tab;
+        if (!catTotals[key]) catTotals[key] = { label, amount: 0, tab };
+        catTotals[key].amount += amount;
+      };
+
+      // Gemaakte kosten: group by cat
+      (items('gemaakte-kosten')||[]).forEach(item => {
+        const catLabel = item.cat === 'ddo' ? 'DDO facturen' : (item.cat ? item.cat.charAt(0).toUpperCase() + item.cat.slice(1) : 'Overig');
+        addCat(catLabel, parseFloat(item.amount)||0, 'gemaakte-kosten');
+      });
+
+      // Nog te maken: group by cat (only effectief - not uitgesteld)
+      (items('nog-te-maken')||[]).forEach(item => {
+        const isUitgesteld = (state.uitstellen||[]).some(u => u.name === item.name && u.uitgesteld);
+        if (isUitgesteld) return;
+        const catLabel = item.cat === 'ddo' ? 'DDO' : (item.cat === 'overig' ? 'Overig' : (item.cat ? item.cat.charAt(0).toUpperCase() + item.cat.slice(1) : 'Overig'));
+        addCat(catLabel, parseFloat(item.amount)||0, 'nog-te-maken');
+      });
+
+      // Meubels: one bucket
+      if (meubelsTotal > 0) addCat('Meubels', meubelsTotal, 'meubels');
+
+      // Bruiloft: one bucket
+      if (bruiloftTotal > 0) addCat('Bruiloft', bruiloftTotal, 'bruiloft');
+
+      // Sort and take top 3
+      const kostenBreak = Object.values(catTotals)
+        .sort((a,b) => b.amount - a.amount)
+        .slice(0, 3);
+
       topKostenEl.innerHTML =
         '<div style="border-top:0.5px solid var(--border);margin-top:8px;padding-top:8px;">' +
-        '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);margin-bottom:6px;">Grootste kostenposten</div>' +
+        '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);margin-bottom:8px;">Grootste categorieën</div>' +
         kostenBreak.map(k => {
           const kPct = totaalBudget > 0 ? Math.round(k.amount / totaalBudget * 100) : 0;
-          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;" onclick="event.stopPropagation();goToPage('finance','${k.tab}')">
-            <div style="flex:1;">
-              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:3px;">
-                <span>${esc(k.label)}</span>
-                <span>${fmt(k.amount)} <span style="color:var(--text3);">(${kPct}%)</span></span>
-              </div>
-              <div style="height:4px;background:var(--surface3);border-radius:99px;overflow:hidden;">
-                <div style="height:4px;background:${kPct > 40 ? 'var(--red)' : kPct > 25 ? 'var(--amber)' : 'var(--blue)'};width:${Math.min(100,kPct)}%;border-radius:99px;"></div>
-              </div>
+          const barColor = kPct > 40 ? 'var(--red)' : kPct > 25 ? 'var(--amber)' : 'var(--blue)';
+          return `<div style="margin-bottom:8px;cursor:pointer;" onclick="event.stopPropagation();goToPage('finance','${k.tab}')">
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text2);margin-bottom:4px;">
+              <span style="font-weight:500;">${esc(k.label)}</span>
+              <span>${fmt(k.amount)} <span style="color:var(--text3);font-size:11px;">${kPct}%</span></span>
+            </div>
+            <div style="height:5px;background:var(--surface3);border-radius:99px;overflow:hidden;">
+              <div style="height:5px;background:${barColor};width:${Math.min(100,kPct)}%;border-radius:99px;transition:width 0.4s;"></div>
             </div>
           </div>`;
         }).join('') +
@@ -3415,12 +3605,7 @@ async function load() {
     console.warn('Supabase unavailable, using localStorage');
   }
   try {
-    // Try current key first
     let s = localStorage.getItem('ovs-v16');
-    // Fall back to previous keys to preserve user edits
-    if (!s) s = localStorage.getItem('ovs-v12');
-    if (!s) s = localStorage.getItem('ovs-v11');
-    if (!s) s = localStorage.getItem('ovs-v10');
     if (s) {
       state = JSON.parse(s);
 
@@ -3513,7 +3698,17 @@ function render() {
     {id:'list-meubels-nog',cat:'nog',color:'amber',showStatus:true}
   ]);
   renderLists('bruiloft',[{id:'list-bruiloft',cat:null,color:'purple'}]);
+  // Apply te-ontvangen status filter
+  const teOntvStatusFilter = window._teOntvFilter || '';
+  const teOntvItems = (state.items['te-ontvangen'] || []);
+  const teOntvFiltered = teOntvStatusFilter
+    ? teOntvItems.filter(i => (i.status || 'verwacht') === teOntvStatusFilter)
+    : teOntvItems;
+  // Temporarily override for renderLists
+  const _origTeOntv = state.items['te-ontvangen'];
+  state.items['te-ontvangen'] = teOntvFiltered;
   renderLists('te-ontvangen',[{id:'list-te-ontvangen',cat:null,color:'green'}]);
+  state.items['te-ontvangen'] = _origTeOntv;
   renderLists('vermogen',[
     {id:'list-vermogen-joost',cat:'joost',color:'blue'},
     {id:'list-vermogen-merel',cat:'merel',color:'blue'},
@@ -3711,6 +3906,23 @@ function openModal(section, editIdx) {
   const isPartialOntv = section === 'te-ontvangen' && statusSel.value === 'gedeeltelijk';
   document.getElementById('form-partial-group').style.display = (isPartialKosten || isPartialOntv) ? 'block' : 'none';
   const vcg = document.getElementById('form-vermogen-correctie-group');
+  // te-ontvangen: show vermogen toevoegen when ontvangen/gedeeltelijk
+  const ovg = document.getElementById('form-ontvangen-vermogen-group');
+  if (section === 'te-ontvangen' && ovg) {
+    const showOvg = ['ontvangen','gedeeltelijk'].includes(statusSel.value);
+    ovg.style.display = showOvg ? 'block' : 'none';
+    if (showOvg) {
+      populateOntvangenVermogen();
+      if (item && item.ontvangenVermogenKey) {
+        setTimeout(() => {
+          const s = document.getElementById('form-ontvangen-vermogen');
+          if (s) s.value = item.ontvangenVermogenKey || '__nieuw__';
+          updateOntvangenVermogenInfo();
+        }, 50);
+      }
+    }
+  }
+
   const showVcg = (
     (['nog-te-maken','gemaakte-kosten'].includes(section) && ['betaald','gedeeltelijk'].includes(statusSel.value)) ||
     (section === 'meubels' && item && ['gekocht','deels'].includes(item.cat))
@@ -3741,6 +3953,11 @@ function openModal(section, editIdx) {
     } else if (section === 'te-ontvangen') {
       pg.style.display = this.value === 'gedeeltelijk' ? 'block' : 'none';
       if (vcg) vcg.style.display = 'none';
+      const ovg = document.getElementById('form-ontvangen-vermogen-group');
+      if (ovg) {
+        ovg.style.display = ['ontvangen','gedeeltelijk'].includes(this.value) ? 'block' : 'none';
+        if (['ontvangen','gedeeltelijk'].includes(this.value)) populateOntvangenVermogen();
+      }
     }
   };
 
@@ -3794,12 +4011,48 @@ function setLeverType(type) {
   if (wrap) wrap.style.display = type !== 'geen' ? 'block' : 'none';
 }
 
+function populateOntvangenVermogen() {
+  const sel = document.getElementById('form-ontvangen-vermogen');
+  if (!sel) return;
+  const vermogen = state.items['vermogen'] || [];
+  const curVal = sel.value;
+  sel.innerHTML = '<option value="__nieuw__">— Los toevoegen (eigen naam) —</option>' +
+    vermogen.map(v => `<option value="${esc(v.name)}">${esc(v.name)} (${fmt(v.amount)})</option>`).join('');
+  if (curVal) sel.value = curVal;
+  sel.onchange = updateOntvangenVermogenInfo;
+  updateOntvangenVermogenInfo();
+}
+
+function updateOntvangenVermogenInfo() {
+  const sel = document.getElementById('form-ontvangen-vermogen');
+  const info = document.getElementById('form-ontvangen-vermogen-info');
+  if (!sel || !info) return;
+  if (sel.value === '__nieuw__') {
+    const nameEl = document.getElementById('form-name');
+    info.textContent = nameEl ? 'Wordt als "' + (nameEl.value || '...') + '" toegevoegd aan vermogen' : '';
+    info.style.color = 'var(--text3)';
+    return;
+  }
+  const amountEl = document.getElementById('form-amount');
+  const partialEl = document.getElementById('form-partial-amount');
+  const statusEl = document.getElementById('form-status');
+  const status = statusEl ? statusEl.value : '';
+  const ontvangenAmt = status === 'gedeeltelijk'
+    ? (parseFloat(partialEl?.value) || 0)
+    : (parseFloat(amountEl?.value) || 0);
+  const v = (state.items['vermogen']||[]).find(v => v.name === sel.value);
+  if (!v) return;
+  const newBal = parseFloat(v.amount) + ontvangenAmt;
+  info.textContent = sel.value + ': ' + fmt(v.amount) + ' → ' + fmt(newBal);
+  info.style.color = 'var(--text3)';
+}
+
 function populateVermogenCorrectie() {
   const sel = document.getElementById('form-vermogen-correctie');
   if (!sel) return;
   const vermogen = state.items['vermogen'] || [];
   // Only show positive balance items (not auto-entries)
-  const opts = vermogen.filter(v => parseFloat(v.amount) > 0 && !v.autoKey?.startsWith('sp_'));
+  const opts = vermogen.filter(v => parseFloat(v.amount) > 0);
   const curVal = sel.value;
   sel.innerHTML = '<option value="">— Niet corrigeren —</option>' +
     opts.map(v => `<option value="${esc(v.name)}">${esc(v.name)} (${fmt(v.amount)})</option>`).join('');
@@ -3941,18 +4194,39 @@ function saveItem() {
     const prev = editIndex !== null ? (state.items[curSection]||[])[editIndex] : null;
     const prevOntvangen = prev ? (prev.ontvangen||0) : 0;
     const newOntvangen = item.ontvangen || 0;
+    const ontvangenVermogenKey = document.getElementById('form-ontvangen-vermogen')?.value || '__nieuw__';
+    item.ontvangenVermogenKey = ontvangenVermogenKey;
+
+    if (!state.items.vermogen) state.items.vermogen = [];
+
+    // Undo previous vermogen entry if existed
+    if (prev && prev.autoKey) {
+      const prevIdx = state.items.vermogen.findIndex(v => v.autoKey === prev.autoKey);
+      if (prevIdx >= 0) state.items.vermogen.splice(prevIdx, 1);
+      // If was added to existing post, subtract
+      if (prev.ontvangenVermogenKey && prev.ontvangenVermogenKey !== '__nieuw__') {
+        const pvIdx = state.items.vermogen.findIndex(v => v.name === prev.ontvangenVermogenKey);
+        if (pvIdx >= 0) state.items.vermogen[pvIdx].amount = Math.max(0, parseFloat(state.items.vermogen[pvIdx].amount) - prevOntvangen);
+      }
+    }
+
     if (newOntvangen > 0) {
-      if (!state.items.vermogen) state.items.vermogen = [];
-      const autoKey = 'auto_ontv_' + (editIndex !== null ? editIndex : Date.now());
-      item.autoKey = prev ? (prev.autoKey || autoKey) : autoKey;
-      const existingIdx = state.items.vermogen.findIndex(v => v.autoKey === item.autoKey);
-      if (existingIdx >= 0) { state.items.vermogen[existingIdx].amount = newOntvangen; state.items.vermogen[existingIdx].name = item.name + ' (ontvangen)'; }
-      else { state.items.vermogen.push({name: item.name + ' (ontvangen)', amount: newOntvangen, cat: 'beiden', note: 'Automatisch vanuit te ontvangen', autoKey: item.autoKey}); }
+      const autoKey = prev ? (prev.autoKey || ('auto_ontv_' + Date.now())) : ('auto_ontv_' + Date.now());
+      item.autoKey = autoKey;
+      if (ontvangenVermogenKey && ontvangenVermogenKey !== '__nieuw__') {
+        // Add to existing vermogen post
+        const vIdx = state.items.vermogen.findIndex(v => v.name === ontvangenVermogenKey);
+        if (vIdx >= 0) {
+          state.items.vermogen[vIdx].amount = parseFloat(state.items.vermogen[vIdx].amount) + newOntvangen;
+          // Store autoKey reference on the item only (no separate entry)
+        }
+      } else {
+        // Create loose entry with item name
+        const existingIdx = state.items.vermogen.findIndex(v => v.autoKey === autoKey);
+        if (existingIdx >= 0) { state.items.vermogen[existingIdx].amount = newOntvangen; state.items.vermogen[existingIdx].name = item.name; }
+        else { state.items.vermogen.push({name: item.name, amount: newOntvangen, cat: 'beiden', note: 'Ontvangen', autoKey}); }
+      }
       state.updated['vermogen'] = new Date().toISOString();
-    } else if (newOntvangen === 0 && prev && prev.autoKey) {
-      item.autoKey = prev.autoKey;
-      const existingIdx = state.items.vermogen ? state.items.vermogen.findIndex(v => v.autoKey === item.autoKey) : -1;
-      if (existingIdx >= 0) state.items.vermogen.splice(existingIdx, 1);
     }
   }
 
@@ -4109,6 +4383,9 @@ function deleteItem() {
 
 function switchTab(tab) {
   const scrollY = window.scrollY;
+  // Clear nog-te-maken search on tab switch
+  const ntmSearch = document.getElementById('nog-te-maken-search');
+  if (ntmSearch && ntmSearch.value) { ntmSearch.value = ''; renderNogTeMakenSearch(); }
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
