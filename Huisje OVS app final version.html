@@ -3749,6 +3749,12 @@ const KLUSDAGEN_SEED = [
 ];
 
 let klusWeekOffset = 0;
+const kdTakenCollapsed = {};
+
+function toggleKdTaken(kdId) {
+  kdTakenCollapsed[kdId] = !kdTakenCollapsed[kdId];
+  renderKlusdagen();
+}
 let klusdagEditId = null;
 let kdLosseTaken = [];
 let kdSelectedPlanningTaken = [];
@@ -3825,15 +3831,26 @@ function renderKlusdagen() {
     }).join('');
 
     const allDone = kd.taken && kd.taken.length > 0 && kd.taken.every(t => t.done);
+    const takenCount = (kd.taken||[]).length;
+    const doneTaken = (kd.taken||[]).filter(t=>t.done).length;
+    const collapsed = kdTakenCollapsed[kd.id];
+    const takenLabel = takenCount === 0 ? '' : (doneTaken + '/' + takenCount + ' klaar');
+    const toggleArrow = takenCount > 0 ? `<span onclick="event.stopPropagation();toggleKdTaken('${kd.id}')" style="font-size:13px;color:var(--text3);padding:4px 6px;cursor:pointer;transition:transform 0.2s;display:inline-block;transform:${collapsed?'rotate(-90deg)':'rotate(0deg)'}">▾</span>` : '';
     return `<div class="klusdag-block">
       <div class="klusdag-header" onclick="openKlusdagModal('${kd.id}')" style="cursor:pointer;">
         <div>
           <div class="klusdag-date">${dayLabel(kd.datum)}</div>
           <div class="klusdag-wie">${esc(kd.wie)}${kd.dagdelen && kd.dagdelen.length ? ' · ' + (kd.dagdelen.length === 3 ? 'Hele dag' : kd.dagdelen.map(d=>d.charAt(0).toUpperCase()+d.slice(1)).join(' & ')) : ''}${kd.note ? ' · ' + esc(kd.note) : ''}</div>
         </div>
-        ${allDone ? '<span style="font-size:11px;color:var(--green);font-weight:500;">Klaar ✓</span>' : '<span style="font-size:18px;color:var(--text3);">›</span>'}
+        <div style="display:flex;align-items:center;gap:4px;">
+          ${allDone ? '<span style="font-size:11px;color:var(--green);font-weight:500;">Klaar ✓</span>' : (takenLabel ? `<span style="font-size:11px;color:var(--text3);">${takenLabel}</span>` : '')}
+          ${toggleArrow}
+          <span style="font-size:18px;color:var(--text3);">›</span>
+        </div>
       </div>
-      ${takenHtml}
+      <div style="display:${collapsed ? 'none' : 'block'}">
+        ${takenHtml || '<div style="font-size:13px;color:var(--text3);padding:10px 16px;">Geen taken toegevoegd</div>'}
+      </div>
     </div>`;
   }).join('');
 }
