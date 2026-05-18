@@ -900,6 +900,97 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     border-color: var(--text);
     color: var(--bg);
   }
+
+  .dagdeel-btn {
+    background: var(--surface);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 12px 8px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text2);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    width: 100%;
+  }
+  .dagdeel-btn.active {
+    background: #111;
+    border-color: #111;
+    color: #f5f0e8;
+  }
+  [data-theme="dark"] .dagdeel-btn.active {
+    background: var(--text);
+    border-color: var(--text);
+    color: var(--bg);
+  }
+
+  /* PRIVACY MODE */
+  .privacy-amount { transition: filter 0.2s; }
+  body.privacy-mode .privacy-amount { filter: blur(6px); cursor: pointer; user-select: none; }
+  body.privacy-mode .privacy-amount:hover { filter: blur(4px); }
+  body.privacy-mode.privacy-revealed .privacy-amount { filter: none; }
+
+  /* ARCHIEF */
+  .archief-toggle-btn {
+    font-size: 12px;
+    color: var(--text3);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 0;
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .archief-toggle-btn:hover { color: var(--text2); }
+  .archief-section {
+    border-top: 0.5px solid var(--border);
+    margin-top: 16px;
+    padding-top: 12px;
+  }
+  .archief-section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+
+  /* CATEGORY BUDGET METER */
+  .cat-budget-bar {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    cursor: default;
+  }
+  .cat-budget-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 5px;
+  }
+  .cat-budget-row .cb-pct {
+    font-weight: 600;
+    font-size: 11px;
+  }
+  .cat-budget-track {
+    height: 5px;
+    background: var(--surface3);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .cat-budget-fill {
+    height: 5px;
+    border-radius: 99px;
+    transition: width 0.4s;
+  }
+  .cb-ok { background: var(--green); }
+  .cb-warn { background: var(--amber); }
+  .cb-over { background: var(--red); }
 </style>
 </head>
 <body>
@@ -962,7 +1053,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     </div>
 
     <div class="ov-progress-wrap" style="margin-top:10px;cursor:pointer;" onclick="goToPage('finance','streep')">
-      <div class="ov-progress-row"><span>Kosten vs. budget</span><span id="ov-pct">–</span></div>
+      <div class="ov-progress-row"><span>Kosten vs. budget</span><span id="ov-pct" class="privacy-amount">–</span></div>
       <div class="progress-track"><div class="progress-fill" id="ov-pfill" style="width:0%"></div></div>
       <div id="ov-top-kosten" style="margin-top:10px;"></div>
     </div>
@@ -971,24 +1062,25 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   <div class="ov-divider"></div>
 
   <!-- FINANCIEEL -->
-  <div class="ov-section" style="padding-top:16px;">
+  <div class="ov-section" style="padding-top:16px;" onclick="if(document.body.classList.contains('privacy-mode'))togglePrivacyReveal();">
     <div class="ov-label">Financiën</div>
     <div class="ov-grid">
       <div class="ov-card red" onclick="goToPage('finance','nog-te-maken')">
         <div class="oc-label">Nog te betalen</div>
-        <div class="oc-val" id="ov-te-betalen">–</div>
+        <div class="oc-val privacy-amount" id="ov-te-betalen">–</div>
       </div>
       <div class="ov-card green" onclick="goToPage('finance','vermogen')">
         <div class="oc-label">Liquide</div>
-        <div class="oc-val" id="ov-liquide">–</div>
+        <div class="oc-val privacy-amount" id="ov-liquide">–</div>
       </div>
       <div class="ov-card blue" onclick="goToPage('finance','te-ontvangen')">
         <div class="oc-label">Te ontvangen</div>
-        <div class="oc-val" id="ov-te-ontv">–</div>
+        <div class="oc-val privacy-amount" id="ov-te-ontv">–</div>
       </div>
     </div>
   </div>
 
+  <div id="ov-cat-budgets" style="display:none;padding:16px 20px 0;"></div>
   <div class="ov-divider"></div>
 
   <!-- DEZE WEEK -->
@@ -998,7 +1090,10 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
         <div class="ov-week-num" id="ov-week-num">Week –</div>
         <div class="ov-week-dates" id="ov-week-dates">–</div>
       </div>
+<div style="display:flex;gap:6px;">
+      <button class="btn-add" onclick="generateWeekUpdate()">📤 Update</button>
       <button class="btn-add" onclick="goToPage('klusdagen')">Alle klusdagen</button>
+      </div>
     </div>
     <div id="ov-klusdagen-week"></div>
     <div id="ov-meubel-levering"></div>
@@ -1018,53 +1113,53 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 
 <div class="dashboard">
   <div class="dash-label">Totaaloverzicht</div>
-  <div class="blutmeter" id="dcard-streep" onclick="selectDash(this,'streep')">
+  <div class="blutmeter" id="dcard-streep" onclick="if(document.body.classList.contains('privacy-mode')){togglePrivacyReveal();}else{selectDash(this,'streep');}">
     <div class="blutmeter-label">Netto positie (blutmeter)</div>
-    <div class="blutmeter-amount" id="d-netto">€ –</div>
+    <div class="blutmeter-amount privacy-amount" id="d-netto">€ –</div>
   </div>
   <div class="progress-bar-wrap">
     <div class="progress-row">
       <span>Kosten vs. budget</span>
-      <span id="d-pct" style="font-weight:500;">0%</span>
+      <span id="d-pct" class="privacy-amount" style="font-weight:500;">0%</span>
     </div>
     <div class="progress-track" style="height:8px;border-radius:99px;overflow:visible;position:relative;">
       <div class="progress-fill" id="d-pfill" style="width:0%;border-radius:99px;height:100%;"></div>
       <div id="d-budget-marker" style="position:absolute;top:-3px;width:2px;height:14px;background:#111;border-radius:2px;left:100%;transform:translateX(-50%);"></div>
     </div>
     <div class="progress-row" style="margin-top:8px;margin-bottom:0;">
-      <span id="d-kosten-label" style="color:var(--text2);">Kosten: –</span>
-      <span id="d-budget-label" style="color:var(--text2);">Budget: –</span>
+      <span id="d-kosten-label" class="privacy-amount" style="color:var(--text2);">Kosten: –</span>
+      <span id="d-budget-label" class="privacy-amount" style="color:var(--text2);">Budget: –</span>
     </div>
   </div>
   <div class="dash-grid">
     <div class="dash-card red" id="dcard-gemaakte-kosten" onclick="selectDash(this,'gemaakte-kosten')">
       <div class="dc-label">Gemaakte kosten</div>
-      <div class="dc-amount" id="d-gemaakt" style="color:var(--red)">€ –</div>
+      <div class="dc-amount privacy-amount" id="d-gemaakt" style="color:var(--red)">€ –</div>
     </div>
     <div class="dash-card amber" id="dcard-nog-te-maken" onclick="selectDash(this,'nog-te-maken')">
       <div class="dc-label">Nog te maken kosten</div>
-      <div class="dc-amount" id="d-te-maken" style="color:var(--amber)">€ –</div>
+      <div class="dc-amount privacy-amount" id="d-te-maken" style="color:var(--amber)">€ –</div>
     </div>
     <div class="dash-card amber" id="dcard-meubels" onclick="selectDash(this,'meubels')">
       <div class="dc-label">Meubels (nog te betalen)</div>
-      <div class="dc-amount" id="d-meubels" style="color:var(--amber)">€ –</div>
+      <div class="dc-amount privacy-amount" id="d-meubels" style="color:var(--amber)">€ –</div>
     </div>
     <div class="dash-card purple" id="dcard-bruiloft" onclick="selectDash(this,'bruiloft')">
       <div class="dc-label">Bruiloft (nog te betalen)</div>
-      <div class="dc-amount" id="d-bruiloft" style="color:var(--purple)">€ –</div>
+      <div class="dc-amount privacy-amount" id="d-bruiloft" style="color:var(--purple)">€ –</div>
     </div>
   </div>
   <div class="dash-wide green" id="dcard-vermogen" onclick="selectDash(this,'vermogen')">
     <span class="dc-label">Liquide middelen</span>
-    <span class="dc-amount" id="d-vermogen" style="color:var(--green)">€ –</span>
+    <span class="dc-amount privacy-amount" id="d-vermogen" style="color:var(--green)">€ –</span>
   </div>
   <div class="dash-wide blue" id="dcard-te-ontvangen" onclick="selectDash(this,'te-ontvangen')">
     <span class="dc-label">Te ontvangen</span>
-    <span class="dc-amount" id="d-te-ontv" style="color:var(--green)">€ –</span>
+    <span class="dc-amount privacy-amount" id="d-te-ontv" style="color:var(--green)">€ –</span>
   </div>
   <div class="dash-wide amber" id="dcard-sparen" onclick="selectDash(this,'sparen')" style="margin-bottom:0">
     <span class="dc-label">Nog te sparen</span>
-    <span class="dc-amount" id="d-sparen" style="color:var(--amber)">€ –</span>
+    <span class="dc-amount privacy-amount" id="d-sparen" style="color:var(--amber)">€ –</span>
   </div>
 </div>
 
@@ -1089,20 +1184,25 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <div><div class="section-title">Gemaakte kosten</div><div class="section-updated" id="upd-gemaakte-kosten">–</div></div>
     <button class="btn-add" onclick="openModal('gemaakte-kosten')">+ Toevoegen</button>
   </div>
+  <input class="form-input" type="text" id="gemaakte-kosten-search" placeholder="🔍  Zoeken..." oninput="renderGemaakteKostenSearch()" style="margin-bottom:12px;font-size:13px;padding:9px 12px;">
+  <div id="gemaakte-kosten-search-results" style="display:none;"></div>
+  <div id="cat-budget-bar-gemaakte-kosten"></div>
+  <div id="gemaakte-kosten-normal">
   <div class="sub-header sub-header-toggle" onclick="toggleCollapse('gemaakte-kosten-ddo')">
     <span class="sh-label">DDO facturen</span>
-    <span class="sh-right"><span class="sh-count" id="sh-count-gemaakte-kosten-ddo">0</span><span class="sh-arrow" id="sh-arrow-gemaakte-kosten-ddo">▾</span></span>
+    <span class="sh-right"><span id="sh-subtotal-gemaakte-kosten-ddo" style="font-size:11px;color:var(--text3);margin-right:6px;"></span><span class="sh-count" id="sh-count-gemaakte-kosten-ddo">0</span><span class="sh-arrow" id="sh-arrow-gemaakte-kosten-ddo">▾</span></span>
   </div>
   <div class="collapsible-list" id="collapse-gemaakte-kosten-ddo">
     <div class="items-list" id="list-gemaakte-kosten-ddo"></div>
   </div>
   <div class="sub-header sub-header-toggle" onclick="toggleCollapse('gemaakte-kosten-overig')" style="margin-top:18px;">
     <span class="sh-label">Overige kosten</span>
-    <span class="sh-right"><span class="sh-count" id="sh-count-gemaakte-kosten-overig">0</span><span class="sh-arrow" id="sh-arrow-gemaakte-kosten-overig">▾</span></span>
+    <span class="sh-right"><span id="sh-subtotal-gemaakte-kosten-overig" style="font-size:11px;color:var(--text3);margin-right:6px;"></span><span class="sh-count" id="sh-count-gemaakte-kosten-overig">0</span><span class="sh-arrow" id="sh-arrow-gemaakte-kosten-overig">▾</span></span>
   </div>
   <div class="collapsible-list" id="collapse-gemaakte-kosten-overig">
     <div class="items-list" id="list-gemaakte-kosten-overig"></div>
   </div>
+  </div><!-- end gemaakte-kosten-normal -->
   <div class="section-total"><span class="st-label">Totaal gemaakte kosten</span><span class="st-amount red" id="total-gemaakte-kosten">€ 0</span></div>
 </section>
 
@@ -1114,17 +1214,18 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   </div>
   <input class="form-input" type="text" id="nog-te-maken-search" placeholder="🔍  Zoeken..." oninput="renderNogTeMakenSearch()" style="margin-bottom:12px;font-size:13px;padding:9px 12px;">
   <div id="nog-te-maken-search-results" style="display:none;"></div>
+  <div id="cat-budget-bar-nog-te-maken"></div>
   <div id="nog-te-maken-normal">
   <div class="sub-header sub-header-toggle" onclick="toggleCollapse('nog-te-maken-ddo')">
     <span class="sh-label">Verbouwing DDO</span>
-    <span class="sh-right"><span class="sh-count" id="sh-count-nog-te-maken-ddo">0</span><span class="sh-arrow" id="sh-arrow-nog-te-maken-ddo">▾</span></span>
+    <span class="sh-right"><span id="sh-subtotal-nog-te-maken-ddo" style="font-size:11px;color:var(--text3);margin-right:6px;"></span><span class="sh-count" id="sh-count-nog-te-maken-ddo">0</span><span class="sh-arrow" id="sh-arrow-nog-te-maken-ddo">▾</span></span>
   </div>
   <div class="collapsible-list" id="collapse-nog-te-maken-ddo">
     <div class="items-list" id="list-nog-te-maken-ddo"></div>
   </div>
   <div class="sub-header sub-header-toggle" onclick="toggleCollapse('nog-te-maken-overig')" style="margin-top:18px;">
     <span class="sh-label">Overige kosten</span>
-    <span class="sh-right"><span class="sh-count" id="sh-count-nog-te-maken-overig">0</span><span class="sh-arrow" id="sh-arrow-nog-te-maken-overig">▾</span></span>
+    <span class="sh-right"><span id="sh-subtotal-nog-te-maken-overig" style="font-size:11px;color:var(--text3);margin-right:6px;"></span><span class="sh-count" id="sh-count-nog-te-maken-overig">0</span><span class="sh-arrow" id="sh-arrow-nog-te-maken-overig">▾</span></span>
   </div>
   <div class="collapsible-list" id="collapse-nog-te-maken-overig">
     <div class="items-list" id="list-nog-te-maken-overig"></div>
@@ -1138,6 +1239,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <div><div class="section-title">Meubels</div><div class="section-updated" id="upd-meubels">–</div></div>
     <button class="btn-add" onclick="openModal('meubels')">+ Toevoegen</button>
   </div>
+  <div id="cat-budget-bar-meubels"></div>
   <input class="form-input" type="text" id="meubel-search" placeholder="🔍  Zoeken op naam, merk..." oninput="renderMeubelsSearch()" style="margin-bottom:12px;font-size:13px;padding:9px 12px;">
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
     <div class="meubel-stat" id="mstat-begroot" onclick="filterMeubels('begroot')"><div class="ms-label">Begroot</div><div class="ms-val amber" id="ms-begroot">€ 0</div></div>
@@ -1163,6 +1265,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <div><div class="section-title">Bruiloft</div><div class="section-updated" id="upd-bruiloft">–</div></div>
     <button class="btn-add" onclick="openModal('bruiloft')">+ Toevoegen</button>
   </div>
+  <div id="cat-budget-bar-bruiloft"></div>
   <div class="items-list" id="list-bruiloft"></div>
   <div class="section-total"><span class="st-label">Nog te betalen bruiloft</span><span class="st-amount purple" id="total-bruiloft">€ 0</span></div>
   <div class="info-box">Rekening gehouden met cadeaus die definitief zijn (taart / jurk / pak).</div>
@@ -1172,7 +1275,10 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 <section class="section" id="tab-vermogen">
   <div class="section-header">
     <div><div class="section-title">Liquide middelen</div><div class="section-updated" id="upd-vermogen">–</div></div>
-    <button class="btn-add" onclick="openModal('vermogen')">+ Toevoegen</button>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="btn-add" id="verm-sort-btn" onclick="toggleVermogenSort()" style="font-size:11px;padding:5px 10px;">↕ Sorteren</button>
+      <button class="btn-add" onclick="openModal('vermogen')">+ Toevoegen</button>
+    </div>
   </div>
   <div class="sub-header">Persoon 1</div>
   <div class="items-list" id="list-vermogen-joost"></div>
@@ -1256,22 +1362,22 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     </div>
     <div class="form-group">
       <label class="form-label">Omschrijving</label>
-      <input class="form-input" type="text" id="form-name" placeholder="bijv. Bank, schilderwerk...">
+      <input class="form-input" type="text" id="form-name" oninput="markModalChanged()" placeholder="bijv. Bank, schilderwerk...">
     </div>
     <div class="form-group">
       <label class="form-label">Bedrag (€)</label>
-      <input class="form-input" type="number" id="form-amount" placeholder="0" inputmode="decimal">
+      <input class="form-input" type="number" id="form-amount" oninput="markModalChanged()" placeholder="0" inputmode="decimal">
     </div>
     <div class="form-group" id="form-cat-group" style="display:none">
       <label class="form-label">Categorie</label>
-      <select class="form-select" id="form-cat" onchange="handleCatChange(this)"></select>
+      <select class="form-select" id="form-cat" onchange="handleCatChange(this);markModalChanged();"></select>
       <div id="form-cat-new-wrap" style="display:none;margin-top:8px;">
         <input class="form-input" type="text" id="form-cat-new" placeholder="Naam nieuwe categorie...">
       </div>
     </div>
     <div class="form-group" id="form-status-group" style="display:none">
       <label class="form-label">Status</label>
-      <select class="form-select" id="form-status"></select>
+      <select class="form-select" id="form-status" onchange="markModalChanged()"></select>
     </div>
     <div class="form-group" id="form-partial-group" style="display:none">
       <label class="form-label" id="form-partial-label">Ontvangen bedrag (€)</label>
@@ -1329,6 +1435,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     </div>
     <div class="modal-actions">
       <button class="btn-primary" onclick="saveItem()">Opslaan</button>
+      <button class="btn-add" id="btn-duplicate" style="display:none" onclick="duplicateItem()">Dupliceer</button>
       <button class="btn-danger" id="btn-delete" style="display:none" onclick="deleteItem()">Verwijder</button>
     </div>
   </div>
@@ -1347,7 +1454,14 @@ function loadSettings() {
   } catch(e) {}
   applyTheme(appSettings.theme);
   applyAppNaam();
+  applyPrivacyMode();
   applyPageToggles();
+}
+
+function togglePrivacySetting(el) {
+  appSettings.privacyMode = el.checked;
+  localStorage.setItem('app-settings', JSON.stringify(appSettings));
+  applyPrivacyMode();
 }
 
 function toggleBudgetWarning(el) {
@@ -1397,6 +1511,13 @@ function openSettings() {
   const syncEl = document.getElementById('settings-sync-status');
   if (syncEl) syncEl.textContent = supabaseConnected ? '🟢 Verbonden' : '🔴 Niet verbonden';
   // Budget warning toggle: ON = waarschuwing actief, OFF = onderdrukt
+  const catBudgets = appSettings.catBudgets || {};
+  ['meubels','bruiloft','gemaakte-kosten','nog-te-maken'].forEach(k => {
+    const el = document.getElementById('catbudget-' + k);
+    if (el) el.value = catBudgets[k] || '';
+  });
+  const privToggle = document.getElementById('settings-privacy-mode');
+  if (privToggle) privToggle.checked = !!appSettings.privacyMode;
   const bwToggle = document.getElementById('settings-budget-warning');
   if (bwToggle) bwToggle.checked = !appSettings.budgetWarningSuppressed;
   document.getElementById('settings-backdrop').classList.add('open');
@@ -1445,10 +1566,11 @@ function resetSection(section) {
   );
 }
 
-function showConfirm(title, msg, onOk) {
+function showConfirm(title, msg, onOk, okLabel) {
   document.getElementById('confirm-title').textContent = title;
   document.getElementById('confirm-msg').textContent = msg;
   const okBtn = document.getElementById('confirm-ok-btn');
+  okBtn.textContent = okLabel || 'Verwijder';
   okBtn.onclick = function() { closeConfirm(); onOk(); };
   document.getElementById('confirm-backdrop').classList.add('open');
 }
@@ -1519,6 +1641,7 @@ function renderContacten() {
 }
 
 function openContactModal(editIdx) {
+  resetModalChanges();
   contactEditId = editIdx !== undefined ? editIdx : null;
   const ct = contactEditId !== null ? (state.contacten||[])[contactEditId] : null;
   setText('contact-modal-title', ct ? 'Contact bewerken' : 'Contact toevoegen');
@@ -1531,9 +1654,332 @@ function openContactModal(editIdx) {
   document.getElementById('contact-modal').classList.add('open');
   setTimeout(() => document.getElementById('c-naam').focus(), 80);
 }
-function closeContactModal() { document.getElementById('contact-modal').classList.remove('open'); }
+function closeContactModal() { confirmCloseModal(() => { document.getElementById('contact-modal').classList.remove('open'); resetModalChanges(); }); }
 function closeContactModalBg(e) { if (e.target === document.getElementById('contact-modal')) closeContactModal(); }
 
+
+
+// ── UNSAVED CHANGES GUARD ─────────────────────────────────────────────────────
+let modalHasChanges = false;
+
+function markModalChanged() {
+  modalHasChanges = true;
+}
+
+function resetModalChanges() {
+  modalHasChanges = false;
+}
+
+function confirmCloseModal(closeFn) {
+  if (!modalHasChanges) { closeFn(); return; }
+  showConfirm(
+    'Wijzigingen niet opgeslagen',
+    'Als je dit venster sluit gaan je wijzigingen verloren. Weet je het zeker?',
+    () => { resetModalChanges(); closeFn(); },
+    'Doorgaan'
+  );
+}
+// ── END UNSAVED CHANGES GUARD ─────────────────────────────────────────────────
+
+
+// ── PRIVACY MODE ──────────────────────────────────────────────────────────────
+function applyPrivacyMode() {
+  if (appSettings.privacyMode) {
+    document.body.classList.add('privacy-mode');
+    document.body.classList.remove('privacy-revealed');
+  } else {
+    document.body.classList.remove('privacy-mode');
+    document.body.classList.remove('privacy-revealed');
+  }
+}
+
+function togglePrivacyReveal() {
+  if (!appSettings.privacyMode) return;
+  document.body.classList.toggle('privacy-revealed');
+}
+
+// ── END PRIVACY MODE ───────────────────────────────────────────────────────────
+
+
+
+
+// ── CATEGORIE BUDGETTEN ────────────────────────────────────────────────────────
+function saveCatBudgets() {
+  appSettings.catBudgets = {
+    meubels: parseFloat(document.getElementById('catbudget-meubels')?.value) || 0,
+    bruiloft: parseFloat(document.getElementById('catbudget-bruiloft')?.value) || 0,
+    'gemaakte-kosten': parseFloat(document.getElementById('catbudget-gemaakte-kosten')?.value) || 0,
+    'nog-te-maken': parseFloat(document.getElementById('catbudget-nog-te-maken')?.value) || 0
+  };
+  localStorage.setItem('app-settings', JSON.stringify(appSettings));
+  renderCatBudgetBars();
+  renderOverzichtCatBudgets();
+}
+
+function renderCatBudgetBar(elId, spent, budget) {
+  const el = document.getElementById('cat-budget-bar-' + elId);
+  if (!el) return;
+  if (!budget || budget <= 0) { el.innerHTML = ''; return; }
+  const pct = Math.min(Math.round(spent / budget * 100), 999);
+  const cls = pct >= 100 ? 'cb-over' : pct >= 80 ? 'cb-warn' : 'cb-ok';
+  const barW = Math.min(100, pct);
+  el.innerHTML = '<div class="cat-budget-bar">' +
+    '<div class="cat-budget-row">' +
+    '<span>' + fmt(spent) + ' <span style="color:var(--text3)">van</span> ' + fmt(budget) + '</span>' +
+    '<span class="cb-pct" style="color:' + (pct>=100?'var(--red)':pct>=80?'var(--amber)':'var(--green)') + '">' + pct + '%</span>' +
+    '</div>' +
+    '<div class="cat-budget-track"><div class="cat-budget-fill ' + cls + '" style="width:' + barW + '%"></div></div>' +
+    '</div>';
+}
+
+function renderCatBudgetBars() {
+  const budgets = appSettings.catBudgets || {};
+  const items = s => state.items[s] || [];
+  const sumArr = arr => arr.reduce((a,b) => a+(parseFloat(b.amount)||0), 0);
+
+  // Meubels: use nogOpen totals
+  const meubelsSpent = items('meubels').reduce((a,b) => a+(parseFloat(b.werkelijk||b.begroot||0)),0);
+  renderCatBudgetBar('meubels', meubelsSpent, budgets.meubels || 0);
+
+  // Bruiloft
+  renderCatBudgetBar('bruiloft', sumArr(items('bruiloft')), budgets.bruiloft || 0);
+
+  // Gemaakte kosten
+  renderCatBudgetBar('gemaakte-kosten', sumArr(items('gemaakte-kosten')), budgets['gemaakte-kosten'] || 0);
+
+  // Nog te maken
+  const uitstellenAftrek = (state.uitstellen||[]).filter(i=>i.uitgesteld).reduce((a,b)=>a+(parseFloat(b.amount)||0),0);
+  renderCatBudgetBar('nog-te-maken', sumArr(items('nog-te-maken')) - uitstellenAftrek, budgets['nog-te-maken'] || 0);
+}
+
+function renderOverzichtCatBudgets() {
+  const el = document.getElementById('ov-cat-budgets');
+  if (!el) return;
+  const budgets = appSettings.catBudgets || {};
+  const items = s => state.items[s] || [];
+  const sumArr = arr => arr.reduce((a,b) => a+(parseFloat(b.amount)||0), 0);
+
+  const cats = [
+    { key: 'meubels', label: 'Meubels', spent: items('meubels').reduce((a,b)=>a+(parseFloat(b.werkelijk||b.begroot||0)),0), tab: 'meubels' },
+    { key: 'bruiloft', label: 'Bruiloft', spent: sumArr(items('bruiloft')), tab: 'bruiloft' },
+    { key: 'gemaakte-kosten', label: 'Gemaakte kosten', spent: sumArr(items('gemaakte-kosten')), tab: 'gemaakte-kosten' },
+    { key: 'nog-te-maken', label: 'Nog te maken', spent: sumArr(items('nog-te-maken')), tab: 'nog-te-maken' }
+  ].filter(cat => budgets[cat.key] > 0);
+
+  if (!cats.length) { el.style.display = 'none'; return; }
+
+  // Only show categories over 80%
+  const over80 = cats.filter(cat => cat.spent / budgets[cat.key] >= 0.8);
+  if (!over80.length) { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  el.innerHTML = '<div class="ov-label" style="margin-bottom:10px;">Categorie budgetten</div>' +
+    over80.map(cat => {
+      const budget = budgets[cat.key];
+      const pct = Math.min(Math.round(cat.spent / budget * 100), 999);
+      const cls = pct >= 100 ? 'cb-over' : 'cb-warn';
+      const barW = Math.min(100, pct);
+      return '<div style="margin-bottom:10px;cursor:pointer;" onclick="goToPage(\'finance\',\'' + cat.tab + '\')">' +
+        '<div class="cat-budget-row"><span style="font-weight:500;">' + cat.label + '</span>' +
+        '<span class="cb-pct" style="color:' + (pct>=100?'var(--red)':'var(--amber)') + '">' + fmt(cat.spent) + ' / ' + fmt(budget) + ' · ' + pct + '%</span></div>' +
+        '<div class="cat-budget-track"><div class="cat-budget-fill ' + cls + '" style="width:' + barW + '%"></div></div>' +
+        '</div>';
+    }).join('');
+}
+// ── END CATEGORIE BUDGETTEN ────────────────────────────────────────────────────
+
+// ── WEEK UPDATE ───────────────────────────────────────────────────────────────
+function generateWeekUpdate() {
+  const curWeek = getCurrentWeek();
+  const nextWeek = curWeek + 1;
+  const {mon, sun} = getKlusWeekDates(0);
+  const {mon: nMon, sun: nSun} = getKlusWeekDates(1);
+  const privacyOn = appSettings.privacyMode && !document.body.classList.contains('privacy-revealed');
+  const projectNaam = appSettings.appnaam || 'Verbouwing';
+
+  const lines = [];
+  lines.push('📋 Week ' + curWeek + ' update — ' + projectNaam);
+  lines.push('');
+
+  // Klaar deze week
+  const klaarDezeWeek = (state.planning||[]).filter(t => {
+    const ws = parseInt(t.week), we = t.weekEnd ? parseInt(t.weekEnd) : ws;
+    return t.status === 'klaar' && ws <= curWeek && we >= curWeek;
+  });
+  if (klaarDezeWeek.length) {
+    lines.push('✅ Klaar deze week:');
+    klaarDezeWeek.forEach(t => lines.push('   · ' + t.taak));
+    lines.push('');
+  }
+
+  // Open taken deze week
+  const openDezeWeek = (state.planning||[]).filter(t => {
+    const ws = parseInt(t.week), we = t.weekEnd ? parseInt(t.weekEnd) : ws;
+    return t.status !== 'klaar' && t.status !== 'uitgesteld' && ws <= curWeek && we >= curWeek;
+  });
+  if (openDezeWeek.length) {
+    lines.push('🔧 Nog open deze week:');
+    openDezeWeek.forEach(t => lines.push('   · ' + t.taak + (t.wie ? ' (' + t.wie + ')' : '')));
+    lines.push('');
+  }
+
+  // Klusdagen deze week
+  const kdDezeWeek = (state.klusdagen||[]).filter(kd => {
+    const parts = kd.datum.split('-');
+    const d = new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+    return d >= mon && d <= sun;
+  }).sort((a,b) => new Date(a.datum)-new Date(b.datum));
+  if (kdDezeWeek.length) {
+    lines.push('🔨 Klusdagen:');
+    kdDezeWeek.forEach(kd => {
+      const parts = kd.datum.split('-');
+      const d = new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+      const dag = d.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'short'});
+      const dagdeel = kd.dagdelen && kd.dagdelen.length
+        ? (kd.dagdelen.length === 3 ? 'hele dag' : kd.dagdelen.join(' & '))
+        : '';
+      lines.push('   · ' + dag + ' — ' + kd.wie + (dagdeel ? ' (' + dagdeel + ')' : ''));
+    });
+    lines.push('');
+  }
+
+  // Leveringen deze week
+  const leverDezeWeek = (state.items['meubels']||[]).filter(m => {
+    if (!m.leverType || !m.leverdatum) return false;
+    const parts = m.leverdatum.split('-');
+    const d = new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+    return d >= mon && d <= sun;
+  });
+  if (leverDezeWeek.length) {
+    lines.push('📦 Leveringen:');
+    leverDezeWeek.forEach(m => {
+      const parts = m.leverdatum.split('-');
+      const d = new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+      const dag = d.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'short'});
+      const type = m.leverType === 'levering' ? 'levering' : 'ophalen';
+      lines.push('   · ' + m.name + ' — ' + type + ' ' + dag);
+    });
+    lines.push('');
+  }
+
+  // Volgende week taken
+  const volgendeWeek = (state.planning||[]).filter(t => {
+    const ws = parseInt(t.week), we = t.weekEnd ? parseInt(t.weekEnd) : ws;
+    return t.status !== 'klaar' && t.status !== 'uitgesteld' && ws <= nextWeek && we >= nextWeek;
+  });
+  if (volgendeWeek.length) {
+    lines.push('📅 Volgende week (w' + nextWeek + '):');
+    volgendeWeek.slice(0,4).forEach(t => lines.push('   · ' + t.taak));
+    if (volgendeWeek.length > 4) lines.push('   · +' + (volgendeWeek.length-4) + ' meer');
+    lines.push('');
+  }
+
+  // Budget & voortgang (skip if privacy mode)
+  if (!privacyOn) {
+    const items = s => state.items[s] || [];
+    const sumArr = arr => arr.reduce((a,b) => a+(parseFloat(b.amount)||0), 0);
+    const gemaaktTotal = sumArr(items('gemaakte-kosten'));
+    const uitstellenAftrek = (state.uitstellen||[]).filter(i=>i.uitgesteld).reduce((a,b)=>a+(parseFloat(b.amount)||0),0);
+    const teMakenEff = sumArr(items('nog-te-maken')) - uitstellenAftrek;
+    const meubelsTotal = (items('meubels')||[]).reduce((a,b)=>a+(parseFloat(b.nogOpen||0)),0);
+    const bruiloftTotal = sumArr(items('bruiloft'));
+    const vermogenTotal = sumArr(items('vermogen'));
+    const teOntvTotal = (items('te-ontvangen')||[]).reduce((a,b)=>{
+      if(b.status==='ontvangen') return a;
+      if(b.status==='gedeeltelijk') return a+(parseFloat(b.amount)||0)-(parseFloat(b.ontvangen)||0);
+      return a+(parseFloat(b.amount)||0);
+    },0);
+    const sparenTotal = getSparenTotal();
+    const netto = vermogenTotal + teOntvTotal + sparenTotal - gemaaktTotal - teMakenEff - meubelsTotal - bruiloftTotal;
+    const totaalBudget = vermogenTotal + teOntvTotal + sparenTotal;
+    const totaalKosten = gemaaktTotal + teMakenEff + meubelsTotal + bruiloftTotal;
+    const pct = totaalBudget > 0 ? Math.round(totaalKosten/totaalBudget*100) : 0;
+    lines.push('💰 Budget: ' + pct + '% · Netto: ' + fmt(netto));
+  }
+
+  // Voortgang taken
+  const totaalTaken = (state.planning||[]).length;
+  const klaarTaken = (state.planning||[]).filter(t=>t.status==='klaar').length;
+  const takenPct = totaalTaken > 0 ? Math.round(klaarTaken/totaalTaken*100) : 0;
+  const weeksLeft = Math.max(0, (appSettings.opleverweek||29) - curWeek);
+  lines.push('🏗️ Voortgang: ' + klaarTaken + '/' + totaalTaken + ' taken (' + takenPct + '%) · ' + weeksLeft + ' weken te gaan');
+
+  const text = lines.join('\n');
+  document.getElementById('week-update-text').textContent = text;
+  document.getElementById('week-update-copied').textContent = '';
+  document.getElementById('week-update-modal').classList.add('open');
+}
+
+function closeWeekUpdateModal() { document.getElementById('week-update-modal').classList.remove('open'); }
+function closeWeekUpdateBg(e) { if (e.target === document.getElementById('week-update-modal')) closeWeekUpdateModal(); }
+
+function copyWeekUpdate() {
+  const text = document.getElementById('week-update-text').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const el = document.getElementById('week-update-copied');
+    if (el) { el.textContent = '✓ Gekopieerd naar klembord'; el.style.display = 'block'; }
+  }).catch(() => {
+    // Fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    const el = document.getElementById('week-update-copied');
+    if (el) { el.textContent = '✓ Gekopieerd'; el.style.display = 'block'; }
+  });
+}
+
+function shareWhatsApp() {
+  const text = document.getElementById('week-update-text').textContent;
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+// ── END WEEK UPDATE ────────────────────────────────────────────────────────────
+
+// ── ARCHIEF ───────────────────────────────────────────────────────────────────
+let archiefVisible = false;
+
+function toggleArchief() {
+  archiefVisible = !archiefVisible;
+  const section = document.getElementById('archief-section');
+  const label = document.getElementById('archief-toggle-label');
+  if (section) section.style.display = archiefVisible ? 'block' : 'none';
+  if (label) label.textContent = archiefVisible ? '▾ Archief verbergen' : '▸ Archief weergeven';
+  if (archiefVisible) renderArchief();
+}
+
+function renderArchief() {
+  const list = document.getElementById('archief-list');
+  if (!list) return;
+  const klaarTaken = (state.planning||[]).filter(t => t.status === 'klaar');
+  if (!klaarTaken.length) {
+    list.innerHTML = '<div class="empty-state">Nog geen afgeronde taken</div>';
+    return;
+  }
+  // Group by week
+  const byWeek = {};
+  klaarTaken.forEach(t => {
+    const w = t.week || '?';
+    if (!byWeek[w]) byWeek[w] = [];
+    byWeek[w].push(t);
+  });
+  const weeks = Object.keys(byWeek).sort((a,b) => parseInt(a)-parseInt(b));
+  list.innerHTML = weeks.map(w => {
+    const weekTaken = byWeek[w];
+    return `<div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Week ${w}</div>
+      ${weekTaken.map(t => {
+        const ri = (state.planning||[]).indexOf(t);
+        return `<div class="plan-row status-klaar" onclick="openPlanEdit(${ri})" style="opacity:0.65;cursor:pointer;">
+          <div class="pr-left">
+            <div class="pr-taak" style="text-decoration:line-through;">${esc(t.taak)}</div>
+            <div class="pr-meta">${esc(t.cat||'')} · ${esc(t.wie||'')}</div>
+          </div>
+          <span class="badge paid">Klaar</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ── END ARCHIEF ────────────────────────────────────────────────────────────────
 
 // ── VALIDATION ────────────────────────────────────────────────────────────────
 function validateFields(ids) {
@@ -1576,7 +2022,7 @@ function saveContact() {
   if (contactEditId !== null) { state.contacten[contactEditId] = ct; }
   else { state.contacten.push(ct); }
   state.updatedContacten = new Date().toISOString();
-  save(); renderContacten(); closeContactModal();
+  resetModalChanges(); save(); renderContacten(); closeContactModal();
 }
 
 function deleteContact() {
@@ -1584,7 +2030,7 @@ function deleteContact() {
   showConfirm('Contact verwijderen', 'Weet je zeker dat je dit contact wil verwijderen?', () => {
     state.contacten.splice(contactEditId, 1);
     state.updatedContacten = new Date().toISOString();
-    save(); renderContacten(); closeContactModal();
+    resetModalChanges(); save(); renderContacten(); closeContactModal();
   });
 }
 
@@ -1626,6 +2072,7 @@ function filterKeuzesCat(cat) {
 }
 
 function openKeuzeModal(editIdx) {
+  resetModalChanges();
   keuzeEditId = editIdx !== undefined ? editIdx : null;
   const k = keuzeEditId !== null ? (state.keuzes||[])[keuzeEditId] : null;
   setText('keuze-modal-title', k ? 'Keuze bewerken' : 'Keuze toevoegen');
@@ -1640,7 +2087,7 @@ function openKeuzeModal(editIdx) {
   document.getElementById('keuze-modal').classList.add('open');
   setTimeout(() => document.getElementById('k-naam').focus(), 80);
 }
-function closeKeuzeModal() { document.getElementById('keuze-modal').classList.remove('open'); }
+function closeKeuzeModal() { confirmCloseModal(() => { document.getElementById('keuze-modal').classList.remove('open'); resetModalChanges(); }); }
 function closeKeuzeModalBg(e) { if (e.target === document.getElementById('keuze-modal')) closeKeuzeModal(); }
 
 function saveKeuze() {
@@ -1659,7 +2106,7 @@ function saveKeuze() {
   if (keuzeEditId !== null) { state.keuzes[keuzeEditId] = k; }
   else { state.keuzes.push(k); }
   state.updatedKeuzes = new Date().toISOString();
-  save(); renderKeuzes(); closeKeuzeModal();
+  resetModalChanges(); save(); renderKeuzes(); closeKeuzeModal();
 }
 
 function deleteKeuze() {
@@ -1667,7 +2114,7 @@ function deleteKeuze() {
   showConfirm('Keuze verwijderen', 'Weet je zeker dat je deze keuze wil verwijderen?', () => {
     state.keuzes.splice(keuzeEditId, 1);
     state.updatedKeuzes = new Date().toISOString();
-    save(); renderKeuzes(); closeKeuzeModal();
+    resetModalChanges(); save(); renderKeuzes(); closeKeuzeModal();
   });
 }
 
@@ -1971,6 +2418,40 @@ function renderMeubelsSearch() {
   }).join('');
 }
 
+function renderGemaakteKostenSearch() {
+  const query = (document.getElementById('gemaakte-kosten-search')?.value || '').toLowerCase().trim();
+  const normal = document.getElementById('gemaakte-kosten-normal');
+  const results = document.getElementById('gemaakte-kosten-search-results');
+  if (!normal || !results) return;
+  if (!query) {
+    normal.style.display = 'block';
+    results.style.display = 'none';
+    results.innerHTML = '';
+    return;
+  }
+  normal.style.display = 'none';
+  results.style.display = 'block';
+  const items = state.items['gemaakte-kosten'] || [];
+  const filtered = items.filter(item =>
+    item.name.toLowerCase().includes(query) ||
+    (item.cat||'').toLowerCase().includes(query) ||
+    (item.note||'').toLowerCase().includes(query)
+  );
+  if (!filtered.length) { results.innerHTML = '<div class="empty-state">Geen items gevonden</div>'; return; }
+  results.innerHTML = filtered.map(item => {
+    const ri = items.indexOf(item);
+    const catDisplay = item.cat ? item.cat.charAt(0).toUpperCase() + item.cat.slice(1) : '';
+    const sub = [catDisplay, item.note].filter(Boolean).join(' · ');
+    return `<div class="item-row" onclick="openEdit('gemaakte-kosten',${ri})">
+      <div class="item-info">
+        <div class="item-name">${esc(item.name)}</div>
+        ${sub ? `<div class="item-meta">${esc(sub)}</div>` : ''}
+      </div>
+      <div class="item-amount red">${fmt(item.amount)}</div>
+    </div>`;
+  }).join('');
+}
+
 function renderNogTeMakenSearch() {
   const query = (document.getElementById('nog-te-maken-search')?.value || '').toLowerCase().trim();
   const normal = document.getElementById('nog-te-maken-normal');
@@ -2227,15 +2708,38 @@ function renderPlanning() {
     if (cb) {
       cb.checked = !cb.checked;
       msdChange('week');
-    } else {
-      toggleChip('week', wStr);
     }
   };
   banner.classList.toggle('active', planFilters.week.has(String(curWeek)));
 
-  let tasks = state.planning;
+  // Separate klaar tasks to archief (hide from main list unless status filter includes klaar)
+  const filteringForKlaar = planFilters.status.has('klaar');
+  let tasks = filteringForKlaar ? state.planning : state.planning.filter(t => t.status !== 'klaar');
 
-  if (filterStatus.size > 0) tasks = tasks.filter(t => filterStatus.has(t.status));
+  // Update archief count
+  const klaarCount = (state.planning||[]).filter(t => t.status === 'klaar').length;
+  const archiefCount = document.getElementById('archief-count');
+  if (archiefCount) archiefCount.textContent = klaarCount > 0 ? klaarCount : '';
+  const archiefBtn = document.getElementById('archief-toggle-btn');
+  if (archiefBtn) archiefBtn.style.display = klaarCount > 0 ? 'flex' : 'none';
+
+  // Re-render archief if open
+  if (archiefVisible) renderArchief();
+
+  if (filterStatus.size > 0) {
+    tasks = tasks.filter(t => {
+      return [...filterStatus].some(fs => {
+        if (fs === 'achterstallig') {
+          const end = t.weekEnd ? parseInt(t.weekEnd) : parseInt(t.week);
+          return end < curWeekNow && t.status !== 'klaar' && t.status !== 'uitgesteld';
+        }
+        if (fs === 'geen-klusdag') {
+          return !(state.klusdagen||[]).some(kd => (kd.taken||[]).some(tk => tk.planningTaak === t.taak));
+        }
+        return t.status === fs;
+      });
+    });
+  }
   if (filterWie.size > 0) tasks = tasks.filter(t => filterWie.has(t.wie));
   if (filterCat.size > 0) tasks = tasks.filter(t => filterCat.has(t.cat));
   const curWeekNow = getCurrentWeek();
@@ -2244,7 +2748,6 @@ function renderPlanning() {
       const end = t.weekEnd ? parseInt(t.weekEnd) : parseInt(t.week);
       const start = parseInt(t.week);
       return [...filterWeek].some(fw => {
-        if (fw === 'achterstallig') return end < curWeekNow && t.status !== 'klaar' && t.status !== 'uitgesteld';
         const w = parseInt(fw);
         return w >= start && w <= (t.weekEnd ? parseInt(t.weekEnd) : start);
       });
@@ -2322,6 +2825,7 @@ function renderPlanning() {
 }
 
 function openPlanModal(editIdx) {
+  resetModalChanges();
   planEditIndex = editIdx !== undefined ? editIdx : null;
   const t = planEditIndex !== null ? state.planning[planEditIndex] : null;
   setText('plan-modal-title', t ? 'Taak bewerken' : 'Taak toevoegen');
@@ -2334,12 +2838,30 @@ function openPlanModal(editIdx) {
   document.getElementById('pf-status-input').value = t ? t.status : 'gepland';
   document.getElementById('pf-note-input').value = t ? (t.note||'') : '';
   document.getElementById('plan-btn-delete').style.display = planEditIndex !== null ? 'block' : 'none';
+  // Populate klusdag dropdown
+  const kdSel = document.getElementById('pf-klusdag-select');
+  if (kdSel) {
+    const taakNaam = t ? t.taak : null;
+    const klusdagen = (state.klusdagen||[]).sort((a,b) => new Date(a.datum)-new Date(b.datum));
+    kdSel.innerHTML = '<option value="">— Niet koppelen —</option>' +
+      klusdagen.map(kd => {
+        const parts = kd.datum.split('-');
+        const d = new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+        const label = d.toLocaleDateString('nl-NL',{weekday:'short',day:'numeric',month:'short'}) + ' · ' + kd.wie;
+        return `<option value="${esc(kd.id)}">${esc(label)}</option>`;
+      }).join('');
+    // Pre-select if taak already linked to a klusdag
+    if (taakNaam) {
+      const linked = (state.klusdagen||[]).find(kd => (kd.taken||[]).some(tk => tk.planningTaak === taakNaam));
+      if (linked) kdSel.value = linked.id;
+    }
+  }
   document.getElementById('plan-modal-backdrop').classList.add('open');
   setTimeout(() => document.getElementById('pf-taak-input').focus(), 80);
 }
 
 function openPlanEdit(idx) { openPlanModal(idx); }
-function closePlanModal() { document.getElementById('plan-modal-backdrop').classList.remove('open'); }
+function closePlanModal() { confirmCloseModal(() => { document.getElementById('plan-modal-backdrop').classList.remove('open'); resetModalChanges(); }); }
 function closePlanModalBg(e) { if (e.target === document.getElementById('plan-modal-backdrop')) closePlanModal(); }
 
 function savePlanItem() {
@@ -2358,17 +2880,62 @@ function savePlanItem() {
     note: document.getElementById('pf-note-input').value.trim()
   };
   if (!state.planning) state.planning = [];
+
+  // Get old taak name before updating (for klusdag sync)
+  const oldTaak = planEditIndex !== null ? (state.planning[planEditIndex]?.taak || null) : null;
+
   if (planEditIndex !== null) { state.planning[planEditIndex] = item; }
   else { state.planning.push(item); }
   state.updatedPlanning = new Date().toISOString();
-  save(); renderPlanning(); renderOverzicht(); closePlanModal();
+
+  // Sync klusdag taken: update planningTaak and tekst if taak name changed
+  if (oldTaak && oldTaak !== item.taak) {
+    (state.klusdagen||[]).forEach(kd => {
+      (kd.taken||[]).forEach(t => {
+        if (t.planningTaak === oldTaak) {
+          t.planningTaak = item.taak;
+          t.tekst = item.taak;
+        }
+      });
+    });
+  }
+
+  // Handle klusdag koppeling from dropdown
+  const kdSel = document.getElementById('pf-klusdag-select');
+  const kdId = kdSel ? kdSel.value : '';
+  if (kdId) {
+    const kd = (state.klusdagen||[]).find(k => k.id === kdId);
+    if (kd) {
+      (state.klusdagen||[]).forEach(k => {
+        k.taken = (k.taken||[]).filter(t => t.planningTaak !== item.taak);
+      });
+      if (!kd.taken) kd.taken = [];
+      if (!kd.taken.find(t => t.planningTaak === item.taak)) {
+        kd.taken.push({tekst: item.taak, planningTaak: item.taak, done: false});
+      }
+    }
+  } else if (kdSel && kdSel.value === '') {
+    // Explicitly unlinked
+    (state.klusdagen||[]).forEach(k => {
+      k.taken = (k.taken||[]).filter(t => t.planningTaak !== item.taak);
+    });
+  }
+
+  resetModalChanges(); save(); renderPlanning(); renderOverzicht(); if(currentPage==='klusdagen') renderKlusdagen(); closePlanModal();
 }
 
 function deletePlanItem() {
   if (planEditIndex === null) return;
+  const deletedTaak = state.planning[planEditIndex]?.taak;
   state.planning.splice(planEditIndex, 1);
+  // Remove from all klusdagen
+  if (deletedTaak) {
+    (state.klusdagen||[]).forEach(kd => {
+      kd.taken = (kd.taken||[]).filter(t => t.planningTaak !== deletedTaak);
+    });
+  }
   state.updatedPlanning = new Date().toISOString();
-  save(); renderPlanning(); renderOverzicht(); closePlanModal();
+  resetModalChanges(); save(); renderPlanning(); renderOverzicht(); if(currentPage==='klusdagen') renderKlusdagen(); closePlanModal();
 }
 
 
@@ -2794,6 +3361,8 @@ function renderOverzicht() {
 
   setText('ov-hero-week', 'Week ' + curWeek + ' · ' + weekLabel(0).range);
   renderTimeline();
+  renderCatBudgetBars();
+  renderOverzichtCatBudgets();
 
   // Build recap sentence
   const kdThisWeek = (state.klusdagen||[]).filter(kd => {
@@ -2859,7 +3428,7 @@ function renderOverzicht() {
         </div>`
       ).join('');
       return `<div class="ov-klusdag" onclick="goToPage('klusdagen')">
-        <div class="ov-klusdag-title">${dayLabel(kd.datum)} · ${esc(kd.wie)}</div>
+        <div class="ov-klusdag-title">${dayLabel(kd.datum)} · ${esc(kd.wie)}${kd.dagdelen && kd.dagdelen.length ? ' · ' + (kd.dagdelen.length === 3 ? 'Hele dag' : kd.dagdelen.map(d=>d.charAt(0).toUpperCase()+d.slice(1)).join(' & ')) : ''}</div>
         ${takenHtml}
       </div>`;
     }).join('');
@@ -3006,6 +3575,12 @@ function renderOverzicht() {
 const KLUSDAGEN_SEED = [];
 
 let klusWeekOffset = 0;
+const kdTakenCollapsed = {};
+
+function toggleKdTaken(kdId) {
+  kdTakenCollapsed[kdId] = !kdTakenCollapsed[kdId];
+  renderKlusdagen();
+}
 let klusdagEditId = null;
 let kdLosseTaken = [];
 let kdSelectedPlanningTaken = [];
@@ -3082,15 +3657,26 @@ function renderKlusdagen() {
     }).join('');
 
     const allDone = kd.taken && kd.taken.length > 0 && kd.taken.every(t => t.done);
+    const takenCount = (kd.taken||[]).length;
+    const doneTaken = (kd.taken||[]).filter(t=>t.done).length;
+    const collapsed = kdTakenCollapsed[kd.id];
+    const takenLabel = takenCount === 0 ? '' : (doneTaken + '/' + takenCount + ' klaar');
+    const toggleArrow = takenCount > 0 ? `<span onclick="event.stopPropagation();toggleKdTaken('${kd.id}')" style="font-size:13px;color:var(--text3);padding:4px 6px;cursor:pointer;transition:transform 0.2s;display:inline-block;transform:${collapsed?'rotate(-90deg)':'rotate(0deg)'}">▾</span>` : '';
     return `<div class="klusdag-block">
       <div class="klusdag-header" onclick="openKlusdagModal('${kd.id}')" style="cursor:pointer;">
         <div>
           <div class="klusdag-date">${dayLabel(kd.datum)}</div>
-          <div class="klusdag-wie">${esc(kd.wie)}${kd.note ? ' · ' + esc(kd.note) : ''}</div>
+          <div class="klusdag-wie">${esc(kd.wie)}${kd.dagdelen && kd.dagdelen.length ? ' · ' + (kd.dagdelen.length === 3 ? 'Hele dag' : kd.dagdelen.map(d=>d.charAt(0).toUpperCase()+d.slice(1)).join(' & ')) : ''}${kd.note ? ' · ' + esc(kd.note) : ''}</div>
         </div>
-        ${allDone ? '<span style="font-size:11px;color:var(--green);font-weight:500;">Klaar ✓</span>' : '<span style="font-size:18px;color:var(--text3);">›</span>'}
+        <div style="display:flex;align-items:center;gap:4px;">
+          ${allDone ? '<span style="font-size:11px;color:var(--green);font-weight:500;">Klaar ✓</span>' : (takenLabel ? `<span style="font-size:11px;color:var(--text3);">${takenLabel}</span>` : '')}
+          ${toggleArrow}
+          <span style="font-size:18px;color:var(--text3);">›</span>
+        </div>
       </div>
-      ${takenHtml}
+      <div style="display:${collapsed ? 'none' : 'block'}">
+        ${takenHtml || '<div style="font-size:13px;color:var(--text3);padding:10px 16px;">Geen taken toegevoegd</div>'}
+      </div>
     </div>`;
   }).join('');
 }
@@ -3138,7 +3724,28 @@ function renderKdPlanTaken() {
   }).join('') || '<div style="color:var(--text3);font-size:12px;padding:8px 0;">Geen taken gevonden</div>';
 }
 
+function toggleDagdeel(deel) {
+  const btn = document.getElementById('kd-' + deel);
+  if (btn) btn.classList.toggle('active');
+  markModalChanged();
+}
+
+function getDagdelen() {
+  return ['ochtend','middag','avond'].filter(d => {
+    const btn = document.getElementById('kd-' + d);
+    return btn && btn.classList.contains('active');
+  });
+}
+
+function setDagdelen(dagdelen) {
+  ['ochtend','middag','avond'].forEach(d => {
+    const btn = document.getElementById('kd-' + d);
+    if (btn) btn.classList.toggle('active', (dagdelen||[]).includes(d));
+  });
+}
+
 function openKlusdagModal(editId) {
+  resetModalChanges();
   kdEditId = editId || null;
   const kd = kdEditId ? (state.klusdagen||[]).find(k => k.id === kdEditId) : null;
 
@@ -3156,6 +3763,7 @@ function openKlusdagModal(editId) {
   document.getElementById('kd-wie').style.background = '';
   document.getElementById('kd-wie').value = kd ? kd.wie : '';
   document.getElementById('kd-note').value = kd ? (kd.note||'') : '';
+  setDagdelen(kd ? (kd.dagdelen||[]) : []);
   document.getElementById('kd-btn-delete').style.display = kd ? 'block' : 'none';
 
   // Load losse taken
@@ -3197,13 +3805,14 @@ function renderKdLosseTaken() {
 
 function removeLosseTaak(i) { kdLosseTaken.splice(i,1); renderKdLosseTaken(); }
 
-function closeKlusdagModal() { document.getElementById('klusdag-modal').classList.remove('open'); }
+function closeKlusdagModal() { confirmCloseModal(() => { document.getElementById('klusdag-modal').classList.remove('open'); resetModalChanges(); }); }
 function closeKlusdagModalBg(e) { if (e.target === document.getElementById('klusdag-modal')) closeKlusdagModal(); }
 
 function saveKlusdag() {
   const datum = document.getElementById('kd-datum').value;
   const wie = document.getElementById('kd-wie').value.trim();
   const note = document.getElementById('kd-note').value.trim();
+  const dagdelen = getDagdelen();
   // Validate required fields with visual feedback
   let valid = true;
   const datumEl = document.getElementById('kd-datum');
@@ -3236,17 +3845,29 @@ function saveKlusdag() {
 
   if (kdEditId) {
     const idx = state.klusdagen.findIndex(k => k.id === kdEditId);
-    if (idx >= 0) state.klusdagen[idx] = {id: kdEditId, datum, wie, note, taken};
+    if (idx >= 0) state.klusdagen[idx] = {id: kdEditId, datum, wie, note, dagdelen, taken};
   } else {
-    state.klusdagen.push({id: 'kd' + Date.now(), datum, wie, note, taken});
+    state.klusdagen.push({id: 'kd' + Date.now(), datum, wie, note, dagdelen, taken});
   }
-  save(); renderKlusdagen(); renderOverzicht(); closeKlusdagModal();
+  resetModalChanges(); save(); renderKlusdagen(); renderOverzicht(); closeKlusdagModal();
 }
 
 function deleteKlusdag() {
   if (!kdEditId) return;
-  state.klusdagen = (state.klusdagen||[]).filter(k => k.id !== kdEditId);
-  save(); renderKlusdagen(); renderOverzicht(); closeKlusdagModal();
+  const kd = (state.klusdagen||[]).find(k => k.id === kdEditId);
+  const heeftTaken = kd && kd.taken && kd.taken.length > 0;
+  const msg = heeftTaken
+    ? 'Weet je zeker dat je deze klusdag wilt verwijderen? Er zijn ' + kd.taken.length + ' taken gekoppeld aan deze dag.'
+    : 'Weet je zeker dat je deze klusdag wilt verwijderen?';
+  showConfirm(
+    'Klusdag verwijderen',
+    msg,
+    () => {
+      state.klusdagen = (state.klusdagen||[]).filter(k => k.id !== kdEditId);
+      resetModalChanges(); save(); renderKlusdagen(); renderOverzicht(); closeKlusdagModal();
+    },
+    'Verwijder'
+  );
 }
 
 
@@ -3535,6 +4156,32 @@ function render() {
   state.items['te-ontvangen'] = teOntvFiltered;
   renderLists('te-ontvangen',[{id:'list-te-ontvangen',cat:null,color:'green'}]);
   state.items['te-ontvangen'] = _origTeOntv;
+let vermogenSortMode = null; // null = default, 'asc' = laag→hoog, 'desc' = hoog→laag
+
+function toggleVermogenSort() {
+  if (!vermogenSortMode) vermogenSortMode = 'desc';
+  else if (vermogenSortMode === 'desc') vermogenSortMode = 'asc';
+  else vermogenSortMode = null;
+  const btn = document.getElementById('verm-sort-btn');
+  if (btn) {
+    btn.textContent = vermogenSortMode === 'desc' ? '↓ Hoog→Laag' : vermogenSortMode === 'asc' ? '↑ Laag→Hoog' : '↕ Sorteren';
+    btn.style.background = vermogenSortMode ? '#111' : 'var(--surface)';
+    btn.style.color = vermogenSortMode ? '#f5f0e8' : 'var(--text2)';
+    btn.style.borderColor = vermogenSortMode ? '#111' : 'var(--border2)';
+  }
+  render();
+}
+
+  // Sort vermogen if needed
+  if (vermogenSortMode) {
+    ['joost','merel','beiden'].forEach(cat => {
+      const items = state.items.vermogen || [];
+      items.sort((a,b) => {
+        if (a.cat !== cat || b.cat !== cat) return 0;
+        return vermogenSortMode === 'desc' ? parseFloat(b.amount)-parseFloat(a.amount) : parseFloat(a.amount)-parseFloat(b.amount);
+      });
+    });
+  }
   renderLists('vermogen',[
     {id:'list-vermogen-joost',cat:'joost',color:'blue'},
     {id:'list-vermogen-merel',cat:'merel',color:'blue'},
@@ -3588,7 +4235,7 @@ function render() {
   const netto = vermogenTotal + teOntvTotal + sparenTotal - gemaaktTotal - teMakenEffectief - meubelsTotal - bruiloftTotal;
 
   const netEl = document.getElementById('d-netto');
-  if (netEl) { netEl.textContent = fmt(netto); netEl.className = 'blutmeter-amount ' + (netto >= 0 ? 'pos' : 'neg'); }
+  if (netEl) { netEl.textContent = fmt(netto); netEl.className = 'blutmeter-amount privacy-amount ' + (netto >= 0 ? 'pos' : 'neg'); }
   setText('d-gemaakt', fmt(gemaaktTotal));
   setText('d-te-maken', fmt(teMakenEffectief));
   if (uitstellenAftrek > 0) setText('d-te-maken', fmt(teMakenEffectief) + ' (−' + fmt(uitstellenAftrek) + ' uitgesteld)');
@@ -3623,8 +4270,9 @@ function render() {
   if (sNetto) { sNetto.textContent = fmt(netto); sNetto.className = 'sr-val ' + (netto >= 0 ? 'pos' : 'neg'); }
 
   setText('header-sub', new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'}));
-  updateCollapseCounts();
   renderUitstellenList();
+  setTimeout(updateCollapseCounts, 50);
+  renderCatBudgetBars();
   renderSparenList();
 }
 
@@ -3680,6 +4328,7 @@ function renderLists(sec, lists) {
 }
 
 function openModal(section, editIdx) {
+  resetModalChanges();
   curSection = section;
   editIndex = editIdx !== undefined ? editIdx : null;
   const item = editIndex !== null ? (state.items[section]||[])[editIndex] : null;
@@ -3821,7 +4470,7 @@ function openModal(section, editIdx) {
 }
 
 function openEdit(section, idx) { openModal(section, idx); }
-function closeModal() { document.getElementById('modal-backdrop').classList.remove('open'); }
+function closeModal() { confirmCloseModal(() => { document.getElementById('modal-backdrop').classList.remove('open'); resetModalChanges(); }); }
 function closeModalBg(e) { if (e.target === document.getElementById('modal-backdrop')) closeModal(); }
 
 function setLeverType(type) {
@@ -4097,7 +4746,7 @@ function saveItem() {
       state.items['gemaakte-kosten'].push(item);
       state.updated['gemaakte-kosten'] = new Date().toISOString();
       state.updated['nog-te-maken'] = new Date().toISOString();
-      save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
+      resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
       return;
     }
 
@@ -4111,7 +4760,7 @@ function saveItem() {
       state.updated['gemaakte-kosten'] = new Date().toISOString();
       // Handle wachten -> auto-add to uitstellen
       handleWachtenStatus(item, true);
-      save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
+      resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
       return;
     }
 
@@ -4143,7 +4792,7 @@ function saveItem() {
       state.items[curSection].push(item);
       if (!state.updated) state.updated = {};
       state.updated[curSection] = new Date().toISOString();
-      save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
+      resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
     }, newAmt);
     return;
   }
@@ -4151,7 +4800,7 @@ function saveItem() {
   if (editIndex !== null) { state.items[curSection][editIndex] = item; } else { state.items[curSection].push(item); }
   if (!state.updated) state.updated = {};
   state.updated[curSection] = new Date().toISOString();
-  save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
+  resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
 }
 
 function cleanupAutoKey(autoKey, section) {
@@ -4186,6 +4835,22 @@ function handleWachtenStatus(item, addToUitst) {
   }
 }
 
+function duplicateItem() {
+  if (editIndex === null || !curSection) return;
+  const original = (state.items[curSection]||[])[editIndex];
+  if (!original) return;
+  const copy = JSON.parse(JSON.stringify(original));
+  copy.name = copy.name + ' (kopie)';
+  // Remove autoKey to avoid conflicts
+  delete copy.autoKey;
+  delete copy.vermogenCorrectieKey;
+  if (!state.items[curSection]) state.items[curSection] = [];
+  state.items[curSection].push(copy);
+  state.updated[curSection] = new Date().toISOString();
+  resetModalChanges();
+  save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
+}
+
 function deleteItem() {
   if (editIndex === null) return;
   const item = (state.items[curSection]||[])[editIndex];
@@ -4204,7 +4869,7 @@ function deleteItem() {
   if (item && item.autoKey) handleWachtenStatus(item, false);
   state.items[curSection].splice(editIndex, 1);
   state.updated[curSection] = new Date().toISOString();
-  save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
+  resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
 }
 
 function switchTab(tab) {
@@ -4212,6 +4877,8 @@ function switchTab(tab) {
   // Clear nog-te-maken search on tab switch
   const ntmSearch = document.getElementById('nog-te-maken-search');
   if (ntmSearch && ntmSearch.value) { ntmSearch.value = ''; renderNogTeMakenSearch(); }
+  const gkSearch = document.getElementById('gemaakte-kosten-search');
+  if (gkSearch && gkSearch.value) { gkSearch.value = ''; renderGemaakteKostenSearch(); }
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   const btn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
@@ -4252,7 +4919,7 @@ document.addEventListener('click', e => {
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape') { if (modalHasChanges) closeModal(); else { document.querySelectorAll('.modal-backdrop.open, .settings-backdrop.open').forEach(m => m.classList.remove('open')); resetModalChanges(); } }
   if (e.key === 'Enter' && document.getElementById('modal-backdrop').classList.contains('open')) {
     if (document.activeElement.tagName !== 'BUTTON') saveItem();
   }
@@ -4312,6 +4979,8 @@ load();
         <label class="msd-item"><input type="checkbox" value="bezig" onchange="msdChange('status')"> Bezig</label>
         <label class="msd-item"><input type="checkbox" value="klaar" onchange="msdChange('status')"> Klaar</label>
         <label class="msd-item"><input type="checkbox" value="uitgesteld" onchange="msdChange('status')"> Uitgesteld</label>
+        <label class="msd-item" style="border-top:0.5px solid var(--border);margin-top:4px;padding-top:8px;"><input type="checkbox" value="achterstallig" onchange="msdChange('status')"> Achterstallig</label>
+        <label class="msd-item"><input type="checkbox" value="geen-klusdag" onchange="msdChange('status')"> Niet gekoppeld</label>
       </div>
     </div>
     <div class="msd-wrap" id="msd-wie">
@@ -4346,7 +5015,6 @@ load();
         <span id="msd-week-label">Week</span><span class="msd-arrow">▾</span>
       </button>
       <div class="msd-dropdown" id="msd-week-dropdown" style="max-height:200px;overflow-y:auto;">
-        <label class="msd-item"><input type="checkbox" value="achterstallig" onchange="msdChange('week')"> Achterstallig</label>
       </div>
     </div>
   </div>
@@ -4356,6 +5024,15 @@ load();
   <select id="pf-week" style="display:none"></select>
 
   <div id="planning-list"></div>
+
+  <div id="archief-section" style="display:none;" class="archief-section">
+    <div class="archief-section-label">Archief — Afgeronde taken</div>
+    <div id="archief-list"></div>
+  </div>
+  <button class="archief-toggle-btn" id="archief-toggle-btn" onclick="toggleArchief()" style="display:none;">
+    <span id="archief-toggle-label">▸ Archief weergeven</span>
+    <span id="archief-count" style="background:var(--surface2);border-radius:99px;padding:1px 8px;font-size:10px;margin-left:4px;"></span>
+  </button>
 </section>
 
 </div>
@@ -4420,7 +5097,7 @@ load();
     </div>
     <div class="form-group">
       <label class="form-label">Naam</label>
-      <input class="form-input" type="text" id="c-naam" placeholder="bijv. Jan Janssen">
+      <input class="form-input" type="text" id="c-naam" oninput="markModalChanged()" placeholder="bijv. Jan Janssen">
     </div>
     <div class="form-group">
       <label class="form-label">Rol / bedrijf</label>
@@ -4459,7 +5136,7 @@ load();
     </div>
     <div class="form-group">
       <label class="form-label">Omschrijving</label>
-      <input class="form-input" type="text" id="k-naam" placeholder="bijv. Vloerkleur woonkamer">
+      <input class="form-input" type="text" id="k-naam" oninput="markModalChanged()" placeholder="bijv. Vloerkleur woonkamer">
     </div>
     <div class="form-group">
       <label class="form-label">Categorie</label>
@@ -4513,14 +5190,20 @@ load();
     </div>
     <div class="form-group">
       <label class="form-label">Datum</label>
-      <input class="form-input" type="date" id="kd-datum">
+      <input class="form-input" type="date" id="kd-datum" onchange="markModalChanged()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Dagdeel</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <button type="button" id="kd-ochtend" onclick="toggleDagdeel('ochtend')" class="dagdeel-btn">Ochtend</button>
+        <button type="button" id="kd-middag" onclick="toggleDagdeel('middag')" class="dagdeel-btn">Middag</button>
+        <button type="button" id="kd-avond" onclick="toggleDagdeel('avond')" class="dagdeel-btn">Avond</button>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Met wie</label>
-      <input class="form-input" type="text" id="kd-wie" list="kd-wie-list" placeholder="bijv. Zelf, Partner...">
-      <datalist id="kd-wie-list">
-        <option value="Zelf"><option value="Partner"><option value="Samen">
-      </datalist>
+      <input class="form-input" type="text" id="kd-wie" oninput="markModalChanged()" list="kd-wie-list" placeholder="bijv. Zelf, Partner...">
+      <datalist id="kd-wie-list"><option value="Zelf"><option value="Partner"><option value="Samen"></datalist>
     </div>
     <div class="form-group">
       <label class="form-label">Taken uit planning (meerdere mogelijk)</label>
@@ -4581,15 +5264,15 @@ load();
     <div class="form-group">
       <label class="form-label">Week</label>
       <div style="display:flex;align-items:center;gap:8px;">
-        <select class="form-select" id="pf-week-van" style="flex:1;"><option value="1">Week 1</option><option value="2">Week 2</option><option value="3">Week 3</option><option value="4">Week 4</option><option value="5">Week 5</option><option value="6">Week 6</option><option value="7">Week 7</option><option value="8">Week 8</option><option value="9">Week 9</option><option value="10">Week 10</option><option value="11">Week 11</option><option value="12">Week 12</option><option value="13">Week 13</option><option value="14">Week 14</option><option value="15">Week 15</option><option value="16">Week 16</option><option value="17">Week 17</option><option value="18">Week 18</option><option value="19">Week 19</option><option value="20">Week 20</option><option value="21">Week 21</option><option value="22">Week 22</option><option value="23">Week 23</option><option value="24">Week 24</option><option value="25">Week 25</option><option value="26">Week 26</option><option value="27">Week 27</option><option value="28">Week 28</option><option value="29">Week 29</option><option value="30">Week 30</option><option value="31">Week 31</option><option value="32">Week 32</option><option value="33">Week 33</option><option value="34">Week 34</option><option value="35">Week 35</option><option value="36">Week 36</option><option value="37">Week 37</option><option value="38">Week 38</option><option value="39">Week 39</option><option value="40">Week 40</option><option value="41">Week 41</option><option value="42">Week 42</option><option value="43">Week 43</option><option value="44">Week 44</option><option value="45">Week 45</option><option value="46">Week 46</option><option value="47">Week 47</option><option value="48">Week 48</option><option value="49">Week 49</option><option value="50">Week 50</option><option value="51">Week 51</option><option value="52">Week 52</option></select>
+        <select class="form-select" id="pf-week-van" style="flex:1;" onchange="markModalChanged()"><option value="1">Week 1</option><option value="2">Week 2</option><option value="3">Week 3</option><option value="4">Week 4</option><option value="5">Week 5</option><option value="6">Week 6</option><option value="7">Week 7</option><option value="8">Week 8</option><option value="9">Week 9</option><option value="10">Week 10</option><option value="11">Week 11</option><option value="12">Week 12</option><option value="13">Week 13</option><option value="14">Week 14</option><option value="15">Week 15</option><option value="16">Week 16</option><option value="17">Week 17</option><option value="18">Week 18</option><option value="19">Week 19</option><option value="20">Week 20</option><option value="21">Week 21</option><option value="22">Week 22</option><option value="23">Week 23</option><option value="24">Week 24</option><option value="25">Week 25</option><option value="26">Week 26</option><option value="27">Week 27</option><option value="28">Week 28</option><option value="29">Week 29</option><option value="30">Week 30</option><option value="31">Week 31</option><option value="32">Week 32</option><option value="33">Week 33</option><option value="34">Week 34</option><option value="35">Week 35</option><option value="36">Week 36</option><option value="37">Week 37</option><option value="38">Week 38</option><option value="39">Week 39</option><option value="40">Week 40</option><option value="41">Week 41</option><option value="42">Week 42</option><option value="43">Week 43</option><option value="44">Week 44</option><option value="45">Week 45</option><option value="46">Week 46</option><option value="47">Week 47</option><option value="48">Week 48</option><option value="49">Week 49</option><option value="50">Week 50</option><option value="51">Week 51</option><option value="52">Week 52</option></select>
         <span style="font-size:13px;color:var(--text3);flex-shrink:0;">t/m</span>
-        <select class="form-select" id="pf-week-tot" style="flex:1;">
+        <select class="form-select" id="pf-week-tot" style="flex:1;" onchange="markModalChanged()">
           <option value="">—</option><option value="1">Week 1</option><option value="2">Week 2</option><option value="3">Week 3</option><option value="4">Week 4</option><option value="5">Week 5</option><option value="6">Week 6</option><option value="7">Week 7</option><option value="8">Week 8</option><option value="9">Week 9</option><option value="10">Week 10</option><option value="11">Week 11</option><option value="12">Week 12</option><option value="13">Week 13</option><option value="14">Week 14</option><option value="15">Week 15</option><option value="16">Week 16</option><option value="17">Week 17</option><option value="18">Week 18</option><option value="19">Week 19</option><option value="20">Week 20</option><option value="21">Week 21</option><option value="22">Week 22</option><option value="23">Week 23</option><option value="24">Week 24</option><option value="25">Week 25</option><option value="26">Week 26</option><option value="27">Week 27</option><option value="28">Week 28</option><option value="29">Week 29</option><option value="30">Week 30</option><option value="31">Week 31</option><option value="32">Week 32</option><option value="33">Week 33</option><option value="34">Week 34</option><option value="35">Week 35</option><option value="36">Week 36</option><option value="37">Week 37</option><option value="38">Week 38</option><option value="39">Week 39</option><option value="40">Week 40</option><option value="41">Week 41</option><option value="42">Week 42</option><option value="43">Week 43</option><option value="44">Week 44</option><option value="45">Week 45</option><option value="46">Week 46</option><option value="47">Week 47</option><option value="48">Week 48</option><option value="49">Week 49</option><option value="50">Week 50</option><option value="51">Week 51</option><option value="52">Week 52</option></select>
       </div>
     </div>
     <div class="form-group">
       <label class="form-label">Categorie</label>
-      <input class="form-input" type="text" id="pf-cat-input" list="cat-list" placeholder="Kies of typ zelf...">
+      <input class="form-input" type="text" id="pf-cat-input" list="cat-list" placeholder="Kies of typ zelf..." oninput="markModalChanged()">
       <datalist id="cat-list">
         <option value="Gipsen/Stucen">
         <option value="Dakwerk">
@@ -4603,11 +5286,11 @@ load();
     </div>
     <div class="form-group">
       <label class="form-label">Taakomschrijving</label>
-      <input class="form-input" type="text" id="pf-taak-input" placeholder="bijv. Vloer leggen woonkamer">
+      <input class="form-input" type="text" id="pf-taak-input" placeholder="bijv. Vloer leggen woonkamer" oninput="markModalChanged()">
     </div>
     <div class="form-group">
       <label class="form-label">Verantwoordelijke</label>
-      <input class="form-input" type="text" id="pf-wie-input" list="wie-list" placeholder="Kies of typ zelf...">
+      <input class="form-input" type="text" id="pf-wie-input" list="wie-list" placeholder="Kies of typ zelf..." oninput="markModalChanged()">
       <datalist id="wie-list">
         <option value="Zelf">
         <option value="Partner">
@@ -4618,7 +5301,7 @@ load();
     </div>
     <div class="form-group">
       <label class="form-label">Status</label>
-      <select class="form-select" id="pf-status-input">
+      <select class="form-select" id="pf-status-input" onchange="markModalChanged()">
         <option value="gepland">Gepland</option>
         <option value="bezig">Bezig</option>
         <option value="klaar">Klaar</option>
@@ -4627,7 +5310,13 @@ load();
     </div>
     <div class="form-group">
       <label class="form-label">Notitie (optioneel)</label>
-      <input class="form-input" type="text" id="pf-note-input" placeholder="Extra info...">
+      <input class="form-input" type="text" id="pf-note-input" placeholder="Extra info..." oninput="markModalChanged()">
+    </div>
+    <div class="form-group" id="pf-klusdag-group">
+      <label class="form-label">Koppel aan klusdag (optioneel)</label>
+      <select class="form-select" id="pf-klusdag-select" onchange="markModalChanged()">
+        <option value="">— Niet koppelen —</option>
+      </select>
     </div>
     <div class="modal-actions">
       <button class="btn-primary" onclick="savePlanItem()">Opslaan</button>
@@ -4656,9 +5345,7 @@ load();
     <div class="form-group">
       <label class="form-label">Persoon</label>
       <input class="form-input" type="text" id="sparen-wie" list="sparen-wie-list" placeholder="bijv. Persoon 1, Persoon 2...">
-      <datalist id="sparen-wie-list">
-        <option value="Persoon 1"><option value="Persoon 2">
-      </datalist>
+      <datalist id="sparen-wie-list"><option value="Persoon 1"><option value="Persoon 2"></datalist>
     </div>
     <div class="form-group">
       <label class="form-label">Bedrag (€)</label>
@@ -4691,6 +5378,31 @@ load();
 
     <!-- Opleverdatum -->
     <div class="settings-section">
+      <div class="settings-section-label">App naam</div>
+      <div class="settings-row">
+        <div style="flex:1;">
+          <div class="settings-row-label">Projectnaam</div>
+          <input type="text" id="settings-appnaam" placeholder="Mijn Verbouwing" onchange="saveSettings()" style="margin-top:6px;width:100%;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Thema -->
+    <div class="settings-section">
+      <div class="settings-section-label">Synchronisatie</div>
+      <div class="sync-row">
+        <div class="sync-status-row">
+          <div>
+            <div class="settings-row-label">Status</div>
+            <div class="settings-row-sub" id="settings-sync-status">–</div>
+          </div>
+          <button class="sync-force-btn" onclick="forcSync()">↺ Forceer sync</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- App naam -->
+    <div class="settings-section">
       <div class="settings-section-label">Oplevering</div>
       <div class="settings-row">
         <div>
@@ -4714,18 +5426,7 @@ load();
       </div>
     </div>
 
-    <!-- App naam -->
-    <div class="settings-section">
-      <div class="settings-section-label">App naam</div>
-      <div class="settings-row">
-        <div style="flex:1;">
-          <div class="settings-row-label">Projectnaam</div>
-          <input type="text" id="settings-appnaam" placeholder="Mijn Verbouwing" onchange="saveSettings()" style="margin-top:6px;width:100%;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;">
-        </div>
-      </div>
-    </div>
-
-    <!-- Thema -->
+    <!-- Sync -->
     <div class="settings-section">
       <div class="settings-section-label">Thema</div>
       <div class="settings-row">
@@ -4740,6 +5441,21 @@ load();
     </div>
 
     <!-- Budget waarschuwing -->
+    <div class="settings-section">
+      <div class="settings-section-label">Privacy</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Bedragen verbergen</div>
+          <div class="settings-row-sub">Verbergt bedragen in tegels · tik om te tonen</div>
+        </div>
+        <div class="settings-row-action">
+          <label class="toggle-switch">
+            <input type="checkbox" id="settings-privacy-mode" onchange="togglePrivacySetting(this)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
     <div class="settings-section">
       <div class="settings-section-label">Meldingen</div>
       <div class="settings-row">
@@ -4756,16 +5472,35 @@ load();
       </div>
     </div>
 
-    <!-- Sync -->
+    <!-- Categorie budgetten -->
     <div class="settings-section">
-      <div class="settings-section-label">Synchronisatie</div>
-      <div class="sync-row">
-        <div class="sync-status-row">
-          <div>
-            <div class="settings-row-label">Status</div>
-            <div class="settings-row-sub" id="settings-sync-status">–</div>
-          </div>
-          <button class="sync-force-btn" onclick="forcSync()">↺ Forceer sync</button>
+      <div class="settings-section-label">Categorie budgetten</div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Meubels</div></div>
+        <div class="settings-row-action" style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:var(--text3);">€</span>
+          <input type="number" id="catbudget-meubels" min="0" placeholder="—" style="width:80px;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;text-align:right;" onchange="saveCatBudgets()">
+        </div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Bruiloft</div></div>
+        <div class="settings-row-action" style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:var(--text3);">€</span>
+          <input type="number" id="catbudget-bruiloft" min="0" placeholder="—" style="width:80px;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;text-align:right;" onchange="saveCatBudgets()">
+        </div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Gemaakte kosten</div></div>
+        <div class="settings-row-action" style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:var(--text3);">€</span>
+          <input type="number" id="catbudget-gemaakte-kosten" min="0" placeholder="—" style="width:80px;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;text-align:right;" onchange="saveCatBudgets()">
+        </div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Nog te maken</div></div>
+        <div class="settings-row-action" style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:var(--text3);">€</span>
+          <input type="number" id="catbudget-nog-te-maken" min="0" placeholder="—" style="width:80px;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;text-align:right;" onchange="saveCatBudgets()">
         </div>
       </div>
     </div>
@@ -4858,6 +5593,22 @@ load();
       <button class="bw-btn-cancel" onclick="closeBudgetWarning(false)">Annuleer</button>
       <button class="bw-btn-ok" onclick="closeBudgetWarning(true)">Toch opslaan</button>
     </div>
+  </div>
+</div>
+
+<!-- WEEK UPDATE MODAL -->
+<div class="modal-backdrop" id="week-update-modal" onclick="closeWeekUpdateBg(event)">
+  <div class="modal">
+    <div class="modal-title">
+      <span>Week update</span>
+      <button class="modal-close" onclick="closeWeekUpdateModal()">&#215;</button>
+    </div>
+    <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:14px;font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;font-family:'DM Sans',sans-serif;max-height:60vh;overflow-y:auto;" id="week-update-text"></div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn-primary" onclick="copyWeekUpdate()">📋 Kopiëren</button>
+      <button class="btn-add" onclick="shareWhatsApp()" style="flex:1;text-align:center;">💬 WhatsApp</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;" id="week-update-copied" style="display:none;"></div>
   </div>
 </div>
 </body>
