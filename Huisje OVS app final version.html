@@ -957,6 +957,40 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     color: var(--text3);
     margin-bottom: 8px;
   }
+
+  /* CATEGORY BUDGET METER */
+  .cat-budget-bar {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    cursor: default;
+  }
+  .cat-budget-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 5px;
+  }
+  .cat-budget-row .cb-pct {
+    font-weight: 600;
+    font-size: 11px;
+  }
+  .cat-budget-track {
+    height: 5px;
+    background: var(--surface3);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .cat-budget-fill {
+    height: 5px;
+    border-radius: 99px;
+    transition: width 0.4s;
+  }
+  .cb-ok { background: var(--green); }
+  .cb-warn { background: var(--amber); }
+  .cb-over { background: var(--red); }
 </style>
 </head>
 <body>
@@ -1046,6 +1080,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     </div>
   </div>
 
+  <div id="ov-cat-budgets" style="display:none;padding:16px 20px 0;"></div>
   <div class="ov-divider"></div>
 
   <!-- DEZE WEEK -->
@@ -1151,6 +1186,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   </div>
   <input class="form-input" type="text" id="gemaakte-kosten-search" placeholder="🔍  Zoeken..." oninput="renderGemaakteKostenSearch()" style="margin-bottom:12px;font-size:13px;padding:9px 12px;">
   <div id="gemaakte-kosten-search-results" style="display:none;"></div>
+  <div id="cat-budget-bar-gemaakte-kosten"></div>
   <div id="gemaakte-kosten-normal">
   <div class="sub-header sub-header-toggle" onclick="toggleCollapse('gemaakte-kosten-ddo')">
     <span class="sh-label">DDO facturen</span>
@@ -1178,6 +1214,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   </div>
   <input class="form-input" type="text" id="nog-te-maken-search" placeholder="🔍  Zoeken..." oninput="renderNogTeMakenSearch()" style="margin-bottom:12px;font-size:13px;padding:9px 12px;">
   <div id="nog-te-maken-search-results" style="display:none;"></div>
+  <div id="cat-budget-bar-nog-te-maken"></div>
   <div id="nog-te-maken-normal">
   <div class="sub-header sub-header-toggle" onclick="toggleCollapse('nog-te-maken-ddo')">
     <span class="sh-label">Verbouwing DDO</span>
@@ -1202,6 +1239,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <div><div class="section-title">Meubels</div><div class="section-updated" id="upd-meubels">–</div></div>
     <button class="btn-add" onclick="openModal('meubels')">+ Toevoegen</button>
   </div>
+  <div id="cat-budget-bar-meubels"></div>
   <input class="form-input" type="text" id="meubel-search" placeholder="🔍  Zoeken op naam, merk..." oninput="renderMeubelsSearch()" style="margin-bottom:12px;font-size:13px;padding:9px 12px;">
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
     <div class="meubel-stat" id="mstat-begroot" onclick="filterMeubels('begroot')"><div class="ms-label">Begroot</div><div class="ms-val amber" id="ms-begroot">€ 0</div></div>
@@ -1227,6 +1265,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <div><div class="section-title">Bruiloft</div><div class="section-updated" id="upd-bruiloft">–</div></div>
     <button class="btn-add" onclick="openModal('bruiloft')">+ Toevoegen</button>
   </div>
+  <div id="cat-budget-bar-bruiloft"></div>
   <div class="items-list" id="list-bruiloft"></div>
   <div class="section-total"><span class="st-label">Nog te betalen bruiloft</span><span class="st-amount purple" id="total-bruiloft">€ 0</span></div>
   <div class="info-box">Rekening gehouden met cadeaus die definitief zijn (taart / jurk / pak).</div>
@@ -1472,6 +1511,11 @@ function openSettings() {
   const syncEl = document.getElementById('settings-sync-status');
   if (syncEl) syncEl.textContent = supabaseConnected ? '🟢 Verbonden' : '🔴 Niet verbonden';
   // Budget warning toggle: ON = waarschuwing actief, OFF = onderdrukt
+  const catBudgets = appSettings.catBudgets || {};
+  ['meubels','bruiloft','gemaakte-kosten','nog-te-maken'].forEach(k => {
+    const el = document.getElementById('catbudget-' + k);
+    if (el) el.value = catBudgets[k] || '';
+  });
   const privToggle = document.getElementById('settings-privacy-mode');
   if (privToggle) privToggle.checked = !!appSettings.privacyMode;
   const bwToggle = document.getElementById('settings-budget-warning');
@@ -1657,6 +1701,92 @@ function togglePrivacyReveal() {
 // ── END PRIVACY MODE ───────────────────────────────────────────────────────────
 
 
+
+
+// ── CATEGORIE BUDGETTEN ────────────────────────────────────────────────────────
+function saveCatBudgets() {
+  appSettings.catBudgets = {
+    meubels: parseFloat(document.getElementById('catbudget-meubels')?.value) || 0,
+    bruiloft: parseFloat(document.getElementById('catbudget-bruiloft')?.value) || 0,
+    'gemaakte-kosten': parseFloat(document.getElementById('catbudget-gemaakte-kosten')?.value) || 0,
+    'nog-te-maken': parseFloat(document.getElementById('catbudget-nog-te-maken')?.value) || 0
+  };
+  localStorage.setItem('ovs-settings', JSON.stringify(appSettings));
+  renderCatBudgetBars();
+  renderOverzichtCatBudgets();
+}
+
+function renderCatBudgetBar(elId, spent, budget) {
+  const el = document.getElementById('cat-budget-bar-' + elId);
+  if (!el) return;
+  if (!budget || budget <= 0) { el.innerHTML = ''; return; }
+  const pct = Math.min(Math.round(spent / budget * 100), 999);
+  const cls = pct >= 100 ? 'cb-over' : pct >= 80 ? 'cb-warn' : 'cb-ok';
+  const barW = Math.min(100, pct);
+  el.innerHTML = '<div class="cat-budget-bar">' +
+    '<div class="cat-budget-row">' +
+    '<span>' + fmt(spent) + ' <span style="color:var(--text3)">van</span> ' + fmt(budget) + '</span>' +
+    '<span class="cb-pct" style="color:' + (pct>=100?'var(--red)':pct>=80?'var(--amber)':'var(--green)') + '">' + pct + '%</span>' +
+    '</div>' +
+    '<div class="cat-budget-track"><div class="cat-budget-fill ' + cls + '" style="width:' + barW + '%"></div></div>' +
+    '</div>';
+}
+
+function renderCatBudgetBars() {
+  const budgets = appSettings.catBudgets || {};
+  const items = s => state.items[s] || [];
+  const sumArr = arr => arr.reduce((a,b) => a+(parseFloat(b.amount)||0), 0);
+
+  // Meubels: use nogOpen totals
+  const meubelsSpent = items('meubels').reduce((a,b) => a+(parseFloat(b.werkelijk||b.begroot||0)),0);
+  renderCatBudgetBar('meubels', meubelsSpent, budgets.meubels || 0);
+
+  // Bruiloft
+  renderCatBudgetBar('bruiloft', sumArr(items('bruiloft')), budgets.bruiloft || 0);
+
+  // Gemaakte kosten
+  renderCatBudgetBar('gemaakte-kosten', sumArr(items('gemaakte-kosten')), budgets['gemaakte-kosten'] || 0);
+
+  // Nog te maken
+  const uitstellenAftrek = (state.uitstellen||[]).filter(i=>i.uitgesteld).reduce((a,b)=>a+(parseFloat(b.amount)||0),0);
+  renderCatBudgetBar('nog-te-maken', sumArr(items('nog-te-maken')) - uitstellenAftrek, budgets['nog-te-maken'] || 0);
+}
+
+function renderOverzichtCatBudgets() {
+  const el = document.getElementById('ov-cat-budgets');
+  if (!el) return;
+  const budgets = appSettings.catBudgets || {};
+  const items = s => state.items[s] || [];
+  const sumArr = arr => arr.reduce((a,b) => a+(parseFloat(b.amount)||0), 0);
+
+  const cats = [
+    { key: 'meubels', label: 'Meubels', spent: items('meubels').reduce((a,b)=>a+(parseFloat(b.werkelijk||b.begroot||0)),0), tab: 'meubels' },
+    { key: 'bruiloft', label: 'Bruiloft', spent: sumArr(items('bruiloft')), tab: 'bruiloft' },
+    { key: 'gemaakte-kosten', label: 'Gemaakte kosten', spent: sumArr(items('gemaakte-kosten')), tab: 'gemaakte-kosten' },
+    { key: 'nog-te-maken', label: 'Nog te maken', spent: sumArr(items('nog-te-maken')), tab: 'nog-te-maken' }
+  ].filter(cat => budgets[cat.key] > 0);
+
+  if (!cats.length) { el.style.display = 'none'; return; }
+
+  // Only show categories over 80%
+  const over80 = cats.filter(cat => cat.spent / budgets[cat.key] >= 0.8);
+  if (!over80.length) { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  el.innerHTML = '<div class="ov-label" style="margin-bottom:10px;">Categorie budgetten</div>' +
+    over80.map(cat => {
+      const budget = budgets[cat.key];
+      const pct = Math.min(Math.round(cat.spent / budget * 100), 999);
+      const cls = pct >= 100 ? 'cb-over' : 'cb-warn';
+      const barW = Math.min(100, pct);
+      return '<div style="margin-bottom:10px;cursor:pointer;" onclick="goToPage(\'finance\',\'' + cat.tab + '\')">' +
+        '<div class="cat-budget-row"><span style="font-weight:500;">' + cat.label + '</span>' +
+        '<span class="cb-pct" style="color:' + (pct>=100?'var(--red)':'var(--amber)') + '">' + fmt(cat.spent) + ' / ' + fmt(budget) + ' · ' + pct + '%</span></div>' +
+        '<div class="cat-budget-track"><div class="cat-budget-fill ' + cls + '" style="width:' + barW + '%"></div></div>' +
+        '</div>';
+    }).join('');
+}
+// ── END CATEGORIE BUDGETTEN ────────────────────────────────────────────────────
 
 // ── WEEK UPDATE ───────────────────────────────────────────────────────────────
 function generateWeekUpdate() {
@@ -3386,6 +3516,8 @@ function renderOverzicht() {
 
   setText('ov-hero-week', 'Week ' + curWeek + ' · ' + weekLabel(0).range);
   renderTimeline();
+  renderCatBudgetBars();
+  renderOverzichtCatBudgets();
 
   // Build recap sentence
   const kdThisWeek = (state.klusdagen||[]).filter(kd => {
@@ -3879,8 +4011,20 @@ function saveKlusdag() {
 
 function deleteKlusdag() {
   if (!kdEditId) return;
-  state.klusdagen = (state.klusdagen||[]).filter(k => k.id !== kdEditId);
-  resetModalChanges(); save(); renderKlusdagen(); renderOverzicht(); closeKlusdagModal();
+  const kd = (state.klusdagen||[]).find(k => k.id === kdEditId);
+  const heeftTaken = kd && kd.taken && kd.taken.length > 0;
+  const msg = heeftTaken
+    ? 'Weet je zeker dat je deze klusdag wilt verwijderen? Er zijn ' + kd.taken.length + ' taken gekoppeld aan deze dag.'
+    : 'Weet je zeker dat je deze klusdag wilt verwijderen?';
+  showConfirm(
+    'Klusdag verwijderen',
+    msg,
+    () => {
+      state.klusdagen = (state.klusdagen||[]).filter(k => k.id !== kdEditId);
+      resetModalChanges(); save(); renderKlusdagen(); renderOverzicht(); closeKlusdagModal();
+    },
+    'Verwijder'
+  );
 }
 
 
@@ -4285,6 +4429,7 @@ function toggleVermogenSort() {
   setText('header-sub', new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'}));
   renderUitstellenList();
   setTimeout(updateCollapseCounts, 50);
+  renderCatBudgetBars();
   renderSparenList();
 }
 
@@ -5405,6 +5550,31 @@ load();
 
     <!-- Opleverdatum -->
     <div class="settings-section">
+      <div class="settings-section-label">App naam</div>
+      <div class="settings-row">
+        <div style="flex:1;">
+          <div class="settings-row-label">Projectnaam</div>
+          <input type="text" id="settings-appnaam" placeholder="Verbouwing huisje OVS" onchange="saveSettings()" style="margin-top:6px;width:100%;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Thema -->
+    <div class="settings-section">
+      <div class="settings-section-label">Synchronisatie</div>
+      <div class="sync-row">
+        <div class="sync-status-row">
+          <div>
+            <div class="settings-row-label">Status</div>
+            <div class="settings-row-sub" id="settings-sync-status">–</div>
+          </div>
+          <button class="sync-force-btn" onclick="forcSync()">↺ Forceer sync</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- App naam -->
+    <div class="settings-section">
       <div class="settings-section-label">Oplevering</div>
       <div class="settings-row">
         <div>
@@ -5428,18 +5598,7 @@ load();
       </div>
     </div>
 
-    <!-- App naam -->
-    <div class="settings-section">
-      <div class="settings-section-label">App naam</div>
-      <div class="settings-row">
-        <div style="flex:1;">
-          <div class="settings-row-label">Projectnaam</div>
-          <input type="text" id="settings-appnaam" placeholder="Verbouwing huisje OVS" onchange="saveSettings()" style="margin-top:6px;width:100%;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;">
-        </div>
-      </div>
-    </div>
-
-    <!-- Thema -->
+    <!-- Sync -->
     <div class="settings-section">
       <div class="settings-section-label">Thema</div>
       <div class="settings-row">
@@ -5453,7 +5612,7 @@ load();
       </div>
     </div>
 
-    <!-- Privacy mode -->
+    <!-- Budget waarschuwing -->
     <div class="settings-section">
       <div class="settings-section-label">Privacy</div>
       <div class="settings-row">
@@ -5469,8 +5628,6 @@ load();
         </div>
       </div>
     </div>
-
-    <!-- Budget waarschuwing -->
     <div class="settings-section">
       <div class="settings-section-label">Meldingen</div>
       <div class="settings-row">
@@ -5487,16 +5644,35 @@ load();
       </div>
     </div>
 
-    <!-- Sync -->
+    <!-- Categorie budgetten -->
     <div class="settings-section">
-      <div class="settings-section-label">Synchronisatie</div>
-      <div class="sync-row">
-        <div class="sync-status-row">
-          <div>
-            <div class="settings-row-label">Status</div>
-            <div class="settings-row-sub" id="settings-sync-status">–</div>
-          </div>
-          <button class="sync-force-btn" onclick="forcSync()">↺ Forceer sync</button>
+      <div class="settings-section-label">Categorie budgetten</div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Meubels</div></div>
+        <div class="settings-row-action" style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:var(--text3);">€</span>
+          <input type="number" id="catbudget-meubels" min="0" placeholder="—" style="width:80px;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;text-align:right;" onchange="saveCatBudgets()">
+        </div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Bruiloft</div></div>
+        <div class="settings-row-action" style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:var(--text3);">€</span>
+          <input type="number" id="catbudget-bruiloft" min="0" placeholder="—" style="width:80px;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;text-align:right;" onchange="saveCatBudgets()">
+        </div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Gemaakte kosten</div></div>
+        <div class="settings-row-action" style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:var(--text3);">€</span>
+          <input type="number" id="catbudget-gemaakte-kosten" min="0" placeholder="—" style="width:80px;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;text-align:right;" onchange="saveCatBudgets()">
+        </div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Nog te maken</div></div>
+        <div class="settings-row-action" style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:var(--text3);">€</span>
+          <input type="number" id="catbudget-nog-te-maken" min="0" placeholder="—" style="width:80px;background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;text-align:right;" onchange="saveCatBudgets()">
         </div>
       </div>
     </div>
