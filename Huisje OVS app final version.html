@@ -497,7 +497,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     border-bottom: 0.5px solid var(--border);
     background: var(--bg);
     position: sticky;
-    top: 44px;
+    top: 0;
     z-index: 9;
   }
   .week-nav-btn {
@@ -1012,6 +1012,10 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   .cb-warn { background: var(--amber); }
   .cb-over { background: var(--red); }
 
+  /* Hide bottom nav when modal open */
+  body.modal-active .bottom-nav,
+  body.modal-active .bn-meer-panel { display: none !important; }
+
   /* BOTTOM NAV */
   .bottom-nav {
     position: fixed;
@@ -1129,7 +1133,6 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   /* PAGE SWIPE */
   #page-container {
     position: relative;
-    overflow: hidden;
     will-change: transform;
   }
   .page-slide {
@@ -1138,16 +1141,16 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
                 opacity 0.32s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .page-slide.slide-out-left {
-    animation: slideOutLeft 0.32s cubic-bezier(0.4,0,0.2,1) forwards;
+    animation: slideOutLeft 0.18s cubic-bezier(0.4,0,0.2,1) forwards;
   }
   .page-slide.slide-out-right {
-    animation: slideOutRight 0.32s cubic-bezier(0.4,0,0.2,1) forwards;
+    animation: slideOutRight 0.18s cubic-bezier(0.4,0,0.2,1) forwards;
   }
   .page-slide.slide-in-left {
-    animation: slideInLeft 0.32s cubic-bezier(0.4,0,0.2,1) forwards;
+    animation: slideInLeft 0.18s cubic-bezier(0.4,0,0.2,1) forwards;
   }
   .page-slide.slide-in-right {
-    animation: slideInRight 0.32s cubic-bezier(0.4,0,0.2,1) forwards;
+    animation: slideInRight 0.18s cubic-bezier(0.4,0,0.2,1) forwards;
   }
   @keyframes slideOutLeft {
     from { transform: translateX(0); opacity: 1; }
@@ -1709,6 +1712,7 @@ function openSettings() {
   if (privToggle) privToggle.checked = !!appSettings.privacyMode;
   const bwToggle = document.getElementById('settings-budget-warning');
   if (bwToggle) bwToggle.checked = !appSettings.budgetWarningSuppressed;
+  document.body.classList.add('modal-active');
   document.getElementById('settings-backdrop').classList.add('open');
   setTimeout(() => applyPageToggles(), 50);
 }
@@ -1761,6 +1765,7 @@ function showConfirm(title, msg, onOk, okLabel) {
   const okBtn = document.getElementById('confirm-ok-btn');
   okBtn.textContent = okLabel || 'Verwijder';
   okBtn.onclick = function() { closeConfirm(); onOk(); };
+  document.body.classList.add('modal-active');
   document.getElementById('confirm-backdrop').classList.add('open');
 }
 
@@ -1840,6 +1845,7 @@ function openContactModal(editIdx) {
   document.getElementById('c-email').value = ct ? (ct.email||'') : '';
   document.getElementById('c-note').value = ct ? (ct.note||'') : '';
   document.getElementById('contact-btn-delete').style.display = ct ? 'block' : 'none';
+  document.body.classList.add('modal-active');
   document.getElementById('contact-modal').classList.add('open');
   setTimeout(() => document.getElementById('c-naam').focus(), 80);
 }
@@ -2096,6 +2102,7 @@ function generateWeekUpdate() {
   const text = lines.join('\n');
   document.getElementById('week-update-text').textContent = text;
   document.getElementById('week-update-copied').textContent = '';
+  document.body.classList.add('modal-active');
   document.getElementById('week-update-modal').classList.add('open');
 }
 
@@ -2171,7 +2178,7 @@ function navigateToPage(page, tab, direction) {
 
     setTimeout(() => {
       newEl.classList.remove('page-slide', inClass);
-    }, 350);
+    }, 200);
 
     // Sync nav
     ['overzicht','finance','planning','klusdagen','contacten','keuzes'].forEach(p => {
@@ -2193,7 +2200,7 @@ function navigateToPage(page, tab, direction) {
     if (page==='keuzes') renderKeuzes();
     if (page==='finance' && tab) { switchTab(tab); return; }
     window.scrollTo(0,0);
-  }, 280);
+  }, 160);
 }
 
 // Swipe detection
@@ -2264,6 +2271,7 @@ document.addEventListener('touchend', e => {
 
   // Tab swipe mode (finance page below tab bar)
   if (mode === 'tabs') {
+    if (_tabSwitching) return; // debounce: ignore while animating
     const curTabIdx = TABS.indexOf(currentTab || 'streep');
     if (dx < 0 && curTabIdx < TABS.length - 1) {
       switchTab(TABS[curTabIdx + 1], 'left');
@@ -2339,10 +2347,19 @@ function renderArchief() {
 function closeModalAnimated(backdropId, afterClose) {
   const backdrop = document.getElementById(backdropId);
   if (!backdrop) { if (afterClose) afterClose(); return; }
+  // Use pre-saved scroll (set before render()) or current scroll
+  const savedScroll = window._savedModalScroll !== undefined ? window._savedModalScroll : window.scrollY;
+  window._savedModalScroll = undefined;
   backdrop.classList.add('closing');
   setTimeout(() => {
     backdrop.classList.remove('open', 'closing');
+    document.body.classList.remove('modal-active');
     if (afterClose) afterClose();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, savedScroll);
+      });
+    });
   }, 300);
 }
 // ── END MODAL ANIMATIONS ───────────────────────────────────────────────────────
@@ -2450,6 +2467,7 @@ function openKeuzeModal(editIdx) {
   document.getElementById('k-status').value = k ? (k.status||'open') : 'open';
   document.getElementById('k-note').value = k ? (k.note||'') : '';
   document.getElementById('keuze-btn-delete').style.display = k ? 'block' : 'none';
+  document.body.classList.add('modal-active');
   document.getElementById('keuze-modal').classList.add('open');
   setTimeout(() => document.getElementById('k-naam').focus(), 80);
 }
@@ -3387,6 +3405,7 @@ function openPlanModal(editIdx) {
       if (linked) kdSel.value = linked.id;
     }
   }
+  document.body.classList.add('modal-active');
   document.getElementById('plan-modal-backdrop').classList.add('open');
   setTimeout(() => document.getElementById('pf-taak-input').focus(), 80);
 }
@@ -3576,6 +3595,7 @@ function openSparenModal(editIdx) {
   document.getElementById('sparen-amount').value = item ? item.amount : '';
   document.getElementById('sparen-gespaard').checked = item ? (item.gespaard === true) : false;
   document.getElementById('sparen-btn-delete').style.display = sparenEditIndex !== null ? 'block' : 'none';
+  document.body.classList.add('modal-active');
   document.getElementById('sparen-modal').classList.add('open');
   setTimeout(() => document.getElementById('sparen-maand').focus(), 80);
 }
@@ -3696,6 +3716,7 @@ function openUitstelModal(editIdx) {
   document.getElementById('uitstel-amount').value = item ? item.amount : '';
   document.getElementById('uitstel-note').value = item ? (item.note||'') : '';
   document.getElementById('uitstel-btn-delete').style.display = uitstelEditIndex !== null ? 'block' : 'none';
+  document.body.classList.add('modal-active');
   document.getElementById('uitstel-modal').classList.add('open');
   setTimeout(() => document.getElementById('uitstel-name').focus(), 80);
 }
@@ -4099,6 +4120,7 @@ const KLUSDAGEN_SEED = [
 
 let klusWeekOffset = 0;
 let currentTab = 'streep';
+let _tabSwitching = false;
 const kdTakenCollapsed = {};
 
 function toggleKdTaken(kdId) {
@@ -4314,6 +4336,7 @@ function openKlusdagModal(editId) {
   if (searchEl) searchEl.value = '';
   renderKdPlanTaken();
 
+  document.body.classList.add('modal-active');
   document.getElementById('klusdag-modal').classList.add('open');
 }
 
@@ -4553,7 +4576,8 @@ function checkBudgetAndSave(saveFn, newAmount) {
     }
     document.getElementById('bw-suppress-check').checked = false;
     budgetWarningSaveFn = saveFn;
-    document.getElementById('budget-warning').classList.add('open');
+    document.body.classList.add('modal-active');
+  document.getElementById('budget-warning').classList.add('open');
     return;
   }
   // No warning needed
@@ -4943,10 +4967,10 @@ function openModal(section, editIdx) {
     }
   }
 
-  // Vermogen correctie only for nog-te-maken (moving to betaald) and meubels
-  // NOT for direct gemaakte-kosten entries - those already reduce vermogen via the blutmeter
+  // Vermogen correctie: optional for all cost sections
+  // Default = "Niet corrigeren" so user explicitly has to choose
   const showVcg = (
-    (section === 'nog-te-maken' && ['betaald','gedeeltelijk'].includes(statusSel.value)) ||
+    (['nog-te-maken','gemaakte-kosten'].includes(section) && ['betaald','gedeeltelijk'].includes(statusSel.value)) ||
     (section === 'meubels' && item && ['gekocht','deels'].includes(item.cat))
   );
   if (vcg) vcg.style.display = showVcg ? 'block' : 'none';
@@ -4969,8 +4993,8 @@ function openModal(section, editIdx) {
     const vcg = document.getElementById('form-vermogen-correctie-group');
     if (['nog-te-maken','gemaakte-kosten'].includes(section)) {
       pg.style.display = this.value === 'gedeeltelijk' ? 'block' : 'none';
-      // Only show vermogen correctie for nog-te-maken, not direct gemaakte-kosten entries
-      const showCorr = section === 'nog-te-maken' && ['betaald','gedeeltelijk'].includes(this.value);
+      // Show vermogen correctie for both sections - user explicitly chooses or leaves empty
+      const showCorr = ['betaald','gedeeltelijk'].includes(this.value);
       if (vcg) vcg.style.display = showCorr ? 'block' : 'none';
       if (showCorr) populateVermogenCorrectie();
     } else if (section === 'te-ontvangen') {
@@ -5013,12 +5037,16 @@ function openModal(section, editIdx) {
     if (vcg) { vcg.style.display = 'block'; populateVermogenCorrectie(); }
   }
   document.getElementById('btn-delete').style.display = editIndex !== null ? 'block' : 'none';
+  document.body.classList.add('modal-active');
   document.getElementById('modal-backdrop').classList.add('open');
   setTimeout(() => document.getElementById('form-name').focus(), 80);
 }
 
 function openEdit(section, idx) { openModal(section, idx); }
-function closeModal() { confirmCloseModal(() => { closeModalAnimated('modal-backdrop', () => resetModalChanges()); }); }
+function closeModal() {
+  window._savedModalScroll = window.scrollY;
+  confirmCloseModal(() => { closeModalAnimated('modal-backdrop', () => { resetModalChanges(); document.body.classList.remove('modal-active'); }); });
+}
 function closeModalBg(e) { if (e.target === document.getElementById('modal-backdrop')) closeModal(); }
 
 function setLeverType(type) {
@@ -5278,11 +5306,11 @@ function saveItem() {
       if (editIndex !== null) state.items['nog-te-maken'].splice(editIndex, 1);
       if (!state.items['gemaakte-kosten']) state.items['gemaakte-kosten'] = [];
       item.amount = status === 'cadeau' ? 0 : amount;
-      // Apply vermogen correction
+      // Apply vermogen correction ONLY if user explicitly chose a post
       const corrSel2 = document.getElementById('form-vermogen-correctie-group');
       if (corrSel2 && corrSel2.style.display !== 'none' && status !== 'cadeau') {
         const corrKey2 = document.getElementById('form-vermogen-correctie').value;
-        if (corrKey2) {
+        if (corrKey2 && corrKey2 !== '') {
           const vIdx2 = (state.items['vermogen']||[]).findIndex(v => v.name === corrKey2);
           if (vIdx2 >= 0) {
             state.items['vermogen'][vIdx2].amount = Math.max(0, parseFloat(state.items['vermogen'][vIdx2].amount) - amount);
@@ -5294,6 +5322,7 @@ function saveItem() {
       state.items['gemaakte-kosten'].push(item);
       state.updated['gemaakte-kosten'] = new Date().toISOString();
       state.updated['nog-te-maken'] = new Date().toISOString();
+      window._savedModalScroll = window.scrollY;
       resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
       return;
     }
@@ -5340,6 +5369,7 @@ function saveItem() {
       state.items[curSection].push(item);
       if (!state.updated) state.updated = {};
       state.updated[curSection] = new Date().toISOString();
+      window._savedModalScroll = window.scrollY;
       resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
     }, newAmt);
     return;
@@ -5348,6 +5378,7 @@ function saveItem() {
   if (editIndex !== null) { state.items[curSection][editIndex] = item; } else { state.items[curSection].push(item); }
   if (!state.updated) state.updated = {};
   state.updated[curSection] = new Date().toISOString();
+  window._savedModalScroll = window.scrollY;
   resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
 }
 
@@ -5422,8 +5453,9 @@ function deleteItem() {
 
 function switchTab(tab, direction) {
   const prevTab = currentTab;
+  const isRerender = tab === prevTab && !direction;
   currentTab = tab;
-  const scrollY = window.scrollY;
+  if (!isRerender) { _tabSwitching = true; setTimeout(() => { _tabSwitching = false; }, 280); }
 
   // Clear searches on tab switch
   const ntmSearch = document.getElementById('nog-te-maken-search');
@@ -5460,12 +5492,10 @@ function switchTab(tab, direction) {
       oldSec.classList.remove('active', outClass);
       newSec.classList.add('active', inClass);
       setTimeout(() => newSec.classList.remove(inClass), 280);
-      window.scrollTo(0, scrollY);
     }, 220);
   } else {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     if (newSec) newSec.classList.add('active');
-    window.scrollTo(0, scrollY);
   }
 
   const idx = TABS.indexOf(tab);
