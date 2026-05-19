@@ -2211,6 +2211,7 @@ document.addEventListener('touchstart', e => {
   // On klusdagen: top 80px = page swipe, below = week swipe
   if (currentPage === 'klusdagen') {
     if (e.touches[0].clientY > 80) {
+      if (_klusSwitching) return; // debounce
       _swipeStartX = e.touches[0].clientX;
       _swipeStartY = e.touches[0].clientY;
       _swipeActive = 'klusweek';
@@ -4119,6 +4120,7 @@ const KLUSDAGEN_SEED = [
 let klusWeekOffset = 0;
 let currentTab = 'streep';
 let _tabSwitching = false;
+let _klusSwitching = false;
 const kdTakenCollapsed = {};
 
 function toggleKdTaken(kdId) {
@@ -4149,6 +4151,9 @@ function weekLabel(offset) {
 }
 
 function shiftKlusWeek(dir) {
+  if (_klusSwitching) return;
+  _klusSwitching = true;
+  setTimeout(() => { _klusSwitching = false; }, 420);
   const list = document.getElementById('klusdagen-list');
   const outClass = dir > 0 ? 'kw-slide-out-left' : 'kw-slide-out-right';
   const inClass  = dir > 0 ? 'kw-slide-in-left'  : 'kw-slide-in-right';
