@@ -2220,20 +2220,18 @@ document.addEventListener('touchstart', e => {
   // On finance: tab-nav itself is scrollable, ignore it
   // Below tab-nav = tab swipe, above = page swipe
   if (currentPage === 'finance') {
+    if (_tabSwitching) return; // block new swipe while tab is animating
     const tabBar = document.getElementById('tab-nav');
     if (tabBar) {
       const tabBarRect = tabBar.getBoundingClientRect();
       const touchY = e.touches[0].clientY;
-      // Touch on the tab bar itself → let it scroll, ignore
       if (touchY >= tabBarRect.top && touchY <= tabBarRect.bottom) return;
-      // Touch below tab bar → tab swipe
       if (touchY > tabBarRect.bottom) {
         _swipeStartX = e.touches[0].clientX;
         _swipeStartY = e.touches[0].clientY;
         _swipeActive = 'tabs';
         return;
       }
-      // Touch above tab bar → page swipe
     }
   }
   _swipeStartX = e.touches[0].clientX;
@@ -5451,11 +5449,15 @@ function deleteItem() {
   resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
 }
 
+const _tabScrollPos = {};
+
 function switchTab(tab, direction) {
   const prevTab = currentTab;
   const isRerender = tab === prevTab && !direction;
+  // Save current scroll position for previous tab
+  if (!isRerender) _tabScrollPos[prevTab] = window.scrollY;
   currentTab = tab;
-  if (!isRerender) { _tabSwitching = true; setTimeout(() => { _tabSwitching = false; }, 280); }
+  if (!isRerender) { _tabSwitching = true; setTimeout(() => { _tabSwitching = false; }, 380); }
 
   // Clear searches on tab switch
   const ntmSearch = document.getElementById('nog-te-maken-search');
@@ -5491,11 +5493,19 @@ function switchTab(tab, direction) {
     setTimeout(() => {
       oldSec.classList.remove('active', outClass);
       newSec.classList.add('active', inClass);
-      setTimeout(() => newSec.classList.remove(inClass), 280);
+      setTimeout(() => {
+        newSec.classList.remove(inClass);
+        const restorePos = _tabScrollPos[tab] || 0;
+        window.scrollTo(0, restorePos);
+      }, 220);
     }, 220);
   } else {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     if (newSec) newSec.classList.add('active');
+    if (!isRerender) {
+      const restorePos = _tabScrollPos[tab] || 0;
+      requestAnimationFrame(() => window.scrollTo(0, restorePos));
+    }
   }
 
   const idx = TABS.indexOf(tab);
