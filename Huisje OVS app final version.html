@@ -252,26 +252,22 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 .modal-backdrop {
   display: none;
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0);
+  background: rgba(0,0,0,0.6);
   z-index: 100;
   align-items: flex-end;
   justify-content: center;
-  transition: background 0.28s ease;
 }
-.modal-backdrop.open { display: flex; background: rgba(0,0,0,0.6); }
-.modal-backdrop.closing { background: rgba(0,0,0,0); }
+.modal-backdrop.open { display: flex; }
 .modal {
   background: var(--surface);
   border: 0.5px solid var(--border2);
   border-radius: 20px 20px 0 0;
   width: 100%; max-width: 480px;
   padding: 24px 20px 40px;
-  max-height: 90vh; overflow-y: auto;
-  transform: translateY(100%);
-  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 75vh; max-height: 75dvh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
-.modal-backdrop.open .modal { transform: translateY(0); }
-.modal-backdrop.closing .modal { transform: translateY(100%); }
 .modal-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 600; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
 .modal-close { background: var(--surface3); border: none; color: #111; border-radius: 50%; width: 28px; height: 28px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .form-group { margin-bottom: 14px; }
@@ -663,7 +659,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   /* SETTINGS */
   .settings-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200; align-items:flex-end; justify-content:center; }
   .settings-backdrop.open { display:flex; }
-  .settings-panel { background:var(--surface); border-radius:20px 20px 0 0; width:100%; max-width:480px; padding:24px 20px 44px; max-height:88vh; overflow-y:auto; }
+  .settings-panel { background:var(--surface); border-radius:20px 20px 0 0; width:100%; max-width:480px; padding:24px 20px 44px; max-height:75vh; max-height:75dvh; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
   .settings-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
   .settings-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:700; }
   .settings-section { margin-bottom:20px; }
@@ -1016,6 +1012,9 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   body.modal-active .bottom-nav,
   body.modal-active .bn-meer-panel { display: none !important; }
 
+  /* Prevent page scroll behind modal - no position:fixed to avoid iOS jump */
+  body.modal-active { overflow: hidden; height: 100%; }
+
   /* BOTTOM NAV */
   .bottom-nav {
     position: fixed;
@@ -1133,7 +1132,6 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   /* PAGE SWIPE */
   #page-container {
     position: relative;
-    will-change: transform;
   }
   .page-slide {
     width: 100%;
@@ -1545,6 +1543,32 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   </div>
 </section>
 
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bn-btn active" id="bn-overzicht" onclick="goToPage('overzicht')">
+    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span class="bn-label">Overzicht</span>
+  </button>
+  <button class="bn-btn" id="bn-finance" onclick="goToPage('finance')">
+    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+    <span class="bn-label">Budget</span>
+  </button>
+  <button class="bn-btn" id="bn-planning" onclick="goToPage('planning')">
+    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span class="bn-label">Planning</span>
+  </button>
+  <button class="bn-btn" id="bn-klusdagen" onclick="goToPage('klusdagen')">
+    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+    <span class="bn-label">Klusdagen</span>
+  </button>
+  <button class="bn-btn" id="bn-meer" onclick="toggleMeerPanel()">
+    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>
+    <span class="bn-label">Meer</span>
+  </button>
+</nav>
+
 <!-- MODAL -->
 <div class="modal-backdrop" id="modal-backdrop" onclick="closeModalBg(event)">
   <div class="modal">
@@ -1712,12 +1736,11 @@ function openSettings() {
   if (privToggle) privToggle.checked = !!appSettings.privacyMode;
   const bwToggle = document.getElementById('settings-budget-warning');
   if (bwToggle) bwToggle.checked = !appSettings.budgetWarningSuppressed;
-  document.body.classList.add('modal-active');
-  document.getElementById('settings-backdrop').classList.add('open');
+  openModal_base('settings-backdrop');
   setTimeout(() => applyPageToggles(), 50);
 }
 
-function closeSettings() { closeModalAnimated('settings-backdrop'); }
+function closeSettings() { closeModal_base('settings-backdrop'); }
 function closeSettingsBg(e) { if (e.target === document.getElementById('settings-backdrop')) closeSettings(); }
 
 function forcSync() {
@@ -1765,7 +1788,6 @@ function showConfirm(title, msg, onOk, okLabel) {
   const okBtn = document.getElementById('confirm-ok-btn');
   okBtn.textContent = okLabel || 'Verwijder';
   okBtn.onclick = function() { closeConfirm(); onOk(); };
-  document.body.classList.add('modal-active');
   document.getElementById('confirm-backdrop').classList.add('open');
 }
 
@@ -1845,11 +1867,10 @@ function openContactModal(editIdx) {
   document.getElementById('c-email').value = ct ? (ct.email||'') : '';
   document.getElementById('c-note').value = ct ? (ct.note||'') : '';
   document.getElementById('contact-btn-delete').style.display = ct ? 'block' : 'none';
-  document.body.classList.add('modal-active');
-  document.getElementById('contact-modal').classList.add('open');
+  openModal_base('contact-modal');
   setTimeout(() => document.getElementById('c-naam').focus(), 80);
 }
-function closeContactModal() { confirmCloseModal(() => { closeModalAnimated('contact-modal', () => resetModalChanges()); }); }
+function closeContactModal() { confirmCloseModal(() => { closeModal_base('contact-modal', resetModalChanges); }); }
 function closeContactModalBg(e) { if (e.target === document.getElementById('contact-modal')) closeContactModal(); }
 
 
@@ -2102,11 +2123,10 @@ function generateWeekUpdate() {
   const text = lines.join('\n');
   document.getElementById('week-update-text').textContent = text;
   document.getElementById('week-update-copied').textContent = '';
-  document.body.classList.add('modal-active');
-  document.getElementById('week-update-modal').classList.add('open');
+  openModal_base('week-update-modal');
 }
 
-function closeWeekUpdateModal() { closeModalAnimated('week-update-modal'); }
+function closeWeekUpdateModal() { closeModal_base('week-update-modal'); }
 function closeWeekUpdateBg(e) { if (e.target === document.getElementById('week-update-modal')) closeWeekUpdateModal(); }
 
 function copyWeekUpdate() {
@@ -2199,7 +2219,6 @@ function navigateToPage(page, tab, direction) {
     if (page==='contacten') renderContacten();
     if (page==='keuzes') renderKeuzes();
     if (page==='finance' && tab) { switchTab(tab); return; }
-    window.scrollTo(0,0);
   }, 160);
 }
 
@@ -2208,14 +2227,17 @@ document.addEventListener('touchstart', e => {
   // Don't swipe when modal is open
   if (document.querySelector('.modal-backdrop.open')) return;
   if (e.target.closest('.modal-backdrop')) return;
-  // On klusdagen: top 80px = page swipe, below = week swipe
+  // On klusdagen: on or below week-nav header = week swipe, above = page swipe
   if (currentPage === 'klusdagen') {
-    if (e.touches[0].clientY > 80) {
+    const weekNav = document.querySelector('.week-nav');
+    const weekNavTop = weekNav ? weekNav.getBoundingClientRect().top : 60;
+    if (e.touches[0].clientY >= weekNavTop) {
       _swipeStartX = e.touches[0].clientX;
       _swipeStartY = e.touches[0].clientY;
       _swipeActive = 'klusweek';
       return;
     }
+    // Above week-nav → fall through to page swipe
   }
   // On finance: tab-nav itself is scrollable, ignore it
   // Below tab-nav = tab swipe, above = page swipe
@@ -2343,26 +2365,34 @@ function renderArchief() {
 // ── END ARCHIEF ────────────────────────────────────────────────────────────────
 
 
-// ── MODAL ANIMATIONS ──────────────────────────────────────────────────────────
-function closeModalAnimated(backdropId, afterClose) {
+// ── MODAL CLOSE ───────────────────────────────────────────────────────────────
+// ── MODAL ENGINE ──────────────────────────────────────────────────────────────
+let _modalScrollY = 0;
+
+function openModal_base(backdropId) {
+  _modalScrollY = window.scrollY;
+  // Force instant scroll to top so iOS positions the fixed backdrop correctly
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  requestAnimationFrame(() => {
+    document.body.classList.add('modal-active');
+    const modal = document.querySelector(`#${backdropId} .modal`);
+    if (modal) modal.scrollTop = 0;
+    const panel = document.querySelector(`#${backdropId} .settings-panel`);
+    if (panel) panel.scrollTop = 0;
+    document.getElementById(backdropId).classList.add('open');
+  });
+}
+
+function closeModal_base(backdropId, afterClose) {
   const backdrop = document.getElementById(backdropId);
   if (!backdrop) { if (afterClose) afterClose(); return; }
-  // Use pre-saved scroll (set before render()) or current scroll
-  const savedScroll = window._savedModalScroll !== undefined ? window._savedModalScroll : window.scrollY;
-  window._savedModalScroll = undefined;
-  backdrop.classList.add('closing');
-  setTimeout(() => {
-    backdrop.classList.remove('open', 'closing');
-    document.body.classList.remove('modal-active');
-    if (afterClose) afterClose();
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.scrollTo(0, savedScroll);
-      });
-    });
-  }, 300);
+  backdrop.classList.remove('open');
+  document.body.classList.remove('modal-active');
+  if (afterClose) afterClose();
+  window.scrollTo(0, _modalScrollY);
 }
-// ── END MODAL ANIMATIONS ───────────────────────────────────────────────────────
+// ── END MODAL ENGINE ──────────────────────────────────────────────────────────
 
 // ── VALIDATION ────────────────────────────────────────────────────────────────
 function validateFields(ids) {
@@ -2467,11 +2497,10 @@ function openKeuzeModal(editIdx) {
   document.getElementById('k-status').value = k ? (k.status||'open') : 'open';
   document.getElementById('k-note').value = k ? (k.note||'') : '';
   document.getElementById('keuze-btn-delete').style.display = k ? 'block' : 'none';
-  document.body.classList.add('modal-active');
-  document.getElementById('keuze-modal').classList.add('open');
+  openModal_base('keuze-modal');
   setTimeout(() => document.getElementById('k-naam').focus(), 80);
 }
-function closeKeuzeModal() { confirmCloseModal(() => { document.getElementById('keuze-modal').classList.remove('open'); resetModalChanges(); }); }
+function closeKeuzeModal() { confirmCloseModal(() => { closeModal_base('keuze-modal', resetModalChanges); }); }
 function closeKeuzeModalBg(e) { if (e.target === document.getElementById('keuze-modal')) closeKeuzeModal(); }
 
 function saveKeuze() {
@@ -3405,13 +3434,12 @@ function openPlanModal(editIdx) {
       if (linked) kdSel.value = linked.id;
     }
   }
-  document.body.classList.add('modal-active');
-  document.getElementById('plan-modal-backdrop').classList.add('open');
+  openModal_base('plan-modal-backdrop');
   setTimeout(() => document.getElementById('pf-taak-input').focus(), 80);
 }
 
 function openPlanEdit(idx) { openPlanModal(idx); }
-function closePlanModal() { confirmCloseModal(() => { closeModalAnimated('plan-modal-backdrop', () => resetModalChanges()); }); }
+function closePlanModal() { confirmCloseModal(() => { closeModal_base('plan-modal-backdrop', resetModalChanges); }); }
 function closePlanModalBg(e) { if (e.target === document.getElementById('plan-modal-backdrop')) closePlanModal(); }
 
 function savePlanItem() {
@@ -3595,11 +3623,10 @@ function openSparenModal(editIdx) {
   document.getElementById('sparen-amount').value = item ? item.amount : '';
   document.getElementById('sparen-gespaard').checked = item ? (item.gespaard === true) : false;
   document.getElementById('sparen-btn-delete').style.display = sparenEditIndex !== null ? 'block' : 'none';
-  document.body.classList.add('modal-active');
-  document.getElementById('sparen-modal').classList.add('open');
+  openModal_base('sparen-modal');
   setTimeout(() => document.getElementById('sparen-maand').focus(), 80);
 }
-function closeSparenModal() { document.getElementById('sparen-modal').classList.remove('open'); }
+function closeSparenModal() { closeModal_base('sparen-modal'); }
 function closeSparenModalBg(e) { if (e.target === document.getElementById('sparen-modal')) closeSparenModal(); }
 
 function saveSparenItem() {
@@ -3716,11 +3743,10 @@ function openUitstelModal(editIdx) {
   document.getElementById('uitstel-amount').value = item ? item.amount : '';
   document.getElementById('uitstel-note').value = item ? (item.note||'') : '';
   document.getElementById('uitstel-btn-delete').style.display = uitstelEditIndex !== null ? 'block' : 'none';
-  document.body.classList.add('modal-active');
-  document.getElementById('uitstel-modal').classList.add('open');
+  openModal_base('uitstel-modal');
   setTimeout(() => document.getElementById('uitstel-name').focus(), 80);
 }
-function closeUitstelModal() { closeModalAnimated('uitstel-modal'); }
+function closeUitstelModal() { closeModal_base('uitstel-modal'); }
 function closeUitstelModalBg(e) { if (e.target === document.getElementById('uitstel-modal')) closeUitstelModal(); }
 
 function saveUitstelItem() {
@@ -4151,6 +4177,9 @@ function weekLabel(offset) {
 }
 
 function shiftKlusWeek(dir) {
+  if (shiftKlusWeek._busy) return;
+  shiftKlusWeek._busy = true;
+  setTimeout(() => { shiftKlusWeek._busy = false; }, 500);
   const list = document.getElementById('klusdagen-list');
   const outClass = dir > 0 ? 'kw-slide-out-left' : 'kw-slide-out-right';
   const inClass  = dir > 0 ? 'kw-slide-in-left'  : 'kw-slide-in-right';
@@ -4336,8 +4365,7 @@ function openKlusdagModal(editId) {
   if (searchEl) searchEl.value = '';
   renderKdPlanTaken();
 
-  document.body.classList.add('modal-active');
-  document.getElementById('klusdag-modal').classList.add('open');
+  openModal_base('klusdag-modal');
 }
 
 function toggleKdPlanTaak(cb) {
@@ -4366,7 +4394,7 @@ function renderKdLosseTaken() {
 
 function removeLosseTaak(i) { kdLosseTaken.splice(i,1); renderKdLosseTaken(); }
 
-function closeKlusdagModal() { confirmCloseModal(() => { closeModalAnimated('klusdag-modal', () => resetModalChanges()); }); }
+function closeKlusdagModal() { confirmCloseModal(() => { closeModal_base('klusdag-modal', resetModalChanges); }); }
 function closeKlusdagModalBg(e) { if (e.target === document.getElementById('klusdag-modal')) closeKlusdagModal(); }
 
 function saveKlusdag() {
@@ -4576,8 +4604,7 @@ function checkBudgetAndSave(saveFn, newAmount) {
     }
     document.getElementById('bw-suppress-check').checked = false;
     budgetWarningSaveFn = saveFn;
-    document.body.classList.add('modal-active');
-  document.getElementById('budget-warning').classList.add('open');
+    openModal_base('budget-warning');
     return;
   }
   // No warning needed
@@ -4590,7 +4617,7 @@ function closeBudgetWarning(proceed) {
     appSettings.budgetWarningSuppressed = true;
     localStorage.setItem('ovs-settings', JSON.stringify(appSettings));
   }
-  closeModalAnimated('budget-warning');
+  closeModal_base('budget-warning');
   if (proceed && budgetWarningSaveFn) budgetWarningSaveFn();
   budgetWarningSaveFn = null;
 }
@@ -5037,15 +5064,13 @@ function openModal(section, editIdx) {
     if (vcg) { vcg.style.display = 'block'; populateVermogenCorrectie(); }
   }
   document.getElementById('btn-delete').style.display = editIndex !== null ? 'block' : 'none';
-  document.body.classList.add('modal-active');
-  document.getElementById('modal-backdrop').classList.add('open');
+  openModal_base('modal-backdrop');
   setTimeout(() => document.getElementById('form-name').focus(), 80);
 }
 
 function openEdit(section, idx) { openModal(section, idx); }
 function closeModal() {
-  window._savedModalScroll = window.scrollY;
-  confirmCloseModal(() => { closeModalAnimated('modal-backdrop', () => { resetModalChanges(); document.body.classList.remove('modal-active'); }); });
+  confirmCloseModal(() => { closeModal_base('modal-backdrop', resetModalChanges); });
 }
 function closeModalBg(e) { if (e.target === document.getElementById('modal-backdrop')) closeModal(); }
 
@@ -5322,7 +5347,6 @@ function saveItem() {
       state.items['gemaakte-kosten'].push(item);
       state.updated['gemaakte-kosten'] = new Date().toISOString();
       state.updated['nog-te-maken'] = new Date().toISOString();
-      window._savedModalScroll = window.scrollY;
       resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
       return;
     }
@@ -5369,7 +5393,6 @@ function saveItem() {
       state.items[curSection].push(item);
       if (!state.updated) state.updated = {};
       state.updated[curSection] = new Date().toISOString();
-      window._savedModalScroll = window.scrollY;
       resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
     }, newAmt);
     return;
@@ -5378,7 +5401,6 @@ function saveItem() {
   if (editIndex !== null) { state.items[curSection][editIndex] = item; } else { state.items[curSection].push(item); }
   if (!state.updated) state.updated = {};
   state.updated[curSection] = new Date().toISOString();
-  window._savedModalScroll = window.scrollY;
   resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
 }
 
@@ -5532,27 +5554,6 @@ document.addEventListener('keydown', e => {
     if (document.activeElement.tagName !== 'BUTTON') saveItem();
   }
 });
-
-(function(){
-  let sx = 0, sy = 0;
-  document.addEventListener('touchstart', e => {
-    if (e.target.closest('.tab-nav-wrap')) return;
-    sx = e.touches[0].clientX;
-    sy = e.touches[0].clientY;
-  }, {passive:true});
-  document.addEventListener('touchend', e => {
-    if (e.target.closest('.tab-nav-wrap')) return;
-    const dx = e.changedTouches[0].clientX - sx;
-    const dy = e.changedTouches[0].clientY - sy;
-    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2) {
-      if (currentPage === 'klusdagen') {
-        shiftKlusWeek(dx < 0 ? 1 : -1);
-      } else {
-        stepTab(dx < 0 ? 1 : -1);
-      }
-    }
-  }, {passive:true});
-})();
 
 load();
 </script>
@@ -5799,49 +5800,58 @@ load();
 
 <!-- KLUSDAG MODAL -->
 <div class="modal-backdrop" id="klusdag-modal" onclick="closeKlusdagModalBg(event)">
-  <div class="modal">
-    <div class="modal-title">
-      <span id="klusdag-modal-title">Klusdag toevoegen</span>
-      <button class="modal-close" onclick="closeKlusdagModal()">&#215;</button>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Datum</label>
-      <input class="form-input" type="date" id="kd-datum" onchange="markModalChanged()">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Dagdeel</label>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <button type="button" id="kd-ochtend" onclick="toggleDagdeel('ochtend')" class="dagdeel-btn">Ochtend</button>
-        <button type="button" id="kd-middag" onclick="toggleDagdeel('middag')" class="dagdeel-btn">Middag</button>
-        <button type="button" id="kd-avond" onclick="toggleDagdeel('avond')" class="dagdeel-btn">Avond</button>
+  <div class="modal" style="display:flex;flex-direction:column;max-height:82vh;padding:0;overflow:hidden;">
+    <!-- Sticky header -->
+    <div style="padding:24px 20px 16px;flex-shrink:0;">
+      <div class="modal-title" style="margin-bottom:0;">
+        <span id="klusdag-modal-title">Klusdag toevoegen</span>
+        <button class="modal-close" onclick="closeKlusdagModal()">&#215;</button>
       </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Met wie</label>
-      <input class="form-input" type="text" id="kd-wie" oninput="markModalChanged()" list="kd-wie-list" placeholder="bijv. Joost, Jacco...">
-      <datalist id="kd-wie-list">
-        <option value="Joost"><option value="Merel"><option value="Jacco">
-        <option value="Samen"><option value="Joost & Merel">
-      </datalist>
+    <!-- Scrollable body -->
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:0 20px;">
+      <div class="form-group">
+        <label class="form-label">Datum</label>
+        <input class="form-input" type="date" id="kd-datum" onchange="markModalChanged()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Dagdeel</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <button type="button" id="kd-ochtend" onclick="toggleDagdeel('ochtend')" class="dagdeel-btn">Ochtend</button>
+          <button type="button" id="kd-middag" onclick="toggleDagdeel('middag')" class="dagdeel-btn">Middag</button>
+          <button type="button" id="kd-avond" onclick="toggleDagdeel('avond')" class="dagdeel-btn">Avond</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Met wie</label>
+        <input class="form-input" type="text" id="kd-wie" oninput="markModalChanged()" list="kd-wie-list" placeholder="bijv. Joost, Jacco...">
+        <datalist id="kd-wie-list">
+          <option value="Joost"><option value="Merel"><option value="Jacco">
+          <option value="Samen"><option value="Joost & Merel">
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Taken uit planning (meerdere mogelijk)</label>
+        <input class="form-input" type="text" id="kd-plan-search" placeholder="🔍  Zoeken in taken..." oninput="renderKdPlanTaken()" style="margin-bottom:6px;font-size:13px;padding:8px 12px;">
+        <div id="kd-planning-tasks" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Losse taak toevoegen</label>
+        <input class="form-input" type="text" id="kd-losse-taak" placeholder="bijv. Schroeven kopen, slijpschijf...">
+        <button class="btn-add" style="margin-top:6px;width:100%;" onclick="addLosseTaak()">+ Toevoegen</button>
+      </div>
+      <div id="kd-losse-taken-list" style="display:flex;flex-direction:column;gap:4px;margin-top:4px;"></div>
+      <div class="form-group">
+        <label class="form-label">Notitie (optioneel)</label>
+        <input class="form-input" type="text" id="kd-note" placeholder="Extra info...">
+      </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Taken uit planning (meerdere mogelijk)</label>
-      <input class="form-input" type="text" id="kd-plan-search" placeholder="🔍  Zoeken in taken..." oninput="renderKdPlanTaken()" style="margin-bottom:6px;font-size:13px;padding:8px 12px;">
-      <div id="kd-planning-tasks" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;"></div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Losse taak toevoegen</label>
-      <input class="form-input" type="text" id="kd-losse-taak" placeholder="bijv. Schroeven kopen, slijpschijf...">
-      <button class="btn-add" style="margin-top:6px;width:100%;" onclick="addLosseTaak()">+ Toevoegen</button>
-    </div>
-    <div id="kd-losse-taken-list" style="display:flex;flex-direction:column;gap:4px;margin-top:4px;"></div>
-    <div class="form-group">
-      <label class="form-label">Notitie (optioneel)</label>
-      <input class="form-input" type="text" id="kd-note" placeholder="Extra info...">
-    </div>
-    <div class="modal-actions">
-      <button class="btn-primary" onclick="saveKlusdag()">Opslaan</button>
-      <button class="btn-danger" id="kd-btn-delete" style="display:none" onclick="deleteKlusdag()">Verwijder</button>
+    <!-- Sticky footer -->
+    <div style="padding:16px 20px 32px;flex-shrink:0;border-top:0.5px solid var(--border2);">
+      <div class="modal-actions" style="margin-top:0;">
+        <button class="btn-primary" onclick="saveKlusdag()">Opslaan</button>
+        <button class="btn-danger" id="kd-btn-delete" style="display:none" onclick="deleteKlusdag()">Verwijder</button>
+      </div>
     </div>
   </div>
 </div>
@@ -6247,30 +6257,6 @@ load();
   </button>
 </div>
 
-</div>
 
-<!-- BOTTOM NAV -->
-<nav class="bottom-nav" id="bottom-nav">
-  <button class="bn-btn active" id="bn-overzicht" onclick="goToPage('overzicht')">
-    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-    <span class="bn-label">Overzicht</span>
-  </button>
-  <button class="bn-btn" id="bn-finance" onclick="goToPage('finance')">
-    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-    <span class="bn-label">Budget</span>
-  </button>
-  <button class="bn-btn" id="bn-planning" onclick="goToPage('planning')">
-    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-    <span class="bn-label">Planning</span>
-  </button>
-  <button class="bn-btn" id="bn-klusdagen" onclick="goToPage('klusdagen')">
-    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
-    <span class="bn-label">Klusdagen</span>
-  </button>
-  <button class="bn-btn" id="bn-meer" onclick="toggleMeerPanel()">
-    <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>
-    <span class="bn-label">Meer</span>
-  </button>
-</nav>
 </body>
 </html>
