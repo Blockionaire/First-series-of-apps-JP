@@ -1126,6 +1126,54 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   .bn-meer-icon { width: 20px; height: 20px; color: #3a3a3c; flex-shrink: 0; }
   [data-theme="dark"] .bn-meer-icon { color: #ebebf5; }
 
+  /* CASHFLOW */
+  .cf-toggle-btn {
+    flex: 1; padding: 8px 0;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    border: 0.5px solid var(--border2); border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--text2); cursor: pointer;
+    transition: all 0.15s;
+  }
+  .cf-toggle-btn.active {
+    background: var(--text); color: var(--bg); border-color: var(--text);
+  }
+  .cf-bar-wrap {
+    display: inline-flex; flex-direction: column; align-items: center;
+    gap: 4px; cursor: pointer; min-width: 36px;
+  }
+  .cf-bar-outer {
+    width: 28px; border-radius: 4px 4px 0 0;
+    background: var(--surface2); position: relative; overflow: hidden;
+  }
+  .cf-bar-inner {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: #4a90d9; border-radius: 4px 4px 0 0;
+    transition: height 0.3s ease;
+  }
+  .cf-bar-wrap.selected .cf-bar-inner { background: #2563b0; }
+  .cf-bar-wrap.selected .cf-bar-outer { outline: 2px solid #2563b0; }
+  .cf-bar-label {
+    font-size: 10px; color: var(--text3); font-family: 'DM Sans', sans-serif;
+    text-align: center; line-height: 1.2; white-space: nowrap;
+  }
+  .cf-bar-amount {
+    font-size: 9px; color: var(--text2); font-family: 'DM Sans', sans-serif;
+    text-align: center;
+  }
+  .cf-bar-wrap.has-data .cf-bar-label { color: var(--text); font-weight: 500; }
+  #cf-chart {
+    display: flex; align-items: flex-end; gap: 6px;
+    padding: 8px 4px 0; min-height: 140px;
+  }
+  .cf-item-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 0.5px solid var(--border);
+  }
+  .cf-item-row:last-child { border-bottom: none; }
+  .cf-item-name { font-size: 14px; color: var(--text); }
+  .cf-item-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .cf-item-amount { font-size: 14px; font-weight: 500; color: #4a90d9; white-space: nowrap; margin-left: 12px; }
+
   /* Adjust body for bottom nav */
   body { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
 
@@ -1357,12 +1405,13 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   <button class="tab-arrow" id="tab-prev" onclick="stepTab(-1)" disabled>&#8249;</button>
   <nav class="tab-nav" id="tab-nav" data-tab-bar="true">
     <button class="tab-btn active" data-tab="streep">Recap</button>
+    <button class="tab-btn" data-tab="vermogen">Vermogen</button>
+    <button class="tab-btn" data-tab="cashflow">Cashflow</button>
     <button class="tab-btn" data-tab="gemaakte-kosten">Gemaakte kosten</button>
     <button class="tab-btn" data-tab="nog-te-maken">Nog te maken</button>
+    <button class="tab-btn" data-tab="te-ontvangen">Te ontvangen</button>
     <button class="tab-btn" data-tab="meubels">Meubels</button>
     <button class="tab-btn" data-tab="bruiloft">Bruiloft</button>
-    <button class="tab-btn" data-tab="vermogen">Vermogen</button>
-    <button class="tab-btn" data-tab="te-ontvangen">Te ontvangen</button>
     <button class="tab-btn" data-tab="sparen">Sparen</button>
   </nav>
   <button class="tab-arrow" id="tab-next" onclick="stepTab(1)">&#8250;</button>
@@ -1515,6 +1564,23 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   </div>
 </section>
 
+<!-- CASHFLOW -->
+<section class="section" id="tab-cashflow">
+  <div class="section-header">
+    <div><div class="section-title">Cashflow</div><div class="section-updated">Nog te betalen kosten per periode</div></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;">
+    <button id="cf-btn-week" class="cf-toggle-btn active" onclick="setCashflowMode('week')">Per week</button>
+    <button id="cf-btn-maand" class="cf-toggle-btn" onclick="setCashflowMode('maand')">Per maand</button>
+  </div>
+  <div id="cf-chart-wrap" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+    <div id="cf-chart"></div>
+  </div>
+  <div id="cf-selected-label" style="display:none;font-family:'Syne',sans-serif;font-size:13px;font-weight:600;color:var(--text);margin-top:18px;margin-bottom:8px;"></div>
+  <div id="cf-item-list"></div>
+  <div id="cf-no-data" style="display:none;" class="empty-state">Geen nog te betalen kosten met een betaalweek ingesteld.<br><br>Voeg een verwacht betaalmoment toe aan items onder "Nog te maken".</div>
+</section>
+
 <section class="section active" id="tab-streep">
   <div class="section-header">
     <div><div class="section-title">Onder aan de streep</div><div class="section-updated">Automatisch berekend</div></div>
@@ -1648,6 +1714,12 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <div class="form-group">
       <label class="form-label">Notitie (optioneel)</label>
       <input class="form-input" type="text" id="form-note" placeholder="Extra info...">
+    </div>
+    <div class="form-group" id="form-betaalweek-group" style="display:none">
+      <label class="form-label">Verwacht betaalmoment</label>
+      <select class="form-select" id="form-betaalweek" onchange="markModalChanged()">
+        <option value="">— Geen week geselecteerd —</option>
+      </select>
     </div>
     <div class="modal-actions">
       <button class="btn-primary" onclick="saveItem()">Opslaan</button>
@@ -2694,7 +2766,7 @@ function updateSyncIndicator(status) {
 
 // ── END SUPABASE ──────────────────────────────────────────────────────────────
 
-const TABS = ['streep','gemaakte-kosten','nog-te-maken','meubels','bruiloft','vermogen','te-ontvangen','sparen'];
+const TABS = ['streep','vermogen','cashflow','gemaakte-kosten','nog-te-maken','te-ontvangen','meubels','bruiloft','sparen'];
 const CAT_OPTIONS = {
   'gemaakte-kosten': [{v:'ddo',l:'DDO factuur'},{v:'overig',l:'Overige kosten'}],
   'nog-te-maken':    [{v:'ddo',l:'Verbouwing DDO'},{v:'overig',l:'Overige kosten'}],
@@ -3011,11 +3083,14 @@ function renderNogTeMakenSearch() {
     const statusBadge = item.status && item.status !== 'nog'
       ? `<span class="badge ${item.status === 'wacht' ? 'wacht' : 'partial'}" style="margin-top:3px;">${statusLabel[item.status]||item.status}</span>`
       : '';
+    const weekBadge = item.betaalweek
+      ? `<span class="badge" style="margin-top:3px;background:rgba(74,144,217,0.15);color:#2563b0;">w${item.betaalweek}</span>`
+      : '';
     return `<div class="item-row" onclick="openEdit('nog-te-maken',${ri})">
       <div class="item-info">
         <div class="item-name">${esc(item.name)}</div>
         ${sub ? `<div class="item-meta">${esc(sub)}</div>` : ''}
-        ${statusBadge}
+        ${statusBadge}${weekBadge}
       </div>
       <div class="item-amount amber">${fmt(item.amount)}</div>
     </div>`;
@@ -5036,6 +5111,7 @@ function openModal(section, editIdx) {
   };
 
   const isMeubel = section === 'meubels';
+  const isNogTeMaken = section === 'nog-te-maken';
   ['merk','begroot','werkelijk','betaald','nogopen','levering'].forEach(f => {
     const g = document.getElementById('form-' + f + '-group');
     if (g) g.style.display = isMeubel ? 'block' : 'none';
@@ -5064,6 +5140,23 @@ function openModal(section, editIdx) {
     if (vcg) { vcg.style.display = 'block'; populateVermogenCorrectie(); }
   }
   document.getElementById('btn-delete').style.display = editIndex !== null ? 'block' : 'none';
+
+  // Betaalweek: only for nog-te-maken
+  const betaalweekGroup = document.getElementById('form-betaalweek-group');
+  if (betaalweekGroup) {
+    betaalweekGroup.style.display = isNogTeMaken ? 'block' : 'none';
+    if (isNogTeMaken) {
+      const sel = document.getElementById('form-betaalweek');
+      const startWeek = appSettings.startweek || getCurrentWeek();
+      const endWeek = (appSettings.opleverweek || getCurrentWeek() + 12) + 4;
+      let opts = '<option value="">— Geen week geselecteerd —</option>';
+      for (let w = startWeek; w <= endWeek; w++) {
+        opts += `<option value="${w}">Week ${w}</option>`;
+      }
+      sel.innerHTML = opts;
+      sel.value = item ? (item.betaalweek || '') : '';
+    }
+  }
   openModal_base('modal-backdrop');
   setTimeout(() => document.getElementById('form-name').focus(), 80);
 }
@@ -5188,6 +5281,12 @@ function saveItem() {
   const item = {name, amount, note};
   if (cat !== undefined) item.cat = cat;
   if (status !== undefined) item.status = status;
+
+  // Betaalweek for nog-te-maken
+  if (curSection === 'nog-te-maken') {
+    const bwEl = document.getElementById('form-betaalweek');
+    item.betaalweek = bwEl && bwEl.value ? parseInt(bwEl.value) : null;
+  }
 
   // ── MEUBELS ──
   if (curSection === 'meubels') {
@@ -5473,6 +5572,185 @@ function deleteItem() {
   resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
 }
 
+// ── CASHFLOW ──────────────────────────────────────────────────────────────────
+let cashflowMode = 'week';
+let cashflowSelected = null;
+
+function setCashflowMode(mode) {
+  cashflowMode = mode;
+  cashflowSelected = null;
+  document.getElementById('cf-btn-week').classList.toggle('active', mode === 'week');
+  document.getElementById('cf-btn-maand').classList.toggle('active', mode === 'maand');
+  renderCashflow();
+}
+
+function renderCashflow() {
+  const items = (state.items['nog-te-maken'] || []).filter(item =>
+    item.betaalweek && !['betaald'].includes(item.status)
+  );
+
+  const chart = document.getElementById('cf-chart');
+  const noData = document.getElementById('cf-no-data');
+  const selectedLabel = document.getElementById('cf-selected-label');
+  const itemList = document.getElementById('cf-item-list');
+  if (!chart) return;
+
+  if (!items.length) {
+    chart.innerHTML = '';
+    noData.style.display = 'block';
+    selectedLabel.style.display = 'none';
+    itemList.innerHTML = '';
+    return;
+  }
+  noData.style.display = 'none';
+
+  // Group by week or month
+  const groups = {};
+  const startWeek = appSettings.startweek || 1;
+  const endWeek = Math.max(appSettings.opleverweek || 52, ...items.map(i => i.betaalweek)) + 1;
+
+  if (cashflowMode === 'week') {
+    for (let w = startWeek; w <= endWeek; w++) groups[w] = [];
+    items.forEach(item => {
+      if (groups[item.betaalweek]) groups[item.betaalweek].push(item);
+      else groups[item.betaalweek] = [item];
+    });
+  } else {
+    // Group by month using ISO week → date conversion
+    items.forEach(item => {
+      const date = weekToDate(item.betaalweek);
+      const key = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    });
+    // Fill in empty months in range
+    const firstDate = weekToDate(startWeek);
+    const lastDate = weekToDate(endWeek);
+    const cur = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+    while (cur <= lastDate) {
+      const key = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
+      if (!groups[key]) groups[key] = [];
+      cur.setMonth(cur.getMonth() + 1);
+    }
+  }
+
+  const keys = Object.keys(groups).sort();
+  // Trim leading/trailing empty groups but keep at least ones with data
+  const dataKeys = keys.filter(k => groups[k].length > 0);
+  if (!dataKeys.length) {
+    chart.innerHTML = '';
+    noData.style.display = 'block';
+    return;
+  }
+  const firstData = keys.indexOf(dataKeys[0]);
+  const lastData = keys.indexOf(dataKeys[dataKeys.length-1]);
+  const trimmedKeys = keys.slice(Math.max(0, firstData-1), lastData+2);
+
+  const totals = trimmedKeys.map(k => groups[k].reduce((s,i) => s + (parseFloat(i.amount)||0), 0));
+  const maxTotal = Math.max(...totals, 1);
+  const BAR_HEIGHT = 120;
+
+  const MAAND_NL = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+
+  chart.innerHTML = trimmedKeys.map((key, idx) => {
+    const groupItems = groups[key] || [];
+    const total = totals[idx];
+    const barH = Math.round((total / maxTotal) * BAR_HEIGHT);
+    const isEmpty = total === 0;
+    const isSelected = cashflowSelected === key;
+    let label;
+    if (cashflowMode === 'week') {
+      label = `w${key}`;
+    } else {
+      const [yr, mo] = key.split('-');
+      label = MAAND_NL[parseInt(mo)-1];
+    }
+    const amtLabel = isEmpty ? '' : `€${total >= 1000 ? Math.round(total/1000)+'k' : Math.round(total)}`;
+    return `<div class="cf-bar-wrap${isEmpty ? '' : ' has-data'}${isSelected ? ' selected' : ''}" onclick="selectCashflowBar('${key}')" data-cf-key="${key}">
+      <div class="cf-bar-amount">${amtLabel}</div>
+      <div class="cf-bar-outer" style="height:${BAR_HEIGHT}px">
+        <div class="cf-bar-inner" style="height:${barH}px"></div>
+      </div>
+      <div class="cf-bar-label">${label}</div>
+    </div>`;
+  }).join('');
+
+  // Restore selected item list
+  if (cashflowSelected && groups[cashflowSelected]) {
+    renderCashflowItems(cashflowSelected, groups[cashflowSelected]);
+  } else {
+    selectedLabel.style.display = 'none';
+    itemList.innerHTML = '';
+  }
+}
+
+function weekToDate(weekNum) {
+  const jan4 = new Date(new Date().getFullYear(), 0, 4);
+  const startOfWeek1 = new Date(jan4);
+  startOfWeek1.setDate(jan4.getDate() - (jan4.getDay()||7) + 1);
+  const date = new Date(startOfWeek1);
+  date.setDate(startOfWeek1.getDate() + (weekNum-1)*7);
+  return date;
+}
+
+function selectCashflowBar(key) {
+  const items = (state.items['nog-te-maken'] || []).filter(item => item.betaalweek && !['betaald'].includes(item.status));
+  let groupItems;
+  if (cashflowMode === 'week') {
+    groupItems = items.filter(i => String(i.betaalweek) === String(key));
+  } else {
+    groupItems = items.filter(i => {
+      const date = weekToDate(i.betaalweek);
+      const k = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+      return k === key;
+    });
+  }
+  if (cashflowSelected === key) {
+    cashflowSelected = null;
+    document.getElementById('cf-selected-label').style.display = 'none';
+    document.getElementById('cf-item-list').innerHTML = '';
+    document.querySelectorAll('.cf-bar-wrap').forEach(el => el.classList.remove('selected'));
+  } else {
+    cashflowSelected = key;
+    document.querySelectorAll('.cf-bar-wrap').forEach(el => {
+      el.classList.toggle('selected', el.dataset.cfKey === key);
+    });
+    renderCashflowItems(key, groupItems);
+  }
+}
+
+function renderCashflowItems(key, groupItems) {
+  const selectedLabel = document.getElementById('cf-selected-label');
+  const itemList = document.getElementById('cf-item-list');
+  const MAAND_NL = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+  let label;
+  if (cashflowMode === 'week') {
+    label = `Week ${key}`;
+  } else {
+    const [yr, mo] = key.split('-');
+    label = `${MAAND_NL[parseInt(mo)-1]} ${yr}`;
+  }
+  const total = groupItems.reduce((s,i) => s + (parseFloat(i.amount)||0), 0);
+  selectedLabel.style.display = 'block';
+  selectedLabel.textContent = `${label} — ${fmt(total)}`;
+  if (!groupItems.length) {
+    itemList.innerHTML = '<div class="empty-state" style="padding:12px 0">Geen kosten gepland in deze periode</div>';
+    return;
+  }
+  itemList.innerHTML = groupItems.map(item => {
+    const cat = item.cat ? item.cat.charAt(0).toUpperCase() + item.cat.slice(1) : '';
+    const meta = [cat, item.note].filter(Boolean).join(' · ');
+    return `<div class="cf-item-row">
+      <div>
+        <div class="cf-item-name">${esc(item.name)}</div>
+        ${meta ? `<div class="cf-item-meta">${esc(meta)}</div>` : ''}
+      </div>
+      <div class="cf-item-amount">${fmt(item.amount)}</div>
+    </div>`;
+  }).join('');
+}
+// ── END CASHFLOW ───────────────────────────────────────────────────────────────
+
 function switchTab(tab, direction) {
   const prevTab = currentTab;
   const isRerender = tab === prevTab && !direction;
@@ -5523,6 +5801,7 @@ function switchTab(tab, direction) {
   const idx = TABS.indexOf(tab);
   document.getElementById('tab-prev').disabled = idx <= 0;
   document.getElementById('tab-next').disabled = idx >= TABS.length - 1;
+  if (tab === 'cashflow') setTimeout(() => renderCashflow(), 50);
 }
 
 function stepTab(dir) {
