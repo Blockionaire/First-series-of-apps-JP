@@ -277,15 +277,15 @@ export function pairArt(flowerId: string, vaseId: string, colorHex?: string): st
   const vase = productById(vaseId);
   if (!flower || !vase) return wrap('');
   const tint = 'var(--tint, #F3EDDF)';
-  const flowerScene =
-    flower.id === 'orchid-arrangement' || flower.id === 'orchid-stem'
-      ? orchidStem(150, 326, 1, 0.95, tint)
-      : calla(150, 326, 1, 1.15, tint);
+  const isOrchid = flower.id === 'orchid-arrangement' || flower.id === 'orchid-stem';
+  const full = flower.category === 'bouquets';
+  const flowerScene = isOrchid
+    ? `${orchidStem(200, 424, 1, 1.05, tint)}${full ? orchidStem(212, 424, -1, 0.9, tint) : ''}`
+    : `${calla(200, 424, 1, 1.3, tint)}${full ? `${calla(192, 424, -1.6, 1.05, tint)}${calla(208, 424, 2, 0.9, tint)}` : ''}`;
   return wrap(
-    `${shadow(190, 428, 110)}
-     ${vaseShape(vaseId === 'vase-round' ? 'vase-round' : vaseId, 150, 424)}
-     <g transform="translate(0 98)">${flowerScene}</g>
-     ${vaseShape(vaseId === 'vase-glass' ? 'vase-tall' : 'vase-glass', 268, 424, 0.8)}`,
+    `${shadow(200, 428, 96)}
+     <g transform="translate(0 -6)">${flowerScene}</g>
+     ${vaseShape(vaseId, 200, 424, 1.05)}`,
     colorHex,
   );
 }

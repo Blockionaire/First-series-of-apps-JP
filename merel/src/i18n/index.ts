@@ -35,12 +35,13 @@ export function tt(key: MessageKey, vars: Record<string, string | number>): stri
  * Product/data field lookup: tp(product, 'name') returns `name_nl`
  * in Dutch when present, `name` otherwise.
  */
-export function tp<T extends Record<string, unknown>>(obj: T, field: string): string {
+export function tp(obj: object, field: string): string {
+  const record = obj as Record<string, unknown>;
   if (locale === 'nl') {
-    const localized = obj[`${field}_nl`];
+    const localized = record[`${field}_nl`];
     if (typeof localized === 'string') return localized;
   }
-  const base = obj[field];
+  const base = record[field];
   return typeof base === 'string' ? base : '';
 }
 

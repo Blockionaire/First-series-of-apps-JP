@@ -3,7 +3,7 @@ import { esc, qs } from '../lib/dom';
 import { money } from '../lib/format';
 import { FREE_SHIP, GIFT, GIFT_WRAP } from '../data/config';
 import { productById, colorOf } from '../data/products';
-import { lookById, lookPrice } from '../data/looks';
+import { lookById } from '../data/looks';
 import {
   getLines,
   linePrice,
@@ -23,7 +23,7 @@ import {
   addProduct,
   type CartLine,
 } from '../state/cart';
-import { productArt, pairArt } from './art';
+import { productArt, pairArt, motifSprout } from './art';
 import { openCheckoutModal } from './modals';
 import { showToast } from './toast';
 import { registerOverlay, unregisterOverlay } from './overlay';
@@ -218,6 +218,7 @@ export function renderCartDrawer(): void {
       </div>
       <div class="drawer-body">
         <div class="cart-empty">
+          ${motifSprout(44)}
           <p class="serif" style="font-size:1.3rem;font-style:italic">${t('cart.empty')}</p>
           <a class="btn btn--primary" href="/shop" data-close-nav>${t('cart.emptyCta')}</a>
         </div>
