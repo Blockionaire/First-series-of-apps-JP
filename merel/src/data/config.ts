@@ -9,3 +9,6 @@ export const GIFT = {
 
 /** Order cutoff for next-day delivery (local time, 24h). Sundays skipped. */
 export const CUTOFF_HOUR = 16;
+
+/** The welcome code handed out on newsletter signup. Front-end demo only. */
+export const PROMO = { code: 'MEREL10', rate: 0.1 } as const;

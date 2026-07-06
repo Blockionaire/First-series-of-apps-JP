@@ -255,6 +255,42 @@ export const en = {
   'footer.legal': 'Terms · Privacy · Imprint',
   'footer.copyright': '© {year} Merèl, Amsterdam. All rights reserved.',
 
+  // Wishlist
+  'nav.wishlist': 'Saved',
+  'wishlist.title': 'Saved pieces',
+  'wishlist.sub': 'Kept quietly, for when the moment is right.',
+  'wishlist.empty': 'Nothing saved yet.',
+  'wishlist.emptyBody': 'Tap the small heart on any piece and it will wait for you here.',
+  'wishlist.save': 'Save for later',
+  'wishlist.saved': 'Saved',
+  'toast.wishAdded': '{name} saved for later',
+  'toast.wishRemoved': '{name} removed from saved',
+
+  // Add-to-cart confirmation
+  'pdp.added': 'Added',
+
+  // Discount code
+  'promo.have': 'Add a code',
+  'promo.placeholder': 'Discount code',
+  'promo.apply': 'Apply',
+  'promo.invalid': 'That code is not one of ours.',
+  'promo.line': 'Welcome courtesy ({code})',
+  'promo.removeCode': 'Remove code',
+  'email.successCode':
+    'Thank you. Your welcome code is {code} — it takes 10% off your first order.',
+
+  // Not found
+  'nf.title': 'Nothing grows here',
+  'nf.body': 'The page you are looking for does not exist, or has quietly moved.',
+  'nf.cta': 'Back to the collection',
+
+  // SEO descriptions
+  'seo.home': 'Hyperrealistic artificial flowers for considered interiors. Flowers that look real, last forever, and never need tending.',
+  'seo.shop': 'Arrangements, single stems and the vessels made for them. Delivered in 1–3 days in NL & BE.',
+  'seo.looks': 'Flower and vessel, paired by our studio. Bundled with a courtesy of about ten percent.',
+  'seo.story': 'Cast from living flowers, finished by hand in our Amsterdam studio. This is why we make everlasting botanicals.',
+  'seo.care': 'How to care for Merèl everlasting botanicals, and short answers to fair questions.',
+
   // Weekdays (for the delivery countdown)
   'day.0': 'Sunday',
   'day.1': 'Monday',

@@ -46,9 +46,10 @@ export function openQuickView(p: Product, initialColorId?: string): void {
   });
 
   const out = card.querySelector<HTMLElement>('[data-qv-out]')!;
+  const maxQty = p.stock ?? 99;
   card.querySelectorAll<HTMLButtonElement>('[data-qv-qty]').forEach((btn) =>
     btn.addEventListener('click', () => {
-      qty = Math.max(1, qty + Number(btn.dataset.qvQty));
+      qty = Math.min(maxQty, Math.max(1, qty + Number(btn.dataset.qvQty)));
       out.textContent = String(qty);
     }),
   );

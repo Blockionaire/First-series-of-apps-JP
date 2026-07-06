@@ -1,5 +1,6 @@
-import { t } from '../i18n';
+import { t, tt } from '../i18n';
 import { esc } from '../lib/dom';
+import { PROMO } from '../data/config';
 import { isSubscribed, setSubscribed, promoShown, markPromoShown } from '../state/prefs';
 import { registerOverlay, unregisterOverlay } from './overlay';
 import { showToast } from './toast';
@@ -89,7 +90,15 @@ export function schedulePromoModal(): void {
       }
       setSubscribed();
       showToast(t('toast.subscribed'));
-      close();
+      const pad = card.querySelector<HTMLElement>('.modal-pad');
+      if (pad) {
+        pad.innerHTML = `
+          <span class="eyebrow">${t('promo.eyebrow')}</span>
+          <p class="lede" style="text-align:center">
+            ${tt('email.successCode', { code: `<b class="promo-code">${PROMO.code}</b>` })}</p>
+          <button class="btn btn--primary" data-promo-done>${t('checkout.ok')}</button>`;
+        pad.querySelector('[data-promo-done]')?.addEventListener('click', close);
+      }
     });
   }, 4200);
 }

@@ -31,6 +31,27 @@ export function updateRecentColor(productId: string, colorId: string): void {
   }
 }
 
+/* Wishlist --------------------------------------------------------------- */
+
+export function getWishlist(): string[] {
+  return storageGet<string[]>('wishlist', []);
+}
+
+export function inWishlist(productId: string): boolean {
+  return getWishlist().includes(productId);
+}
+
+/** Returns the new state: true = now saved. */
+export function toggleWishlist(productId: string): boolean {
+  const list = getWishlist();
+  const index = list.indexOf(productId);
+  if (index === -1) list.unshift(productId);
+  else list.splice(index, 1);
+  storageSet('wishlist', list);
+  emit('wish:change');
+  return index === -1;
+}
+
 /* Newsletter / promo ---------------------------------------------------- */
 
 export function isSubscribed(): boolean {

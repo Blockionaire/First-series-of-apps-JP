@@ -67,6 +67,18 @@ Design decisions worth knowing:
   `scripts/make-vase-glb.mjs` — dependency-free lathe geometry → binary glTF.
 - **Storage** goes through `lib/storage.ts` only: try/catch with an in-memory
   fallback, so private browsing degrades silently.
+- **Wishlist** (`/wishlist`): hearts on cards and PDPs, persisted, header
+  count, live removal on the wishlist page itself.
+- **Welcome code loop**: subscribing (email section or promo modal) reveals
+  `MEREL10`; the cart drawer's "Add a code" applies 10% off paid items. The
+  reward thresholds (free shipping €75 / gift €175) are checked against the
+  *discounted* subtotal, so the messaging never overpromises.
+- **Stock honesty**: quantity steppers and cart lines are capped at real
+  stock; bundle lines cap at their scarcest component.
+- **SEO**: per-route titles/descriptions plus JSON-LD (Organization +
+  WebSite everywhere; Product with computed AggregateRating and
+  BreadcrumbList on PDPs; FAQPage on Care). Unknown routes and unknown
+  product ids render a quiet 404.
 
 ## Before launch
 
@@ -95,3 +107,8 @@ Design decisions worth knowing:
   quick view hidden <560px, burger nav <860px.
 - Keyboard: focus-visible sage outlines, overlays trap focus and close on
   Escape, focus returns to the opener.
+- 404 for unknown routes and product ids; JSON-LD present per route.
+- Add-to-cart morphs to a sage "Added" state; header counters pulse once.
+- `MEREL10` applies and removes cleanly; invalid codes show a calm error.
+- Wishlist survives reload; un-hearting on `/wishlist` removes the card live.
+- Quantity is capped at real stock on PDP, quick view and cart lines.

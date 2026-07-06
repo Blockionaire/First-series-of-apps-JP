@@ -442,6 +442,21 @@
 
 .pdp-buy .btn {
   flex: 1;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .pdp-buy {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .pdp-buy .btn--primary {
+    order: 2;
+    flex: 1 1 100%;
+  }
+  .pdp-buy .wish-btn--pdp {
+    width: 44px;
+  }
 }
 
 .low-stock {

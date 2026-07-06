@@ -38,6 +38,103 @@
   transform: scale(1.04);
 }
 
+/* Two stacked scenes: studio front + "in the room", crossfading on hover */
+.card-layer {
+  position: absolute;
+  inset: 0;
+  transition: opacity 1s var(--ease-luxe);
+}
+
+.card-layer--alt {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.product-card:hover .card-layer--alt {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce), (hover: none) {
+  .card-layer--alt {
+    display: none;
+  }
+}
+
+/* Wishlist heart ------------------------------------------------------ */
+.wish-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: var(--cocoa);
+  transition: color 0.3s ease, transform 0.3s var(--ease-luxe);
+}
+
+.wish-btn:hover {
+  color: var(--espresso);
+  transform: scale(1.08);
+}
+
+.wish-btn[aria-pressed='true'] {
+  color: var(--sage);
+}
+
+.wish-btn[aria-pressed='true'] .heart-path {
+  fill: currentColor;
+}
+
+.wish-btn--card {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: color-mix(in srgb, var(--bone) 82%, transparent);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.35s var(--ease-luxe), transform 0.35s var(--ease-luxe), color 0.3s;
+}
+
+.product-card:hover .wish-btn--card,
+.wish-btn--card[aria-pressed='true'],
+.wish-btn--card:focus-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (hover: none) {
+  .wish-btn--card {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.wish-btn--pdp {
+  width: 48px;
+  height: auto;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  flex: none;
+}
+
+.header-wish {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--cocoa);
+  padding: 0.3rem;
+}
+
+.header-wish:hover,
+.header-wish[aria-current='page'] {
+  color: var(--espresso);
+}
+
+.cart-count--wish {
+  background: var(--espresso);
+}
+
 .quickview-btn {
   position: absolute;
   left: 50%;
@@ -569,6 +666,76 @@
   gap: 1rem;
   align-items: center;
   color: var(--cocoa);
+}
+
+/* Discount code ---------------------------------------------------------- */
+.promo-details summary {
+  list-style: none;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--stone);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  width: fit-content;
+}
+
+.promo-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.promo-details summary:hover {
+  color: var(--espresso);
+}
+
+.promo-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.promo-form .field {
+  flex: 1;
+  text-transform: uppercase;
+}
+
+.promo-form .field::placeholder {
+  text-transform: none;
+}
+
+.promo-error {
+  font-size: 0.75rem;
+  color: #a3552e;
+  margin-top: 0.4rem;
+}
+
+.promo-code {
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--sage);
+}
+
+/* Count pulse + added confirmation ---------------------------------------- */
+@keyframes count-pulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.cart-count.pulse {
+  animation: count-pulse 0.5s var(--ease-luxe);
+}
+
+.btn.is-added {
+  background: var(--sage);
+  border-color: var(--sage);
+  color: var(--bone);
 }
 
 /* Modals ---------------------------------------------------------------- */

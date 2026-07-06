@@ -7,6 +7,7 @@ export type BusEvent =
   | 'cart:change'
   | 'lang:change'
   | 'recent:change'
+  | 'wish:change'
   | 'route:change';
 
 export function on(event: BusEvent, fn: Handler): () => void {

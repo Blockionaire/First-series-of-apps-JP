@@ -257,6 +257,42 @@ export const nl: Record<MessageKey, string> = {
   'footer.legal': 'Voorwaarden · Privacy · Colofon',
   'footer.copyright': '© {year} Merèl, Amsterdam. Alle rechten voorbehouden.',
 
+  // Wishlist
+  'nav.wishlist': 'Bewaard',
+  'wishlist.title': 'Bewaarde stukken',
+  'wishlist.sub': 'Stilletjes bewaard, voor wanneer het moment daar is.',
+  'wishlist.empty': 'Nog niets bewaard.',
+  'wishlist.emptyBody': 'Tik op het kleine hart bij een stuk en het wacht hier op je.',
+  'wishlist.save': 'Bewaar voor later',
+  'wishlist.saved': 'Bewaard',
+  'toast.wishAdded': '{name} bewaard voor later',
+  'toast.wishRemoved': '{name} verwijderd uit bewaard',
+
+  // Add-to-cart confirmation
+  'pdp.added': 'Toegevoegd',
+
+  // Discount code
+  'promo.have': 'Code toevoegen',
+  'promo.placeholder': 'Kortingscode',
+  'promo.apply': 'Toepassen',
+  'promo.invalid': 'Die code kennen wij niet.',
+  'promo.line': 'Welkomstattentie ({code})',
+  'promo.removeCode': 'Code verwijderen',
+  'email.successCode':
+    'Dank je. Je welkomstcode is {code} — goed voor 10% op je eerste bestelling.',
+
+  // Not found
+  'nf.title': 'Hier groeit niets',
+  'nf.body': 'De pagina die je zoekt bestaat niet, of is stilletjes verplaatst.',
+  'nf.cta': 'Terug naar de collectie',
+
+  // SEO descriptions
+  'seo.home': 'Hyperrealistische kunstbloemen voor doordachte interieurs. Bloemen die echt lijken, eeuwig meegaan en nooit verzorging vragen.',
+  'seo.shop': 'Arrangementen, losse stelen en de vazen die ervoor gemaakt zijn. Binnen 1–3 dagen geleverd in NL & BE.',
+  'seo.looks': 'Bloem en vaas, gecombineerd door ons atelier. Gebundeld met een attentie van ongeveer tien procent.',
+  'seo.story': 'Afgegoten van levende bloemen, met de hand afgewerkt in ons Amsterdamse atelier. Daarom maken wij eeuwigdurende botanicals.',
+  'seo.care': 'Hoe je Merèl-botanicals verzorgt, en korte antwoorden op eerlijke vragen.',
+
   // Weekdays (for the delivery countdown)
   'day.0': 'zondag',
   'day.1': 'maandag',

@@ -1,5 +1,6 @@
 /** Shared page sections: trust strip, email capture, recently viewed. */
 import { t, tt } from '../i18n';
+import { PROMO } from '../data/config';
 import { esc } from '../lib/dom';
 import { money } from '../lib/format';
 import { productById, colorOf } from '../data/products';
@@ -58,7 +59,8 @@ export function bindEmailCapture(root: HTMLElement): void {
       setSubscribed();
       const box = form.closest<HTMLElement>('[data-email-capture]');
       if (box) {
-        box.innerHTML = `<p class="lede" style="margin-inline:auto">${t('email.success')}</p>`;
+        box.innerHTML = `<p class="lede" style="margin-inline:auto">
+          ${tt('email.successCode', { code: `<b class="promo-code">${PROMO.code}</b>` })}</p>`;
       }
       showToast(t('toast.subscribed'));
     });

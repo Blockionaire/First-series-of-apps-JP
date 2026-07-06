@@ -4,8 +4,10 @@ import { money } from '../lib/format';
 import { CUTOFF_HOUR, GIFT } from '../data/config';
 import { productById, colorOf, products, type Product } from '../data/products';
 import { ratingFor, reviewsFor } from '../data/reviews';
-import { addProduct, itemsSubtotal } from '../state/cart';
+import { addProduct, discountedSubtotal } from '../state/cart';
 import { pushRecent, updateRecentColor } from '../state/prefs';
+import { confirmAdded } from '../components/feedback';
+import { wishButtonMarkup, bindWishButtons } from '../components/wishButton';
 import { productArt, type ArtVariant } from '../components/art';
 import { starsMarkup } from '../components/rating';
 import { swatchesMarkup, bindSwatches } from '../components/swatches';
@@ -67,7 +69,15 @@ function artForSlot(p: Product, slot: MediaSlot, colorHex?: string): string {
 export function renderProduct(main: HTMLElement, id: string): (() => void) | void {
   const p = productById(id);
   if (!p) {
-    main.innerHTML = `<section class="container section"><p class="shop-empty">${t('shop.empty')}</p></section>`;
+    // Unknown product id — render the quiet 404 instead of an empty page.
+    main.innerHTML = `
+      <section class="container section" style="text-align:center;padding-block:clamp(4rem,12vw,8rem)">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1.2rem">
+          <h1>${t('nf.title')}</h1>
+          <p class="lede" style="text-align:center">${t('nf.body')}</p>
+          <a class="btn btn--primary" href="/shop">${t('nf.cta')}</a>
+        </div>
+      </section>`;
     return;
   }
 
@@ -83,7 +93,8 @@ export function renderProduct(main: HTMLElement, id: string): (() => void) | voi
 
   pushRecent(p.id, colorId);
 
-  const giftGap = GIFT.threshold - itemsSubtotal();
+  const maxQty = p.stock ?? 99;
+  const giftGap = GIFT.threshold - discountedSubtotal();
 
   main.innerHTML = `
   <section class="container pdp">
@@ -140,6 +151,7 @@ export function renderProduct(main: HTMLElement, id: string): (() => void) | voi
         <button class="btn btn--primary" data-add>${t('pdp.add')}
           <svg class="btn-arrow" width="16" height="10" viewBox="0 0 16 10" fill="none"><path d="M0 5h14M10 1l4 4-4 4" stroke="currentColor"/></svg>
         </button>
+        ${wishButtonMarkup(p.id, 'wish-btn--pdp')}
       </div>
 
       ${p.stock !== undefined && p.stock <= 6 ? `<p class="low-stock">${tt('pdp.lowStock', { n: p.stock })}</p>` : ''}
@@ -287,23 +299,31 @@ export function renderProduct(main: HTMLElement, id: string): (() => void) | voi
   const qtyOut = qs<HTMLElement>(main, '[data-qty-out]');
   main.querySelectorAll<HTMLButtonElement>('.pdp-buy [data-qty]').forEach((btn) =>
     btn.addEventListener('click', () => {
-      qty = Math.max(1, qty + Number(btn.dataset.qty));
+      qty = Math.min(maxQty, Math.max(1, qty + Number(btn.dataset.qty)));
       qtyOut.textContent = String(qty);
     }),
   );
 
-  const doAdd = () => {
+  const doAdd = (btn: HTMLElement) => {
     addProduct(p.id, colorId, qty);
     showToast(tt('toast.added', { name: tp(p, 'name') }));
+    confirmAdded(btn);
   };
-  qs<HTMLElement>(main, '[data-add]').addEventListener('click', doAdd);
-  main.querySelector('[data-add-sticky]')?.addEventListener('click', doAdd);
+  qs<HTMLElement>(main, '[data-add]').addEventListener('click', (e) =>
+    doAdd(e.currentTarget as HTMLElement),
+  );
+  main.querySelector('[data-add-sticky]')?.addEventListener('click', (e) =>
+    doAdd(e.currentTarget as HTMLElement),
+  );
 
-  main.querySelector('[data-add-paired]')?.addEventListener('click', () => {
+  main.querySelector('[data-add-paired]')?.addEventListener('click', (e) => {
     if (!paired) return;
     addProduct(paired.id, paired.colors?.[0]?.id);
     showToast(tt('toast.added', { name: tp(paired, 'name') }));
+    confirmAdded(e.currentTarget as HTMLElement);
   });
+
+  bindWishButtons(main);
 
   /* — Reviews anchor --------------------------------------------------------- */
   main.querySelector('[data-reviews-link]')?.addEventListener('click', (e) => {
@@ -333,7 +353,7 @@ export function renderProduct(main: HTMLElement, id: string): (() => void) | voi
   /* — Gift nudge stays honest when the cart changes under us -------------------- */
   const offCart = on('cart:change', () => {
     const nudge = main.querySelector<HTMLElement>('.gift-nudge');
-    const gap = GIFT.threshold - itemsSubtotal();
+    const gap = GIFT.threshold - discountedSubtotal();
     if (nudge) {
       if (gap > 0) nudge.innerHTML = `✦ ${tt('pdp.giftNudge', { amount: money(gap) })}`;
       else nudge.remove();

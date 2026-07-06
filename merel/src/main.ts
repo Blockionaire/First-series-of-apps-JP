@@ -17,8 +17,11 @@ import { renderProduct } from './pages/product';
 import { renderLooks } from './pages/looks';
 import { renderStory } from './pages/story';
 import { renderCare } from './pages/care';
+import { renderWishlist } from './pages/wishlist';
+import { renderNotFound } from './pages/notfound';
 import { initPageMotion, killPageMotion } from './motion/scroll';
 import { reducedMotion } from './lib/dom';
+import { applySeo } from './lib/seo';
 
 const app = document.getElementById('app')!;
 app.innerHTML = `
@@ -58,12 +61,25 @@ function renderPage(): void {
     case 'care':
       cleanup = renderCare(main);
       break;
+    case 'wishlist':
+      cleanup = renderWishlist(main);
+      break;
+    case 'notfound':
+      cleanup = renderNotFound(main);
+      break;
     default:
       cleanup = renderHome(main);
   }
   if (typeof cleanup === 'function') pageCleanup = cleanup;
 
+  applySeo(route);
   window.scrollTo({ top: 0, behavior: 'auto' });
+
+  // Soft page-enter transition; the reduced-motion media rule collapses it.
+  main.classList.remove('page-enter');
+  void main.offsetWidth;
+  main.classList.add('page-enter');
+
   initPageMotion(main);
 }
 
@@ -101,6 +117,9 @@ on('cart:change', () => {
   updateCartCount();
   if (cartDrawerIsOpen()) renderCartDrawer();
 });
+
+// Wishlist count lives in the header chrome.
+on('wish:change', () => renderHeader(headerHost));
 
 // Reduced-motion listeners can change live; re-render motion cheaply.
 window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener?.('change', () => {

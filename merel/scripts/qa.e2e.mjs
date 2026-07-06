@@ -254,6 +254,72 @@ check('reduced motion: hero at final state', heroVisible && heroOpacity === '1',
 check('reduced motion: no js errors', err4.length === 0, err4.join('; '));
 await ctx4.close();
 
+
+/* — v2 upgrades ------------------------------------------------------- */
+
+/* 404 for unknown routes and unknown products */
+await page.goto(BASE + '/does-not-exist');
+await page.waitForTimeout(700);
+check('404 page for unknown route', (await page.textContent('h1'))?.includes('Nothing grows here'));
+await page.goto(BASE + '/product/does-not-exist');
+await page.waitForTimeout(700);
+check('404 for unknown product', (await page.textContent('h1'))?.includes('Nothing grows here'));
+
+/* JSON-LD structured data on PDP */
+await page.goto(BASE + '/product/orchid-arrangement');
+await page.waitForTimeout(900);
+const ld = await page.evaluate(() => document.getElementById('jsonld')?.textContent ?? '');
+check('PDP JSON-LD Product with rating', ld.includes('"Product"') && ld.includes('aggregateRating'));
+check('PDP document title', (await page.title()).includes('Alba'));
+
+/* Add-to-cart confirmation morph */
+await page.locator('.pdp-buy [data-add]').click();
+await page.waitForTimeout(300);
+check('ATC morphs to added state', (await page.locator('.pdp-buy [data-add].is-added').count()) === 1);
+await page.waitForTimeout(1600);
+
+/* Qty cap by stock: Sera has stock 4 */
+await page.goto(BASE + '/product/calla-arrangement');
+await page.waitForTimeout(800);
+for (let i = 0; i < 8; i++) await page.locator('.pdp-buy [data-qty="1"]').click();
+check('PDP qty capped at stock 4', (await page.textContent('[data-qty-out]')) === '4');
+
+/* Wishlist: heart on PDP, header count, wishlist page */
+await page.locator('.wish-btn--pdp').click();
+await page.waitForTimeout(500);
+check('heart pressed on PDP', (await page.locator('.wish-btn--pdp[aria-pressed="true"]').count()) === 1);
+check('header wishlist count', (await page.textContent('[data-wish-count]')) === '1');
+await page.goto(BASE + '/wishlist');
+await page.waitForTimeout(800);
+check('wishlist page shows saved piece', (await page.locator('[data-wish-grid] .product-card').count()) === 1);
+await page.locator('[data-wish-grid] .wish-btn').first().click({ force: true });
+await page.waitForTimeout(600);
+check('unheart empties wishlist live', (await page.locator('.cart-empty').count()) === 1);
+
+/* Promo code loop: invalid rejected, MEREL10 applies 10% */
+await page.locator('[data-cart-open]').click();
+await page.waitForTimeout(800);
+await page.locator('[data-promo-details] summary').click();
+await page.fill('[data-promo-cart-form] input', 'WRONG');
+await page.locator('[data-promo-cart-form] button').click();
+await page.waitForTimeout(300);
+check('invalid code shows error', await page.locator('[data-promo-error]:not([hidden])').count() === 1);
+await page.fill('[data-promo-cart-form] input', 'merel10');
+await page.locator('[data-promo-cart-form] button').click();
+await page.waitForTimeout(600);
+const summaryText = await page.textContent('.drawer-foot');
+check('MEREL10 applies discount line', summaryText?.includes('MEREL10'), summaryText?.replace(/\s+/g,' ').slice(0,120));
+await page.locator('[data-promo-remove]').click();
+await page.waitForTimeout(500);
+check('code removable', !(await page.textContent('.drawer-foot'))?.includes('MEREL10'));
+await page.keyboard.press('Escape');
+await page.waitForTimeout(400);
+
+/* Card hover crossfade layer present */
+await page.goto(BASE + '/shop');
+await page.waitForTimeout(900);
+check('cards carry room-scene hover layer', (await page.locator('[data-card-alt]').count()) === 8);
+
 check('no page errors overall', errors.length === 0, errors.slice(0, 4).join(' | '));
 
 await browser.close();

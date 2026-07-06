@@ -1,8 +1,10 @@
 import { getLocale, setLocale, t } from '../i18n';
 import { qs, qsa } from '../lib/dom';
 import { cartCount } from '../state/cart';
+import { getWishlist } from '../state/prefs';
 import { currentRoute, pathFor } from '../router';
 import { openCartDrawer } from './cartDrawer';
+import { pulse } from './feedback';
 
 const NAV: Array<{ path: string; key: 'nav.shop' | 'nav.looks' | 'nav.story' | 'nav.care' }> = [
   { path: '/shop', key: 'nav.shop' },
@@ -40,6 +42,14 @@ export function renderHeader(host: HTMLElement): void {
             <span aria-hidden="true" style="color:var(--hairline-strong)">/</span>
             <button data-lang="nl" aria-pressed="${lang === 'nl'}">NL</button>
           </div>
+          <a class="header-wish" href="/wishlist" aria-label="${t('wishlist.title')}"
+            ${activePath === '/wishlist' ? 'aria-current="page"' : ''}>
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+              <path d="M12 20.2C7 15.4 3.6 12 3.6 8.6a4.6 4.6 0 018.4-2.6 4.6 4.6 0 018.4 2.6c0 3.4-3.4 6.8-8.4 11.6z"
+                fill="${getWishlist().length ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.4"/>
+            </svg>
+            ${getWishlist().length ? `<span class="cart-count cart-count--wish" data-wish-count>${getWishlist().length}</span>` : ''}
+          </a>
           <button class="cart-btn" data-cart-open aria-label="${t('header.cart')}">
             <span class="cart-label">${t('header.cart')}</span>
             <span class="cart-count" data-cart-count>${cartCount()}</span>
@@ -91,7 +101,10 @@ export function renderHeader(host: HTMLElement): void {
 }
 
 export function updateCartCount(): void {
-  document.querySelectorAll('[data-cart-count]').forEach((el) => {
-    el.textContent = String(cartCount());
+  document.querySelectorAll<HTMLElement>('[data-cart-count]').forEach((el) => {
+    if (el.textContent !== String(cartCount())) {
+      el.textContent = String(cartCount());
+      pulse(el);
+    }
   });
 }

@@ -6,7 +6,9 @@ export type Route =
   | { name: 'product'; id: string }
   | { name: 'looks' }
   | { name: 'story' }
-  | { name: 'care' };
+  | { name: 'care' }
+  | { name: 'wishlist' }
+  | { name: 'notfound' };
 
 export function parse(path: string): Route {
   const clean = path.replace(/\/+$/, '') || '/';
@@ -15,9 +17,10 @@ export function parse(path: string): Route {
   if (clean === '/looks') return { name: 'looks' };
   if (clean === '/story') return { name: 'story' };
   if (clean === '/care') return { name: 'care' };
+  if (clean === '/wishlist') return { name: 'wishlist' };
   const product = clean.match(/^\/product\/([\w-]+)$/);
   if (product) return { name: 'product', id: product[1] };
-  return { name: 'home' };
+  return { name: 'notfound' };
 }
 
 let current: Route = parse(window.location.pathname);
@@ -29,6 +32,7 @@ export function currentRoute(): Route {
 export function pathFor(route: Route): string {
   switch (route.name) {
     case 'home':
+    case 'notfound':
       return '/';
     case 'product':
       return `/product/${route.id}`;

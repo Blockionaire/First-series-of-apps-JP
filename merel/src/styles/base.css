@@ -552,6 +552,22 @@ h3 {
   }
 }
 
+/* Page-enter transition ------------------------------------------------ */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+#main.page-enter {
+  animation: page-in 0.55s var(--ease-luxe) both;
+}
+
 /* Skip link ---------------------------------------------------------- */
 .skip-link {
   position: absolute;

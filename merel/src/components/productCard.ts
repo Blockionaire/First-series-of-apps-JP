@@ -7,12 +7,15 @@ import { productArt } from './art';
 import { ratingLine } from './rating';
 import { swatchesMarkup, bindSwatches } from './swatches';
 import { openQuickView } from './quickView';
+import { wishButtonMarkup, bindWishButtons } from './wishButton';
 
 export function productCardMarkup(p: Product, colorId?: string): string {
   const color = colorOf(p, colorId);
   return `<article class="product-card" data-card="${p.id}">
     <a class="card-media" href="/product/${p.id}" data-card-link aria-label="${esc(tp(p, 'name'))}">
-      <div data-card-art style="width:100%;height:100%">${productArt(p, { colorHex: color?.hex })}</div>
+      <div class="card-layer" data-card-art>${productArt(p, { colorHex: color?.hex })}</div>
+      <div class="card-layer card-layer--alt" data-card-alt aria-hidden="true">${productArt(p, { variant: 'room', colorHex: color?.hex })}</div>
+      ${wishButtonMarkup(p.id, 'wish-btn--card')}
       <button type="button" class="quickview-btn" data-quickview>${t('shop.quickview')}</button>
     </a>
     <div class="card-body">
@@ -30,7 +33,7 @@ export function productCardMarkup(p: Product, colorId?: string): string {
   </article>`;
 }
 
-/** Wires swatch retint + quick view on every card inside `root`. */
+/** Wires swatch retint, wishlist heart and quick view on every card inside `root`. */
 export function bindProductCards(root: HTMLElement, resolve: (id: string) => Product | undefined): void {
   root.querySelectorAll<HTMLElement>('[data-card]').forEach((card) => {
     const product = resolve(card.dataset.card!);
@@ -38,8 +41,11 @@ export function bindProductCards(root: HTMLElement, resolve: (id: string) => Pro
 
     bindSwatches(card, (cid) => {
       const color = colorOf(product, cid);
+      if (!color) return;
       const art = card.querySelector<HTMLElement>('[data-card-art]');
-      if (art && color) art.innerHTML = productArt(product, { colorHex: color.hex });
+      if (art) art.innerHTML = productArt(product, { colorHex: color.hex });
+      const alt = card.querySelector<HTMLElement>('[data-card-alt]');
+      if (alt) alt.innerHTML = productArt(product, { variant: 'room', colorHex: color.hex });
       card.dataset.color = cid;
     });
 
@@ -50,4 +56,6 @@ export function bindProductCards(root: HTMLElement, resolve: (id: string) => Pro
       openQuickView(product, card.dataset.color);
     });
   });
+
+  bindWishButtons(root);
 }

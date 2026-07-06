@@ -9,6 +9,13 @@ import {
   linePrice,
   lineTotal,
   itemsSubtotal,
+  discountedSubtotal,
+  promoApplied,
+  promoDiscount,
+  getPromoCode,
+  applyPromoCode,
+  removePromoCode,
+  maxQtyFor,
   cartTotal,
   freeShippingUnlocked,
   giftUnlocked,
@@ -99,7 +106,7 @@ function lineMarkup(line: CartLine): string {
         <span class="qty qty--sm">
           <button data-qty="-1" aria-label="−">−</button>
           <output>${line.qty}</output>
-          <button data-qty="1" aria-label="+">+</button>
+          <button data-qty="1" aria-label="+" ${line.qty >= maxQtyFor(line) ? 'disabled' : ''}>+</button>
         </span>
         <button class="line-remove" data-remove>${t('cart.remove')}</button>
       </div>
@@ -110,7 +117,7 @@ function lineMarkup(line: CartLine): string {
 /* — Rewards tracker ------------------------------------------------------ */
 
 function rewardsMarkup(): string {
-  const subtotal = itemsSubtotal();
+  const subtotal = discountedSubtotal();
   const progress = Math.min(1, subtotal / GIFT.threshold);
   let message: string;
   if (subtotal >= GIFT.threshold) message = t('rewards.done');
@@ -248,7 +255,27 @@ export function renderCartDrawer(): void {
         </div>
       </div>
       <div class="drawer-foot">
+        ${
+          promoApplied()
+            ? ''
+            : `<details class="promo-details" data-promo-details>
+                <summary>${t('promo.have')}</summary>
+                <form class="promo-form" data-promo-cart-form novalidate>
+                  <input class="field" type="text" autocomplete="off" autocapitalize="characters"
+                    placeholder="${esc(t('promo.placeholder'))}" aria-label="${esc(t('promo.placeholder'))}" />
+                  <button class="btn btn--ghost" type="submit" style="padding:.6rem 1rem">${t('promo.apply')}</button>
+                </form>
+                <p class="promo-error" data-promo-error hidden>${t('promo.invalid')}</p>
+              </details>`
+        }
         <div class="summary-line"><span>${t('cart.subtotal')}</span><span>${money(itemsSubtotal())}</span></div>
+        ${
+          promoApplied()
+            ? `<div class="summary-line"><span>${tt('promo.line', { code: getPromoCode() ?? '' })}
+                <button class="line-remove" data-promo-remove style="margin-left:.5rem" aria-label="${t('promo.removeCode')}">×</button></span>
+                <span class="free">−${money(promoDiscount())}</span></div>`
+            : ''
+        }
         ${
           giftProduct
             ? `<div class="summary-line"><span>${tt('gift.line', { name: esc(tp(giftProduct, 'name')) })}</span><span class="free">${t('gift.free')}</span></div>`
@@ -308,6 +335,17 @@ function bindDrawer(): void {
   });
 
   root.querySelector('[data-checkout]')?.addEventListener('click', openCheckoutModal);
+
+  root.querySelector<HTMLFormElement>('[data-promo-cart-form]')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = (e.target as HTMLFormElement).querySelector('input')!;
+    if (!applyPromoCode(input.value)) {
+      const error = root.querySelector<HTMLElement>('[data-promo-error]');
+      if (error) error.hidden = false;
+      input.focus();
+    }
+  });
+  root.querySelector('[data-promo-remove]')?.addEventListener('click', removePromoCode);
 }
 
 /* — Open / close ------------------------------------------------------------------ */
