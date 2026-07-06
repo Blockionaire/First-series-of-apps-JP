@@ -6,6 +6,6 @@
   </g>
   <rect x="40" y="40" width="1000" height="1000" fill="none" stroke="#dcccb2" stroke-width="3" stroke-dasharray="14 10" opacity="0.7"/>
   <text x="540" y="500" text-anchor="middle" font-family="Georgia, serif" font-size="80" fill="#5a4633" font-weight="bold">POST 3</text>
-  <text x="540" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#5a4633" opacity="0.75">Instagram-post — @huisjeoostvoorstraat</text>
-  <text x="540" y="645" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" fill="#5a4633" opacity="0.55">placeholder — vervang dit bestand door je eigen foto</text>
+  <text x="540" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#5a4633" opacity="0.8">Instagram-post — @huisjeoostvoorstraat</text>
+  <text x="540" y="645" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" fill="#5a4633" opacity="0.6">placeholder — vervang dit bestand door je eigen foto</text>
 </svg>

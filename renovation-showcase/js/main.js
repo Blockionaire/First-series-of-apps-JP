@@ -22,6 +22,26 @@
     return node;
   }
 
+  /* Vangnet: als een foto ontbreekt (bijv. verkeerde bestandsnaam) tonen we
+     een nette beige placeholder met het bijschrift, geen kapot icoontje. */
+  function fallbackFor(label) {
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100">' +
+      '<rect width="1600" height="1100" fill="#efe8db"/>' +
+      '<text x="800" y="530" text-anchor="middle" font-family="Georgia,serif" font-size="52" fill="#a4937c">' +
+      String(label || "Foto").replace(/[<>&]/g, "") + "</text>" +
+      '<text x="800" y="600" text-anchor="middle" font-family="Arial,sans-serif" font-size="30" fill="#a4937c">foto volgt nog</text></svg>';
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
+  function guardImg(img, label) {
+    img.addEventListener("error", () => {
+      if (img.dataset.fallback) return;
+      img.dataset.fallback = "1";
+      img.src = fallbackFor(label);
+    }, { once: false });
+    return img;
+  }
+
   /* ---------- teksten uit content.js in de pagina zetten ---------- */
   $$("[data-content]").forEach((node) => {
     const value = get(CONTENT, node.dataset.content);
@@ -40,13 +60,17 @@
     const after = el("img");
     after.src = opts.after;
     after.alt = (opts.name || "") + " — na de verbouwing";
-    after.loading = "lazy";
+    after.loading = opts.eager ? "eager" : "lazy";
+    if (opts.eager) after.fetchPriority = "high";
+    guardImg(after, (opts.name || "") + " — na");
 
     const beforeWrap = el("div", "ba__before");
     const before = el("img");
     before.src = opts.before;
     before.alt = (opts.name || "") + " — voor de verbouwing";
-    before.loading = "lazy";
+    before.loading = opts.eager ? "eager" : "lazy";
+    if (opts.eager) before.fetchPriority = "high";
+    guardImg(before, (opts.name || "") + " — voor");
     beforeWrap.appendChild(before);
 
     const divider = el("div", "ba__divider");
@@ -149,14 +173,17 @@
      ========================================================================= */
 
   /* hero */
-  $("#heroSlider").appendChild(
-    createBeforeAfter({
-      before: CONTENT.hero.before,
-      after: CONTENT.hero.after,
-      name: "Het appartement",
-      start: 55
-    })
-  );
+  const heroSection = $(".hero");
+  const heroBa = createBeforeAfter({
+    before: CONTENT.hero.before,
+    after: CONTENT.hero.after,
+    name: "Het appartement",
+    start: 55,
+    eager: true
+  });
+  $("#heroSlider").appendChild(heroBa);
+  /* de sleep-hint verdwijnt zodra er voor het eerst geschoven is */
+  heroBa.addEventListener("pointerdown", () => heroSection.classList.add("has-interacted"), { once: true });
 
   /* verhaal */
   const storyText = $("#storyText");
@@ -187,6 +214,7 @@
       img.src = item.image;
       img.alt = item.title;
       img.loading = "lazy";
+      guardImg(img, item.title);
       node.appendChild(img);
     }
     timeline.appendChild(node);
@@ -309,13 +337,19 @@
     const tabBar = el("div", "room__tabs");
     tabBar.setAttribute("role", "tablist");
     const panel = el("div", "room__panel");
+    panel.setAttribute("role", "tabpanel");
     const tabNames = Object.keys(room.tabs);
     tabNames.forEach((name, idx) => {
       const tab = el("button", "room__tab" + (idx === 0 ? " is-active" : ""), name);
       tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-selected", idx === 0 ? "true" : "false");
       tab.addEventListener("click", () => {
-        $$(".room__tab", tabBar).forEach((t) => t.classList.remove("is-active"));
+        $$(".room__tab", tabBar).forEach((t) => {
+          t.classList.remove("is-active");
+          t.setAttribute("aria-selected", "false");
+        });
         tab.classList.add("is-active");
+        tab.setAttribute("aria-selected", "true");
         panel.textContent = room.tabs[name];
       });
       tabBar.appendChild(tab);
@@ -329,8 +363,9 @@
 
   /* de verbouwing in cijfers */
   const funStatsGrid = $("#funStatsGrid");
-  CONTENT.funStats.items.forEach((stat) => {
+  CONTENT.funStats.items.forEach((stat, i) => {
     const card = el("div", "funstat reveal");
+    card.style.transitionDelay = (i % 4) * 70 + "ms";
     const value = el("div", "stat__value funstat__value", "0");
     value.dataset.target = stat.value;
     value.dataset.suffix = stat.suffix || "";
@@ -342,8 +377,9 @@
 
   /* instagram-posts in de footer */
   const instaPosts = $("#instaPosts");
-  CONTENT.instaPosts.items.forEach((post) => {
+  CONTENT.instaPosts.items.forEach((post, i) => {
     const link = el("a", "insta-post reveal");
+    link.style.transitionDelay = (i % 4) * 70 + "ms";
     link.href = post.url;
     link.target = "_blank";
     link.rel = "noopener";
@@ -351,6 +387,7 @@
     img.src = post.image;
     img.alt = post.caption;
     img.loading = "lazy";
+    guardImg(img, post.caption);
     const caption = el("span", "insta-post__caption", post.caption);
     const icon = el("span", "insta-post__icon");
     icon.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.2" cy="6.8" r="1.2" fill="currentColor" stroke="none"/></svg>';
@@ -363,6 +400,7 @@
   const phaseLabels = { voor: "Voor", tijdens: "Tijdens", na: "Na" };
   CONTENT.gallery.items.forEach((item, index) => {
     const fig = el("button", "gallery__item reveal");
+    fig.style.transitionDelay = (index % 3) * 70 + "ms";
     fig.dataset.phase = item.phase;
     fig.dataset.index = index;
     fig.setAttribute("aria-label", item.caption + " — groot bekijken");
@@ -371,6 +409,7 @@
     img.src = item.src;
     img.alt = item.caption;
     img.loading = "lazy";
+    guardImg(img, item.caption);
 
     const tag = el("span", "phase-tag", phaseLabels[item.phase] || item.phase);
     const caption = el("figcaption", null, item.caption);
@@ -396,7 +435,11 @@
   const lightbox = $("#lightbox");
   const lbImage = $("#lbImage");
   const lbCaption = $("#lbCaption");
+  const lbCount = el("p", "lightbox__count");
+  $(".lightbox__figure").appendChild(lbCount);
+  guardImg(lbImage, "Foto");
   let lbIndex = 0;
+  let lbLastFocus = null;
 
   function visibleGalleryIndexes() {
     return $$(".gallery__item").filter((n) => !n.classList.contains("is-hidden"))
@@ -404,20 +447,32 @@
   }
 
   function openLightbox(index) {
+    if (!lightbox.classList.contains("is-open")) lbLastFocus = document.activeElement;
     lbIndex = index;
     const item = CONTENT.gallery.items[index];
+    delete lbImage.dataset.fallback;
     lbImage.src = item.src;
     lbImage.alt = item.caption;
     lbCaption.textContent = item.caption;
+    const visible = visibleGalleryIndexes();
+    lbCount.textContent = (visible.indexOf(index) + 1) + " / " + visible.length;
     lightbox.classList.add("is-open");
     lightbox.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
+    $("#lbClose").focus({ preventScroll: true });
+    /* buurfoto's alvast laden zodat bladeren direct voelt */
+    [1, -1].forEach((dir) => {
+      const cur = visible.indexOf(index);
+      const nb = visible[(cur + dir + visible.length) % visible.length];
+      if (nb != null && nb !== index) { const pre = new Image(); pre.src = CONTENT.gallery.items[nb].src; }
+    });
   }
 
   function closeLightbox() {
     lightbox.classList.remove("is-open");
     lightbox.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
+    if (lbLastFocus && lbLastFocus.focus) lbLastFocus.focus({ preventScroll: true });
   }
 
   function stepLightbox(dir) {
@@ -438,6 +493,17 @@
     if (e.key === "ArrowLeft") stepLightbox(-1);
     if (e.key === "ArrowRight") stepLightbox(1);
   });
+  /* vegen op mobiel: links/rechts bladert, omlaag vegen sluit */
+  let swipeX = null, swipeY = null;
+  lightbox.addEventListener("pointerdown", (e) => { swipeX = e.clientX; swipeY = e.clientY; });
+  lightbox.addEventListener("pointerup", (e) => {
+    if (swipeX == null) return;
+    const dx = e.clientX - swipeX;
+    const dy = e.clientY - swipeY;
+    swipeX = swipeY = null;
+    if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy)) stepLightbox(dx < 0 ? 1 : -1);
+    else if (dy > 80 && Math.abs(dy) > Math.abs(dx)) closeLightbox();
+  });
 
   /* =========================================================================
      NAVIGATIE
@@ -448,6 +514,31 @@
 
   window.addEventListener("scroll", () => {
     nav.classList.toggle("is-solid", window.scrollY > 40);
+  }, { passive: true });
+
+  /* markeer in het menu bij welke sectie je bent */
+  const sectionForLink = {};
+  $$(".nav__links a[href^='#']").forEach((a) => {
+    const target = document.getElementById(a.getAttribute("href").slice(1));
+    if (target) sectionForLink[target.id] = a;
+  });
+  const navSpy = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      $$(".nav__links a").forEach((a) => a.classList.remove("is-active"));
+      const link = sectionForLink[entry.target.id];
+      if (link) link.classList.add("is-active");
+    });
+  }, { rootMargin: "-35% 0px -55% 0px" });
+  Object.keys(sectionForLink).forEach((id) => navSpy.observe(document.getElementById(id)));
+
+  /* terug-naar-boven-knop */
+  const toTop = el("button", "to-top", "↑");
+  toTop.setAttribute("aria-label", "Terug naar boven");
+  toTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+  document.body.appendChild(toTop);
+  window.addEventListener("scroll", () => {
+    toTop.classList.toggle("is-visible", window.scrollY > 900);
   }, { passive: true });
 
   burger.addEventListener("click", () => {

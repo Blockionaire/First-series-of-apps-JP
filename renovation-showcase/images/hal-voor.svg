@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
-  <rect width="1600" height="1100" fill="#4b3b2c"/>
-  <g stroke="#5d4b39" stroke-width="2" opacity="0.5">
+  <rect width="1600" height="1100" fill="#9c876a"/>
+  <g stroke="#ab967a" stroke-width="2" opacity="0.5">
     <line x1="0" y1="0" x2="1600" y2="1100"/>
     <line x1="1600" y1="0" x2="0" y2="1100"/>
   </g>
-  <rect x="40" y="40" width="1520" height="1020" fill="none" stroke="#5d4b39" stroke-width="3" stroke-dasharray="14 10" opacity="0.7"/>
-  <text x="800" y="510" text-anchor="middle" font-family="Georgia, serif" font-size="86" fill="#dccfbd" font-weight="bold">VOOR</text>
-  <text x="800" y="590" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" fill="#dccfbd" opacity="0.75">Hal — oude situatie</text>
-  <text x="800" y="660" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="#dccfbd" opacity="0.55">placeholder — vervang dit bestand door je eigen foto</text>
+  <rect x="40" y="40" width="1520" height="1020" fill="none" stroke="#ab967a" stroke-width="3" stroke-dasharray="14 10" opacity="0.7"/>
+  <text x="800" y="510" text-anchor="middle" font-family="Georgia, serif" font-size="80" fill="#faf4e9" font-weight="bold">VOOR</text>
+  <text x="800" y="590" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#faf4e9" opacity="0.8">Hal — oude situatie</text>
+  <text x="800" y="655" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" fill="#faf4e9" opacity="0.6">placeholder — vervang dit bestand door je eigen foto</text>
 </svg>
