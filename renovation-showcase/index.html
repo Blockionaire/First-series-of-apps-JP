@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anno 1780 — Van casco naar thuis · Oud-Beijerland</title>
+  <meta name="description" content="De complete transformatie van een appartement uit 1780 in het oude centrum van Oud-Beijerland. Bekijk het voor en na van elke ruimte.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%231d1a16'/%3E%3Cpath d='M50 22 22 46h8v30h40V46h8z' fill='%23c98a4b'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== Navigatie ===== -->
+  <header class="nav" id="nav">
+    <a class="nav__brand" href="#top">
+      <span class="nav__brand-mark">1780</span>
+      <span class="nav__brand-name" data-content="site.name"></span>
+    </a>
+    <nav class="nav__links" id="navLinks">
+      <a href="#verhaal">Het verhaal</a>
+      <a href="#tijdlijn">Tijdlijn</a>
+      <a href="#ruimtes">Ruimtes</a>
+      <a href="#galerij">Galerij</a>
+      <a href="#" class="nav__insta" id="navInsta" target="_blank" rel="noopener">Instagram</a>
+    </nav>
+    <button class="nav__burger" id="navBurger" aria-label="Menu openen" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </header>
+
+  <!-- ===== Hero met grote voor/na-schuif ===== -->
+  <section class="hero" id="top">
+    <div class="hero__slider" id="heroSlider"></div>
+    <div class="hero__overlay">
+      <p class="hero__kicker" data-content="hero.kicker"></p>
+      <h1 class="hero__title" data-content="hero.title"></h1>
+      <p class="hero__subtitle" data-content="hero.subtitle"></p>
+      <p class="hero__hint">← Sleep de schuif →</p>
+    </div>
+    <a class="hero__scroll" href="#verhaal" aria-label="Scroll naar het verhaal">
+      <span></span>
+    </a>
+  </section>
+
+  <!-- ===== Het verhaal + cijfers ===== -->
+  <section class="section story" id="verhaal">
+    <div class="container">
+      <p class="kicker reveal" data-content="story.kicker"></p>
+      <h2 class="section__title reveal" data-content="story.title"></h2>
+      <div class="story__grid">
+        <div class="story__text reveal" id="storyText"></div>
+        <div class="story__stats" id="statsGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Tijdlijn ===== -->
+  <section class="section section--dark timeline-section" id="tijdlijn">
+    <div class="container">
+      <p class="kicker reveal" data-content="timeline.kicker"></p>
+      <h2 class="section__title reveal" data-content="timeline.title"></h2>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </section>
+
+  <!-- ===== Ruimtes met voor/na-schuiven ===== -->
+  <section class="section rooms" id="ruimtes">
+    <div class="container">
+      <p class="kicker reveal" data-content="roomsIntro.kicker"></p>
+      <h2 class="section__title reveal" data-content="roomsIntro.title"></h2>
+      <p class="section__intro reveal" data-content="roomsIntro.text"></p>
+      <div class="rooms__list" id="roomsList"></div>
+    </div>
+  </section>
+
+  <!-- ===== Galerij ===== -->
+  <section class="section section--tint gallery-section" id="galerij">
+    <div class="container">
+      <p class="kicker reveal" data-content="gallery.kicker"></p>
+      <h2 class="section__title reveal" data-content="gallery.title"></h2>
+      <p class="section__intro reveal" data-content="gallery.text"></p>
+      <div class="gallery__filters reveal" id="galleryFilters">
+        <button class="chip is-active" data-filter="alles">Alles</button>
+        <button class="chip" data-filter="voor">Voor</button>
+        <button class="chip" data-filter="tijdens">Tijdens</button>
+        <button class="chip" data-filter="na">Na</button>
+      </div>
+      <div class="gallery__grid" id="galleryGrid"></div>
+    </div>
+  </section>
+
+  <!-- ===== Footer / Instagram ===== -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <h2 class="footer__title reveal" data-content="footer.title"></h2>
+      <p class="footer__text reveal" data-content="footer.text"></p>
+      <a class="btn-insta reveal" href="#" id="footerInsta" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.2" cy="6.8" r="1.2" fill="currentColor" stroke="none"/>
+        </svg>
+        <span data-content="site.instagram.handle"></span>
+      </a>
+      <p class="footer__note" data-content="footer.note"></p>
+    </div>
+  </footer>
+
+  <!-- ===== Lightbox ===== -->
+  <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-label="Foto groot bekijken">
+    <button class="lightbox__close" id="lbClose" aria-label="Sluiten">&times;</button>
+    <button class="lightbox__arrow lightbox__arrow--prev" id="lbPrev" aria-label="Vorige foto">&#8249;</button>
+    <figure class="lightbox__figure">
+      <img id="lbImage" src="" alt="">
+      <figcaption id="lbCaption"></figcaption>
+    </figure>
+    <button class="lightbox__arrow lightbox__arrow--next" id="lbNext" aria-label="Volgende foto">&#8250;</button>
+  </div>
+
+  <script src="js/content.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
