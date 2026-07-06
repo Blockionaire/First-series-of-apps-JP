@@ -22,6 +22,7 @@
     <nav class="nav__links" id="navLinks">
       <a href="#verhaal">Het verhaal</a>
       <a href="#tijdlijn">Tijdlijn</a>
+      <a href="#plattegrond">Plattegrond</a>
       <a href="#ruimtes">Ruimtes</a>
       <a href="#galerij">Galerij</a>
       <a href="#" class="nav__insta" id="navInsta" target="_blank" rel="noopener">Instagram</a>
@@ -66,6 +67,16 @@
     </div>
   </section>
 
+  <!-- ===== Plattegrond: klikbaar en schuifbaar ===== -->
+  <section class="section section--tint plan-section" id="plattegrond">
+    <div class="container">
+      <p class="kicker reveal" data-content="floorplan.kicker"></p>
+      <h2 class="section__title reveal" data-content="floorplan.title"></h2>
+      <p class="section__intro reveal" data-content="floorplan.text"></p>
+      <div class="plan-wrap reveal" id="floorplanWrap"></div>
+    </div>
+  </section>
+
   <!-- ===== Ruimtes met voor/na-schuiven ===== -->
   <section class="section rooms" id="ruimtes">
     <div class="container">
@@ -73,6 +84,16 @@
       <h2 class="section__title reveal" data-content="roomsIntro.title"></h2>
       <p class="section__intro reveal" data-content="roomsIntro.text"></p>
       <div class="rooms__list" id="roomsList"></div>
+    </div>
+  </section>
+
+  <!-- ===== De verbouwing in cijfers ===== -->
+  <section class="section section--dark funstats" id="cijfers">
+    <div class="container">
+      <p class="kicker reveal" data-content="funStats.kicker"></p>
+      <h2 class="section__title reveal" data-content="funStats.title"></h2>
+      <p class="section__intro reveal" data-content="funStats.text"></p>
+      <div class="funstats__grid" id="funStatsGrid"></div>
     </div>
   </section>
 
@@ -103,6 +124,8 @@
         </svg>
         <span data-content="site.instagram.handle"></span>
       </a>
+      <p class="footer__posts-intro reveal" data-content="instaPosts.text"></p>
+      <div class="footer__posts" id="instaPosts"></div>
       <p class="footer__note" data-content="footer.note"></p>
     </div>
   </footer>

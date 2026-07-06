@@ -182,8 +182,101 @@
     node.appendChild(el("p", "timeline__period", item.period));
     node.appendChild(el("h3", null, item.title));
     node.appendChild(el("p", null, item.text));
+    if (item.image) {
+      const img = el("img", "timeline__img");
+      img.src = item.image;
+      img.alt = item.title;
+      img.loading = "lazy";
+      node.appendChild(img);
+    }
     timeline.appendChild(node);
   });
+
+  /* =========================================================================
+     PLATTEGROND — schuifbaar tussen oude en nieuwe indeling,
+     kamers klikbaar in beide lagen
+     ========================================================================= */
+  (function buildFloorPlan() {
+    const cfg = CONTENT.floorplan;
+    if (!cfg) return;
+    const wrap = $("#floorplanWrap");
+
+    const root = el("div", "plan");
+    root.style.setProperty("--pos", "50%");
+
+    function makeLayer(cls, rooms) {
+      const layer = el("div", "plan__layer " + cls);
+      rooms.forEach((r) => {
+        const btn = el("button", "plan__room");
+        btn.style.left = r.x + "%";
+        btn.style.top = r.y + "%";
+        btn.style.width = r.w + "%";
+        btn.style.height = r.h + "%";
+        btn.appendChild(el("span", null, r.label));
+        btn.setAttribute("aria-label", "Ga naar " + r.label);
+        btn.addEventListener("click", () => {
+          const target = document.getElementById("ruimte-" + r.room);
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+        layer.appendChild(btn);
+      });
+      return layer;
+    }
+
+    const layerAfter = makeLayer("plan__layer--na", cfg.after);
+    const layerBefore = makeLayer("plan__layer--voor", cfg.before);
+
+    const divider = el("div", "ba__divider");
+    const handle = el("button", "ba__handle plan__handle");
+    handle.innerHTML = "&#8249;&#8250;";
+    handle.setAttribute("role", "slider");
+    handle.setAttribute("aria-label", "Vergelijk oude en nieuwe indeling");
+    handle.setAttribute("aria-valuemin", "0");
+    handle.setAttribute("aria-valuemax", "100");
+    handle.setAttribute("aria-valuenow", "50");
+    const labelBefore = el("span", "ba__label ba__label--before", cfg.labelBefore);
+    const labelAfter = el("span", "ba__label ba__label--after", cfg.labelAfter);
+
+    root.append(layerAfter, layerBefore, divider, labelBefore, labelAfter, handle);
+    wrap.appendChild(root);
+
+    let pos = 50;
+    function setPos(next) {
+      pos = Math.max(0, Math.min(100, next));
+      root.style.setProperty("--pos", pos + "%");
+      handle.setAttribute("aria-valuenow", String(Math.round(pos)));
+      labelBefore.classList.toggle("is-hidden", pos < 22);
+      labelAfter.classList.toggle("is-hidden", pos > 78);
+    }
+
+    /* slepen alleen via de knop, zodat de kamers klikbaar blijven */
+    let dragging = false;
+    handle.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      root.classList.add("is-dragging");
+      handle.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    handle.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const rect = root.getBoundingClientRect();
+      setPos(((e.clientX - rect.left) / rect.width) * 100);
+    });
+    ["pointerup", "pointercancel"].forEach((type) =>
+      handle.addEventListener(type, () => {
+        dragging = false;
+        root.classList.remove("is-dragging");
+      })
+    );
+    handle.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") { setPos(pos - 4); e.preventDefault(); }
+      if (e.key === "ArrowRight") { setPos(pos + 4); e.preventDefault(); }
+      if (e.key === "Home") { setPos(0); e.preventDefault(); }
+      if (e.key === "End") { setPos(100); e.preventDefault(); }
+    });
+
+    setPos(50);
+  })();
 
   /* ruimtes */
   const roomsList = $("#roomsList");
@@ -225,6 +318,37 @@
     info.append(tabBar, panel);
     section.append(media, info);
     roomsList.appendChild(section);
+  });
+
+  /* de verbouwing in cijfers */
+  const funStatsGrid = $("#funStatsGrid");
+  CONTENT.funStats.items.forEach((stat) => {
+    const card = el("div", "funstat reveal");
+    const value = el("div", "stat__value funstat__value", "0");
+    value.dataset.target = stat.value;
+    value.dataset.suffix = stat.suffix || "";
+    value.dataset.noformat = stat.noFormat ? "1" : "";
+    card.appendChild(value);
+    card.appendChild(el("div", "funstat__label", stat.label));
+    funStatsGrid.appendChild(card);
+  });
+
+  /* instagram-posts in de footer */
+  const instaPosts = $("#instaPosts");
+  CONTENT.instaPosts.items.forEach((post) => {
+    const link = el("a", "insta-post reveal");
+    link.href = post.url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    const img = el("img");
+    img.src = post.image;
+    img.alt = post.caption;
+    img.loading = "lazy";
+    const caption = el("span", "insta-post__caption", post.caption);
+    const icon = el("span", "insta-post__icon");
+    icon.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.2" cy="6.8" r="1.2" fill="currentColor" stroke="none"/></svg>';
+    link.append(img, icon, caption);
+    instaPosts.appendChild(link);
   });
 
   /* galerij */

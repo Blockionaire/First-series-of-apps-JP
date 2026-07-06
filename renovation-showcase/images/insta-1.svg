@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <rect width="1080" height="1080" fill="#efe6d6"/>
+  <g stroke="#dcccb2" stroke-width="2" opacity="0.5">
+    <line x1="0" y1="0" x2="1080" y2="1080"/>
+    <line x1="1080" y1="0" x2="0" y2="1080"/>
+  </g>
+  <rect x="40" y="40" width="1000" height="1000" fill="none" stroke="#dcccb2" stroke-width="3" stroke-dasharray="14 10" opacity="0.7"/>
+  <text x="540" y="500" text-anchor="middle" font-family="Georgia, serif" font-size="80" fill="#5a4633" font-weight="bold">POST 1</text>
+  <text x="540" y="580" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#5a4633" opacity="0.75">Instagram-post — @huisjeoostvoorstraat</text>
+  <text x="540" y="645" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" fill="#5a4633" opacity="0.55">placeholder — vervang dit bestand door je eigen foto</text>
+</svg>

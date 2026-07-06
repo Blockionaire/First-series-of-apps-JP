@@ -7,12 +7,19 @@ appartement uit 1780 in het oude centrum van Oud-Beijerland.
 
 - **Hero** — paginavullende voor/na-schuif van het appartement
 - **Het verhaal** — introductie met tellende cijfers (bouwjaar, maanden, …)
-- **Tijdlijn** — de fases van de verbouwing
+- **Tijdlijn** — de fases van de verbouwing, elk met foto
+- **Plattegrond** — schuifbaar tussen oude en nieuwe indeling; klik op een
+  ruimte (in allebei de plattegronden) om naar die ruimte te springen.
+  De vakken pas je aan in `js/content.js` bij `floorplan` (x/y/w/h in
+  procenten)
 - **Ruimte voor ruimte** — per ruimte een voor/na-schuif met klikbare tabs
   (*Wat we deden / Obstakels / Onze keuzes*) en optionele hotspot-stipjes op de
   foto met extra uitleg
+- **De verbouwing in cijfers** — grappige tellende statistieken (zakken puin,
+  keer naar de RAD, …); aantallen pas je aan bij `funStats`
 - **Galerij** — fotogrid met filter (voor / tijdens / na) en lightbox
-- **Footer** — link naar het Instagram-account
+- **Footer** — Instagram-knop met daaronder een selectie posts (links en
+  afbeeldingen pas je aan bij `instaPosts`)
 
 De site is puur HTML/CSS/JavaScript — geen installatie of build nodig.
 
