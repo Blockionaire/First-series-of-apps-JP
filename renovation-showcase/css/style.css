@@ -374,15 +374,23 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 
 /* ---------- plattegrond ---------- */
-.plan-wrap { max-width: 880px; margin: 10px auto 0; }
+.plan-wrap { max-width: 980px; margin: 10px auto 0; overflow-x: auto; }
 .plan {
   --pos: 50%;
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 10; /* wordt overschreven door "aspect" in content.js */
+  min-width: 640px;
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);
   user-select: none;
+}
+.plan__note {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--ink-faint);
+  text-align: center;
+  min-width: 0;
 }
 .plan__layer { position: absolute; inset: 0; padding: 0; }
 .plan__layer--na { background: #f7f2e9; }
@@ -411,11 +419,25 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .plan__layer--na .plan__room:hover { background: rgba(176, 141, 100, 0.22); }
 .plan__layer--voor .plan__room {
-  background: rgba(241, 232, 217, 0.06);
+  background: #52412f;
   border: 1.5px dashed rgba(241, 232, 217, 0.45);
   color: var(--cream);
 }
-.plan__layer--voor .plan__room:hover { background: rgba(241, 232, 217, 0.16); }
+.plan__layer--voor .plan__room:hover { background: #64513b; }
+.plan__room--static { pointer-events: none; }
+.plan__layer--na .plan__room--static {
+  background: rgba(130, 104, 74, 0.06);
+  border-style: dotted;
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+.plan__layer--voor .plan__room--static {
+  background: #4c3d2d;
+  border-style: dotted;
+  border-color: rgba(241, 232, 217, 0.28);
+  color: rgba(241, 232, 217, 0.55);
+  font-weight: 400;
+}
 .plan__room:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .plan .ba__label { pointer-events: none; }
 .plan__handle { cursor: ew-resize; touch-action: none; }

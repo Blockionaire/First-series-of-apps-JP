@@ -118,8 +118,14 @@ const CONTENT = {
      PLATTEGROND — klikbare kamers, schuifbaar tussen oude en nieuwe indeling
      Elke kamer: x/y = positie linksboven, w/h = breedte/hoogte, alles in
      procenten van de plattegrond. "room" verwijst naar het id van de ruimte
-     hierboven (de klik scrolt daarnaartoe). Pas de vakken aan tot ze bij
-     jullie echte plattegrond passen — of vervang ze door een eigen tekening.
+     hierboven (de klik scrolt daarnaartoe). Vakken ZONDER "room" (zoals de
+     kasten) zijn alleen decoratie en niet klikbaar.
+
+     De oude indeling is overgenomen van de originele plattegrond
+     (5,40 m breed × 13,94 m lang) en een kwartslag gedraaid zodat hij in
+     beeld past: links de voorzijde met de woonkamer, rechts de achterzijde
+     met de slaapkamer en badkamer. "aspect" bepaalt de verhouding
+     (lengte / breedte van het appartement).
      ========================================================================= */
   floorplan: {
     kicker: "De plattegrond",
@@ -127,25 +133,34 @@ const CONTENT = {
     text: "Sleep de schuif om te zien hoe de indeling veranderde, en klik op " +
           "een ruimte om er direct naartoe te gaan — dat werkt in allebei de " +
           "plattegronden.",
+    note: "Naar de originele plattegrond (5,40 × 13,94 m), een kwartslag " +
+          "gedraaid: links de voorzijde met de woonkamer, rechts de " +
+          "achterzijde met de slaapkamer.",
+    aspect: "2.6 / 1",
     labelBefore: "Oude indeling",
     labelAfter: "Nieuwe indeling",
     before: [
-      { room: "entree",     label: "Entree",     x: 2,  y: 72, w: 16, h: 26 },
-      { room: "hal",        label: "Hal",        x: 20, y: 72, w: 34, h: 26 },
-      { room: "keuken",     label: "Keuken",     x: 2,  y: 2,  w: 22, h: 34 },
-      { room: "woonkamer",  label: "Woonkamer",  x: 26, y: 2,  w: 34, h: 68 },
-      { room: "slaapkamer", label: "Slaapkamer", x: 62, y: 2,  w: 36, h: 44 },
-      { room: "badkamer",   label: "Badkamer",   x: 62, y: 48, w: 20, h: 22 },
-      { room: "dak",        label: "Zolder",     x: 84, y: 48, w: 14, h: 50 }
+      { label: "Kast",                            x: 2,  y: 2,  w: 36, h: 20 },
+      { room: "woonkamer",  label: "Woonkamer",   x: 2,  y: 26, w: 36, h: 72 },
+      { label: "Kast",                            x: 40, y: 26, w: 5,  h: 30 },
+      { label: "Kast",                            x: 47, y: 2,  w: 21, h: 20 },
+      { room: "keuken",     label: "Keuken",      x: 47, y: 26, w: 21, h: 48 },
+      { label: "Kast",                            x: 47, y: 78, w: 9,  h: 20 },
+      { room: "hal",        label: "Gang",        x: 58, y: 78, w: 10, h: 20 },
+      { room: "slaapkamer", label: "Slaapkamer",  x: 70, y: 26, w: 28, h: 72 },
+      { room: "entree",     label: "Trap",        x: 70, y: 2,  w: 12, h: 20 },
+      { room: "badkamer",   label: "Badkamer",    x: 84, y: 2,  w: 14, h: 46 }
     ],
+    /* De nieuwe indeling is nog een voorbeeldopzet — pas de vakken aan
+       (of stuur de nieuwe plattegrond) zodat hij klopt met de echte situatie. */
     after: [
-      { room: "entree",     label: "Entree",     x: 2,  y: 72, w: 14, h: 26 },
-      { room: "hal",        label: "Hal",        x: 18, y: 72, w: 24, h: 26 },
-      { room: "woonkamer",  label: "Woonkamer",  x: 2,  y: 2,  w: 40, h: 68 },
-      { room: "keuken",     label: "Keuken",     x: 44, y: 2,  w: 26, h: 40 },
-      { room: "badkamer",   label: "Badkamer",   x: 44, y: 44, w: 26, h: 26 },
-      { room: "slaapkamer", label: "Slaapkamer", x: 72, y: 2,  w: 26, h: 68 },
-      { room: "dak",        label: "Zolder — het dak", x: 44, y: 72, w: 54, h: 26 }
+      { room: "woonkamer",  label: "Woonkamer",   x: 2,  y: 2,  w: 42, h: 96 },
+      { room: "keuken",     label: "Keuken",      x: 46, y: 2,  w: 20, h: 44 },
+      { room: "badkamer",   label: "Badkamer",    x: 46, y: 50, w: 20, h: 48 },
+      { room: "entree",     label: "Entree",      x: 68, y: 2,  w: 12, h: 44 },
+      { room: "hal",        label: "Hal",         x: 68, y: 50, w: 12, h: 48 },
+      { room: "dak",        label: "Zolder — het dak", x: 82, y: 2, w: 16, h: 20 },
+      { room: "slaapkamer", label: "Slaapkamer",  x: 82, y: 26, w: 16, h: 72 }
     ]
   },
 

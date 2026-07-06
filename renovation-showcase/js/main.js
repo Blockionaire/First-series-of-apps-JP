@@ -203,22 +203,28 @@
 
     const root = el("div", "plan");
     root.style.setProperty("--pos", "50%");
+    if (cfg.aspect) root.style.aspectRatio = cfg.aspect;
 
     function makeLayer(cls, rooms) {
       const layer = el("div", "plan__layer " + cls);
       rooms.forEach((r) => {
-        const btn = el("button", "plan__room");
-        btn.style.left = r.x + "%";
-        btn.style.top = r.y + "%";
-        btn.style.width = r.w + "%";
-        btn.style.height = r.h + "%";
-        btn.appendChild(el("span", null, r.label));
-        btn.setAttribute("aria-label", "Ga naar " + r.label);
-        btn.addEventListener("click", () => {
-          const target = document.getElementById("ruimte-" + r.room);
-          if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
-        });
-        layer.appendChild(btn);
+        /* met "room" klikbaar; zonder (bijv. kasten) alleen decoratie */
+        const node = r.room
+          ? el("button", "plan__room")
+          : el("div", "plan__room plan__room--static");
+        node.style.left = r.x + "%";
+        node.style.top = r.y + "%";
+        node.style.width = r.w + "%";
+        node.style.height = r.h + "%";
+        node.appendChild(el("span", null, r.label));
+        if (r.room) {
+          node.setAttribute("aria-label", "Ga naar " + r.label);
+          node.addEventListener("click", () => {
+            const target = document.getElementById("ruimte-" + r.room);
+            if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+        }
+        layer.appendChild(node);
       });
       return layer;
     }
@@ -239,6 +245,7 @@
 
     root.append(layerAfter, layerBefore, divider, labelBefore, labelAfter, handle);
     wrap.appendChild(root);
+    if (cfg.note) wrap.appendChild(el("p", "plan__note", cfg.note));
 
     let pos = 50;
     function setPos(next) {

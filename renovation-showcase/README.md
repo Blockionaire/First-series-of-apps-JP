@@ -11,7 +11,9 @@ appartement uit 1780 in het oude centrum van Oud-Beijerland.
 - **Plattegrond** — schuifbaar tussen oude en nieuwe indeling; klik op een
   ruimte (in allebei de plattegronden) om naar die ruimte te springen.
   De vakken pas je aan in `js/content.js` bij `floorplan` (x/y/w/h in
-  procenten)
+  procenten). Vakken zonder `room` (zoals kasten) zijn niet klikbaar;
+  `aspect` bepaalt de verhouding van de plattegrond. De oude indeling is
+  overgenomen van de originele plattegrond, een kwartslag gedraaid
 - **Ruimte voor ruimte** — per ruimte een voor/na-schuif met klikbare tabs
   (*Wat we deden / Obstakels / Onze keuzes*) en optionele hotspot-stipjes op de
   foto met extra uitleg
