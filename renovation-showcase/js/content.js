@@ -17,8 +17,8 @@ const CONTENT = {
     name: "Anno 1780",
     location: "Oud-Beijerland",
     instagram: {
-      handle: "@ons.instagram.account",          // <-- jullie Instagram-naam
-      url: "https://www.instagram.com/"           // <-- link naar het account
+      handle: "@huisjeoostvoorstraat",
+      url: "https://www.instagram.com/huisjeoostvoorstraat/"
     }
   },
 
@@ -37,7 +37,7 @@ const CONTENT = {
     { value: 1780, label: "Bouwjaar van het pand", noFormat: true },
     { value: 14,   label: "Maanden verbouwd" },                    // <-- pas aan
     { value: 100,  suffix: "%", label: "Gestript en opnieuw opgebouwd" },
-    { value: 1,    label: "Origineel bewaard: de kapconstructie" }
+    { value: 1,    label: "Origineel bewaard: het dak" }
   ],
 
   story: {
@@ -82,7 +82,7 @@ const CONTENT = {
       },
       {
         period: "Fase 3",
-        title: "De kapconstructie",
+        title: "Het dak",
         text: "De originele kap uit 1780 is schoongemaakt, gerepareerd en " +
               "geschilderd. Het enige onderdeel dat de hele verbouwing overleefde " +
               "— en dat mag gezien worden."
@@ -182,11 +182,11 @@ const CONTENT = {
       hotspots: []
     },
     {
-      id: "kapconstructie",
-      name: "De kapconstructie",
+      id: "dak",
+      name: "Het dak",
       tagline: "Het enige originele onderdeel — anno 1780",
-      before: "images/kapconstructie-voor.svg",
-      after: "images/kapconstructie-na.svg",
+      before: "images/dak-voor.svg",
+      after: "images/dak-na.svg",
       tabs: {
         "Wat we deden":
           "De kap is schoongemaakt, hersteld waar het hout dat nodig had en " +
@@ -201,14 +201,27 @@ const CONTENT = {
     },
     {
       id: "hal",
-      name: "Hal & entree",
-      tagline: "De eerste indruk",
+      name: "Hal",
+      tagline: "De verbinding tussen alle ruimtes",
       before: "images/hal-voor.svg",
       after: "images/hal-na.svg",
       tabs: {
         "Wat we deden": "Beschrijf hier wat er in de hal is gedaan.",
         "Obstakels": "Beschrijf hier de obstakels in de hal.",
         "Onze keuzes": "Beschrijf hier de keuzes voor de hal."
+      },
+      hotspots: []
+    },
+    {
+      id: "entree",
+      name: "Entree",
+      tagline: "De eerste indruk",
+      before: "images/entree-voor.svg",
+      after: "images/entree-na.svg",
+      tabs: {
+        "Wat we deden": "Beschrijf hier wat er bij de entree is gedaan.",
+        "Obstakels": "Beschrijf hier de obstakels bij de entree.",
+        "Onze keuzes": "Beschrijf hier de keuzes voor de entree."
       },
       hotspots: []
     }
@@ -221,7 +234,7 @@ const CONTENT = {
     items: [
       { src: "images/woonkamer-voor.svg",     caption: "Woonkamer bij aankoop",        phase: "voor" },
       { src: "images/keuken-voor.svg",        caption: "De oude keuken",               phase: "voor" },
-      { src: "images/kapconstructie-voor.svg",caption: "De kap vóór het herstel",      phase: "voor" },
+      { src: "images/dak-voor.svg",           caption: "Het dak vóór het herstel",     phase: "voor" },
       { src: "images/tijdens-1.svg",          caption: "Gestript tot op het casco",    phase: "tijdens" },
       { src: "images/tijdens-2.svg",          caption: "Werk aan de vloer",            phase: "tijdens" },
       { src: "images/tijdens-3.svg",          caption: "Isolatie en installaties",     phase: "tijdens" },
@@ -229,7 +242,7 @@ const CONTENT = {
       { src: "images/woonkamer-na.svg",       caption: "De nieuwe woonkamer",          phase: "na" },
       { src: "images/keuken-na.svg",          caption: "De nieuwe keuken",             phase: "na" },
       { src: "images/badkamer-na.svg",        caption: "De nieuwe badkamer",           phase: "na" },
-      { src: "images/kapconstructie-na.svg",  caption: "De kap, hersteld en geschilderd", phase: "na" },
+      { src: "images/dak-na.svg",             caption: "Het dak, hersteld en geschilderd", phase: "na" },
       { src: "images/slaapkamer-na.svg",      caption: "De nieuwe slaapkamer",         phase: "na" }
     ]
   },
