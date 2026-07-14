@@ -520,6 +520,7 @@ section[id] { scroll-margin-top: 76px; }
 .room { display: grid; grid-template-columns: 1.25fr 1fr; gap: 44px; align-items: center; }
 .room:nth-child(even) .room__media { order: 2; }
 .room__media { position: relative; box-shadow: var(--shadow); border-radius: var(--radius); }
+.room__media--portrait { max-width: 440px; margin: 0 auto; width: 100%; }
 .room__index {
   font-family: var(--font-display);
   font-size: 15px;

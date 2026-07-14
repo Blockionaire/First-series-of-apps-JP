@@ -215,8 +215,10 @@ const CONTENT = {
       id: "badkamer",
       name: "Badkamer",
       tagline: "Volledig opnieuw opgebouwd",
-      before: "images/badkamer-voor.svg",
-      after: "images/badkamer-na.svg",
+      before: "images/badkamer-voor.jpeg",
+      after: "images/badkamer-na.jpeg",
+      /* staande (portret)foto's? geef de verhouding mee, bijv. "3 / 4" */
+      aspect: "3 / 4",
       tabs: {
         "Wat we deden": "Beschrijf hier wat er in de badkamer is gedaan.",
         "Obstakels": "Beschrijf hier de obstakels in de badkamer.",
@@ -319,7 +321,7 @@ const CONTENT = {
       { src: "images/tijdens-4.svg",          caption: "De afbouw",                    phase: "tijdens" },
       { src: "images/woonkamer-na.svg",       caption: "De nieuwe woonkamer",          phase: "na" },
       { src: "images/keuken-na.svg",          caption: "De nieuwe keuken",             phase: "na" },
-      { src: "images/badkamer-na.svg",        caption: "De nieuwe badkamer",           phase: "na" },
+      { src: "images/badkamer-na.jpeg",       caption: "De nieuwe badkamer",           phase: "na" },
       { src: "images/dak-na.svg",             caption: "Het dak, hersteld en geschilderd", phase: "na" },
       { src: "images/slaapkamer-na.svg",      caption: "De nieuwe slaapkamer",         phase: "na" }
     ]

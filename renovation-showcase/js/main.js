@@ -56,6 +56,7 @@
   function createBeforeAfter(opts) {
     const root = el("div", "ba");
     root.style.setProperty("--pos", "50%");
+    if (opts.aspect) root.style.aspectRatio = opts.aspect;
 
     const after = el("img");
     after.src = opts.after;
@@ -320,11 +321,17 @@
     section.id = "ruimte-" + room.id;
 
     const media = el("div", "room__media");
+    /* staande foto's krijgen een smallere, gecentreerde schuif */
+    if (room.aspect) {
+      const parts = String(room.aspect).split("/").map(Number);
+      if (parts.length === 2 && parts[0] < parts[1]) media.classList.add("room__media--portrait");
+    }
     media.appendChild(
       createBeforeAfter({
         before: room.before,
         after: room.after,
         name: room.name,
+        aspect: room.aspect,
         hotspots: room.hotspots
       })
     );
