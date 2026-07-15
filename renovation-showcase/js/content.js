@@ -396,13 +396,13 @@ const CONTENT = {
     text: "Een paar hoogtepunten uit de verbouwing — klik op een post om hem " +
           "op Instagram te bekijken.",
     items: [
-      { url: "https://www.instagram.com/huisjeoostvoorstraat/",
+      { url: "https://www.instagram.com/p/Daa8fg4jGoKXSdD1EkpaR5ouvnnZJjugoVJEgk0/",
         image: "images/insta-1.svg", caption: "De eerste sloopdag" },
-      { url: "https://www.instagram.com/huisjeoostvoorstraat/",
+      { url: "https://www.instagram.com/p/DXkBmJ9jAscel7GRjkSr164loersyJCiNXu0XE0/",
         image: "images/insta-2.svg", caption: "Het dak in de verf" },
-      { url: "https://www.instagram.com/huisjeoostvoorstraat/",
+      { url: "https://www.instagram.com/p/DVdHjUUjJOwtlFOGKmwJxe49euSD-03jcuw-Q80/",
         image: "images/insta-3.svg", caption: "De nieuwe vloer gaat erin" },
-      { url: "https://www.instagram.com/huisjeoostvoorstraat/",
+      { url: "https://www.instagram.com/p/DT45ftTDHV6Y-S0lb4u_-nxZye87O7WagZozt00/",
         image: "images/insta-4.svg", caption: "Bijna klaar…" }
     ]
   }
