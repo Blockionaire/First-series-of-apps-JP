@@ -397,13 +397,13 @@ const CONTENT = {
           "op Instagram te bekijken.",
     items: [
       { url: "https://www.instagram.com/p/Daa8fg4jGoKXSdD1EkpaR5ouvnnZJjugoVJEgk0/",
-        image: "images/insta-1.svg", caption: "De eerste sloopdag" },
+        image: "images/insta-1.svg", caption: "Updates juni" },
       { url: "https://www.instagram.com/p/DXkBmJ9jAscel7GRjkSr164loersyJCiNXu0XE0/",
-        image: "images/insta-2.svg", caption: "Het dak in de verf" },
+        image: "images/insta-2.svg", caption: "Meubels uitzoeken" },
       { url: "https://www.instagram.com/p/DVdHjUUjJOwtlFOGKmwJxe49euSD-03jcuw-Q80/",
-        image: "images/insta-3.svg", caption: "De nieuwe vloer gaat erin" },
+        image: "images/insta-3.svg", caption: "Keuzes keuken" },
       { url: "https://www.instagram.com/p/DT45ftTDHV6Y-S0lb4u_-nxZye87O7WagZozt00/",
-        image: "images/insta-4.svg", caption: "Bijna klaar…" }
+        image: "images/insta-4.svg", caption: "Keuzes keuken" }
     ]
   }
 };
