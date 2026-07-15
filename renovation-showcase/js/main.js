@@ -58,51 +58,97 @@
     root.style.setProperty("--pos", "50%");
     if (opts.aspect) root.style.aspectRatio = opts.aspect;
 
-    const after = el("img");
-    after.src = opts.after;
-    after.alt = (opts.name || "") + " — na de verbouwing";
-    after.loading = opts.eager ? "eager" : "lazy";
-    if (opts.eager) after.fetchPriority = "high";
-    guardImg(after, (opts.name || "") + " — na");
+    const hasDuring = !!opts.during;
+    if (hasDuring) root.classList.add("ba--triple");
+
+    function makeImg(src, phase) {
+      const img = el("img");
+      img.src = src;
+      img.alt = (opts.name || "") + " — " + phase;
+      img.loading = opts.eager ? "eager" : "lazy";
+      if (opts.eager) img.fetchPriority = "high";
+      guardImg(img, (opts.name || "") + " — " + phase);
+      return img;
+    }
+
+    const after = makeImg(opts.after, "na de verbouwing");
 
     const beforeWrap = el("div", "ba__before");
-    const before = el("img");
-    before.src = opts.before;
-    before.alt = (opts.name || "") + " — voor de verbouwing";
-    before.loading = opts.eager ? "eager" : "lazy";
-    if (opts.eager) before.fetchPriority = "high";
-    guardImg(before, (opts.name || "") + " — voor");
-    beforeWrap.appendChild(before);
+    beforeWrap.appendChild(makeImg(opts.before, "voor de verbouwing"));
+
+    let midWrap = null;
+    if (hasDuring) {
+      midWrap = el("div", "ba__mid");
+      midWrap.appendChild(makeImg(opts.during, "tijdens de verbouwing"));
+    }
 
     const divider = el("div", "ba__divider");
     const handle = el("button", "ba__handle");
     handle.innerHTML = "&#8249;&#8250;";
     handle.setAttribute("role", "slider");
-    handle.setAttribute("aria-label", "Vergelijk voor en na");
+    handle.setAttribute("aria-label", hasDuring ? "Grens tussen voor en tijdens" : "Vergelijk voor en na");
     handle.setAttribute("aria-valuemin", "0");
     handle.setAttribute("aria-valuemax", "100");
     handle.setAttribute("aria-valuenow", "50");
 
+    let divider2 = null, handle2 = null, labelMid = null;
+    if (hasDuring) {
+      divider2 = el("div", "ba__divider ba__divider--2");
+      handle2 = el("button", "ba__handle ba__handle--2");
+      handle2.innerHTML = "&#8249;&#8250;";
+      handle2.setAttribute("role", "slider");
+      handle2.setAttribute("aria-label", "Grens tussen tijdens en na");
+      handle2.setAttribute("aria-valuemin", "0");
+      handle2.setAttribute("aria-valuemax", "100");
+      handle2.setAttribute("aria-valuenow", "66");
+      labelMid = el("span", "ba__label ba__label--mid", "Tijdens");
+    }
+
     const labelBefore = el("span", "ba__label ba__label--before", "Voor");
     const labelAfter = el("span", "ba__label ba__label--after", "Na");
 
-    root.append(after, beforeWrap, divider, labelBefore, labelAfter, handle);
+    root.appendChild(after);
+    if (midWrap) root.appendChild(midWrap);
+    root.appendChild(beforeWrap);
+    root.append(divider, labelBefore, labelAfter);
+    if (hasDuring) root.append(divider2, labelMid);
+    root.appendChild(handle);
+    if (handle2) root.appendChild(handle2);
 
+    /* pos = grens voor/tijdens (of voor/na); pos2 = grens tijdens/na */
+    const GAP = 8;
     let pos = 50;
+    let pos2 = 100;
     const hotspotNodes = [];
 
-    function setPos(next) {
-      pos = Math.max(0, Math.min(100, next));
+    function render() {
       root.style.setProperty("--pos", pos + "%");
+      root.style.setProperty("--pos2", pos2 + "%");
       handle.setAttribute("aria-valuenow", String(Math.round(pos)));
+      if (handle2) handle2.setAttribute("aria-valuenow", String(Math.round(pos2)));
       labelBefore.classList.toggle("is-hidden", pos < 14);
-      labelAfter.classList.toggle("is-hidden", pos > 86);
-      // hotspots horen bij de NA-foto: verberg ze zolang de VOOR-laag eroverheen ligt
+      if (hasDuring) {
+        labelAfter.classList.toggle("is-hidden", pos2 > 88);
+        if (labelMid) labelMid.classList.toggle("is-hidden", pos2 - pos < 18);
+      } else {
+        labelAfter.classList.toggle("is-hidden", pos > 86);
+      }
+      /* hotspots horen bij de NA-foto: verberg ze zolang een laag eroverheen ligt */
+      const boundary = hasDuring ? pos2 : pos;
       hotspotNodes.forEach(({ dot, card, x }) => {
-        const covered = pos > x;
+        const covered = boundary > x;
         dot.classList.toggle("is-covered", covered);
         if (covered) card.hidden = true;
       });
+    }
+
+    function setPos(next) {
+      pos = Math.max(0, Math.min(hasDuring ? pos2 - GAP : 100, next));
+      render();
+    }
+    function setPos2(next) {
+      pos2 = Math.max(pos + GAP, Math.min(100, next));
+      render();
     }
 
     function posFromEvent(e) {
@@ -110,29 +156,35 @@
       return ((e.clientX - rect.left) / rect.width) * 100;
     }
 
-    let dragging = false;
+    /* slepen: bij een driedelige schuif pakt een sleep de dichtstbijzijnde knop */
+    let activeSetter = null;
     root.addEventListener("pointerdown", (e) => {
       if (e.target.closest(".hotspot") || e.target.closest(".hotspot__card")) return;
-      dragging = true;
+      const p = posFromEvent(e);
+      activeSetter = (hasDuring && Math.abs(p - pos2) < Math.abs(p - pos)) ? setPos2 : setPos;
       root.classList.add("is-dragging");
       root.setPointerCapture(e.pointerId);
-      setPos(posFromEvent(e));
+      activeSetter(p);
     });
     root.addEventListener("pointermove", (e) => {
-      if (dragging) setPos(posFromEvent(e));
+      if (activeSetter) activeSetter(posFromEvent(e));
     });
     ["pointerup", "pointercancel"].forEach((type) =>
       root.addEventListener(type, () => {
-        dragging = false;
+        activeSetter = null;
         root.classList.remove("is-dragging");
       })
     );
-    handle.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") { setPos(pos - 4); e.preventDefault(); }
-      if (e.key === "ArrowRight") { setPos(pos + 4); e.preventDefault(); }
-      if (e.key === "Home") { setPos(0); e.preventDefault(); }
-      if (e.key === "End") { setPos(100); e.preventDefault(); }
-    });
+    function bindKeys(h, get, set) {
+      h.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft") { set(get() - 4); e.preventDefault(); }
+        if (e.key === "ArrowRight") { set(get() + 4); e.preventDefault(); }
+        if (e.key === "Home") { set(0); e.preventDefault(); }
+        if (e.key === "End") { set(100); e.preventDefault(); }
+      });
+    }
+    bindKeys(handle, () => pos, setPos);
+    if (handle2) bindKeys(handle2, () => pos2, setPos2);
 
     /* hotspots (klikbare stipjes met uitleg) */
     (opts.hotspots || []).forEach((spot) => {
@@ -165,7 +217,9 @@
       }
     });
 
-    setPos(opts.start != null ? opts.start : 50);
+    if (hasDuring) { pos = 33; pos2 = 66; }
+    else if (opts.start != null) { pos = opts.start; }
+    render();
     return root;
   }
 
@@ -329,6 +383,7 @@
     media.appendChild(
       createBeforeAfter({
         before: room.before,
+        during: room.during,
         after: room.after,
         name: room.name,
         aspect: room.aspect,
@@ -337,9 +392,11 @@
     );
 
     const info = el("div", "room__info");
-    info.appendChild(el("p", "room__index", String(i + 1).padStart(2, "0") + " / " + String(CONTENT.rooms.length).padStart(2, "0")));
-    info.appendChild(el("h3", null, room.name));
-    info.appendChild(el("p", "room__tagline", room.tagline));
+    const head = el("div", "room__head");
+    head.appendChild(el("p", "room__index", String(i + 1).padStart(2, "0") + " / " + String(CONTENT.rooms.length).padStart(2, "0")));
+    head.appendChild(el("h3", null, room.name));
+    head.appendChild(el("p", "room__tagline", room.tagline));
+    const body = el("div", "room__body");
 
     const tabBar = el("div", "room__tabs");
     tabBar.setAttribute("role", "tablist");
@@ -363,7 +420,8 @@
     });
     panel.textContent = room.tabs[tabNames[0]];
 
-    info.append(tabBar, panel);
+    body.append(tabBar, panel);
+    info.append(head, body);
     section.append(media, info);
     roomsList.appendChild(section);
   });

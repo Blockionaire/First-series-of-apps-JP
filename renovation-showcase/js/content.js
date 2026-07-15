@@ -178,6 +178,7 @@ const CONTENT = {
       name: "Woonkamer",
       tagline: "Het hart van het appartement",
       before: "images/woonkamer-voor.svg",
+      during: "images/woonkamer-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
       after: "images/woonkamer-na.svg",
       tabs: {
         "Wat we deden":
@@ -203,6 +204,7 @@ const CONTENT = {
       name: "Keuken",
       tagline: "Van gedateerd naar op maat",
       before: "images/keuken-voor.svg",
+      during: "images/keuken-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
       after: "images/keuken-na.svg",
       tabs: {
         "Wat we deden": "Beschrijf hier wat er in de keuken is gedaan.",
@@ -216,6 +218,7 @@ const CONTENT = {
       name: "Badkamer",
       tagline: "Volledig opnieuw opgebouwd",
       before: "images/badkamer-voor.jpeg",
+      during: "images/badkamer-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
       after: "images/badkamer-na.jpeg",
       /* staande (portret)foto's? geef de verhouding mee, bijv. "3 / 4" */
       aspect: "3 / 4",
@@ -231,6 +234,7 @@ const CONTENT = {
       name: "Slaapkamer",
       tagline: "Rust en warmte",
       before: "images/slaapkamer-voor.svg",
+      during: "images/slaapkamer-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
       after: "images/slaapkamer-na.svg",
       tabs: {
         "Wat we deden": "Beschrijf hier wat er in de slaapkamer is gedaan.",
@@ -244,6 +248,7 @@ const CONTENT = {
       name: "Het dak",
       tagline: "Het enige originele onderdeel — anno 1780",
       before: "images/dak-voor.svg",
+      during: "images/dak-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
       after: "images/dak-na.svg",
       tabs: {
         "Wat we deden":
@@ -262,6 +267,7 @@ const CONTENT = {
       name: "Hal",
       tagline: "De verbinding tussen alle ruimtes",
       before: "images/hal-voor.svg",
+      during: "images/hal-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
       after: "images/hal-na.svg",
       tabs: {
         "Wat we deden": "Beschrijf hier wat er in de hal is gedaan.",
@@ -275,6 +281,7 @@ const CONTENT = {
       name: "Entree",
       tagline: "De eerste indruk",
       before: "images/entree-voor.svg",
+      during: "images/entree-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
       after: "images/entree-na.svg",
       tabs: {
         "Wat we deden": "Beschrijf hier wat er bij de entree is gedaan.",

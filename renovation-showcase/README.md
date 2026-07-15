@@ -14,9 +14,12 @@ appartement uit 1780 in het oude centrum van Oud-Beijerland.
   procenten). Vakken zonder `room` (zoals kasten) zijn niet klikbaar;
   `aspect` bepaalt de verhouding van de plattegrond. De oude indeling is
   overgenomen van de originele plattegrond, een kwartslag gedraaid
-- **Ruimte voor ruimte** — per ruimte een voor/na-schuif met klikbare tabs
-  (*Wat we deden / Obstakels / Onze keuzes*) en optionele hotspot-stipjes op de
-  foto met extra uitleg
+- **Ruimte voor ruimte** — per ruimte een grote schuif over de volle breedte
+  met drie panelen: *voor | tijdens | na* (twee sleepknoppen). Laat je de
+  regel `during` in `js/content.js` weg, dan wordt het een gewone
+  voor/na-schuif. Staande foto's? Zet `aspect: "3 / 4"` bij de ruimte.
+  Elke ruimte heeft klikbare tabs (*Wat we deden / Obstakels / Onze keuzes*)
+  en optionele hotspot-stipjes op de foto met extra uitleg
 - **De verbouwing in cijfers** — grappige tellende statistieken (zakken puin,
   keer naar de RAD, …); aantallen pas je aan bij `funStats`
 - **Galerij** — fotogrid met filter (voor / tijdens / na) en lightbox

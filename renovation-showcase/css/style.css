@@ -241,6 +241,7 @@ section[id] { scroll-margin-top: 76px; }
 /* ---------- voor/na-schuif (before/after slider) ---------- */
 .ba {
   --pos: 50%;
+  --pos2: 100%;
   position: relative;
   aspect-ratio: 16 / 11;
   overflow: hidden;
@@ -254,6 +255,11 @@ section[id] { scroll-margin-top: 76px; }
   position: absolute; inset: 0;
   clip-path: inset(0 calc(100% - var(--pos)) 0 0);
 }
+/* de tijdens-laag van de driedelige schuif (voor | tijdens | na) */
+.ba__mid {
+  position: absolute; inset: 0;
+  clip-path: inset(0 calc(100% - var(--pos2)) 0 0);
+}
 .ba__divider {
   position: absolute;
   top: 0; bottom: 0;
@@ -263,6 +269,7 @@ section[id] { scroll-margin-top: 76px; }
   transform: translateX(-1px);
   box-shadow: 0 0 12px rgba(61, 49, 37, 0.35);
 }
+.ba__divider--2 { left: var(--pos2); }
 .ba__handle {
   position: absolute;
   top: 50%; left: var(--pos);
@@ -284,6 +291,10 @@ section[id] { scroll-margin-top: 76px; }
 }
 .ba__handle:hover, .ba.is-dragging .ba__handle { transform: translate(-50%, -50%) scale(1.08); }
 .ba__handle:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.ba__handle--2 { left: var(--pos2); }
+/* bij drie panelen staan de knoppen iets uit het midden, zodat ze elkaar nooit raken */
+.ba--triple .ba__handle { top: 42%; }
+.ba--triple .ba__handle--2 { top: 58%; }
 .ba__label {
   position: absolute;
   top: 16px;
@@ -302,6 +313,10 @@ section[id] { scroll-margin-top: 76px; }
 }
 .ba__label--before { left: 16px; }
 .ba__label--after { right: 16px; }
+.ba__label--mid {
+  left: calc((var(--pos) + var(--pos2)) / 2);
+  transform: translateX(-50%);
+}
 .ba__label.is-hidden { opacity: 0; }
 
 /* hotspots op de NA-foto */
@@ -516,11 +531,13 @@ section[id] { scroll-margin-top: 76px; }
 @media (max-width: 430px) { .funstats__grid { grid-template-columns: 1fr; } }
 
 /* ---------- ruimtes ---------- */
-.rooms__list { display: flex; flex-direction: column; gap: 90px; margin-top: 30px; }
-.room { display: grid; grid-template-columns: 1.25fr 1fr; gap: 44px; align-items: center; }
-.room:nth-child(even) .room__media { order: 2; }
-.room__media { position: relative; box-shadow: var(--shadow); border-radius: var(--radius); }
-.room__media--portrait { max-width: 440px; margin: 0 auto; width: 100%; }
+.rooms__list { display: flex; flex-direction: column; gap: 100px; margin-top: 30px; }
+.room { display: block; }
+.room__media { position: relative; box-shadow: var(--shadow); border-radius: var(--radius); margin-bottom: 30px; }
+.room__media .ba { aspect-ratio: 16 / 9; }
+.room__media--portrait { max-width: 520px; margin: 0 auto 30px; width: 100%; }
+.room__media--portrait .ba { aspect-ratio: 3 / 4; }
+.room__info { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 40px; align-items: start; }
 .room__index {
   font-family: var(--font-display);
   font-size: 15px;
@@ -533,7 +550,7 @@ section[id] { scroll-margin-top: 76px; }
   font-size: clamp(26px, 3vw, 34px);
   line-height: 1.1;
 }
-.room__tagline { color: var(--accent-deep); font-size: 14.5px; font-weight: 500; margin: 6px 0 22px; }
+.room__tagline { color: var(--accent-deep); font-size: 14.5px; font-weight: 500; margin: 6px 0 0; }
 .room__tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .room__tab {
   padding: 8px 16px;
@@ -557,8 +574,8 @@ section[id] { scroll-margin-top: 76px; }
   min-height: 96px;
 }
 @media (max-width: 900px) {
-  .room { grid-template-columns: 1fr; gap: 26px; }
-  .room:nth-child(even) .room__media { order: 0; }
+  .room__info { grid-template-columns: 1fr; gap: 18px; }
+  .rooms__list { gap: 80px; }
 }
 
 /* ---------- galerij ---------- */
