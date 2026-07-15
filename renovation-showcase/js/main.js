@@ -460,38 +460,58 @@
     instaPosts.appendChild(link);
   });
 
-  /* galerij */
-  const galleryGrid = $("#galleryGrid");
-  const phaseLabels = { voor: "Voor", tijdens: "Tijdens", na: "Na" };
-  CONTENT.gallery.items.forEach((item, index) => {
-    const fig = el("button", "gallery__item reveal");
-    fig.style.transitionDelay = (index % 3) * 70 + "ms";
-    fig.dataset.phase = item.phase;
-    fig.dataset.index = index;
-    fig.setAttribute("aria-label", item.caption + " — groot bekijken");
+  /* galerij: drie rijen (voor/tijdens/na), horizontaal scrollbaar met pijltjes */
+  const galleryRows = $("#galleryRows");
+  const galleryFlat = [];
+  CONTENT.gallery.rows.forEach((row) => {
+    const section = el("div", "gal-row reveal");
 
-    const img = el("img");
-    img.src = item.src;
-    img.alt = item.caption;
-    img.loading = "lazy";
-    guardImg(img, item.caption);
+    const head = el("div", "gal-row__head");
+    head.appendChild(el("h3", "gal-row__title", row.label));
+    const navBtns = el("div", "gal-row__nav");
+    const prevBtn = el("button", "gal-arrow", "‹");
+    prevBtn.setAttribute("aria-label", row.label + ": scroll naar links");
+    const nextBtn = el("button", "gal-arrow", "›");
+    nextBtn.setAttribute("aria-label", row.label + ": scroll naar rechts");
+    navBtns.append(prevBtn, nextBtn);
+    head.appendChild(navBtns);
 
-    const tag = el("span", "phase-tag", phaseLabels[item.phase] || item.phase);
-    const caption = el("figcaption", null, item.caption);
-    fig.append(img, tag, caption);
-    fig.addEventListener("click", () => openLightbox(index));
-    galleryGrid.appendChild(fig);
-  });
-
-  $("#galleryFilters").addEventListener("click", (e) => {
-    const chip = e.target.closest(".chip");
-    if (!chip) return;
-    $$("#galleryFilters .chip").forEach((c) => c.classList.remove("is-active"));
-    chip.classList.add("is-active");
-    const filter = chip.dataset.filter;
-    $$(".gallery__item").forEach((item) => {
-      item.classList.toggle("is-hidden", filter !== "alles" && item.dataset.phase !== filter);
+    const track = el("div", "gal-track");
+    row.items.forEach((item) => {
+      const index = galleryFlat.length;
+      galleryFlat.push(item);
+      const fig = el("button", "gallery__item");
+      fig.dataset.index = index;
+      fig.setAttribute("aria-label", item.caption + " — groot bekijken");
+      const img = el("img");
+      img.src = item.src;
+      img.alt = item.caption;
+      img.loading = "lazy";
+      guardImg(img, item.caption);
+      const caption = el("figcaption", null, item.caption);
+      fig.append(img, caption);
+      fig.addEventListener("click", () => openLightbox(index));
+      track.appendChild(fig);
     });
+
+    function step(dir) {
+      const item = track.querySelector(".gallery__item");
+      const width = item ? item.getBoundingClientRect().width + 14 : track.clientWidth * 0.8;
+      track.scrollBy({ left: dir * width * 2, behavior: "smooth" });
+    }
+    prevBtn.addEventListener("click", () => step(-1));
+    nextBtn.addEventListener("click", () => step(1));
+    /* pijltjes dimmen aan het begin/einde van de rij */
+    function updateArrows() {
+      prevBtn.disabled = track.scrollLeft <= 4;
+      nextBtn.disabled = track.scrollLeft >= track.scrollWidth - track.clientWidth - 4;
+    }
+    track.addEventListener("scroll", updateArrows, { passive: true });
+    window.addEventListener("resize", updateArrows, { passive: true });
+    requestAnimationFrame(updateArrows);
+
+    section.append(head, track);
+    galleryRows.appendChild(section);
   });
 
   /* =========================================================================
@@ -506,30 +526,23 @@
   let lbIndex = 0;
   let lbLastFocus = null;
 
-  function visibleGalleryIndexes() {
-    return $$(".gallery__item").filter((n) => !n.classList.contains("is-hidden"))
-      .map((n) => Number(n.dataset.index));
-  }
-
   function openLightbox(index) {
     if (!lightbox.classList.contains("is-open")) lbLastFocus = document.activeElement;
     lbIndex = index;
-    const item = CONTENT.gallery.items[index];
+    const item = galleryFlat[index];
     delete lbImage.dataset.fallback;
     lbImage.src = item.src;
     lbImage.alt = item.caption;
     lbCaption.textContent = item.caption;
-    const visible = visibleGalleryIndexes();
-    lbCount.textContent = (visible.indexOf(index) + 1) + " / " + visible.length;
+    lbCount.textContent = (index + 1) + " / " + galleryFlat.length;
     lightbox.classList.add("is-open");
     lightbox.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
     $("#lbClose").focus({ preventScroll: true });
     /* buurfoto's alvast laden zodat bladeren direct voelt */
     [1, -1].forEach((dir) => {
-      const cur = visible.indexOf(index);
-      const nb = visible[(cur + dir + visible.length) % visible.length];
-      if (nb != null && nb !== index) { const pre = new Image(); pre.src = CONTENT.gallery.items[nb].src; }
+      const nb = (index + dir + galleryFlat.length) % galleryFlat.length;
+      if (nb !== index) { const pre = new Image(); pre.src = galleryFlat[nb].src; }
     });
   }
 
@@ -541,11 +554,8 @@
   }
 
   function stepLightbox(dir) {
-    const visible = visibleGalleryIndexes();
-    if (!visible.length) return;
-    const current = visible.indexOf(lbIndex);
-    const next = visible[(current + dir + visible.length) % visible.length];
-    openLightbox(next);
+    if (!galleryFlat.length) return;
+    openLightbox((lbIndex + dir + galleryFlat.length) % galleryFlat.length);
   }
 
   $("#lbClose").addEventListener("click", closeLightbox);

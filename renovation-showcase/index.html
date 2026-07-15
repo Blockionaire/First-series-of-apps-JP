@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Anno 1780 — Van casco naar thuis · Oud-Beijerland</title>
+  <title>Huisje OVS — Van casco naar thuis · Oud-Beijerland</title>
   <meta name="description" content="De complete transformatie van een appartement uit 1780 in het oude centrum van Oud-Beijerland. Bekijk het voor en na van elke ruimte.">
   <meta name="theme-color" content="#f7f2e9">
   <!-- Voorvertoning bij delen via WhatsApp e.d. -->
-  <meta property="og:title" content="Anno 1780 — Van casco naar thuis">
+  <meta property="og:title" content="Huisje OVS — Van casco naar thuis">
   <meta property="og:description" content="De complete transformatie van een appartement uit 1780 in het oude centrum van Oud-Beijerland.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="images/hero-na.svg">
@@ -22,8 +22,7 @@
   <!-- ===== Navigatie ===== -->
   <header class="nav" id="nav">
     <a class="nav__brand" href="#top">
-      <span class="nav__brand-mark">1780</span>
-      <span class="nav__brand-name" data-content="site.name"></span>
+      <span class="nav__brand-mark" data-content="site.name"></span>
     </a>
     <nav class="nav__links" id="navLinks">
       <a href="#verhaal">Het verhaal</a>
@@ -109,13 +108,7 @@
       <p class="kicker reveal" data-content="gallery.kicker"></p>
       <h2 class="section__title reveal" data-content="gallery.title"></h2>
       <p class="section__intro reveal" data-content="gallery.text"></p>
-      <div class="gallery__filters reveal" id="galleryFilters">
-        <button class="chip is-active" data-filter="alles">Alles</button>
-        <button class="chip" data-filter="voor">Voor</button>
-        <button class="chip" data-filter="tijdens">Tijdens</button>
-        <button class="chip" data-filter="na">Na</button>
-      </div>
-      <div class="gallery__grid" id="galleryGrid"></div>
+      <div id="galleryRows"></div>
     </div>
   </section>
 

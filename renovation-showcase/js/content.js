@@ -14,7 +14,7 @@
 const CONTENT = {
 
   site: {
-    name: "Anno 1780",
+    name: "Huisje OVS",
     location: "Oud-Beijerland",
     instagram: {
       handle: "@huisjeoostvoorstraat",
@@ -35,7 +35,7 @@ const CONTENT = {
 
   stats: [
     { value: 1780, label: "Bouwjaar van het pand", noFormat: true },
-    { value: 14,   label: "Maanden verbouwd" },                    // <-- pas aan
+    { value: 8,    label: "Maanden verbouwd" },
     { value: 100,  suffix: "%", label: "Gestript en opnieuw opgebouwd" },
     { value: 1,    label: "Origineel bewaard: het dak" }
   ],
@@ -67,8 +67,16 @@ const CONTENT = {
     title: "Zo verliep de verbouwing",
     items: [
       {
+        period: "Fase 0",
+        title: "Nieuwe indeling uittekenen & 3D-renderingen maken",
+        text: "Voordat er ook maar iets gesloopt werd, is de nieuwe indeling " +
+              "volledig uitgetekend en in 3D gerenderd. Zo wisten we precies " +
+              "waar we naartoe werkten.",
+        image: "images/render-3d.svg"
+      },
+      {
         period: "Fase 1",
-        title: "Strippen tot op het casco",
+        title: "Strippen tot casco",
         text: "Alles eruit: wanden, plafonds, vloeren en installaties. Terug tot " +
               "de kale constructie, zodat we konden zien waar we echt mee te " +
               "maken hadden.",
@@ -76,40 +84,53 @@ const CONTENT = {
       },
       {
         period: "Fase 2",
-        title: "Constructie en vloer",
-        text: "De aflopende vloer is aangepakt en het casco waar nodig hersteld " +
-              "en verstevigd. De basis moest goed zijn voordat er iets nieuws in " +
-              "kon.",
+        title: "Nieuwe indeling realiseren",
+        text: "De nieuwe wanden gingen omhoog, precies zoals uitgetekend in " +
+              "fase 0. De oude, onlogische indeling maakte plaats voor een plan " +
+              "dat past bij hoe we nu wonen.",
         image: "images/tijdens-2.svg"
       },
       {
         period: "Fase 3",
-        title: "Het dak",
-        text: "De originele kap uit 1780 is schoongemaakt, gerepareerd en " +
-              "geschilderd. Het enige onderdeel dat de hele verbouwing overleefde " +
-              "— en dat mag gezien worden.",
+        title: "Nieuwe vloer & vloerverwarming",
+        text: "De aflopende vloer eruit en een nieuwe, vlakke vloer erin — " +
+              "compleet met vloerverwarming door het hele appartement.",
         image: "images/tijdens-3.svg"
       },
       {
         period: "Fase 4",
-        title: "Isolatie en installaties",
-        text: "Van niets naar volledig geïsoleerd. Nieuwe elektra, waterleidingen " +
-              "en verwarming, weggewerkt in de nieuwe wanden en vloeren.",
+        title: "Volledige appartement isoleren",
+        text: "Van totaal niet geïsoleerd naar volledig ingepakt: dak, wanden " +
+              "en vloer. Het verschil in comfort (en stookkosten) is enorm.",
         image: "images/tijdens-4.svg"
       },
       {
         period: "Fase 5",
-        title: "Indeling en afbouw",
-        text: "Nieuwe wanden, plafonds en kozijnen. De indeling is opnieuw " +
-              "bedacht, passend bij hoe we nu wonen.",
+        title: "Vervanging buitenkant dak",
+        text: "De buitenkant van het dak is volledig vervangen, terwijl de " +
+              "originele kapconstructie uit 1780 binnen in het zicht bleef.",
         image: "images/tijdens-5.svg"
       },
       {
         period: "Fase 6",
-        title: "Afwerking",
-        text: "Keuken, badkamer, vloeren, schilderwerk en alle details. De fase " +
-              "waarin het van bouwplaats langzaam een thuis werd.",
+        title: "Afwerking (stucen/schilderen/eindvloer)",
+        text: "Stucwerk op de wanden, schilderwerk door het hele huis en de " +
+              "eindvloer erin. De fase waarin het van bouwplaats een thuis werd.",
         image: "images/tijdens-6.svg"
+      },
+      {
+        period: "Fase 7",
+        title: "Afmonteren badkamer, toilet en keuken",
+        text: "Sanitair, toilet en keuken geplaatst en aangesloten — de " +
+              "momenten waarop alles ineens écht af begint te voelen.",
+        image: "images/tijdens-7.svg"
+      },
+      {
+        period: "Fase 8",
+        title: "Inrichting & styling",
+        text: "Meubels, verlichting, gordijnen en de laatste details. Het " +
+              "sluitstuk van acht maanden verbouwen.",
+        image: "images/tijdens-8.svg"
       }
     ]
   },
@@ -220,8 +241,6 @@ const CONTENT = {
       before: "images/badkamer-voor.jpeg",
       during: "images/badkamer-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
       after: "images/badkamer-na.jpeg",
-      /* staande (portret)foto's? geef de verhouding mee, bijv. "3 / 4" */
-      aspect: "3 / 4",
       tabs: {
         "Wat we deden": "Beschrijf hier wat er in de badkamer is gedaan.",
         "Obstakels": "Beschrijf hier de obstakels in de badkamer.",
@@ -314,23 +333,49 @@ const CONTENT = {
     ]
   },
 
+  /* =========================================================================
+     GALERIJ — drie rijen (voor / tijdens / na) met elk zes foto's.
+     Scroll binnen een rij met de pijltjes of door te vegen.
+     ========================================================================= */
   gallery: {
     kicker: "Galerij",
     title: "De verbouwing in beeld",
-    text: "Filter op fase of klik op een foto om hem groot te bekijken.",
-    items: [
-      { src: "images/woonkamer-voor.svg",     caption: "Woonkamer bij aankoop",        phase: "voor" },
-      { src: "images/keuken-voor.svg",        caption: "De oude keuken",               phase: "voor" },
-      { src: "images/dak-voor.svg",           caption: "Het dak vóór het herstel",     phase: "voor" },
-      { src: "images/tijdens-1.svg",          caption: "Gestript tot op het casco",    phase: "tijdens" },
-      { src: "images/tijdens-2.svg",          caption: "Werk aan de vloer",            phase: "tijdens" },
-      { src: "images/tijdens-3.svg",          caption: "Isolatie en installaties",     phase: "tijdens" },
-      { src: "images/tijdens-4.svg",          caption: "De afbouw",                    phase: "tijdens" },
-      { src: "images/woonkamer-na.svg",       caption: "De nieuwe woonkamer",          phase: "na" },
-      { src: "images/keuken-na.svg",          caption: "De nieuwe keuken",             phase: "na" },
-      { src: "images/badkamer-na.jpeg",       caption: "De nieuwe badkamer",           phase: "na" },
-      { src: "images/dak-na.svg",             caption: "Het dak, hersteld en geschilderd", phase: "na" },
-      { src: "images/slaapkamer-na.svg",      caption: "De nieuwe slaapkamer",         phase: "na" }
+    text: "Zes foto's per fase — scroll met de pijltjes door de rij, of klik " +
+          "op een foto om hem groot te bekijken.",
+    rows: [
+      {
+        label: "Voor",
+        items: [
+          { src: "images/woonkamer-voor.svg",  caption: "Woonkamer bij aankoop" },
+          { src: "images/keuken-voor.svg",     caption: "De oude keuken" },
+          { src: "images/badkamer-voor.jpeg",  caption: "De oude badkamer" },
+          { src: "images/slaapkamer-voor.svg", caption: "De oude slaapkamer" },
+          { src: "images/dak-voor.svg",        caption: "Het dak vóór het herstel" },
+          { src: "images/hal-voor.svg",        caption: "De oude hal" }
+        ]
+      },
+      {
+        label: "Tijdens",
+        items: [
+          { src: "images/tijdens-1.svg", caption: "Gestript tot op het casco" },
+          { src: "images/tijdens-2.svg", caption: "De nieuwe indeling gaat omhoog" },
+          { src: "images/tijdens-3.svg", caption: "Nieuwe vloer en vloerverwarming" },
+          { src: "images/tijdens-4.svg", caption: "Isolatie" },
+          { src: "images/tijdens-5.svg", caption: "Het dak wordt vervangen" },
+          { src: "images/tijdens-6.svg", caption: "De afwerking" }
+        ]
+      },
+      {
+        label: "Na",
+        items: [
+          { src: "images/woonkamer-na.svg",  caption: "De nieuwe woonkamer" },
+          { src: "images/keuken-na.svg",     caption: "De nieuwe keuken" },
+          { src: "images/badkamer-na.jpeg",  caption: "De nieuwe badkamer" },
+          { src: "images/slaapkamer-na.svg", caption: "De nieuwe slaapkamer" },
+          { src: "images/dak-na.svg",        caption: "Het dak, hersteld en geschilderd" },
+          { src: "images/entree-na.svg",     caption: "De nieuwe entree" }
+        ]
+      }
     ]
   },
 
@@ -338,7 +383,7 @@ const CONTENT = {
     title: "Volg het hele verhaal op Instagram",
     text: "De volledige verbouwing — van de eerste sloopdag tot de laatste " +
           "likje verf — is te volgen op ons Instagram-account.",
-    note: "Pand uit 1780 · Oude centrum van Oud-Beijerland · Met liefde verbouwd"
+    note: "Verbouwing Huisje OVS | 1780 - 2026"
   },
 
   /* =========================================================================
