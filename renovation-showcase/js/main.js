@@ -276,6 +276,110 @@
   });
 
   /* =========================================================================
+     MAAND VOOR MAAND — de scrubber
+     ========================================================================= */
+  (function buildMonthScrubber() {
+    const cfg = CONTENT.months;
+    if (!cfg || !cfg.items.length) return;
+    const wrap = $("#monthScrub");
+    const items = cfg.items;
+    let active = 0;
+
+    /* de balk met stippen */
+    const bar = el("div", "scrub__bar");
+    const fill = el("div", "scrub__fill");
+    bar.appendChild(fill);
+    const dots = items.map((m, i) => {
+      const dot = el("button", "scrub__dot");
+      dot.setAttribute("aria-label", m.label + " " + m.year + " — " + m.title);
+      dot.appendChild(el("span", "scrub__dot-point"));
+      const lbl = el("span", "scrub__dot-label", m.label.slice(0, 3).toLowerCase());
+      lbl.appendChild(el("span", "scrub__dot-year", " ’" + String(m.year).slice(2)));
+      dot.appendChild(lbl);
+      dot.addEventListener("click", () => setMonth(i));
+      bar.appendChild(dot);
+      return dot;
+    });
+
+    /* slepen over de balk */
+    let scrubbing = false;
+    function monthFromEvent(e) {
+      const rect = bar.getBoundingClientRect();
+      const t = (e.clientX - rect.left) / rect.width;
+      return Math.max(0, Math.min(items.length - 1, Math.round(t * (items.length - 1))));
+    }
+    bar.addEventListener("pointerdown", (e) => {
+      scrubbing = true;
+      bar.setPointerCapture(e.pointerId);
+      setMonth(monthFromEvent(e));
+    });
+    bar.addEventListener("pointermove", (e) => { if (scrubbing) setMonth(monthFromEvent(e)); });
+    ["pointerup", "pointercancel"].forEach((t) => bar.addEventListener(t, () => { scrubbing = false; }));
+
+    /* de kaart met foto en verhaal */
+    const card = el("div", "scrub__card");
+    const media = el("div", "scrub__media");
+    const img = el("img");
+    img.alt = "";
+    guardImg(img, "Foto van deze maand");
+    media.appendChild(img);
+    const body = el("div", "scrub__body");
+    const period = el("p", "scrub__period");
+    const title = el("h3", "scrub__title");
+    const text = el("p", "scrub__text");
+    const list = el("ul", "scrub__highlights");
+    body.append(period, title, text, list);
+    card.append(media, body);
+
+    /* pijltjes + teller */
+    const nav = el("div", "scrub__nav");
+    const prev = el("button", "gal-arrow", "‹");
+    prev.setAttribute("aria-label", "Vorige maand");
+    const counter = el("span", "scrub__counter");
+    const next = el("button", "gal-arrow", "›");
+    next.setAttribute("aria-label", "Volgende maand");
+    prev.addEventListener("click", () => setMonth(active - 1));
+    next.addEventListener("click", () => setMonth(active + 1));
+    nav.append(prev, counter, next);
+
+    wrap.append(bar, card, nav);
+
+    let swapTimer = null;
+    function setMonth(i, instant) {
+      const idx = Math.max(0, Math.min(items.length - 1, i));
+      if (idx === active && !instant) return;
+      active = idx;
+      const m = items[idx];
+      dots.forEach((d, di) => d.classList.toggle("is-active", di === idx));
+      fill.style.width = (idx / (items.length - 1)) * 100 + "%";
+      prev.disabled = idx === 0;
+      next.disabled = idx === items.length - 1;
+      counter.textContent = m.label + " " + m.year;
+
+      const apply = () => {
+        delete img.dataset.fallback;
+        img.src = m.image;
+        img.alt = m.label + " " + m.year + " — " + m.title;
+        period.textContent = "Maand " + (idx + 1) + " · " + m.label + " " + m.year;
+        title.textContent = m.title;
+        text.textContent = m.text;
+        list.textContent = "";
+        (m.highlights || []).forEach((h) => list.appendChild(el("li", null, h)));
+        card.classList.remove("is-swapping");
+      };
+      if (instant) { apply(); return; }
+      card.classList.add("is-swapping");
+      clearTimeout(swapTimer);
+      swapTimer = setTimeout(apply, 160);
+      /* buurmaanden alvast laden */
+      [idx - 1, idx + 1].forEach((n) => {
+        if (items[n]) { const pre = new Image(); pre.src = items[n].image; }
+      });
+    }
+    setMonth(0, true);
+  })();
+
+  /* =========================================================================
      PLATTEGROND — schuifbaar tussen oude en nieuwe indeling,
      kamers klikbaar in beide lagen
      ========================================================================= */

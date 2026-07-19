@@ -136,6 +136,83 @@ const CONTENT = {
   },
 
   /* =========================================================================
+     MAAND VOOR MAAND — de scrubber: klik of sleep door de maanden heen.
+     Pas de maanden, teksten, hoogtepunten en foto's hieronder aan.
+     ========================================================================= */
+  months: {
+    kicker: "Maand voor maand",
+    title: "Acht maanden in vogelvlucht",
+    text: "Klik op een maand of sleep door de balk — per maand zie je wat er " +
+          "toen gebeurde.",
+    items: [
+      {
+        label: "November", year: "2025",
+        title: "Het plan",
+        text: "Voordat de eerste hamer viel: de nieuwe indeling uitgetekend, " +
+              "3D-renderingen gemaakt en de hele verbouwing voorbereid.",
+        highlights: ["Nieuwe indeling uitgetekend", "3D-renderingen gemaakt", "Planning en budget rond"],
+        image: "images/render-3d.svg"
+      },
+      {
+        label: "December", year: "2025",
+        title: "Strippen",
+        text: "Alles eruit. Wanden, plafonds, vloeren en installaties — terug " +
+              "tot het kale casco uit 1780.",
+        highlights: ["Appartement volledig gestript", "Eerste ladingen puin afgevoerd", "Casco geïnspecteerd"],
+        image: "images/tijdens-1.svg"
+      },
+      {
+        label: "Januari", year: "2026",
+        title: "De nieuwe indeling",
+        text: "De nieuwe wanden gingen omhoog, precies volgens het ontwerp " +
+              "uit fase 0.",
+        highlights: ["Nieuwe wanden geplaatst", "Eerste leidingwerk aangelegd"],
+        image: "images/tijdens-2.svg"
+      },
+      {
+        label: "Februari", year: "2026",
+        title: "Vloer & vloerverwarming",
+        text: "De aflopende vloer werd eindelijk vlak — en meteen voorzien " +
+              "van vloerverwarming door het hele appartement.",
+        highlights: ["Vloer vlak getrokken", "Vloerverwarming gelegd", "Dekvloer gestort"],
+        image: "images/tijdens-3.svg"
+      },
+      {
+        label: "Maart", year: "2026",
+        title: "Isoleren",
+        text: "Van totaal niet geïsoleerd naar volledig ingepakt: dak, wanden " +
+              "en vloer.",
+        highlights: ["Dak, wanden en vloer geïsoleerd", "Elektra en leidingen weggewerkt"],
+        image: "images/tijdens-4.svg"
+      },
+      {
+        label: "April", year: "2026",
+        title: "Het dak",
+        text: "De buitenkant van het dak volledig vervangen, terwijl de " +
+              "originele kap uit 1780 binnen in het zicht bleef.",
+        highlights: ["Buitenkant dak vervangen", "Kapconstructie hersteld en geschilderd"],
+        image: "images/tijdens-5.svg"
+      },
+      {
+        label: "Mei", year: "2026",
+        title: "Afwerking",
+        text: "Stucwerk, schilderwerk en de eindvloer — de maand waarin het " +
+              "van bouwplaats een thuis werd.",
+        highlights: ["Wanden gestuukt en geschilderd", "Eindvloer gelegd"],
+        image: "images/tijdens-6.svg"
+      },
+      {
+        label: "Juni", year: "2026",
+        title: "De finish",
+        text: "Badkamer, toilet en keuken afgemonteerd en het appartement " +
+              "ingericht. Acht maanden na de eerste sloopdag: klaar.",
+        highlights: ["Badkamer, toilet en keuken afgemonteerd", "Inrichting & styling", "Klaar om te wonen"],
+        image: "images/tijdens-8.svg"
+      }
+    ]
+  },
+
+  /* =========================================================================
      PLATTEGROND — klikbare kamers, schuifbaar tussen oude en nieuwe indeling
      Elke kamer: x/y = positie linksboven, w/h = breedte/hoogte, alles in
      procenten van de plattegrond. "room" verwijst naar het id van de ruimte
