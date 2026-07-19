@@ -141,73 +141,96 @@ const CONTENT = {
      ========================================================================= */
   months: {
     kicker: "Maand voor maand",
-    title: "Acht maanden in vogelvlucht",
+    title: "Tien maanden in vogelvlucht",
     text: "Klik op een maand of sleep door de balk — per maand zie je wat er " +
           "toen gebeurde.",
     items: [
       {
-        label: "December", year: "2025",
-        title: "Het plan",
-        text: "Voordat de eerste hamer viel: de nieuwe indeling uitgetekend, " +
-              "3D-renderingen gemaakt en de hele verbouwing voorbereid.",
-        highlights: ["Nieuwe indeling uitgetekend", "3D-renderingen gemaakt", "Planning en budget rond"],
+        label: "Oktober", year: "2025",
+        title: "Renders, plan & bod",
+        text: "Het begon achter de laptop: heel veel 3D-renderingen, een " +
+              "compleet verbouwplan en budget. En toen: bezichtigen, bod " +
+              "uitbrengen — geaccepteerd!",
+        highlights: ["Heel veel 3D-renderingen gemaakt", "Verbouwplan en budget opgesteld", "Bezichtigd, bod uitgebracht en geaccepteerd"],
         image: "images/render-3d.svg"
       },
       {
-        label: "Januari", year: "2026",
-        title: "Strippen",
-        text: "Alles eruit. Wanden, plafonds, vloeren en installaties — terug " +
-              "tot het kale casco uit 1780.",
-        highlights: ["Appartement volledig gestript", "Eerste ladingen puin afgevoerd", "Casco geïnspecteerd"],
+        label: "November", year: "2025",
+        title: "Keuken & badkamer kiezen",
+        text: "Nog geen sleutel, wel al keuzes: de keuken en de badkamer " +
+              "werden deze maand uitgezocht.",
+        highlights: ["Keuken uitgekozen", "Badkamer uitgekozen"],
         image: "images/tijdens-1.svg"
       },
       {
-        label: "Februari", year: "2026",
-        title: "De nieuwe indeling",
-        text: "De nieuwe wanden gingen omhoog, precies volgens het ontwerp " +
-              "uit fase 0.",
-        highlights: ["Nieuwe wanden geplaatst", "Eerste leidingwerk aangelegd"],
+        label: "December", year: "2025",
+        title: "De sleutel & de sloop",
+        text: "Sleutel gekregen, snel de before-beelden vastgelegd en " +
+              "diezelfde periode nog begonnen met strippen.",
+        highlights: ["Sleutel gekregen", "Before-beelden gemaakt", "Direct gestart met strippen"],
         image: "images/tijdens-2.svg"
       },
       {
-        label: "Maart", year: "2026",
-        title: "Vloer & vloerverwarming",
-        text: "De aflopende vloer werd eindelijk vlak — en meteen voorzien " +
-              "van vloerverwarming door het hele appartement.",
-        highlights: ["Vloer vlak getrokken", "Vloerverwarming gelegd", "Dekvloer gestort"],
+        label: "Januari", year: "2026",
+        title: "Gestript & gestart met de indeling",
+        text: "Het appartement werd volledig gestript tot het casco, en de " +
+              "eerste wanden van de nieuwe indeling gingen omhoog.",
+        highlights: ["Appartement volledig gestript", "Gestart met de nieuwe indeling"],
         image: "images/tijdens-3.svg"
       },
       {
-        label: "April", year: "2026",
-        title: "Isoleren",
-        text: "Van totaal niet geïsoleerd naar volledig ingepakt: dak, wanden " +
-              "en vloer.",
-        highlights: ["Dak, wanden en vloer geïsoleerd", "Elektra en leidingen weggewerkt"],
+        label: "Februari", year: "2026",
+        title: "Indeling af & techniek erin",
+        text: "De nieuwe indeling werd afgemaakt en alle techniek kwam op zijn " +
+              "plek: elektra, leidingwerk, de eerste isolatie en een nieuwe " +
+              "ondervloer.",
+        highlights: ["Nieuwe indeling afgemaakt", "Nieuwe elektra en leidingwerk aangelegd", "Gestart met isoleren", "Nieuwe ondervloer gestort"],
         image: "images/tijdens-4.svg"
       },
       {
-        label: "Mei", year: "2026",
-        title: "Het dak",
-        text: "De buitenkant van het dak volledig vervangen, terwijl de " +
-              "originele kap uit 1780 binnen in het zicht bleef.",
-        highlights: ["Buitenkant dak vervangen", "Kapconstructie hersteld en geschilderd"],
+        label: "Maart", year: "2026",
+        title: "Dak isoleren & badkamer betegelen",
+        text: "Boven werd het hele dak geïsoleerd, beneden kreeg de badkamer " +
+              "zijn tegels.",
+        highlights: ["Hele dak geïsoleerd", "Badkamer betegeld"],
         image: "images/tijdens-5.svg"
       },
       {
-        label: "Juni", year: "2026",
-        title: "Afwerking",
-        text: "Stucwerk, schilderwerk en de eindvloer — de maand waarin het " +
-              "van bouwplaats een thuis werd.",
-        highlights: ["Wanden gestuukt en geschilderd", "Eindvloer gelegd"],
+        label: "April", year: "2026",
+        title: "Gipsplaten & een nieuw dak",
+        text: "Alle wanden en het dak kregen gips- en stucplaten. Buiten werd " +
+              "het dak volledig gestript en voorzien van folie, nieuwe " +
+              "panlatten en dakpannen.",
+        highlights: ["Wanden en dak voorzien van gips-/stucplaten", "Buitenkant dak volledig gestript", "Folie, panlatten en nieuwe dakpannen aangebracht"],
         image: "images/tijdens-6.svg"
       },
       {
-        label: "Juli", year: "2026",
-        title: "De finish",
-        text: "Badkamer, toilet en keuken afgemonteerd en het appartement " +
-              "ingericht. Acht maanden na de eerste sloopdag: klaar.",
-        highlights: ["Badkamer, toilet en keuken afgemonteerd", "Inrichting & styling", "Klaar om te wonen"],
+        label: "Mei", year: "2026",
+        title: "Stucwerk & dakramen",
+        text: "Het volledige appartement werd gestuct, de trap dichtgemaakt " +
+              "en de twee nieuwe dakramen geplaatst.",
+        highlights: ["Volledige appartement gestuct", "Trap dichtgemaakt", "Twee nieuwe dakramen geplaatst"],
+        image: "images/tijdens-7.svg"
+      },
+      {
+        label: "Juni", year: "2026",
+        title: "Keuken, vloer, verf & behang",
+        text: "De grote afbouwmaand: keuken opgehaald en in elkaar gezet, " +
+              "PVC-vloer geplakt, stopcontacten geplaatst, sierlijsten om de " +
+              "deurposten en alles geschilderd. Het behang kwam in de " +
+              "slaapkamer en het toilet, en de eerste meubels werden geleverd.",
+        highlights: ["Keuken opgehaald en in elkaar gezet", "PVC-vloer geplakt", "Stopcontacten geplaatst", "Sierlijsten en al het schilderwerk", "Behang in slaapkamer en toilet", "Eerste meubels geleverd"],
         image: "images/tijdens-8.svg"
+      },
+      {
+        label: "Juli", year: "2026",
+        title: "De laatste loodjes",
+        text: "Afwerkklusjes overal: deurbeslag, kastjes, de kledingkast en " +
+              "het bed. De buitendeur werd opgeknapt en geverfd en de keuken " +
+              "gemonteerd. Daarna alles het huis in, schoongemaakt en " +
+              "ingericht — klaar.",
+        highlights: ["Deurbeslag, kastjes, kledingkast en bed", "Buitendeur opgeknapt en geverfd", "Keuken gemonteerd", "Schoongemaakt en volledig ingericht"],
+        image: "images/tijdens-9.svg"
       }
     ]
   },
