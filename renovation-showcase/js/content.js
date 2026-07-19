@@ -146,7 +146,7 @@ const CONTENT = {
           "toen gebeurde.",
     items: [
       {
-        label: "November", year: "2025",
+        label: "December", year: "2025",
         title: "Het plan",
         text: "Voordat de eerste hamer viel: de nieuwe indeling uitgetekend, " +
               "3D-renderingen gemaakt en de hele verbouwing voorbereid.",
@@ -154,7 +154,7 @@ const CONTENT = {
         image: "images/render-3d.svg"
       },
       {
-        label: "December", year: "2025",
+        label: "Januari", year: "2026",
         title: "Strippen",
         text: "Alles eruit. Wanden, plafonds, vloeren en installaties — terug " +
               "tot het kale casco uit 1780.",
@@ -162,7 +162,7 @@ const CONTENT = {
         image: "images/tijdens-1.svg"
       },
       {
-        label: "Januari", year: "2026",
+        label: "Februari", year: "2026",
         title: "De nieuwe indeling",
         text: "De nieuwe wanden gingen omhoog, precies volgens het ontwerp " +
               "uit fase 0.",
@@ -170,7 +170,7 @@ const CONTENT = {
         image: "images/tijdens-2.svg"
       },
       {
-        label: "Februari", year: "2026",
+        label: "Maart", year: "2026",
         title: "Vloer & vloerverwarming",
         text: "De aflopende vloer werd eindelijk vlak — en meteen voorzien " +
               "van vloerverwarming door het hele appartement.",
@@ -178,7 +178,7 @@ const CONTENT = {
         image: "images/tijdens-3.svg"
       },
       {
-        label: "Maart", year: "2026",
+        label: "April", year: "2026",
         title: "Isoleren",
         text: "Van totaal niet geïsoleerd naar volledig ingepakt: dak, wanden " +
               "en vloer.",
@@ -186,7 +186,7 @@ const CONTENT = {
         image: "images/tijdens-4.svg"
       },
       {
-        label: "April", year: "2026",
+        label: "Mei", year: "2026",
         title: "Het dak",
         text: "De buitenkant van het dak volledig vervangen, terwijl de " +
               "originele kap uit 1780 binnen in het zicht bleef.",
@@ -194,7 +194,7 @@ const CONTENT = {
         image: "images/tijdens-5.svg"
       },
       {
-        label: "Mei", year: "2026",
+        label: "Juni", year: "2026",
         title: "Afwerking",
         text: "Stucwerk, schilderwerk en de eindvloer — de maand waarin het " +
               "van bouwplaats een thuis werd.",
@@ -202,7 +202,7 @@ const CONTENT = {
         image: "images/tijdens-6.svg"
       },
       {
-        label: "Juni", year: "2026",
+        label: "Juli", year: "2026",
         title: "De finish",
         text: "Badkamer, toilet en keuken afgemonteerd en het appartement " +
               "ingericht. Acht maanden na de eerste sloopdag: klaar.",
