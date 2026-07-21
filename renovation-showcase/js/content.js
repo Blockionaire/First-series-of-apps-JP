@@ -29,8 +29,8 @@ const CONTENT = {
       "Een appartement in het oude centrum van Oud-Beijerland, volledig gestript " +
       "en opnieuw opgebouwd. Alleen de eeuwenoude kapconstructie bleef staan. " +
       "Sleep de schuif en zie het verschil.",
-    before: "images/hero-voor.svg",
-    after: "images/hero-na.svg"
+    before: "images/hero-voor.jpg",
+    after: "images/hero-na.jpg"
   },
 
   stats: [
@@ -72,7 +72,7 @@ const CONTENT = {
         text: "Voordat er ook maar iets gesloopt werd, is de nieuwe indeling " +
               "volledig uitgetekend en in 3D gerenderd. Zo wisten we precies " +
               "waar we naartoe werkten.",
-        image: "images/render-3d.svg"
+        image: "images/tl-0.jpg"
       },
       {
         period: "Fase 1",
@@ -80,7 +80,7 @@ const CONTENT = {
         text: "Alles eruit: wanden, plafonds, vloeren en installaties. Terug tot " +
               "de kale constructie, zodat we konden zien waar we echt mee te " +
               "maken hadden.",
-        image: "images/tijdens-1.svg"
+        image: "images/tl-1.jpg"
       },
       {
         period: "Fase 2",
@@ -88,49 +88,49 @@ const CONTENT = {
         text: "De nieuwe wanden gingen omhoog, precies zoals uitgetekend in " +
               "fase 0. De oude, onlogische indeling maakte plaats voor een plan " +
               "dat past bij hoe we nu wonen.",
-        image: "images/tijdens-2.svg"
+        image: "images/tl-2.jpg"
       },
       {
         period: "Fase 3",
         title: "Nieuwe vloer & vloerverwarming",
         text: "De aflopende vloer eruit en een nieuwe, vlakke vloer erin — " +
               "compleet met vloerverwarming door het hele appartement.",
-        image: "images/tijdens-3.svg"
+        image: "images/tl-3.jpg"
       },
       {
         period: "Fase 4",
         title: "Volledige appartement isoleren",
         text: "Van totaal niet geïsoleerd naar volledig ingepakt: dak, wanden " +
               "en vloer. Het verschil in comfort (en stookkosten) is enorm.",
-        image: "images/tijdens-4.svg"
+        image: "images/tl-4.jpg"
       },
       {
         period: "Fase 5",
         title: "Vervanging buitenkant dak",
         text: "De buitenkant van het dak is volledig vervangen, terwijl de " +
               "originele kapconstructie uit 1780 binnen in het zicht bleef.",
-        image: "images/tijdens-5.svg"
+        image: "images/tl-5.jpg"
       },
       {
         period: "Fase 6",
         title: "Afwerking (stucen/schilderen/eindvloer)",
         text: "Stucwerk op de wanden, schilderwerk door het hele huis en de " +
               "eindvloer erin. De fase waarin het van bouwplaats een thuis werd.",
-        image: "images/tijdens-6.svg"
+        image: "images/tl-6.jpg"
       },
       {
         period: "Fase 7",
         title: "Afmonteren badkamer, toilet en keuken",
         text: "Sanitair, toilet en keuken geplaatst en aangesloten — de " +
               "momenten waarop alles ineens écht af begint te voelen.",
-        image: "images/tijdens-7.svg"
+        image: "images/tl-7.jpg"
       },
       {
         period: "Fase 8",
         title: "Inrichting & styling",
         text: "Meubels, verlichting, gordijnen en de laatste details. Het " +
               "sluitstuk van acht maanden verbouwen.",
-        image: "images/tijdens-8.svg"
+        image: "images/tl-8.jpg"
       }
     ]
   },
@@ -152,7 +152,7 @@ const CONTENT = {
               "compleet verbouwplan en budget. En toen: bezichtigen, bod " +
               "uitbrengen — geaccepteerd!",
         highlights: ["Heel veel 3D-renderingen gemaakt", "Verbouwplan en budget opgesteld", "Bezichtigd, bod uitgebracht en geaccepteerd"],
-        image: "images/render-3d.svg"
+        image: "images/maand-01.jpg"
       },
       {
         label: "November", year: "2025",
@@ -160,7 +160,7 @@ const CONTENT = {
         text: "Nog geen sleutel, wel al keuzes: de keuken en de badkamer " +
               "werden deze maand uitgezocht.",
         highlights: ["Keuken uitgekozen", "Badkamer uitgekozen"],
-        image: "images/tijdens-1.svg"
+        image: "images/maand-02.jpg"
       },
       {
         label: "December", year: "2025",
@@ -168,7 +168,7 @@ const CONTENT = {
         text: "Sleutel gekregen, snel de before-beelden vastgelegd en " +
               "diezelfde periode nog begonnen met strippen.",
         highlights: ["Sleutel gekregen", "Before-beelden gemaakt", "Direct gestart met strippen"],
-        image: "images/tijdens-2.svg"
+        image: "images/maand-03.jpg"
       },
       {
         label: "Januari", year: "2026",
@@ -176,7 +176,7 @@ const CONTENT = {
         text: "Het appartement werd volledig gestript tot het casco, en de " +
               "eerste wanden van de nieuwe indeling gingen omhoog.",
         highlights: ["Appartement volledig gestript", "Gestart met de nieuwe indeling"],
-        image: "images/tijdens-3.svg"
+        image: "images/maand-04.jpg"
       },
       {
         label: "Februari", year: "2026",
@@ -185,7 +185,7 @@ const CONTENT = {
               "plek: elektra, leidingwerk, de eerste isolatie en een nieuwe " +
               "ondervloer.",
         highlights: ["Nieuwe indeling afgemaakt", "Nieuwe elektra en leidingwerk aangelegd", "Gestart met isoleren", "Nieuwe ondervloer gestort"],
-        image: "images/tijdens-4.svg"
+        image: "images/maand-05.jpg"
       },
       {
         label: "Maart", year: "2026",
@@ -193,7 +193,7 @@ const CONTENT = {
         text: "Boven werd het hele dak geïsoleerd, beneden kreeg de badkamer " +
               "zijn tegels.",
         highlights: ["Hele dak geïsoleerd", "Badkamer betegeld"],
-        image: "images/tijdens-5.svg"
+        image: "images/maand-06.jpg"
       },
       {
         label: "April", year: "2026",
@@ -202,7 +202,7 @@ const CONTENT = {
               "het dak volledig gestript en voorzien van folie, nieuwe " +
               "panlatten en dakpannen.",
         highlights: ["Wanden en dak voorzien van gips-/stucplaten", "Buitenkant dak volledig gestript", "Folie, panlatten en nieuwe dakpannen aangebracht"],
-        image: "images/tijdens-6.svg"
+        image: "images/maand-07.jpg"
       },
       {
         label: "Mei", year: "2026",
@@ -210,7 +210,7 @@ const CONTENT = {
         text: "Het volledige appartement werd gestuct, de trap dichtgemaakt " +
               "en de twee nieuwe dakramen geplaatst.",
         highlights: ["Volledige appartement gestuct", "Trap dichtgemaakt", "Twee nieuwe dakramen geplaatst"],
-        image: "images/tijdens-7.svg"
+        image: "images/maand-08.jpg"
       },
       {
         label: "Juni", year: "2026",
@@ -220,7 +220,7 @@ const CONTENT = {
               "deurposten en alles geschilderd. Het behang kwam in de " +
               "slaapkamer en het toilet, en de eerste meubels werden geleverd.",
         highlights: ["Keuken opgehaald en in elkaar gezet", "PVC-vloer geplakt", "Stopcontacten geplaatst", "Sierlijsten en al het schilderwerk", "Behang in slaapkamer en toilet", "Eerste meubels geleverd"],
-        image: "images/tijdens-8.svg"
+        image: "images/maand-09.jpg"
       },
       {
         label: "Juli", year: "2026",
@@ -230,7 +230,7 @@ const CONTENT = {
               "gemonteerd. Daarna alles het huis in, schoongemaakt en " +
               "ingericht — klaar.",
         highlights: ["Deurbeslag, kastjes, kledingkast en bed", "Buitendeur opgeknapt en geverfd", "Keuken gemonteerd", "Schoongemaakt en volledig ingericht"],
-        image: "images/tijdens-9.svg"
+        image: "images/maand-10.jpg"
       }
     ]
   },
@@ -298,9 +298,9 @@ const CONTENT = {
       id: "woonkamer",
       name: "Woonkamer",
       tagline: "Het hart van het appartement",
-      before: "images/woonkamer-voor.svg",
-      during: "images/woonkamer-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
-      after: "images/woonkamer-na.svg",
+      before: "images/woonkamer-voor.jpg",
+      during: "images/woonkamer-tijdens.jpg",   /* weghalen = gewone voor/na-schuif */
+      after: "images/woonkamer-na.jpg",
       tabs: {
         "Wat we deden":
           "Beschrijf hier wat er in de woonkamer is gedaan: nieuwe vloer, " +
@@ -324,9 +324,9 @@ const CONTENT = {
       id: "keuken",
       name: "Keuken",
       tagline: "Van gedateerd naar op maat",
-      before: "images/keuken-voor.svg",
-      during: "images/keuken-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
-      after: "images/keuken-na.svg",
+      before: "images/keuken-voor.jpg",
+      during: "images/keuken-tijdens.jpg",   /* weghalen = gewone voor/na-schuif */
+      after: "images/keuken-na.jpg",
       tabs: {
         "Wat we deden": "Beschrijf hier wat er in de keuken is gedaan.",
         "Obstakels": "Beschrijf hier de obstakels in de keuken.",
@@ -338,9 +338,9 @@ const CONTENT = {
       id: "badkamer",
       name: "Badkamer",
       tagline: "Volledig opnieuw opgebouwd",
-      before: "images/badkamer-voor.jpeg",
-      during: "images/badkamer-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
-      after: "images/badkamer-na.jpeg",
+      before: "images/badkamer-voor.jpg",
+      during: "images/badkamer-tijdens.jpg",   /* weghalen = gewone voor/na-schuif */
+      after: "images/badkamer-na.jpg",
       tabs: {
         "Wat we deden": "Beschrijf hier wat er in de badkamer is gedaan.",
         "Obstakels": "Beschrijf hier de obstakels in de badkamer.",
@@ -352,9 +352,9 @@ const CONTENT = {
       id: "slaapkamer",
       name: "Slaapkamer",
       tagline: "Rust en warmte",
-      before: "images/slaapkamer-voor.svg",
-      during: "images/slaapkamer-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
-      after: "images/slaapkamer-na.svg",
+      before: "images/slaapkamer-voor.jpg",
+      during: "images/slaapkamer-tijdens.jpg",   /* weghalen = gewone voor/na-schuif */
+      after: "images/slaapkamer-na.jpg",
       tabs: {
         "Wat we deden": "Beschrijf hier wat er in de slaapkamer is gedaan.",
         "Obstakels": "Beschrijf hier de obstakels in de slaapkamer.",
@@ -366,9 +366,9 @@ const CONTENT = {
       id: "dak",
       name: "Het dak",
       tagline: "Het enige originele onderdeel — anno 1780",
-      before: "images/dak-voor.svg",
-      during: "images/dak-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
-      after: "images/dak-na.svg",
+      before: "images/dak-voor.jpg",
+      during: "images/dak-tijdens.jpg",   /* weghalen = gewone voor/na-schuif */
+      after: "images/dak-na.jpg",
       tabs: {
         "Wat we deden":
           "De kap is schoongemaakt, hersteld waar het hout dat nodig had en " +
@@ -385,9 +385,9 @@ const CONTENT = {
       id: "hal",
       name: "Hal",
       tagline: "De verbinding tussen alle ruimtes",
-      before: "images/hal-voor.svg",
-      during: "images/hal-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
-      after: "images/hal-na.svg",
+      before: "images/hal-voor.jpg",
+      during: "images/hal-tijdens.jpg",   /* weghalen = gewone voor/na-schuif */
+      after: "images/hal-na.jpg",
       tabs: {
         "Wat we deden": "Beschrijf hier wat er in de hal is gedaan.",
         "Obstakels": "Beschrijf hier de obstakels in de hal.",
@@ -399,9 +399,9 @@ const CONTENT = {
       id: "entree",
       name: "Entree",
       tagline: "De eerste indruk",
-      before: "images/entree-voor.svg",
-      during: "images/entree-tijdens.svg",   /* weghalen = gewone voor/na-schuif */
-      after: "images/entree-na.svg",
+      before: "images/entree-voor.jpg",
+      during: "images/entree-tijdens.jpg",   /* weghalen = gewone voor/na-schuif */
+      after: "images/entree-na.jpg",
       tabs: {
         "Wat we deden": "Beschrijf hier wat er bij de entree is gedaan.",
         "Obstakels": "Beschrijf hier de obstakels bij de entree.",
@@ -446,34 +446,34 @@ const CONTENT = {
       {
         label: "Voor",
         items: [
-          { src: "images/woonkamer-voor.svg",  caption: "Woonkamer bij aankoop" },
-          { src: "images/keuken-voor.svg",     caption: "De oude keuken" },
-          { src: "images/badkamer-voor.jpeg",  caption: "De oude badkamer" },
-          { src: "images/slaapkamer-voor.svg", caption: "De oude slaapkamer" },
-          { src: "images/dak-voor.svg",        caption: "Het dak vóór het herstel" },
-          { src: "images/hal-voor.svg",        caption: "De oude hal" }
+          { src: "images/gal-voor-1.jpg",  caption: "Woonkamer bij aankoop" },
+          { src: "images/gal-voor-2.jpg",     caption: "De oude keuken" },
+          { src: "images/gal-voor-3.jpg",  caption: "De oude badkamer" },
+          { src: "images/gal-voor-4.jpg", caption: "De oude slaapkamer" },
+          { src: "images/gal-voor-5.jpg",        caption: "Het dak vóór het herstel" },
+          { src: "images/gal-voor-6.jpg",        caption: "De oude hal" }
         ]
       },
       {
         label: "Tijdens",
         items: [
-          { src: "images/tijdens-1.svg", caption: "Gestript tot op het casco" },
-          { src: "images/tijdens-2.svg", caption: "De nieuwe indeling gaat omhoog" },
-          { src: "images/tijdens-3.svg", caption: "Nieuwe vloer en vloerverwarming" },
-          { src: "images/tijdens-4.svg", caption: "Isolatie" },
-          { src: "images/tijdens-5.svg", caption: "Het dak wordt vervangen" },
-          { src: "images/tijdens-6.svg", caption: "De afwerking" }
+          { src: "images/gal-tijdens-1.jpg", caption: "Gestript tot op het casco" },
+          { src: "images/gal-tijdens-2.jpg", caption: "De nieuwe indeling gaat omhoog" },
+          { src: "images/gal-tijdens-3.jpg", caption: "Nieuwe vloer en vloerverwarming" },
+          { src: "images/gal-tijdens-4.jpg", caption: "Isolatie" },
+          { src: "images/gal-tijdens-5.jpg", caption: "Het dak wordt vervangen" },
+          { src: "images/gal-tijdens-6.jpg", caption: "De afwerking" }
         ]
       },
       {
         label: "Na",
         items: [
-          { src: "images/woonkamer-na.svg",  caption: "De nieuwe woonkamer" },
-          { src: "images/keuken-na.svg",     caption: "De nieuwe keuken" },
-          { src: "images/badkamer-na.jpeg",  caption: "De nieuwe badkamer" },
-          { src: "images/slaapkamer-na.svg", caption: "De nieuwe slaapkamer" },
-          { src: "images/dak-na.svg",        caption: "Het dak, hersteld en geschilderd" },
-          { src: "images/entree-na.svg",     caption: "De nieuwe entree" }
+          { src: "images/gal-na-1.jpg",  caption: "De nieuwe woonkamer" },
+          { src: "images/gal-na-2.jpg",     caption: "De nieuwe keuken" },
+          { src: "images/gal-na-3.jpg",  caption: "De nieuwe badkamer" },
+          { src: "images/gal-na-4.jpg", caption: "De nieuwe slaapkamer" },
+          { src: "images/gal-na-5.jpg",        caption: "Het dak, hersteld en geschilderd" },
+          { src: "images/gal-na-6.jpg",     caption: "De nieuwe entree" }
         ]
       }
     ]
