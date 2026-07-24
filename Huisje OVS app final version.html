@@ -4246,10 +4246,17 @@ const KLUSDAGEN_SEED = [
 let klusWeekOffset = 0;
 let currentTab = 'streep';
 let _tabSwitching = false;
-const kdTakenCollapsed = {};
+// Load collapsed state from localStorage
+const _kdCollapsedRaw = localStorage.getItem('kd-taken-collapsed');
+const kdTakenCollapsed = _kdCollapsedRaw ? JSON.parse(_kdCollapsedRaw) : {};
+
+function saveKdCollapsed() {
+  localStorage.setItem('kd-taken-collapsed', JSON.stringify(kdTakenCollapsed));
+}
 
 function toggleKdTaken(kdId) {
   kdTakenCollapsed[kdId] = !kdTakenCollapsed[kdId];
+  saveKdCollapsed();
   renderKlusdagen();
 }
 let klusdagEditId = null;
@@ -4380,6 +4387,14 @@ function toggleKlusTaak(kdId, taakIdx) {
     const pt = state.planning.find(t => t.taak === planTaak);
     if (pt) pt.status = kd.taken[taakIdx].done ? 'klaar' : 'gepland';
   }
+
+  // Auto-collapse when all taken are done
+  const allDone = kd.taken.length > 0 && kd.taken.every(t => t.done);
+  if (allDone) {
+    kdTakenCollapsed[kdId] = true;
+    saveKdCollapsed();
+  }
+
   save(); renderKlusdagen(); if (currentPage === 'planning') renderPlanning(); renderOverzicht();
 }
 
