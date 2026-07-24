@@ -1126,7 +1126,24 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   .bn-meer-icon { width: 20px; height: 20px; color: #3a3a3c; flex-shrink: 0; }
   [data-theme="dark"] .bn-meer-icon { color: #ebebf5; }
 
-  /* CASHFLOW */
+  /* Round checkboxes for klusdag task list */
+  .kd-cb-wrap { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:0.5px solid var(--border); cursor:pointer; }
+  .kd-cb-wrap:last-child { border-bottom:none; }
+  .kd-cb { display:none; }
+  .kd-cb-dot {
+    width:20px; height:20px; border-radius:50%; border:1.5px solid var(--border2);
+    background:var(--surface); flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    transition:background 0.15s, border-color 0.15s;
+  }
+  .kd-cb:checked + .kd-cb-dot {
+    background:#1c1c1e; border-color:#1c1c1e;
+  }
+  .kd-cb:checked + .kd-cb-dot::after {
+    content:''; width:5px; height:9px; border:2px solid #fff;
+    border-top:none; border-left:none; transform:rotate(45deg) translate(-1px,-1px); display:block;
+  }
+  [data-theme="dark"] .kd-cb:checked + .kd-cb-dot { background:#f2f2f7; border-color:#f2f2f7; }
+  [data-theme="dark"] .kd-cb:checked + .kd-cb-dot::after { border-color:#1c1c1e; }
   .cf-toggle-btn {
     flex: 1; padding: 8px 0;
     font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
@@ -1629,7 +1646,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
     <span class="bn-label">Klusdagen</span>
   </button>
-  <button class="bn-btn" id="bn-meer" onclick="toggleMeerPanel()">
+  <button class="bn-btn" id="bn-meer" onclick="toggleMeerPanel(event)">
     <svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>
     <span class="bn-label">Meer</span>
   </button>
@@ -1667,7 +1684,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     </div>
     <div class="form-group" id="form-vermogen-correctie-group" style="display:none">
       <label class="form-label">Betaald vanuit</label>
-      <select class="form-select" id="form-vermogen-correctie">
+      <select class="form-select" id="form-vermogen-correctie" onchange="updateVermogenCorrectieInfo();this.style.outline=''">
         <option value="">— Niet corrigeren —</option>
       </select>
       <div style="font-size:11px;color:var(--text3);margin-top:5px;" id="form-vermogen-correctie-info"></div>
@@ -1689,15 +1706,15 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     </div>
     <div class="form-group" id="form-werkelijk-group" style="display:none">
       <label class="form-label">Werkelijk bedrag (€)</label>
-      <input class="form-input" type="number" id="form-werkelijk" placeholder="0" inputmode="decimal">
+      <input class="form-input" type="number" id="form-werkelijk" placeholder="0" inputmode="decimal" oninput="recalcNogOpen();markModalChanged()">
     </div>
     <div class="form-group" id="form-betaald-group" style="display:none">
       <label class="form-label">Al betaald (€)</label>
-      <input class="form-input" type="number" id="form-betaald" placeholder="0" inputmode="decimal">
+      <input class="form-input" type="number" id="form-betaald" placeholder="0" inputmode="decimal" oninput="recalcNogOpen();markModalChanged()">
     </div>
     <div class="form-group" id="form-nogopen-group" style="display:none">
-      <label class="form-label">Nog te betalen (€)</label>
-      <input class="form-input" type="number" id="form-nogopen" placeholder="0" inputmode="decimal">
+      <label class="form-label">Nog te betalen (€) <span style="font-size:11px;color:var(--text3);font-weight:400;">automatisch berekend</span></label>
+      <input class="form-input" type="number" id="form-nogopen" placeholder="0" readonly style="background:var(--surface2);color:var(--text2);cursor:default;">
     </div>
     <div class="form-group" id="form-levering-group" style="display:none">
       <label class="form-label">Levering / ophalen</label>
@@ -2999,6 +3016,9 @@ function renderMeubelsSearch() {
     const ri = items.indexOf(item);
     const bc = catBadge[item.cat] || 'open';
     const badge = `<span class="badge ${bc}">${statusLabel[item.cat]||item.cat}</span>`;
+    const weekBadge = item.betaalweek && item.status === 'nog-te-betalen'
+      ? `<span class="badge" style="background:rgba(74,144,217,0.15);color:#2563b0;">w${item.betaalweek}</span>`
+      : '';
     const sub = [item.merk, item.note].filter(Boolean).join(' · ');
     const displayAmt = parseFloat(item.nogOpen||0) > 0 ? item.nogOpen : (item.betaald > 0 ? item.betaald : item.begroot||0);
     const amtCls = parseFloat(item.nogOpen||0) > 0 ? 'amber' : (item.betaald > 0 ? 'green' : 'red');
@@ -3006,7 +3026,7 @@ function renderMeubelsSearch() {
       <div class="item-info">
         <div class="item-name">${esc(item.name)}</div>
         ${sub ? `<div class="item-meta">${esc(sub)}</div>` : ''}
-        ${badge}
+        ${badge}${weekBadge}
       </div>
       <div class="item-amount ${amtCls}">${fmt(displayAmt)}</div>
     </div>`;
@@ -3202,7 +3222,8 @@ function goToPage(page, tab) {
   navigateToPage(page, tab);
 }
 
-function toggleMeerPanel() {
+function toggleMeerPanel(e) {
+  if (e) e.stopPropagation();
   const panel = document.getElementById('bn-meer-panel');
   if (panel) panel.classList.toggle('open');
 }
@@ -3495,7 +3516,10 @@ function openPlanModal(editIdx) {
   const kdSel = document.getElementById('pf-klusdag-select');
   if (kdSel) {
     const taakNaam = t ? t.taak : null;
-    const klusdagen = (state.klusdagen||[]).sort((a,b) => new Date(a.datum)-new Date(b.datum));
+    const today = new Date(); today.setHours(0,0,0,0);
+    const klusdagen = (state.klusdagen||[])
+      .filter(kd => { const parts = kd.datum.split('-'); return new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2])) >= today; })
+      .sort((a,b) => new Date(a.datum)-new Date(b.datum));
     kdSel.innerHTML = '<option value="">— Niet koppelen —</option>' +
       klusdagen.map(kd => {
         const parts = kd.datum.split('-');
@@ -4366,7 +4390,7 @@ function renderKdPlanTaken() {
   if (!planList) return;
   const query = (document.getElementById('kd-plan-search')?.value || '').toLowerCase().trim();
   const curWeek = getCurrentWeek();
-  let taken = [...(state.planning||[])].filter(t => t.status !== 'uitgesteld');
+  let taken = [...(state.planning||[])].filter(t => t.status !== 'uitgesteld' && t.status !== 'klaar');
   // Sort: open first by week proximity, klaar at bottom
   taken.sort((a,b) => {
     const aKlaar = a.status === 'klaar', bKlaar = b.status === 'klaar';
@@ -4380,10 +4404,10 @@ function renderKdPlanTaken() {
   );
   planList.innerHTML = taken.map(t => {
     const checked = kdSelectedPlanningTaken.includes(t.taak);
-    const isKlaar = t.status === 'klaar';
-    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:5px 0;border-bottom:0.5px solid var(--border);${isKlaar?'opacity:0.45;':''}">
-      <input type="checkbox" value="${esc(t.taak)}" ${checked?'checked':''} onchange="toggleKdPlanTaak(this)" style="width:16px;height:16px;cursor:pointer;accent-color:#111;flex-shrink:0;">
-      <span style="flex:1;">${esc(t.taak)} <span style="color:var(--text3);font-size:11px;">· w${t.week}${t.weekEnd?'–'+t.weekEnd:''} · ${esc(t.wie||'')}</span></span>
+    return `<label class="kd-cb-wrap">
+      <input class="kd-cb" type="checkbox" value="${esc(t.taak)}" ${checked?'checked':''} onchange="toggleKdPlanTaak(this)">
+      <span class="kd-cb-dot"></span>
+      <span style="flex:1;font-size:13px;">${esc(t.taak)} <span style="color:var(--text3);font-size:11px;">· w${t.week}${t.weekEnd?'–'+t.weekEnd:''} · ${esc(t.wie||'')}</span></span>
     </label>`;
   }).join('') || '<div style="color:var(--text3);font-size:12px;padding:8px 0;">Geen taken gevonden</div>';
 }
@@ -4414,12 +4438,24 @@ function openKlusdagModal(editId) {
   const kd = kdEditId ? (state.klusdagen||[]).find(k => k.id === kdEditId) : null;
 
   setText('klusdag-modal-title', kd ? 'Klusdag bewerken' : 'Klusdag toevoegen');
-  // Set datum - use today if no existing datum
-  const today = new Date();
-  const todayStr = today.getFullYear() + '-' +
-    String(today.getMonth()+1).padStart(2,'0') + '-' +
-    String(today.getDate()).padStart(2,'0');
-  document.getElementById('kd-datum').value = kd ? kd.datum : todayStr;
+  // Set datum - use Monday of viewed week for new klusdag, today as fallback
+  let defaultDatum;
+  if (!kd) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const {mon, sun} = getKlusWeekDates(klusWeekOffset);
+    // Als de huidige week bekeken wordt, stel vandaag voor; anders de maandag van die week
+    if (klusWeekOffset === 0) {
+      defaultDatum = today.getFullYear() + '-' +
+        String(today.getMonth()+1).padStart(2,'0') + '-' +
+        String(today.getDate()).padStart(2,'0');
+    } else {
+      defaultDatum = mon.getFullYear() + '-' +
+        String(mon.getMonth()+1).padStart(2,'0') + '-' +
+        String(mon.getDate()).padStart(2,'0');
+    }
+  }
+  document.getElementById('kd-datum').value = kd ? kd.datum : defaultDatum;
   // Reset validation styles
   document.getElementById('kd-datum').style.borderColor = '';
   document.getElementById('kd-datum').style.background = '';
@@ -4709,6 +4745,7 @@ async function load() {
       localStorage.setItem('ovs-v16', JSON.stringify(state));
       render();
       renderOverzicht();
+      applyPageToggles();
       setupRealtime();
       return;
     }
@@ -4777,6 +4814,7 @@ async function load() {
   }
   render();
   renderOverzicht();
+  applyPageToggles();
   setupRealtime();
 }
 function save() {
@@ -4942,7 +4980,7 @@ function toggleVermogenSort() {
 
 function renderLists(sec, lists) {
   const items = state.items[sec] || [];
-  const statusLabel = {open:'Open',paid:'Betaald',cadeau:'Cadeau',wacht:'Wachten',partial:'Deels',gekocht:'Gekocht',deels:'Deels',nog:'Nog aan te schaffen',verwacht:'Verwacht',gedeeltelijk:'Gedeeltelijk betaald',ontvangen:'Ontvangen',betaald:'Betaald'};
+  const statusLabel = {open:'Open',paid:'Betaald',cadeau:'Cadeau',wacht:'Wachten',partial:'Deels',gekocht:'Gekocht',deels:'Deels',nog:'Nog aan te schaffen','nog-te-betalen':'Nog te betalen',verwacht:'Verwacht',gedeeltelijk:'Gedeeltelijk betaald',ontvangen:'Ontvangen',betaald:'Betaald'};
   const catBadge = {gekocht:'paid',deels:'partial',nog:'open',cadeau:'cadeau',wacht:'wacht',verwacht:'open',gedeeltelijk:'partial',ontvangen:'paid'};
   lists.forEach(({id, cat, color, showStatus}) => {
     const el = document.getElementById(id);
@@ -4985,12 +5023,15 @@ function renderLists(sec, lists) {
       }
       const nameStyle = isTeOntv && item.status === 'ontvangen' ? 'text-decoration:line-through;color:var(--text3)' : '';
       const partialNote = isTeOntv && item.status === 'gedeeltelijk' ? ` <span style="font-size:10px;color:var(--text3);">(${fmt(item.ontvangen||0)} ontvangen)</span>` : '';
+      const weekBadge = item.betaalweek && item.status === 'nog-te-betalen'
+        ? `<span class="badge" style="background:rgba(74,144,217,0.15);color:#2563b0;">w${item.betaalweek}</span>`
+        : '';
       return `<div class="item-row" onclick="openEdit('${sec}',${ri})">
         <div class="item-info">
           <div class="item-name" style="${nameStyle}">${esc(item.name)}${partialNote}</div>
           ${subtitle ? `<div class="item-meta">${esc(subtitle)}</div>` : ''}
           ${note2 ? `<div class="item-meta">${esc(note2)}</div>` : ''}
-          ${badge}
+          ${badge}${weekBadge}
         </div>
         <div class="item-amount ${amtCls}">${fmt(displayAmt)}</div>
       </div>`;
@@ -5024,7 +5065,7 @@ function openModal(section, editIdx) {
     else document.getElementById('form-cat').value = catOpts[0].v;
   } else { catGrp.style.display = 'none'; }
 
-  const showStatus = ['nog-te-maken','gemaakte-kosten','te-ontvangen'].includes(section);
+  const showStatus = ['nog-te-maken','gemaakte-kosten','te-ontvangen','meubels','bruiloft'].includes(section);
   document.getElementById('form-status-group').style.display = showStatus ? 'block' : 'none';
   // Set options based on section
   const statusSel = document.getElementById('form-status');
@@ -5040,6 +5081,13 @@ function openModal(section, editIdx) {
       <option value="gedeeltelijk">Gedeeltelijk betaald</option>
       <option value="betaald">Betaald</option>
       <option value="cadeau">Cadeau gekregen</option>`;
+  } else if (['meubels','bruiloft'].includes(section)) {
+    statusSel.innerHTML = `
+      <option value="nog">Nog aan te schaffen</option>
+      <option value="nog-te-betalen">Nog te betalen</option>
+      <option value="gedeeltelijk">Gedeeltelijk betaald</option>
+      <option value="betaald">Betaald</option>
+      <option value="cadeau">Cadeau gekregen</option>`;
   } else {
     statusSel.innerHTML = `
       <option value="nog">Nog aan te schaffen</option>
@@ -5047,7 +5095,6 @@ function openModal(section, editIdx) {
   }
   const defaultStatus = section === 'te-ontvangen' ? 'verwacht' : (section === 'gemaakte-kosten' ? 'betaald' : 'nog');
   if (showStatus) statusSel.value = item ? (item.status || defaultStatus) : defaultStatus;
-  // Show/hide partial betaald field for nog-te-maken / gemaakte-kosten
   const isPartialKosten = ['nog-te-maken','gemaakte-kosten'].includes(section) && statusSel.value === 'gedeeltelijk';
   const isPartialOntv = section === 'te-ontvangen' && statusSel.value === 'gedeeltelijk';
   document.getElementById('form-partial-group').style.display = (isPartialKosten || isPartialOntv) ? 'block' : 'none';
@@ -5069,10 +5116,9 @@ function openModal(section, editIdx) {
     }
   }
 
-  // Vermogen correctie: optional for all cost sections
-  // Default = "Niet corrigeren" so user explicitly has to choose
+  // Vermogen correctie: voor gemaakte-kosten betaald én gedeeltelijk; nog-te-maken betaald; meubels
   const showVcg = (
-    (['nog-te-maken','gemaakte-kosten'].includes(section) && ['betaald','gedeeltelijk'].includes(statusSel.value)) ||
+    (['gemaakte-kosten','nog-te-maken'].includes(section) && ['betaald','gedeeltelijk'].includes(statusSel.value)) ||
     (section === 'meubels' && item && ['gekocht','deels'].includes(item.cat))
   );
   if (vcg) vcg.style.display = showVcg ? 'block' : 'none';
@@ -5095,10 +5141,15 @@ function openModal(section, editIdx) {
     const vcg = document.getElementById('form-vermogen-correctie-group');
     if (['nog-te-maken','gemaakte-kosten'].includes(section)) {
       pg.style.display = this.value === 'gedeeltelijk' ? 'block' : 'none';
-      // Show vermogen correctie for both sections - user explicitly chooses or leaves empty
       const showCorr = ['betaald','gedeeltelijk'].includes(this.value);
       if (vcg) vcg.style.display = showCorr ? 'block' : 'none';
-      if (showCorr) populateVermogenCorrectie();
+      if (showCorr) {
+        populateVermogenCorrectie();
+        if (item && item.vermogenCorrectieKey) {
+          const s = document.getElementById('form-vermogen-correctie');
+          if (s) { s.value = item.vermogenCorrectieKey; updateVermogenCorrectieInfo(); }
+        }
+      }
     } else if (section === 'te-ontvangen') {
       pg.style.display = this.value === 'gedeeltelijk' ? 'block' : 'none';
       if (vcg) vcg.style.display = 'none';
@@ -5121,7 +5172,7 @@ function openModal(section, editIdx) {
     document.getElementById('form-begroot').value = item.begroot||0;
     document.getElementById('form-werkelijk').value = item.werkelijk||0;
     document.getElementById('form-betaald').value = item.betaald||0;
-    document.getElementById('form-nogopen').value = item.nogOpen||0;
+    recalcNogOpen();
     setLeverType(item.leverType||'geen');
     document.getElementById('form-leverdatum').value = item.leverdatum||'';
     // Show vermogen correctie for meubels always (user decides)
@@ -5135,26 +5186,42 @@ function openModal(section, editIdx) {
     }
   } else if (isMeubel) {
     ['form-merk','form-begroot','form-werkelijk','form-betaald','form-nogopen'].forEach(id => { const e = document.getElementById(id); if(e) e.value = id === 'form-merk' ? '' : 0; });
+    recalcNogOpen();
     setLeverType('geen');
     document.getElementById('form-leverdatum').value = '';
     if (vcg) { vcg.style.display = 'block'; populateVermogenCorrectie(); }
   }
   document.getElementById('btn-delete').style.display = editIndex !== null ? 'block' : 'none';
 
-  // Betaalweek: only for nog-te-maken
+  // Betaalweek: for nog-te-maken always, for meubels/bruiloft only when status = nog-te-betalen
+  const isMeubelOrBruiloft = ['meubels','bruiloft'].includes(section);
   const betaalweekGroup = document.getElementById('form-betaalweek-group');
+  function updateBetaalweekVisibility() {
+    const statusVal = document.getElementById('form-status')?.value;
+    const nogOpen = parseFloat(document.getElementById('form-nogopen')?.value) || 0;
+    const show = isNogTeMaken
+      || (section === 'bruiloft' && statusVal === 'nog-te-betalen')
+      || (section === 'meubels' && nogOpen > 0);
+    if (betaalweekGroup) betaalweekGroup.style.display = show ? 'block' : 'none';
+  }
   if (betaalweekGroup) {
-    betaalweekGroup.style.display = isNogTeMaken ? 'block' : 'none';
-    if (isNogTeMaken) {
-      const sel = document.getElementById('form-betaalweek');
-      const startWeek = appSettings.startweek || getCurrentWeek();
-      const endWeek = (appSettings.opleverweek || getCurrentWeek() + 12) + 4;
-      let opts = '<option value="">— Geen week geselecteerd —</option>';
-      for (let w = startWeek; w <= endWeek; w++) {
-        opts += `<option value="${w}">Week ${w}</option>`;
-      }
-      sel.innerHTML = opts;
-      sel.value = item ? (item.betaalweek || '') : '';
+    // Populate week options
+    const sel = document.getElementById('form-betaalweek');
+    const startWeek = appSettings.startweek || getCurrentWeek();
+    const endWeek = (appSettings.opleverweek || getCurrentWeek() + 12) + 4;
+    let opts = '<option value="">— Geen week geselecteerd —</option>';
+    for (let w = startWeek; w <= endWeek; w++) {
+      opts += `<option value="${w}">Week ${w}</option>`;
+    }
+    sel.innerHTML = opts;
+    sel.value = item ? (item.betaalweek || '') : '';
+    updateBetaalweekVisibility();
+    // Update visibility when status changes
+    const statusEl = document.getElementById('form-status');
+    if (statusEl) {
+      statusEl.removeEventListener('change', statusEl._betaalweekHandler);
+      statusEl._betaalweekHandler = () => { updateBetaalweekVisibility(); markModalChanged(); };
+      statusEl.addEventListener('change', statusEl._betaalweekHandler);
     }
   }
   openModal_base('modal-backdrop');
@@ -5166,6 +5233,19 @@ function closeModal() {
   confirmCloseModal(() => { closeModal_base('modal-backdrop', resetModalChanges); });
 }
 function closeModalBg(e) { if (e.target === document.getElementById('modal-backdrop')) closeModal(); }
+
+function recalcNogOpen() {
+  const werkelijk = parseFloat(document.getElementById('form-werkelijk')?.value) || 0;
+  const betaald = parseFloat(document.getElementById('form-betaald')?.value) || 0;
+  const nogOpen = Math.max(0, werkelijk - betaald);
+  const el = document.getElementById('form-nogopen');
+  if (el) el.value = nogOpen || '';
+  // Update betaalweek visibility based on new nogOpen value
+  const betaalweekGroup = document.getElementById('form-betaalweek-group');
+  if (betaalweekGroup && betaalweekGroup.style.display !== undefined) {
+    betaalweekGroup.style.display = nogOpen > 0 ? 'block' : 'none';
+  }
+}
 
 function setLeverType(type) {
   ['geen','levering','ophalen'].forEach(t => {
@@ -5282,8 +5362,8 @@ function saveItem() {
   if (cat !== undefined) item.cat = cat;
   if (status !== undefined) item.status = status;
 
-  // Betaalweek for nog-te-maken
-  if (curSection === 'nog-te-maken') {
+  // Betaalweek for nog-te-maken, meubels, bruiloft
+  if (['nog-te-maken','meubels','bruiloft'].includes(curSection)) {
     const bwEl = document.getElementById('form-betaalweek');
     item.betaalweek = bwEl && bwEl.value ? parseInt(bwEl.value) : null;
   }
@@ -5294,7 +5374,7 @@ function saveItem() {
     item.begroot = parseFloat(document.getElementById('form-begroot').value)||0;
     item.werkelijk = parseFloat(document.getElementById('form-werkelijk').value)||0;
     item.betaald = parseFloat(document.getElementById('form-betaald').value)||0;
-    item.nogOpen = parseFloat(document.getElementById('form-nogopen').value)||0;
+    item.nogOpen = Math.max(0, item.werkelijk - item.betaald);
     item.amount = item.nogOpen || item.begroot;
     const leverGeen = document.getElementById('form-levering-geen');
     const leverLev = document.getElementById('form-levering-levering');
@@ -5305,14 +5385,17 @@ function saveItem() {
     item.leverdatum = item.leverType ? (document.getElementById('form-leverdatum')?.value || null) : null;
   }
 
-  // Apply vermogen correction for cost sections + meubels
-  const corrSel = document.getElementById('form-vermogen-correctie-group');
-  if (corrSel && corrSel.style.display !== 'none') {
-    const corrKey = document.getElementById('form-vermogen-correctie').value;
+  // ── VERMOGEN CORRECTIE ──
+  // vermogenCorrectieKey = naam van de vermogenpost
+  // vermogenCorrectieAmount = het bedrag dat daadwerkelijk is afgetrokken (voor exacte undo)
+  const corrGroup = document.getElementById('form-vermogen-correctie-group');
+  if (corrGroup && corrGroup.style.display !== 'none') {
+    const corrKey = document.getElementById('form-vermogen-correctie').value || '';
     const prevItem = editIndex !== null ? (state.items[curSection]?.[editIndex]) : null;
-    const prevCorrKey = prevItem?.vermogenCorrectieKey || null;
+    const prevCorrKey = prevItem?.vermogenCorrectieKey || '';
+    const prevCorrAmount = parseFloat(prevItem?.vermogenCorrectieAmount) || 0;
 
-    // Determine new correction amount
+    // Determine new correction amount based on section
     let corrAmount = 0;
     if (corrKey) {
       if (curSection === 'meubels') {
@@ -5324,36 +5407,36 @@ function saveItem() {
       }
     }
 
-    // Determine previous correction amount
-    let prevAmount = 0;
-    if (prevCorrKey) {
-      if (curSection === 'meubels') {
-        prevAmount = parseFloat(prevItem?.betaald) || 0;
-      } else {
-        prevAmount = parseFloat(prevItem?.betaald || prevItem?.amount) || 0;
-      }
-    }
-
-    // Step 1: Undo previous correction (restore to old vermogen post)
-    if (prevCorrKey) {
+    // Step 1: Undo previous correction exactly
+    if (prevCorrKey && prevCorrAmount > 0) {
       const prevVIdx = (state.items['vermogen']||[]).findIndex(v => v.name === prevCorrKey);
       if (prevVIdx >= 0) {
-        state.items['vermogen'][prevVIdx].amount = parseFloat(state.items['vermogen'][prevVIdx].amount) + prevAmount;
+        state.items['vermogen'][prevVIdx].amount =
+          parseFloat(state.items['vermogen'][prevVIdx].amount) + prevCorrAmount;
         state.updated['vermogen'] = new Date().toISOString();
       }
     }
 
-    // Step 2: Apply new correction (deduct from new vermogen post)
+    // Step 2: Apply new correction
     if (corrKey && corrAmount > 0) {
       const newVIdx = (state.items['vermogen']||[]).findIndex(v => v.name === corrKey);
       if (newVIdx >= 0) {
-        state.items['vermogen'][newVIdx].amount = Math.max(0, parseFloat(state.items['vermogen'][newVIdx].amount) - corrAmount);
+        state.items['vermogen'][newVIdx].amount =
+          parseFloat(state.items['vermogen'][newVIdx].amount) - corrAmount;
         state.updated['vermogen'] = new Date().toISOString();
       }
       item.vermogenCorrectieKey = corrKey;
+      item.vermogenCorrectieAmount = corrAmount; // store exact amount for future undo
     } else {
-      // No correction chosen - clear the key
       item.vermogenCorrectieKey = null;
+      item.vermogenCorrectieAmount = 0;
+    }
+  } else {
+    // Field not shown — preserve existing correction data as-is (don't wipe on section that doesn't show it)
+    const prevItem = editIndex !== null ? (state.items[curSection]?.[editIndex]) : null;
+    if (prevItem?.vermogenCorrectieKey) {
+      item.vermogenCorrectieKey = prevItem.vermogenCorrectieKey;
+      item.vermogenCorrectieAmount = prevItem.vermogenCorrectieAmount || 0;
     }
   }
 
@@ -5411,12 +5494,6 @@ function saveItem() {
     const autoKey = (prev && prev.autoKey) ? prev.autoKey : ('ak_' + Date.now());
     item.autoKey = autoKey;
 
-    // Handle gedeeltelijk: save betaald amount
-    if (status === 'gedeeltelijk') {
-      item.betaald = parseFloat(document.getElementById('form-partial-amount').value) || 0;
-      item.nogBetalen = amount - item.betaald;
-    }
-
     // Determine target section based on status
     const moveToGemaakt = ['betaald','cadeau'].includes(status);
     const moveToNog = ['nog','wacht'].includes(status);
@@ -5437,9 +5514,10 @@ function saveItem() {
         if (corrKey2 && corrKey2 !== '') {
           const vIdx2 = (state.items['vermogen']||[]).findIndex(v => v.name === corrKey2);
           if (vIdx2 >= 0) {
-            state.items['vermogen'][vIdx2].amount = Math.max(0, parseFloat(state.items['vermogen'][vIdx2].amount) - amount);
+            state.items['vermogen'][vIdx2].amount = parseFloat(state.items['vermogen'][vIdx2].amount) - amount;
             state.updated['vermogen'] = new Date().toISOString();
             item.vermogenCorrectieKey = corrKey2;
+            item.vermogenCorrectieAmount = amount; // store for exact undo
           }
         }
       }
@@ -5465,14 +5543,42 @@ function saveItem() {
     }
 
     if (isGedeel) {
-      // Keep remainder in current section, add betaald part to gemaakte kosten
-      const betaaldItem = {name: item.name + ' (betaald deel)', amount: item.betaald, note: item.note, cat: cat||'overig', status: 'betaald', autoKey: autoKey + '_betaald'};
-      // Remove old auto betaald entry if exists
+      const betaaldBedrag = parseFloat(document.getElementById('form-partial-amount').value) || 0;
+      item.betaald = betaaldBedrag;
+      item.nogBetalen = amount - betaaldBedrag;
+
+      // Vermogen correctie for the betaald part
+      const corrGroup2 = document.getElementById('form-vermogen-correctie-group');
+      const corrKey2 = corrGroup2 && corrGroup2.style.display !== 'none'
+        ? (document.getElementById('form-vermogen-correctie')?.value || '') : '';
+      const prevItem2 = editIndex !== null ? (state.items[curSection]?.[editIndex]) : null;
+      const prevCorrKey2 = prevItem2?.vermogenCorrectieKey || '';
+      const prevCorrAmount2 = parseFloat(prevItem2?.vermogenCorrectieAmount) || 0;
+
+      // Undo previous
+      if (prevCorrKey2 && prevCorrAmount2 > 0) {
+        const pvIdx = (state.items['vermogen']||[]).findIndex(v => v.name === prevCorrKey2);
+        if (pvIdx >= 0) { state.items['vermogen'][pvIdx].amount = parseFloat(state.items['vermogen'][pvIdx].amount) + prevCorrAmount2; state.updated['vermogen'] = new Date().toISOString(); }
+      }
+      // Apply new
+      if (corrKey2 && betaaldBedrag > 0) {
+        const nvIdx = (state.items['vermogen']||[]).findIndex(v => v.name === corrKey2);
+        if (nvIdx >= 0) { state.items['vermogen'][nvIdx].amount = parseFloat(state.items['vermogen'][nvIdx].amount) - betaaldBedrag; state.updated['vermogen'] = new Date().toISOString(); }
+        item.vermogenCorrectieKey = corrKey2;
+        item.vermogenCorrectieAmount = betaaldBedrag;
+      } else {
+        item.vermogenCorrectieKey = null;
+        item.vermogenCorrectieAmount = 0;
+      }
+
+      // Auto-item for betaald deel in gemaakte-kosten
+      const betaaldItem = {name: item.name + ' (betaald deel)', amount: betaaldBedrag, note: item.note, cat: cat||'overig', status: 'betaald', autoKey: autoKey + '_betaald', vermogenCorrectieKey: corrKey2||null, vermogenCorrectieAmount: corrKey2 ? betaaldBedrag : 0};
       const oldBetaaldIdx = (state.items['gemaakte-kosten']||[]).findIndex(i => i.autoKey === autoKey + '_betaald');
       if (oldBetaaldIdx >= 0) state.items['gemaakte-kosten'][oldBetaaldIdx] = betaaldItem;
       else { if (!state.items['gemaakte-kosten']) state.items['gemaakte-kosten'] = []; state.items['gemaakte-kosten'].push(betaaldItem); }
       state.updated['gemaakte-kosten'] = new Date().toISOString();
-      // Keep item in nog-te-maken with remaining amount
+
+      // Remainder stays as nog-te-maken
       item.amount = item.nogBetalen;
     }
 
@@ -5567,6 +5673,15 @@ function deleteItem() {
   }
   // Remove from uitstellen if wachten item
   if (item && item.autoKey) handleWachtenStatus(item, false);
+  // Undo vermogen correction if item had one
+  if (item && item.vermogenCorrectieKey && item.vermogenCorrectieAmount > 0) {
+    const vIdx = (state.items['vermogen']||[]).findIndex(v => v.name === item.vermogenCorrectieKey);
+    if (vIdx >= 0) {
+      state.items['vermogen'][vIdx].amount =
+        parseFloat(state.items['vermogen'][vIdx].amount) + item.vermogenCorrectieAmount;
+      state.updated['vermogen'] = new Date().toISOString();
+    }
+  }
   state.items[curSection].splice(editIndex, 1);
   state.updated[curSection] = new Date().toISOString();
   resetModalChanges(); save(); render(); if(currentPage==='overzicht') renderOverzicht(); closeModal();
@@ -5585,9 +5700,17 @@ function setCashflowMode(mode) {
 }
 
 function renderCashflow() {
-  const items = (state.items['nog-te-maken'] || []).filter(item =>
-    item.betaalweek && !['betaald'].includes(item.status)
-  );
+  // Gather all items with a betaalweek across relevant sections
+  const nogTeMaken = (state.items['nog-te-maken'] || [])
+    .filter(item => item.betaalweek && !['betaald'].includes(item.status))
+    .map(item => ({...item, _section: 'Nog te maken'}));
+  const meubelItems = (state.items['meubels'] || [])
+    .filter(item => item.betaalweek && Math.max(0, (item.werkelijk||0) - (item.betaald||0)) > 0)
+    .map(item => ({...item, _section: 'Meubels', amount: Math.max(0, (item.werkelijk||0) - (item.betaald||0))}));
+  const bruiloftItems = (state.items['bruiloft'] || [])
+    .filter(item => item.betaalweek && item.status === 'nog-te-betalen')
+    .map(item => ({...item, _section: 'Bruiloft'}));
+  const items = [...nogTeMaken, ...meubelItems, ...bruiloftItems];
 
   const chart = document.getElementById('cf-chart');
   const noData = document.getElementById('cf-no-data');
@@ -5682,6 +5805,24 @@ function renderCashflow() {
     selectedLabel.style.display = 'none';
     itemList.innerHTML = '';
   }
+
+  // Scroll chart so current week/month is the first visible bar
+  requestAnimationFrame(() => {
+    const wrap = document.getElementById('cf-chart-wrap');
+    if (!wrap) return;
+    const curWeek = getCurrentWeek();
+    let curKey;
+    if (cashflowMode === 'week') {
+      curKey = String(curWeek);
+    } else {
+      const now = new Date();
+      curKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    }
+    const curBar = chart.querySelector(`[data-cf-key="${curKey}"]`);
+    if (curBar) {
+      wrap.scrollLeft = curBar.offsetLeft - wrap.offsetLeft;
+    }
+  });
 }
 
 function weekToDate(weekNum) {
@@ -5694,12 +5835,22 @@ function weekToDate(weekNum) {
 }
 
 function selectCashflowBar(key) {
-  const items = (state.items['nog-te-maken'] || []).filter(item => item.betaalweek && !['betaald'].includes(item.status));
+  const nogTeMaken = (state.items['nog-te-maken'] || [])
+    .filter(item => item.betaalweek && !['betaald'].includes(item.status))
+    .map(item => ({...item, _section: 'Nog te maken'}));
+  const meubelItems = (state.items['meubels'] || [])
+    .filter(item => item.betaalweek && Math.max(0, (item.werkelijk||0) - (item.betaald||0)) > 0)
+    .map(item => ({...item, _section: 'Meubels', amount: Math.max(0, (item.werkelijk||0) - (item.betaald||0))}));
+  const bruiloftItems = (state.items['bruiloft'] || [])
+    .filter(item => item.betaalweek && item.status === 'nog-te-betalen')
+    .map(item => ({...item, _section: 'Bruiloft'}));
+  const allItems = [...nogTeMaken, ...meubelItems, ...bruiloftItems];
+
   let groupItems;
   if (cashflowMode === 'week') {
-    groupItems = items.filter(i => String(i.betaalweek) === String(key));
+    groupItems = allItems.filter(i => String(i.betaalweek) === String(key));
   } else {
-    groupItems = items.filter(i => {
+    groupItems = allItems.filter(i => {
       const date = weekToDate(i.betaalweek);
       const k = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
       return k === key;
@@ -5739,7 +5890,7 @@ function renderCashflowItems(key, groupItems) {
   }
   itemList.innerHTML = groupItems.map(item => {
     const cat = item.cat ? item.cat.charAt(0).toUpperCase() + item.cat.slice(1) : '';
-    const meta = [cat, item.note].filter(Boolean).join(' · ');
+    const meta = [item._section, cat, item.note].filter(Boolean).join(' · ');
     return `<div class="cf-item-row">
       <div>
         <div class="cf-item-name">${esc(item.name)}</div>
