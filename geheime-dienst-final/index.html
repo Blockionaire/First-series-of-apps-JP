@@ -295,7 +295,41 @@
   .msg{
     max-width:80%; padding:10px 14px; border-radius:20px; background:var(--bg3);
     align-self:flex-start; word-wrap:break-word; border:1px solid var(--line);
+    position:relative;
   }
+  /* ---------- reageren op een bericht ---------- */
+  .msg .reply-hint{
+    position:absolute; left:-36px; top:50%; margin-top:-13px;
+    width:26px; height:26px; border-radius:50%; background:var(--bg4);
+    display:flex; align-items:center; justify-content:center; font-size:13px;
+    opacity:0; transform:scale(.5); transition:opacity .12s ease, transform .12s ease;
+    pointer-events:none;
+  }
+  .msg.swiping .reply-hint{opacity:1; transform:scale(1)}
+  .msg-quote{
+    border-left:3px solid var(--gold); background:rgba(0,0,0,.24);
+    border-radius:9px; padding:5px 10px; margin-bottom:6px; cursor:pointer;
+  }
+  .msg.mine .msg-quote{background:rgba(0,0,0,.22); border-left-color:rgba(255,255,255,.7)}
+  .mq-name{font-size:11.5px; font-weight:700; color:var(--gold)}
+  .msg.mine .mq-name{color:rgba(255,255,255,.92)}
+  .mq-text{font-size:12.5px; color:#cfcfd6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .msg.mine .mq-text{color:rgba(255,255,255,.8)}
+  body.light .msg-quote{background:rgba(0,0,0,.06)}
+  body.light .mq-text{color:#54534d}
+  @keyframes msgHighlight{0%,100%{box-shadow:none} 20%,65%{box-shadow:0 0 0 3px rgba(232,178,58,.6)}}
+  .msg.highlight{animation:msgHighlight 1.5s ease}
+  .reply-bar{
+    display:flex; align-items:center; gap:10px; padding:8px 12px;
+    background:rgba(17,17,20,.9); border-top:1px solid var(--line);
+    animation:viewIn .18s var(--ease);
+  }
+  body.light .reply-bar{background:rgba(250,249,245,.95)}
+  .reply-bar .rb-line{width:3px; align-self:stretch; min-height:30px; background:var(--gold); border-radius:2px}
+  .reply-bar .rb-body{flex:1; min-width:0}
+  .reply-bar .rb-name{font-size:12px; font-weight:700; color:var(--gold)}
+  .reply-bar .rb-text{font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .reply-bar .icon-btn{width:34px; height:34px; font-size:14px}
   .msg.mine{background:linear-gradient(145deg,#478f39,#39762d); border:none; align-self:flex-end}
   .msg.new{animation:msgIn .28s var(--ease)}
   .msg .sender{font-size:11.5px; font-weight:700; color:var(--gold); margin-bottom:2px}
@@ -805,6 +839,7 @@ const S = {
   closingChat: false,
   msgCounts: {},
   msgs: [],
+  replyTo: null,
   unsubMsgs: null,
   imgCache: {},
   clockTimer: null
@@ -842,9 +877,10 @@ function deviceToken(){
 }
 
 /* ---------- gestures ---------- */
-function enableSwipeBack(el, onBack){
+function enableSwipeBack(el, onBack, negeerSel){
   let sx = 0, sy = 0, dx = 0, active = false;
   el.addEventListener("touchstart", e => {
+    if(negeerSel && e.target.closest && e.target.closest(negeerSel)){ active = false; return; }
     const t = e.touches[0]; sx = t.clientX; sy = t.clientY; dx = 0; active = true;
   }, {passive:true});
   el.addEventListener("touchmove", e => {
@@ -859,6 +895,43 @@ function enableSwipeBack(el, onBack){
     if(dx > 90){ el.style.transform = "translateX(105%)"; haptic(6); setTimeout(onBack, 180); }
     else el.style.transform = "";
   });
+}
+// naar rechts vegen op een bericht = erop reageren (zoals in WhatsApp)
+function enableReplySwipe(el, msg){
+  let sx = 0, sy = 0, dx = 0, actief = false;
+  const reset = () => { el.style.transition = "transform .2s cubic-bezier(.32,.72,.33,1)"; el.style.transform = ""; el.classList.remove("swiping"); };
+  el.addEventListener("touchstart", e => {
+    const t = e.touches[0]; sx = t.clientX; sy = t.clientY; dx = 0; actief = true;
+  }, {passive:true});
+  el.addEventListener("touchmove", e => {
+    if(!actief) return;
+    const t = e.touches[0]; dx = t.clientX - sx; const dy = t.clientY - sy;
+    if(Math.abs(dy) > 26 && Math.abs(dy) > Math.abs(dx)){ actief = false; reset(); return; }
+    if(dx > 6){
+      el.style.transition = "none";
+      el.style.transform = `translateX(${Math.min(dx * 0.55, 62)}px)`;
+      el.classList.toggle("swiping", dx > 30);
+    }
+  }, {passive:true});
+  el.addEventListener("touchend", () => {
+    if(!actief) return;
+    actief = false;
+    const genoeg = dx > 52;
+    reset();
+    if(genoeg) startReply(msg);
+  });
+}
+function berichtPreview(m){
+  if(m.type === "img") return "📷 Foto";
+  const t = (m.t || "").trim();
+  return t.length > 80 ? t.slice(0, 80) + "…" : (t || "Bericht");
+}
+function startReply(m){
+  S.replyTo = {id:m.id, sn:m.sn || "Onbekend", t: berichtPreview(m)};
+  haptic(8);
+  renderChat();
+  const ta = $("#composerText");
+  if(ta) ta.focus();
 }
 function enableTabSwipe(el, tabIds){
   let sx = 0, sy = 0;
@@ -2247,6 +2320,7 @@ function newGroupModal(){
    ===================================================================== */
 function openChat(chatId){
   S.openChat = chatId;
+  S.replyTo = null;
   S.chatJustOpened = true;
   S.closingChat = false;
   localStorage.setItem(lastReadKey(chatId), String(now()));
@@ -2262,7 +2336,7 @@ function openChat(chatId){
 function closeChat(skipAnim){
   const done = () => {
     if(S.unsubMsgs){ S.unsubMsgs(); S.unsubMsgs = null; }
-    S.openChat = null; S.closingChat = false;
+    S.openChat = null; S.closingChat = false; S.replyTo = null;
     render();
   };
   const scr = document.querySelector(".chat-screen");
@@ -2316,8 +2390,13 @@ function renderChat(){
     const mine = m.sid === S.me.id;
     const showSender = c.type !== "dm" && !mine;
     return `
-      <div class="msg ${mine ? "mine" : ""} ${gap ? "gap" : ""}">
+      <div class="msg ${mine ? "mine" : ""} ${gap ? "gap" : ""}" data-mid="${m.id}">
+        <span class="reply-hint">↩︎</span>
         ${showSender && gap ? `<div class="sender">${esc(m.sn)}</div>` : ""}
+        ${m.re ? `<div class="msg-quote" data-goto="${esc(m.re.id)}">
+          <div class="mq-name">${esc(m.re.sn)}</div>
+          <div class="mq-text">${esc(m.re.t)}</div>
+        </div>` : ""}
         ${m.type === "img" ? `<img data-img="${m.imgId}" alt="foto">` : ""}
         ${m.t ? `<div>${esc(m.t)}</div>` : ""}
         <div class="mtime">${fmtTime(m.at)}</div>
@@ -2339,6 +2418,15 @@ function renderChat(){
       </div>
       ${!isL && isMuted(S.me) ? `
       <div class="muted-note">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "verbannen"} — je kunt meelezen, maar niet meer chatten of stemmen.</div>` : `
+      ${S.replyTo ? `
+      <div class="reply-bar">
+        <div class="rb-line"></div>
+        <div class="rb-body">
+          <div class="rb-name">↩︎ ${esc(S.replyTo.sn)}</div>
+          <div class="rb-text">${esc(S.replyTo.t)}</div>
+        </div>
+        <button class="icon-btn" id="replyCancel" title="Annuleren">✕</button>
+      </div>` : ""}
       <div class="composer">
         ${isL && c.type !== "dm" ? `<button class="icon-btn" id="btnPlus" title="Meer acties">＋</button>` : ""}
         <button class="icon-btn" id="btnPhoto" title="Foto sturen">📷</button>
@@ -2349,7 +2437,8 @@ function renderChat(){
   S.chatJustOpened = false;
 
   const scr = root.querySelector(".chat-screen");
-  enableSwipeBack(scr, () => closeChat(true));
+  // swipe-terug niet starten op een bericht: daar betekent naar rechts vegen "reageren"
+  enableSwipeBack(scr, () => closeChat(true), ".msg[data-mid]");
 
   // nieuw-bericht-animatie (alleen het laatste bericht, niet bij eerste render)
   const msgsEl = $("#msgs");
@@ -2376,6 +2465,24 @@ function renderChat(){
     });
     img.onclick = () => { if(img.src) viewImage(img.src); };
   });
+  // reageren: naar rechts vegen (mobiel) of dubbelklikken (desktop)
+  msgsEl.querySelectorAll(".msg[data-mid]").forEach(el => {
+    const m = S.msgs.find(x => x.id === el.dataset.mid);
+    if(!m) return;
+    enableReplySwipe(el, m);
+    el.ondblclick = () => startReply(m);
+  });
+  msgsEl.querySelectorAll("[data-goto]").forEach(q => q.onclick = e => {
+    e.stopPropagation();
+    const doel = msgsEl.querySelector(`.msg[data-mid="${q.dataset.goto}"]`);
+    if(!doel){ toast("Dat bericht staat niet meer in beeld"); return; }
+    doel.scrollIntoView({behavior:"smooth", block:"center"});
+    doel.classList.remove("highlight");
+    void doel.offsetWidth;
+    doel.classList.add("highlight");
+  });
+  const rc = $("#replyCancel");
+  if(rc) rc.onclick = () => { S.replyTo = null; renderChat(); };
   msgsEl.querySelectorAll("[data-mission]").forEach(b => b.onclick = () => missionModal(b.dataset.mission));
   msgsEl.querySelectorAll("[data-vote]").forEach(b => b.onclick = () => {
     const [pid, idx] = b.dataset.vote.split(":");
@@ -2401,8 +2508,9 @@ function renderChat(){
     const doSend = async () => {
       const t = ta.value.trim(); if(!t) return;
       ta.value = ""; ta.style.height = "auto";
+      const re = S.replyTo; S.replyTo = null;
       haptic(6);
-      await sendMessage(c.id, {type:"text", t});
+      await sendMessage(c.id, {type:"text", t, ...(re ? {re} : {})});
     };
     ta.onkeydown = e => { if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); doSend(); } };
     $("#btnSend").onclick = doSend;
@@ -2411,7 +2519,8 @@ function renderChat(){
       toast("Foto uploaden…");
       try{
         const imgId = await uploadImage(f);
-        await sendMessage(c.id, {type:"img", imgId});
+        const re = S.replyTo; S.replyTo = null;
+        await sendMessage(c.id, {type:"img", imgId, ...(re ? {re} : {})});
         haptic(10);
       }catch(e){ console.error(e); toast("Uploaden mislukt"); }
     };
