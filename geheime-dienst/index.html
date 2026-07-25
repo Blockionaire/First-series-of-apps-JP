@@ -280,6 +280,30 @@
   .mission-card h4{font-family:'Lilita One'; font-size:16px; letter-spacing:.4px}
   .mission-card p{font-size:13.5px; color:#cfcfd6; margin-bottom:10px; white-space:pre-wrap}
   .mission-card .mc-meta{font-size:12px; color:var(--muted); margin-bottom:10px}
+  .mission-card.pollcard{border-color:var(--gold); box-shadow:0 8px 24px -12px rgba(232,178,58,.35)}
+  .mission-card.pollcard.done{border-color:var(--green); box-shadow:0 8px 24px -12px rgba(98,197,84,.35)}
+  .poll-row{display:flex; gap:8px; margin-bottom:8px; align-items:stretch}
+  .poll-opt{
+    flex:1; display:flex; align-items:center; justify-content:space-between; gap:10px; text-align:left;
+    background:var(--bg3); border:1.5px solid var(--line); border-radius:16px; padding:11px 14px;
+    font-size:13.5px; font-weight:500; transition:transform .13s var(--ease), border-color .15s ease, background .15s ease;
+  }
+  .poll-opt:not(:disabled):active{transform:scale(.975)}
+  .poll-opt.sel{border-color:var(--green); background:rgba(98,197,84,.13)}
+  .poll-opt.win{border-color:var(--green); background:rgba(98,197,84,.2)}
+  .poll-opt:disabled{opacity:1; pointer-events:none}
+  .poll-opt .cnt{
+    background:var(--bg4); border-radius:999px; min-width:26px; height:22px; flex:none;
+    display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; padding:0 8px;
+  }
+  .poll-opt.sel .cnt,.poll-opt.win .cnt{background:var(--green); color:#0d1f0a}
+  .poll-pick{width:auto; padding:0 12px; border-radius:16px; font-size:15px}
+  .poll-foot{font-size:12px; color:var(--muted); margin-top:4px}
+
+  .hq-item{display:flex; align-items:center; gap:10px; background:var(--bg3); border:1px solid var(--line); border-radius:14px; padding:10px 12px; margin-bottom:8px}
+  .hq-item .hq-q{flex:1; font-size:13.5px; min-width:0}
+  .hq-item .hq-q .hq-who{font-size:11px; color:var(--muted)}
+  .hq-answer{display:flex; gap:6px; flex:none}
   .composer{
     display:flex; align-items:flex-end; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom));
     background:rgba(17,17,20,.85); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
@@ -537,6 +561,8 @@ const S = {
   chats: [],
   deadlines: [],
   missions: [],
+  polls: [],
+  hackerQs: [],
   settings: {rolesRevealed:false},
   tab: "chats",
   viewAnim: null,      // 'from-left' | 'from-right'
@@ -568,6 +594,10 @@ function fmtDT(ms){
   return `${day} ${fmtTime(ms)}`;
 }
 function initial(name){ return (name||"?").trim().charAt(0).toUpperCase(); }
+function todayKey(){
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
 
 /* ---------- gestures ---------- */
 function enableSwipeBack(el, onBack){
@@ -874,6 +904,7 @@ function renderSpelers(el){
       </div>
       <label class="switch"><input type="checkbox" id="revealToggle" ${S.settings.rolesRevealed ? "checked" : ""}><span class="slider"></span></label>
     </div>
+    ${leaderHackerHtml()}
     <div class="section-label">Deelnemers</div>
     <div id="playerList">
       ${n === 0 ? `<div class="empty"><div class="big">🏕️</div>Nog geen aanmeldingen.<br>Deel de link van deze app met de groep!</div>` : ""}
@@ -907,6 +938,17 @@ function renderSpelers(el){
     DB.set("settings/main", {rolesRevealed: e.target.checked});
     if(e.target.checked) sendSystem("all", "🎭 De rollen zijn uitgedeeld! Bekijk je rol via het tabblad 'Mijn rol'.");
   };
+  el.querySelectorAll("[data-hq-answer]").forEach(b => b.onclick = async () => {
+    const [qid, ans] = b.dataset.hqAnswer.split("|");
+    const q = S.hackerQs.find(x => x.id === qid);
+    if(!q) return;
+    b.disabled = true;
+    await DB.set("hackerQuestions/" + qid, {answer: ans, answeredAt: now()});
+    await DB.set("chats/dm_" + q.pid, {type:"dm", dmFor:q.pid, at: now()});
+    await sendSystem("dm_" + q.pid, `💻 Antwoord van de spelleider op "${q.q}": ${ans === "ja" ? "✅ JA" : "❌ NEE"}`);
+    haptic(10);
+    toast("Antwoord verstuurd: " + (ans === "ja" ? "Ja" : "Nee"));
+  });
   el.querySelectorAll(".player-row").forEach(row => {
     const pid = row.dataset.pid;
     row.querySelector(".sel-role").onchange = e => { haptic(6); DB.set("players/" + pid, {role: e.target.value || null}); };
@@ -919,6 +961,32 @@ function renderSpelers(el){
       });
     };
   });
+}
+
+/* ---------- hackervragen (spelleider) ---------- */
+function leaderHackerHtml(){
+  const hasHacker = S.players.some(p => p.role === "hacker");
+  if(!hasHacker && S.hackerQs.length === 0) return "";
+  const pending = S.hackerQs.filter(q => !q.answer).sort((a,b) => (a.at||0)-(b.at||0));
+  const answered = S.hackerQs.filter(q => q.answer && q.day === todayKey()).sort((a,b) => (b.at||0)-(a.at||0));
+  return `
+    <div class="card" style="border:1.5px solid ${pending.length ? "var(--gold)" : "var(--line)"}">
+      <h3>💻 Hackervragen ${pending.length ? `<span class="pill pill-gold">${pending.length} nieuw</span>` : ""}</h3>
+      ${pending.length === 0 && answered.length === 0 ? `<div style="font-size:12.5px;color:var(--muted)">Geen openstaande vragen. De hacker mag 2 ja/nee-vragen per dag stellen.</div>` : ""}
+      ${pending.map(q => `
+        <div class="hq-item">
+          <div class="hq-q">${esc(q.q)}<div class="hq-who">van ${esc(q.pn)} · ${fmtTime(q.at)}</div></div>
+          <div class="hq-answer">
+            <button class="btn btn-sm btn-green" data-hq-answer="${q.id}|ja">Ja</button>
+            <button class="btn btn-sm btn-red" data-hq-answer="${q.id}|nee">Nee</button>
+          </div>
+        </div>`).join("")}
+      ${answered.map(q => `
+        <div class="hq-item" style="opacity:.65">
+          <div class="hq-q">${esc(q.q)}<div class="hq-who">van ${esc(q.pn)} · ${fmtTime(q.at)}</div></div>
+          <span class="pill ${q.answer === "ja" ? "pill-green" : "pill-red"}">${q.answer === "ja" ? "Ja" : "Nee"}</span>
+        </div>`).join("")}
+    </div>`;
 }
 
 /* =====================================================================
@@ -1080,6 +1148,10 @@ function renderChat(){
       const mi = S.missions.find(x => x.id === m.mid);
       return mi ? missionCardHtml(mi) : "";
     }
+    if(m.type === "poll"){
+      const p = S.polls.find(x => x.id === m.pollId);
+      return p ? pollCardHtml(p, c) : "";
+    }
     const mine = m.sid === S.me.id;
     const showSender = c.type !== "dm" && !mine;
     return `
@@ -1105,7 +1177,7 @@ function renderChat(){
         ${S.msgs.length === 0 ? `<div class="empty"><div class="big">💬</div>Nog geen berichten.</div>` : msgHtml}
       </div>
       <div class="composer">
-        ${isL && c.type !== "dm" ? `<button class="icon-btn" id="btnMission" title="Nieuwe opdracht">📋</button>` : ""}
+        ${isL && c.type !== "dm" ? `<button class="icon-btn" id="btnMission" title="Nieuwe opdracht">📋</button><button class="icon-btn" id="btnPoll" title="Missielijst met stemming">🗳️</button>` : ""}
         <button class="icon-btn" id="btnPhoto" title="Foto sturen">📷</button>
         <textarea id="composerText" rows="1" placeholder="Bericht…"></textarea>
         <button class="icon-btn send" id="btnSend">➤</button>
@@ -1142,6 +1214,17 @@ function renderChat(){
     img.onclick = () => { if(img.src) viewImage(img.src); };
   });
   msgsEl.querySelectorAll("[data-mission]").forEach(b => b.onclick = () => missionModal(b.dataset.mission));
+  msgsEl.querySelectorAll("[data-vote]").forEach(b => b.onclick = () => {
+    const [pid, idx] = b.dataset.vote.split(":");
+    castVote(pid, Number(idx));
+  });
+  msgsEl.querySelectorAll("[data-choose]").forEach(b => b.onclick = () => {
+    const [pid, idx] = b.dataset.choose.split(":");
+    const p = S.polls.find(x => x.id === pid);
+    confirmModal(`Deze missie kiezen als winnaar?<br><b>${esc(p ? p.options[Number(idx)] : "")}</b>`, async () => {
+      await closePoll(pid, Number(idx)); haptic(12);
+    });
+  });
 
   $("#chatBack").onclick = () => closeChat();
   const ta = $("#composerText");
@@ -1167,6 +1250,7 @@ function renderChat(){
     }catch(e){ console.error(e); toast("Uploaden mislukt"); }
   };
   const bm = $("#btnMission"); if(bm) bm.onclick = () => newMissionModal(c.id);
+  const bp = $("#btnPoll"); if(bp) bp.onclick = () => newPollModal(c.id);
   const ge = $("#grpEdit"); if(ge) ge.onclick = () => editGroupModal(c);
 }
 
@@ -1235,6 +1319,102 @@ function newMissionModal(chatId){
       closeModal();
     };
   });
+}
+
+/* =====================================================================
+   MISSIESTEMMING (infiltranten kiezen de missie van de dag)
+   ===================================================================== */
+function chatVoters(c){
+  if(c.type === "all") return S.players.filter(p => !p.isLeader && p.status !== "uit").map(p => p.id);
+  return (c.members || []).filter(id => { const p = S.players.find(x => x.id === id); return p && p.status !== "uit"; });
+}
+function pollVotes(p){
+  const v = {};
+  Object.keys(p).forEach(k => { if(k.startsWith("v_")) v[k.slice(2)] = p[k]; });
+  return v;
+}
+function pollCardHtml(p, chat){
+  const closed = p.status === "besloten";
+  const votes = pollVotes(p);
+  const voters = chatVoters(chat);
+  const votedCount = voters.filter(id => votes[id] != null).length;
+  const counts = p.options.map((_, i) => Object.entries(votes).filter(([pid, v]) => v === i && voters.includes(pid)).length);
+  const my = votes[S.me.id];
+  const canVote = !closed && !S.me.isLeader && voters.includes(S.me.id);
+  const allVoted = voters.length > 0 && votedCount >= voters.length;
+  const max = Math.max(...counts, 0);
+  const tie = allVoted && counts.filter(n => n === max).length > 1;
+  return `
+    <div class="mission-card pollcard ${closed ? "done" : ""}">
+      <div class="mc-top"><h4>🗳️ ${esc(p.title)}</h4><span class="pill ${closed ? "pill-green" : "pill-gold"}">${closed ? "Gekozen" : "Stemmen"}</span></div>
+      ${p.options.map((opt, i) => `
+        <div class="poll-row">
+          <button class="poll-opt ${my === i && !closed ? "sel" : ""} ${closed && p.winner === i ? "win" : ""}"
+                  data-vote="${p.id}:${i}" ${canVote ? "" : "disabled"}>
+            <span>${closed && p.winner === i ? "🏆 " : ""}${esc(opt)}</span><span class="cnt">${counts[i]}</span>
+          </button>
+          ${S.me.isLeader && !closed ? `<button class="icon-btn poll-pick" data-choose="${p.id}:${i}" title="Kies deze missie">👑</button>` : ""}
+        </div>`).join("")}
+      <div class="poll-foot">
+        ${closed
+          ? `✔ De missie van vandaag is gekozen.`
+          : `${votedCount}/${voters.length} gestemd${tie ? " · 🤝 Gelijkspel — de spelleider hakt de knoop door (👑)" : ""}${canVote && my == null ? " · Tik op een missie om te stemmen" : ""}${canVote && my != null ? " · Je kunt je stem nog wijzigen" : ""}`}
+      </div>
+    </div>`;
+}
+function newPollModal(chatId){
+  modal(`
+    <h3>Missielijst infiltranten</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Alle leden van deze chat stemmen op één missie. De meerderheid wint en wordt automatisch de opdracht van de dag. Bij gelijkspel kies jij de winnaar met 👑.</p>
+    <div class="field"><label>Titel</label><input id="poTitle" value="Stem op de geheime missie van vandaag" maxlength="60"></div>
+    <div class="field"><label>Missies (één per regel)</label>
+      <textarea id="poOptions" rows="6" placeholder="Bijv.&#10;Verstop de handdoek van de spelleider&#10;Laat iemand een liedje zingen&#10;Zet een tandenborstel in de koelkast"></textarea>
+    </div>
+    <button class="btn btn-red btn-block" id="poCreate">🗳️ Missielijst versturen</button>
+  `, m => {
+    m.querySelector("#poCreate").onclick = async () => {
+      const title = m.querySelector("#poTitle").value.trim() || "Stem op de geheime missie van vandaag";
+      const options = m.querySelector("#poOptions").value.split("\n").map(s => s.trim()).filter(Boolean);
+      if(options.length < 2){ toast("Vul minimaal 2 missies in (één per regel)"); return; }
+      const pollId = await DB.add("missionPolls", {chatId, title, options, status:"open", day: todayKey(), at: now()});
+      await DB.add(`chats/${chatId}/messages`, {type:"poll", pollId, at: now()});
+      await DB.set("chats/" + chatId, {lastAt: now(), lastSid: S.me.id, lastText: "🗳️ Missiestemming"});
+      haptic(12);
+      closeModal();
+    };
+  });
+}
+async function castVote(pollId, idx){
+  haptic(6);
+  await DB.set("missionPolls/" + pollId, {["v_" + S.me.id]: idx});
+  await maybeAutoClosePoll(pollId);
+}
+async function maybeAutoClosePoll(pollId){
+  const p = await DB.getDoc("missionPolls/" + pollId);
+  if(!p || p.status !== "open") return;
+  const chat = S.chats.find(c => c.id === p.chatId);
+  if(!chat) return;
+  const voters = chatVoters(chat);
+  const votes = pollVotes(p);
+  if(!voters.length || !voters.every(id => votes[id] != null)) return;
+  const counts = p.options.map((_, i) => voters.filter(id => votes[id] === i).length);
+  const max = Math.max(...counts);
+  if(counts.filter(n => n === max).length > 1) return; // gelijkspel -> spelleider beslist
+  await closePoll(pollId, counts.indexOf(max));
+}
+async function closePoll(pollId, winnerIdx){
+  const p = await DB.getDoc("missionPolls/" + pollId);
+  if(!p || p.status !== "open") return;
+  await DB.set("missionPolls/" + pollId, {status:"besloten", winner: winnerIdx, closedAt: now()});
+  const title = p.options[winnerIdx];
+  const mid = await DB.add("missions", {
+    chatId: p.chatId, title,
+    desc:"Gekozen via de missiestemming. Voer de missie ongezien uit en lever foto's in als bewijs.",
+    deadline:null, status:"open", photoCount:0, at: now()
+  });
+  await DB.add(`chats/${p.chatId}/messages`, {type:"sys", t:`🗳️ De stemming is afgerond! Missie van vandaag: "${title}"`, at: now()});
+  await DB.add(`chats/${p.chatId}/messages`, {type:"mission", mid, at: now() + 1});
+  await DB.set("chats/" + p.chatId, {lastAt: now(), lastSid:"sys", lastText:"🗳️ Missie gekozen: " + title});
 }
 
 let missionUnsub = null;
@@ -1351,7 +1531,56 @@ function renderRol(el){
     <div class="card" style="border:1.5px solid var(--gold)">
       <h3>⛓️ Je bent gevangengenomen</h3>
       <p style="font-size:13.5px;color:#d6d6dc;line-height:1.5">Vind het geheime voorwerp dat ergens op de camping is verstopt en lever het in bij de spelleider om te ontsnappen. Zoeken mag tussen 11:00 en 22:00. Wees andere gevangenen te slim af!</p>
-    </div>` : ""}`;
+    </div>` : ""}
+    ${p.role === "hacker" && p.status !== "uit" ? hackerSectionHtml() : ""}`;
+  if(p.role === "hacker") wireHackerSection(el);
+}
+
+/* ---------- hackervragen (speler) ---------- */
+function hackerSectionHtml(){
+  const myQs = S.hackerQs.filter(q => q.pid === S.me.id).sort((a,b) => (b.at||0)-(a.at||0));
+  const todays = myQs.filter(q => q.day === todayKey());
+  const left = Math.max(0, 2 - todays.length);
+  const chip = q => q.answer === "ja" ? `<span class="pill pill-green">Ja</span>`
+              : q.answer === "nee" ? `<span class="pill pill-red">Nee</span>`
+              : `<span class="pill pill-outline">⏳ wacht</span>`;
+  return `
+    <div class="card" style="border:1.5px solid var(--green)">
+      <h3>💻 Hackervragen</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px">
+        Stel elke dag maximaal 2 ja/nee-vragen aan de spelleider (officieel tussen 11:00 – 19:00).
+        Vandaag nog <b style="color:var(--text)">${left}</b> ${left === 1 ? "vraag" : "vragen"} over.
+      </p>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input id="hqInput" placeholder="Bijv. Is Sanne een infiltrant?" maxlength="120" ${left === 0 ? "disabled" : ""}>
+        <button class="btn btn-green" id="hqSend" style="flex:none" ${left === 0 ? "disabled" : ""}>➤</button>
+      </div>
+      ${myQs.length === 0 ? `<div style="font-size:12.5px;color:var(--muted);text-align:center">Nog geen vragen gesteld.</div>` : ""}
+      ${myQs.slice(0, 8).map(q => `
+        <div class="hq-item">
+          <div class="hq-q">${esc(q.q)}<div class="hq-who">${fmtDT(q.at)}</div></div>
+          ${chip(q)}
+        </div>`).join("")}
+    </div>`;
+}
+function wireHackerSection(el){
+  const btn = el.querySelector("#hqSend");
+  const inp = el.querySelector("#hqInput");
+  if(!btn || !inp) return;
+  const send = async () => {
+    const q = inp.value.trim();
+    if(!q) return;
+    const todays = S.hackerQs.filter(x => x.pid === S.me.id && x.day === todayKey());
+    if(todays.length >= 2){ toast("Je hebt je 2 vragen voor vandaag al gesteld"); return; }
+    btn.disabled = true;
+    await DB.add("hackerQuestions", {pid:S.me.id, pn:S.me.name, q, answer:null, day: todayKey(), at: now()});
+    await DB.set("chats/dm_" + S.me.id, {type:"dm", dmFor:S.me.id, at: now()});
+    await sendSystem("dm_" + S.me.id, `💻 Hackervraag: "${q}"`);
+    haptic(10);
+    toast("Vraag verstuurd naar de spelleider 🤫");
+  };
+  btn.onclick = send;
+  inp.onkeydown = e => { if(e.key === "Enter") send(); };
 }
 
 /* =====================================================================
@@ -1597,6 +1826,8 @@ async function boot(){
   DB.listen("chats", docs => { S.chats = docs; if(S.me && !S.openChat) render(); });
   DB.listen("deadlines", docs => { S.deadlines = docs; if(S.me && !S.openChat && S.tab === "deadlines") render(); });
   DB.listen("missions", docs => { S.missions = docs; if(S.me && S.openChat) renderChat(); });
+  DB.listen("missionPolls", docs => { S.polls = docs; if(S.me && S.openChat) renderChat(); });
+  DB.listen("hackerQuestions", docs => { S.hackerQs = docs; if(S.me && !S.openChat && (S.tab === "rol" || S.tab === "spelers")) render(); });
   DB.listenDoc("settings/main", doc => { S.settings = doc || {rolesRevealed:false}; if(S.me && !S.openChat) render(); });
 
   // als players-collectie leeg blijft, toch join tonen
