@@ -159,6 +159,8 @@
   body.light .lock-logo{filter:invert(.92)}
   .lock-titel{font-size:24px; text-transform:uppercase; margin-bottom:6px}
   .lock-sub{font-size:13.5px; color:var(--muted); line-height:1.5; max-width:300px}
+  .lock-uitleg{font-size:12px; color:var(--muted); opacity:.75; max-width:300px; margin-top:10px}
+  .wacht-teken{font-size:42px; margin:24px 0 4px; animation:popIn .3s var(--ease)}
   .lock-dots{display:flex; gap:16px; margin:26px 0 6px}
   .lock-dots .dot{
     width:15px; height:15px; border-radius:50%; border:2px solid #6a6a73;
@@ -892,6 +894,7 @@ const S = {
   riddleAttempts: [],
   roleRequests: [],
   takeovers: [],
+  pinResets: [],
   hunts: [],
   huntEntries: [],
   settings: {rolesRevealed:false},
@@ -1221,8 +1224,7 @@ async function ontgrendel(speler){
       sub: `Welkom terug, <b style="color:var(--text)">${esc(speler.name)}</b>${isLeider ? " 🎩" : ""}`,
       fout,
       terugLabel: "Iemand anders? Uitloggen",
-      // de spelleider kan zichzelf altijd binnenlaten met de spelleiderscode
-      extraLabel: isLeider ? "Pincode vergeten?" : ""
+      extraLabel: "Pincode vergeten?"
     });
     if(pin === null){
       localStorage.removeItem("gd_player_id");
@@ -1231,7 +1233,10 @@ async function ontgrendel(speler){
       return false;
     }
     if(pin === "__extra__"){
-      if(await herstelLeiderPin(speler)) return true;
+      // de spelleider laat zichzelf binnen met de spelleiderscode,
+      // een speler vraagt toestemming aan de spelleider
+      const gelukt = isLeider ? await herstelLeiderPin(speler) : await vraagPinHerstel(speler);
+      if(gelukt) return true;
       fout = "";
       continue;
     }
@@ -1263,6 +1268,74 @@ async function herstelLeiderPin(speler){
     speler.pinHash = h;
     return true;
   }
+}
+
+/* speler die zijn pincode kwijt is: de spelleider moet toestemming geven.
+   Dit scherm staat buiten de gewone weergave, dus het tekent zichzelf opnieuw
+   zodra de spelleider reageert. */
+async function vraagPinHerstel(speler){
+  // een al goedgekeurd verzoek blijft bruikbaar, ook als de app tussendoor dicht ging;
+  // een afwijzing laten we één keer zien voordat de speler het opnieuw kan vragen
+  let verzoek = S.pinResets.find(x => x.pid === speler.id && ["open","goedgekeurd","afgewezen"].includes(x.status));
+  if(!verzoek){
+    const bevestigd = await bevestigHerstel(speler);
+    if(!bevestigd) return false;
+    const id = await DB.add("pinResets", {pid: speler.id, pn: speler.name, status:"open", at: now()});
+    verzoek = {id};
+    haptic(12);
+  }
+  const uitkomst = await wachtOpSpelleider(speler, verzoek.id);
+  if(uitkomst === "afgewezen") await DB.set("pinResets/" + verzoek.id, {status:"gesloten"});
+  if(uitkomst !== "goedgekeurd") return false;
+  const h = await kiesPin(speler.name, {titel:"Nieuwe pincode", terugLabel:""});
+  if(h === null) return false;
+  await DB.set("players/" + speler.id, {pinHash: h});
+  speler.pinHash = h;
+  await DB.set("pinResets/" + verzoek.id, {status:"gebruikt", usedAt: now()});
+  return true;
+}
+
+function bevestigHerstel(speler){
+  return new Promise(resolve => {
+    const root = $("#root");
+    root.innerHTML = `
+      <div class="lock">
+        <img src="kaarten/logo.png" class="lock-logo" alt="" onerror="this.remove()">
+        <h2 class="lock-titel title-font">Pincode vergeten?</h2>
+        <div class="lock-sub">De spelleider krijgt een melding dat <b style="color:var(--text)">${esc(speler.name)}</b> zijn pincode kwijt is. Pas als die akkoord geeft, kies je een nieuwe.</div>
+        <div class="lock-uitleg">Doe dit alleen voor je eigen account — de spelleider ziet wie het vraagt.</div>
+        <button class="btn btn-green btn-block" id="herstelJa" style="max-width:280px;margin-top:18px">Verzoek versturen</button>
+        <button class="link-btn" id="herstelNee">← Terug</button>
+      </div>`;
+    root.querySelector("#herstelJa").onclick = () => resolve(true);
+    root.querySelector("#herstelNee").onclick = () => resolve(false);
+  });
+}
+
+function wachtOpSpelleider(speler, reqId){
+  return new Promise(resolve => {
+    const root = $("#root");
+    const klaar = uit => { S.onPinResets = null; resolve(uit); };
+    const teken = () => {
+      const r = S.pinResets.find(x => x.id === reqId);
+      const status = r ? r.status : "open";
+      if(status === "goedgekeurd"){ haptic(12); klaar("goedgekeurd"); return; }
+      const afgewezen = status === "afgewezen";
+      root.innerHTML = `
+        <div class="lock">
+          <img src="kaarten/logo.png" class="lock-logo" alt="" onerror="this.remove()">
+          <h2 class="lock-titel title-font">${afgewezen ? "Verzoek afgewezen" : "Verzoek verstuurd"}</h2>
+          <div class="lock-sub">${afgewezen
+            ? "De spelleider heeft je verzoek afgewezen. Zoek hem even op om het uit te praten."
+            : "De spelleider heeft een melding gekregen. Zodra die akkoord geeft, kies je hier meteen een nieuwe pincode."}</div>
+          <div class="wacht-teken">${afgewezen ? "❌" : "⏳"}</div>
+          <button class="link-btn" id="pinTerug">← Terug naar pincode</button>
+        </div>`;
+      root.querySelector("#pinTerug").onclick = () => klaar(status);
+    };
+    S.onPinResets = teken;
+    teken();
+  });
 }
 
 /* =====================================================================
@@ -1477,6 +1550,10 @@ function render(){
   if(!tabs.find(t => t[0] === S.tab)) S.tab = tabs[0][0];
 
   const totalUnread = S.chats.filter(canSeeChat).reduce((n,c) => n + unreadCount(c), 0);
+  // openstaande verzoeken die op de spelleider wachten
+  const leiderTaken = isL
+    ? S.pinResets.filter(r => r.status === "open").length + S.roleRequests.filter(r => r.status === "open").length
+    : 0;
   // scrollpositie bewaren zodat een live update je niet terugwerpt naar boven
   const oldContent = $("#content");
   const zelfdeTab = S.renderedTab === S.tab;
@@ -1501,6 +1578,7 @@ function render(){
         <button data-tab="${id}" class="${S.tab === id ? "active" : ""}">
           <span class="ticon">${icon}</span>${label}
           ${id === "chats" && totalUnread ? `<span class="badge">${totalUnread}</span>` : ""}
+          ${id === "spelers" && leiderTaken ? `<span class="badge">${leiderTaken}</span>` : ""}
         </button>`).join("")}
     </div>`;
   root.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
@@ -1628,7 +1706,7 @@ async function resetGame(wipePlayers){
     for(const ph of await DB.getAll(`missions/${mi.id}/photos`)) await DB.del(`missions/${mi.id}/photos/${ph.id}`);
     await DB.del("missions/" + mi.id);
   }
-  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","hunts","huntEntries","images"]) await delAll(col);
+  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","hunts","huntEntries","images"]) await delAll(col);
   await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null});
   if(wipePlayers){
     await delAll("players");
@@ -1726,6 +1804,7 @@ function renderSpelers(el){
       </div>
       <label class="switch"><input type="checkbox" id="revealToggle" ${S.settings.rolesRevealed ? "checked" : ""}><span class="slider"></span></label>
     </div>
+    ${pinResetHtml()}
     ${leaderRequestsHtml()}
     ${leaderHackerHtml()}
     ${leaderReportHtml()}
@@ -1769,6 +1848,22 @@ function renderSpelers(el){
       setTimeout(syncAutoChats, 600);
     }
   };
+  el.querySelectorAll("[data-pinreset-ok]").forEach(b => b.onclick = () => {
+    const r = S.pinResets.find(x => x.id === b.dataset.pinresetOk);
+    if(!r) return;
+    confirmModal(`<b>${esc(r.pn)}</b> een nieuwe pincode laten kiezen? Diegene komt daarmee in dit account — check dus even of het verzoek echt van ${esc(r.pn)} komt.`, async () => {
+      await DB.set("pinResets/" + r.id, {status:"goedgekeurd", closedAt: now()});
+      toast("Goedgekeurd — " + r.pn + " kan een nieuwe pincode kiezen 🔑");
+    });
+  });
+  el.querySelectorAll("[data-pinreset-no]").forEach(b => b.onclick = () => {
+    const r = S.pinResets.find(x => x.id === b.dataset.pinresetNo);
+    if(!r) return;
+    confirmModal(`Verzoek van <b>${esc(r.pn)}</b> afwijzen? Diegene houdt de oude pincode en ziet dat je het hebt afgewezen.`, async () => {
+      await DB.set("pinResets/" + r.id, {status:"afgewezen", closedAt: now()});
+      toast("Verzoek afgewezen");
+    });
+  });
   el.querySelectorAll("[data-req-ok]").forEach(b => b.onclick = () => approveRequestModal(b.dataset.reqOk));
   el.querySelectorAll("[data-req-ask]").forEach(b => b.onclick = () => askTakeoverModal(b.dataset.reqAsk));
   el.querySelectorAll("[data-req-no]").forEach(b => b.onclick = () => {
@@ -1850,6 +1945,27 @@ async function syncAutoChats(){
   if(gev.length || gevChat){
     await DB.set("chats/gevangenen", {name:"Gevangenen", type:"group", members:gev, at: gevChat ? (gevChat.at || now()) : now()});
   }
+}
+
+/* ---------- vergeten pincodes (spelleider) ---------- */
+function pinResetHtml(){
+  const open = S.pinResets.filter(r => r.status === "open").sort((a,b) => (a.at||0)-(b.at||0));
+  if(!open.length) return "";
+  return `
+    <div class="card" style="border:1.5px solid var(--gold)">
+      <h3>🔑 Pincode vergeten <span class="pill pill-gold">${open.length}</span></h3>
+      <div style="font-size:12px;color:var(--muted);margin:-4px 0 10px">Keur alleen goed als je zeker weet dat de speler het zelf vraagt — met een nieuwe pincode komt diegene in dat account.</div>
+      ${open.map(r => `
+        <div class="set-card" style="margin-bottom:10px">
+          <div style="font-size:13.5px;margin-bottom:8px"><b>${esc(r.pn)}</b> is de pincode kwijt
+            <div style="font-size:12px;color:var(--muted)">${fmtTime(r.at)}</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-green" data-pinreset-ok="${r.id}">✅ Nieuwe pincode toestaan</button>
+            <button class="btn btn-sm btn-red" data-pinreset-no="${r.id}">❌ Afwijzen</button>
+          </div>
+        </div>`).join("")}
+    </div>`;
 }
 
 /* ---------- rolverzoeken (spelleider) ---------- */
@@ -3661,6 +3777,12 @@ async function boot(){
   DB.listen("takeovers", docs => {
     S.takeovers = docs;
     if(S.me && !S.openChat && (S.tab === "spelers" || S.tab === "rol")) render();
+  });
+  DB.listen("pinResets", docs => {
+    S.pinResets = docs;
+    // het wachtscherm hangt buiten de gewone weergave, dus die roept zichzelf aan
+    if(S.onPinResets) S.onPinResets();
+    else if(S.me && !S.openChat && S.tab === "spelers") render();
   });
   DB.listen("hunts", docs => { S.hunts = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("huntEntries", docs => { S.huntEntries = docs; if(S.onHuntEntries) S.onHuntEntries(); });

@@ -33,6 +33,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Deelnemers beheren: rollen uitdelen (met de adviesverdeling uit de flyer) en status wijzigen (actief, gevangen, ontmaskerd, uit het spel)
 - Rollen in één keer onthullen — de infiltranten-groepschat wordt dan automatisch aangemaakt
 - Rolverzoeken goedkeuren (met nieuwe rol), afwijzen, of andere spelers vragen de rol over te nemen
+- Vergeten pincodes: wie zijn code kwijt is vraagt toestemming, jij keurt goed of wijst af
 - Opdrachten versturen en ingediende bewijzen goedkeuren of afwijzen
 - Missiestemmingen als checklist versturen; de meerderheid wordt automatisch de opdracht van de dag
 - Raadsels en dagrapporten versturen of inplannen (worden automatisch gepusht)
@@ -72,6 +73,10 @@ De Firestore-regels staan open tot en met 31 december 2026 — prima voor een be
 
 Pincodes worden nooit als leesbare cijfers opgeslagen: van de code + je naam wordt een SHA-256-hash gemaakt en alleen die hash gaat de database in. De pincode is bedoeld tegen meekijkende medespelers op een gedeelde telefoon, niet tegen iemand die de database zelf openbreekt.
 
-De spelleider heeft twee losse codes: de **spelleiderscode** (`1602`) om het spelleidersaccount te claimen op het aanmeldscherm, en een **eigen pincode** die net als bij spelers bij het openen van de app gevraagd wordt. Vergeten? Tik op *Pincode vergeten?* op het slotscherm — met de spelleiderscode stel je een nieuwe in.
+De spelleider heeft twee losse codes: de **spelleiderscode** (`1602`) om het spelleidersaccount te claimen op het aanmeldscherm, en een **eigen pincode** die net als bij spelers bij het openen van de app gevraagd wordt.
+
+**Pincode vergeten?** Die knop staat op ieders slotscherm, maar werkt per rol anders:
+- **Spelers** sturen een verzoek naar de spelleider. Die krijgt een melding (teller op de tab *Spelers*) en keurt goed of wijst af. Pas na goedkeuring mag de speler een nieuwe pincode kiezen — bij afwijzing blijft de oude gelden.
+- **De spelleider** stelt zelf een nieuwe in met de spelleiderscode, want die kan het aan niemand vragen.
 
 Veel plezier op de camping! 🏕️
