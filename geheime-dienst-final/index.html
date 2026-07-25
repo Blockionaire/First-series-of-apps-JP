@@ -217,6 +217,8 @@
   .row-main{flex:1; min-width:0}
   .row-title{font-weight:600; display:flex; align-items:center; gap:8px}
   .row-sub{font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .row-sub-tags{display:flex; align-items:center; gap:7px; flex-wrap:wrap; white-space:normal; overflow:visible}
+  .row-sub-tags .pill{font-size:10px; padding:3px 9px}
   .row-side{text-align:right; font-size:11px; color:var(--muted); flex:none}
   .unread-dot{
     background:var(--green); color:#0d1f0a; font-size:11px; font-weight:700;
@@ -691,7 +693,7 @@ const ROLES = {
     actie:"Geef je keuze door aan de spelleider tijdens de eerste avondbijeenkomst." }
 };
 const ROLE_ORDER = ["infiltrant","gelovige","veldwerker","hacker","held","bijbelsmokkelaar","verrader","twijfelaar"];
-const STATUSES = { actief:"Actief", gevangen:"Gevangen", ontmaskerd:"Ontmaskerd", uit:"Uit het spel" };
+const STATUSES = { actief:"Actief", gevangen:"Gevangen", ontmaskerd:"Ontmaskerd", uit:"Verbannen" };
 const statusPill = st => st === "gevangen" ? "pill-gold" : st === "ontmaskerd" ? "pill-red" : "pill-gray";
 const isMuted = p => p && !p.isLeader && (p.status === "ontmaskerd" || p.status === "uit");
 const VERHOUDING = {8:[2,6],9:[2,7],10:[3,7],11:[3,8],12:[3,9],13:[3,10],14:[4,10],15:[4,11],16:[4,12],17:[5,12],18:[5,13],19:[5,14],20:[6,14],21:[6,15],22:[6,16],23:[7,16],24:[7,17],25:[7,18]};
@@ -1351,10 +1353,11 @@ function renderSpelers(el){
           <div class="top">
             <div class="avatar ${p.role ? (ROLES[p.role].team === "infiltrant" ? "red" : "green") : ""}">${p.role ? ROLES[p.role].emoji : initial(p.name)}</div>
             <div class="row-main">
-              <div class="row-title">${esc(p.name)}
+              <div class="row-title">${esc(p.name)}</div>
+              <div class="row-sub row-sub-tags">
+                <span>${p.role ? ROLES[p.role].naam : "Nog geen rol"}</span>
                 ${p.status !== "actief" ? `<span class="pill ${statusPill(p.status)}">${STATUSES[p.status] || p.status}</span>` : ""}
               </div>
-              <div class="row-sub">${p.role ? ROLES[p.role].naam : "Nog geen rol"}</div>
             </div>
             <button class="icon-btn act-chat" title="Chat">💬</button>
             ${p.device ? `<button class="icon-btn act-unlock" title="Apparaat loskoppelen">🔓</button>` : ""}
@@ -1882,7 +1885,7 @@ function riddleModal(rid){
     modal(`
       <h3>🛡️ Raadsel</h3>
       <div class="riddle-q">${esc(r.q)}</div>
-      <div style="text-align:center;color:var(--muted);font-size:13px;padding:8px">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "uit het spel"} — je kunt niet meer meedoen aan het raadsel.</div>
+      <div style="text-align:center;color:var(--muted);font-size:13px;padding:8px">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "verbannen"} — je kunt niet meer meedoen aan het raadsel.</div>
     `);
     return;
   }
@@ -2335,7 +2338,7 @@ function renderChat(){
         ${S.msgs.length === 0 ? `<div class="empty"><div class="big">💬</div>Nog geen berichten.</div>` : msgHtml}
       </div>
       ${!isL && isMuted(S.me) ? `
-      <div class="muted-note">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "uit het spel"} — je kunt meelezen, maar niet meer chatten of stemmen.</div>` : `
+      <div class="muted-note">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "verbannen"} — je kunt meelezen, maar niet meer chatten of stemmen.</div>` : `
       <div class="composer">
         ${isL && c.type !== "dm" ? `<button class="icon-btn" id="btnPlus" title="Meer acties">＋</button>` : ""}
         <button class="icon-btn" id="btnPhoto" title="Foto sturen">📷</button>
