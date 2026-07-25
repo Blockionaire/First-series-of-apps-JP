@@ -350,6 +350,10 @@
   .roleblock div{font-size:13.5px; color:#e4e4ea; line-height:1.5}
   .mystery{text-align:center; padding:48px 20px}
   .mystery .q{font-size:64px}
+  .rolecard.has-img{padding:0; overflow:hidden; line-height:0; background:none}
+  .rolecard.has-img img{width:100%; display:block; cursor:pointer}
+  .role-details{margin-bottom:14px}
+  .role-details summary{font-size:14.5px}
 
   /* ---------- deadlines ---------- */
   .deadline-card{
@@ -452,11 +456,11 @@ const PIN = String(CFG.spelleiderPin || "1107");
 
 /* ---------------- rollen (uit de flyer) ---------------- */
 const ROLES = {
-  infiltrant: { naam:"Infiltrant", emoji:"🕵️", team:"infiltrant",
+  infiltrant: { naam:"Infiltrant", emoji:"🕵️", team:"infiltrant", img:"kaarten/infiltrant.jpg",
     missie:"Kies dagelijks één missie uit de lijst, geef deze vóór 11:00 door aan de spelleider en voer de missie gedurende de dag ongezien uit. Door het voltooien van de missie mogen infiltranten één extra gelovige gevangennemen.",
     strategie:"Voer de missie uit zonder betrapt te worden om te voorkomen dat dit in de avondbijeenkomst nadelig uitpakt.",
     actie:"Overleg mag via de chat. Tijdens de avondbijeenkomst stemmen de infiltranten direct één of meerdere gelovigen weg." },
-  gelovige: { naam:"Gelovige", emoji:"✝️", team:"gelovige",
+  gelovige: { naam:"Gelovige", emoji:"✝️", team:"gelovige", img:"kaarten/gelovige.jpg",
     missie:"Ontmasker de infiltranten door observatie overdag en tijdens de avondbijeenkomsten.",
     strategie:"Let op verdacht gedrag en bespreek verdenkingen in kleine groepjes om niet door de infiltranten gevangengenomen te worden.",
     actie:"Deel je verdenkingen tijdens de avondbijeenkomsten en ontmasker infiltranten." },
@@ -476,11 +480,11 @@ const ROLES = {
     missie:"Wijs elke nacht één extra stem toe aan een speler. De stem van deze speler telt in de gezamenlijke stemming dubbel.",
     strategie:"Wijs deze extra stem strategisch toe om het spel te beïnvloeden.",
     actie:"Wijs tijdens de avondbijeenkomst een medespeler aan die de extra stem krijgt. Iedere speler mag maar 1x aangewezen worden tijdens het spel, waaronder jezelf." },
-  verrader: { naam:"Verrader", emoji:"🐍", team:"gelovige",
+  verrader: { naam:"Verrader", emoji:"🐍", team:"gelovige", img:"kaarten/verrader.jpg",
     missie:"Verraad een andere speler wanneer je gevangen wordt genomen.",
     strategie:"Zorg ervoor dat je actie een grote impact heeft.",
     actie:"Neem een andere speler mee wanneer je gevangengenomen wordt door de infiltranten tijdens een avondbijeenkomst." },
-  twijfelaar: { naam:"Twijfelaar", emoji:"🎲", team:"gelovige",
+  twijfelaar: { naam:"Twijfelaar", emoji:"🎲", team:"gelovige", img:"kaarten/twijfelaar.jpg",
     missie:"Wissel in de eerste avondbijeenkomst van rol als je dit wilt (kiezen ná het zien van de rol).",
     strategie:"Bedenk goed of jouw rol bij je past — je mag maar één keer wisselen.",
     actie:"Geef je keuze door aan de spelleider tijdens de eerste avondbijeenkomst." }
@@ -1693,24 +1697,40 @@ function renderRol(el){
   }
   const r = ROLES[p.role];
   const isInf = r.team === "infiltrant";
+  const teamCls = isInf ? "team-red" : "team-green";
+  const roleCard = r.img
+    ? `<div class="rolecard has-img ${teamCls}"><img src="${r.img}" alt="${r.naam}" class="rolecard-img"></div>
+       <details class="role-details">
+         <summary>📖 Volledige rolbeschrijving</summary>
+         <div class="dbody">
+           <div class="roleblock"><b>Missie</b><div>${r.missie}</div></div>
+           <div class="roleblock"><b>Strategie</b><div>${r.strategie}</div></div>
+           <div class="roleblock"><b>Actie</b><div>${r.actie}</div></div>
+         </div>
+       </details>`
+    : `<div class="rolecard ${teamCls}">
+        <div class="remoji">${r.emoji}</div>
+        <h2>${r.naam}</h2>
+        <div class="rteam"><span class="pill ${isInf ? "pill-red" : "pill-green"}">Team ${isInf ? "Infiltranten" : "Gelovigen"}</span></div>
+        <div class="roleblock"><b>Missie</b><div>${r.missie}</div></div>
+        <div class="roleblock"><b>Strategie</b><div>${r.strategie}</div></div>
+        <div class="roleblock"><b>Actie</b><div>${r.actie}</div></div>
+      </div>`;
   el.innerHTML = `
-    <div class="rolecard ${isInf ? "team-red" : "team-green"}">
-      <div class="remoji">${r.emoji}</div>
-      <h2>${r.naam}</h2>
-      <div class="rteam"><span class="pill ${isInf ? "pill-red" : "pill-green"}">Team ${isInf ? "Infiltranten" : "Gelovigen"}</span></div>
-      <div class="roleblock"><b>Missie</b><div>${r.missie}</div></div>
-      <div class="roleblock"><b>Strategie</b><div>${r.strategie}</div></div>
-      <div class="roleblock"><b>Actie</b><div>${r.actie}</div></div>
-    </div>
+    ${roleCard}
     <div class="card" style="text-align:center;font-size:13px;color:var(--muted)">
       🤫 <b>Houd je rol geheim!</b> Niemand mag zijn rol onthullen (spelregel 2).
     </div>
     ${p.status === "gevangen" ? `
+    <div class="rolecard has-img" style="border-color:var(--gold);box-shadow:0 18px 44px -18px rgba(232,178,58,.4)">
+      <img src="kaarten/gevangene.jpg" alt="Gevangene" class="rolecard-img">
+    </div>
     <div class="card" style="border:1.5px solid var(--gold)">
       <h3>⛓️ Je bent gevangengenomen</h3>
       <p style="font-size:13.5px;color:#d6d6dc;line-height:1.5">Vind het geheime voorwerp dat ergens op de camping is verstopt en lever het in bij de spelleider om te ontsnappen. Zoeken mag tussen 11:00 en 22:00. Wees andere gevangenen te slim af!</p>
     </div>` : ""}
     ${p.role === "hacker" && p.status !== "uit" ? hackerSectionHtml() : ""}`;
+  el.querySelectorAll(".rolecard-img").forEach(img => img.onclick = () => viewImage(img.src));
   if(p.role === "hacker") wireHackerSection(el);
 }
 
