@@ -1,0 +1,13 @@
+{
+  "name": "Geheime Dienst",
+  "short_name": "Geheime Dienst",
+  "description": "Geheime Dienst — Real life edition",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1b1611",
+  "theme_color": "#141417",
+  "icons": [
+    { "src": "kaarten/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "kaarten/icon.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
