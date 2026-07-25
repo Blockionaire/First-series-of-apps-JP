@@ -443,6 +443,13 @@
   .toast.hide{animation:toastOut .25s ease forwards}
   .empty{color:var(--muted); text-align:center; padding:44px 20px; font-size:14px}
   .empty .big{font-size:44px; margin-bottom:10px}
+
+  .gameover-banner{
+    margin:0 16px 6px; padding:11px 14px; border-radius:16px; text-align:center;
+    font-weight:700; font-size:13.5px; animation:popIn .35s var(--ease);
+  }
+  .gameover-banner.go-red{background:linear-gradient(135deg,#ff5b4d,#c22a22); color:#fff; box-shadow:0 8px 24px -10px rgba(255,59,48,.6)}
+  .gameover-banner.go-green{background:linear-gradient(135deg,#6fd35f,#3f8f35); color:#0d1f0a; box-shadow:0 8px 24px -10px rgba(98,197,84,.6)}
 </style>
 </head>
 <body>
@@ -622,6 +629,14 @@ function todayKey(){
   const d = new Date();
   return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
 }
+function deviceToken(){
+  let t = localStorage.getItem("gd_device_token");
+  if(!t){
+    t = "dev_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem("gd_device_token", t);
+  }
+  return t;
+}
 
 /* ---------- gestures ---------- */
 function enableSwipeBack(el, onBack){
@@ -761,7 +776,7 @@ function renderJoin(err = "", leaderMode = false){
     if(leaderMode && $("#joinPin").value !== PIN){ $("#joinErr").textContent = "Pincode onjuist."; return; }
     submitBtn.disabled = true;
     try{
-      // bestaat deze naam al? -> zelfde account terugpakken
+      // bestaat deze naam al? -> alleen het eigen apparaat mag het account terugpakken
       const existing = S.players.find(p => p.name.toLowerCase() === name.toLowerCase());
       let id;
       if(existing){
@@ -771,9 +786,18 @@ function renderJoin(err = "", leaderMode = false){
             : "Deze naam bestaat al als speler.";
           return;
         }
+        if(!leaderMode){
+          const tok = deviceToken();
+          if(existing.device && existing.device !== tok){
+            $("#joinErr").textContent = "Deze naam is al in gebruik op een ander apparaat. Nieuwe telefoon? Vraag de spelleider om jouw apparaat los te koppelen (🔓 bij Spelers).";
+            return;
+          }
+          if(!existing.device) await DB.set("players/" + existing.id, {device: tok});
+        }
         id = existing.id;
       } else {
-        id = await DB.add("players", {name, role:null, status:"actief", isLeader:leaderMode, at: now()});
+        id = await DB.add("players", {name, role:null, status:"actief", isLeader:leaderMode,
+          device: leaderMode ? null : deviceToken(), at: now()});
       }
       localStorage.setItem("gd_player_id", id);
       await ensureBaseChats();
@@ -885,6 +909,7 @@ function render(){
       <h2 class="title-font">${tabs.find(t => t[0] === S.tab)[2]}</h2>
       <div class="me-chip">${esc(S.me.name)}<br><span style="color:${isL ? "var(--gold)" : "var(--green)"}">${isL ? "🎩 Spelleider" : "Speler"}</span></div>
     </div>
+    ${S.settings.gameOver ? `<div class="gameover-banner ${S.settings.winner === "infiltrant" ? "go-red" : "go-green"}">🏁 Spel afgelopen — team ${S.settings.winner === "infiltrant" ? "Infiltranten" : "Gelovigen"} heeft gewonnen!</div>` : ""}
     <div class="content ${anim}" id="content"></div>
     <div class="tabbar">
       ${tabs.map(([id,icon,label]) => `
@@ -945,6 +970,7 @@ function renderSpelers(el){
               <div class="row-sub">${p.role ? ROLES[p.role].naam : "Nog geen rol"}</div>
             </div>
             <button class="icon-btn act-chat" title="Chat">💬</button>
+            ${p.device ? `<button class="icon-btn act-unlock" title="Apparaat loskoppelen">🔓</button>` : ""}
             <button class="icon-btn act-del" title="Verwijderen">🗑️</button>
           </div>
           <div class="selects">
@@ -957,13 +983,30 @@ function renderSpelers(el){
             </select>
           </div>
         </div>`).join("")}
-    </div>`;
+    </div>
+    ${endGameHtml()}`;
 
   $("#revealToggle").onchange = e => {
     haptic(12);
     DB.set("settings/main", {rolesRevealed: e.target.checked});
     if(e.target.checked) sendSystem("all", "🎭 De rollen zijn uitgedeeld! Bekijk je rol via het tabblad 'Mijn rol'.");
   };
+  el.querySelectorAll("[data-endgame]").forEach(b => b.onclick = () => {
+    const winner = b.dataset.endgame;
+    const wn = winner === "infiltrant" ? "Infiltranten" : "Gelovigen";
+    confirmModal(`Team <b>${wn}</b> tot winnaar uitroepen en het spel beëindigen?<br><span style="font-size:12.5px;color:var(--muted)">Alle spelers zien dan de uitslag en álle rollen worden voor iedereen onthuld.</span>`, async () => {
+      await DB.set("settings/main", {gameOver:true, winner, endedAt: now(), rolesRevealed:true});
+      await sendSystem("all", `🏁 HET SPEL IS AFGELOPEN! Team ${wn} heeft gewonnen! 🎉 Bekijk de volledige uitslag en alle rollen via het tabblad 'Mijn rol'.`);
+      haptic(20);
+      toast(`Spel beëindigd — ${wn} winnen! 🏁`);
+    });
+  });
+  const rg = $("#reopenGame");
+  if(rg) rg.onclick = () => confirmModal("Spel heropenen? De uitslag verdwijnt weer bij alle spelers.", async () => {
+    await DB.set("settings/main", {gameOver:false});
+    await sendSystem("all", "↩️ De spelleider heeft het spel heropend — het spel gaat verder!");
+    toast("Spel heropend");
+  });
   const nrb = $("#newReportBtn"); if(nrb) nrb.onclick = () => reportModal();
   el.querySelectorAll("[data-report-edit]").forEach(b => b.onclick = () => reportModal(b.dataset.reportEdit));
   el.querySelectorAll("[data-report-del]").forEach(b => b.onclick = () =>
@@ -993,6 +1036,13 @@ function renderSpelers(el){
     row.querySelector(".sel-role").onchange = e => { haptic(6); DB.set("players/" + pid, {role: e.target.value || null}); };
     row.querySelector(".sel-status").onchange = e => { haptic(6); DB.set("players/" + pid, {status: e.target.value, statusAt: now()}); };
     row.querySelector(".act-chat").onclick = () => openDM(pid);
+    const unlock = row.querySelector(".act-unlock");
+    if(unlock) unlock.onclick = () => {
+      const p = S.players.find(x => x.id === pid);
+      confirmModal(`Apparaat van <b>${esc(p.name)}</b> loskoppelen?<br><span style="font-size:12.5px;color:var(--muted)">Doe dit alleen als ${esc(p.name)} zelf een nieuwe telefoon heeft — het eerstvolgende apparaat dat deze naam invoert, wordt het account.</span>`, async () => {
+        await DB.set("players/" + pid, {device: null}); toast("Apparaat losgekoppeld 🔓");
+      });
+    };
     row.querySelector(".act-del").onclick = () => {
       const p = S.players.find(x => x.id === pid);
       confirmModal(`Wil je <b>${esc(p.name)}</b> verwijderen uit het spel?`, async () => {
@@ -1000,6 +1050,28 @@ function renderSpelers(el){
       });
     };
   });
+}
+
+/* ---------- spel beëindigen (spelleider) ---------- */
+function endGameHtml(){
+  if(S.settings.gameOver){
+    const w = S.settings.winner === "infiltrant";
+    return `
+      <div class="card" style="border:1.5px solid ${w ? "var(--red)" : "var(--green)"};margin-top:16px">
+        <h3>🏁 Spel afgelopen</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Team <b style="color:${w ? "var(--red)" : "var(--green)"}">${w ? "Infiltranten" : "Gelovigen"}</b> heeft gewonnen. Alle rollen zijn nu voor iedereen zichtbaar in de uitslag.</p>
+        <button class="btn btn-ghost btn-block" id="reopenGame">↩️ Spel heropenen</button>
+      </div>`;
+  }
+  return `
+    <div class="card" style="margin-top:16px">
+      <h3>🏁 Spel beëindigen</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Roep de winnaar uit — alle spelers zien dan de uitslag en álle rollen worden onthuld.</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-red" style="flex:1" data-endgame="infiltrant">🕵️ Infiltranten winnen</button>
+        <button class="btn btn-green" style="flex:1" data-endgame="gelovige">✝️ Gelovigen winnen</button>
+      </div>
+    </div>`;
 }
 
 /* ---------- hackervragen (spelleider) ---------- */
@@ -1688,6 +1760,7 @@ function missionModal(missionId){
    ===================================================================== */
 function renderRol(el){
   const p = S.me;
+  if(S.settings.gameOver){ renderUitslag(el); return; }
   if(!p.role || !S.settings.rolesRevealed){
     el.innerHTML = `
       <div class="rolecard">
@@ -1736,6 +1809,41 @@ function renderRol(el){
     ${p.role === "hacker" && p.status !== "uit" ? hackerSectionHtml() : ""}`;
   el.querySelectorAll(".rolecard-img").forEach(img => img.onclick = () => viewImage(img.src));
   if(p.role === "hacker") wireHackerSection(el);
+}
+
+/* ---------- uitslag na einde spel ---------- */
+function renderUitslag(el){
+  const w = S.settings.winner === "infiltrant";
+  const players = S.players.filter(p => !p.isLeader)
+    .sort((a,b) => {
+      const ta = a.role && ROLES[a.role] && ROLES[a.role].team === "infiltrant" ? 0 : 1;
+      const tb = b.role && ROLES[b.role] && ROLES[b.role].team === "infiltrant" ? 0 : 1;
+      return ta - tb || (a.name||"").localeCompare(b.name||"");
+    });
+  const iWon = S.me.role && ROLES[S.me.role] && (ROLES[S.me.role].team === S.settings.winner);
+  el.innerHTML = `
+    <div class="rolecard ${w ? "team-red" : "team-green"}">
+      <div class="remoji">${w ? "🕵️" : "✝️"}</div>
+      <h2 style="font-size:30px">${w ? "Infiltranten" : "Gelovigen"} winnen!</h2>
+      <div class="rteam"><span class="pill ${w ? "pill-red" : "pill-green"}">Einde spel</span></div>
+      <p style="font-size:14px;color:#e4e4ea;line-height:1.5">${S.me.isLeader ? "Het spel is afgelopen." : iWon ? "🎉 Gefeliciteerd — jouw team heeft gewonnen!" : "Helaas — jouw team heeft verloren. Volgende keer beter!"}<br>Bedankt voor het spelen van Geheime Dienst.</p>
+    </div>
+    <div class="section-label">Alle rollen onthuld</div>
+    ${players.map(p => {
+      const r = p.role ? ROLES[p.role] : null;
+      const inf = r && r.team === "infiltrant";
+      return `
+      <div class="list-row">
+        <div class="avatar ${r ? (inf ? "red" : "green") : ""}">${r ? r.emoji : initial(p.name)}</div>
+        <div class="row-main">
+          <div class="row-title">${esc(p.name)}
+            ${p.status !== "actief" ? `<span class="pill ${p.status === "gevangen" ? "pill-gold" : "pill-gray"}">${STATUSES[p.status] || p.status}</span>` : ""}
+          </div>
+          <div class="row-sub">${r ? r.naam : "Geen rol"}</div>
+        </div>
+        ${r ? `<span class="pill ${inf ? "pill-red" : "pill-green"}">${inf ? "Infiltrant" : "Gelovige"}</span>` : ""}
+      </div>`;
+    }).join("")}`;
 }
 
 /* ---------- hackervragen (speler) ---------- */
