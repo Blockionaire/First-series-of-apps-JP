@@ -295,6 +295,26 @@
     transition:transform .14s var(--ease), background .14s ease;
   }
   .icon-btn:active{transform:scale(.9); background:var(--bg4)}
+  /* ---------- recap bovenaan het spelersoverzicht ---------- */
+  .recap-dag{
+    background:var(--bg2); border:1px solid var(--line); border-radius:16px;
+    padding:13px 14px 14px; margin-bottom:8px; text-align:center;
+  }
+  .recap-dag.finale{border-color:var(--gold); box-shadow:0 0 0 1px rgba(214,175,84,.25) inset}
+  .rd-label{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.7px; font-weight:600}
+  .rd-dagen{display:flex; gap:8px; justify-content:center; margin-top:9px}
+  .rd-dag{
+    flex:1; max-width:74px; border:1.5px solid var(--line); border-radius:13px; padding:7px 0;
+    font-family:'Lilita One'; font-size:23px; line-height:1.05; color:var(--muted);
+    background:transparent; transition:all .22s var(--ease);
+  }
+  .rd-dag .rd-mini{display:block; font-family:inherit; font-size:9px; letter-spacing:.6px; opacity:.8}
+  button.rd-dag:active{transform:scale(.93)}
+  .rd-dag.aan{color:var(--text); border-color:var(--green); background:rgba(98,197,84,.14)}
+  .rd-dag.aan.finale{border-color:var(--gold); background:rgba(214,175,84,.16)}
+  .rd-sub{font-size:12px; color:var(--muted); margin-top:9px}
+  .rd-sub b{color:var(--gold)}
+
   .stat-strip{display:flex; gap:8px; margin-bottom:14px}
   .stat{flex:1; background:var(--bg2); border:1px solid var(--line); border-radius:16px; padding:11px 8px; text-align:center}
   .stat .num{font-family:'Lilita One'; font-size:22px}
@@ -1707,7 +1727,7 @@ async function resetGame(wipePlayers){
     await DB.del("missions/" + mi.id);
   }
   for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","hunts","huntEntries","images"]) await delAll(col);
-  await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null});
+  await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null, dag:1});
   if(wipePlayers){
     await delAll("players");
     localStorage.removeItem("gd_player_id");
@@ -1725,6 +1745,45 @@ async function resetGame(wipePlayers){
    VERBANNEN SPELERS (zichtbaar voor iedereen)
    ===================================================================== */
 // volgorde: laatst afgevallen bovenaan
+/* ---------- recap: speeldag + de drie tellingen ---------- */
+const spelDag = () => Math.min(3, Math.max(1, Number(S.settings.dag) || 1));
+
+const tegel = (getal, label, kleur = "") =>
+  `<div class="stat"><div class="num"${kleur ? ` style="color:${kleur}"` : ""}>${getal}</div><div class="lbl">${label}</div></div>`;
+
+// het aantal infiltranten is spelgeheim, dus die tegel is alleen voor de spelleider
+function recapHtml(tegels){
+  const dag = spelDag();
+  const isL = S.me.isLeader;
+  return `
+    <div class="recap-dag${dag === 3 ? " finale" : ""}">
+      <div class="rd-label">Dag van het spel</div>
+      <div class="rd-dagen">
+        ${[1,2,3].map(d => {
+          const aan = d === dag;
+          const kl = `rd-dag${aan ? " aan" : ""}${d === 3 && aan ? " finale" : ""}`;
+          const inhoud = `${d}${d === 3 ? `<span class="rd-mini">FINALE</span>` : ""}`;
+          return isL
+            ? `<button class="${kl}" data-dag="${d}">${inhoud}</button>`
+            : `<div class="${kl}">${inhoud}</div>`;
+        }).join("")}
+      </div>
+      <div class="rd-sub">${dag === 3
+        ? `<b>Finaledag</b> — vanavond valt de beslissing 🏁`
+        : `Dag ${dag} van 3${isL ? " · tik op een dag om te wisselen" : ""}`}</div>
+    </div>
+    <div class="stat-strip">${tegels}</div>`;
+}
+
+function bindRecap(el){
+  el.querySelectorAll("[data-dag]").forEach(b => b.onclick = async () => {
+    const d = Number(b.dataset.dag);
+    if(d === spelDag()) return;
+    haptic(8);
+    await DB.set("settings/main", {dag: d});
+  });
+}
+
 function verbannenSpelers(){
   return S.players
     .filter(p => !p.isLeader && p.status && p.status !== "actief")
@@ -1761,11 +1820,13 @@ function renderSpelersVoorSpeler(el){
   const actief = S.players.filter(p => !p.isLeader && (p.status || "actief") === "actief")
     .sort((a,b) => (a.name||"").localeCompare(b.name||""));
   const uit = verbannenSpelers();
+  const gevangen = S.players.filter(p => !p.isLeader && p.status === "gevangen");
   el.innerHTML = `
-    <div class="stat-strip">
-      <div class="stat"><div class="num">${actief.length}</div><div class="lbl">In het spel</div></div>
-      <div class="stat"><div class="num" style="color:var(--red)">${uit.length}</div><div class="lbl">Verbannen</div></div>
-    </div>
+    ${recapHtml(
+      tegel(actief.length + gevangen.length, "Spelers") +
+      tegel(gevangen.length, "Gevangenen", "var(--gold)") +
+      tegel(uit.filter(p => p.status !== "gevangen").length, "Verbannen", "var(--red)")
+    )}
     <div class="section-label">🎭 Nog in het spel</div>
     ${actief.length === 0 ? `<div class="empty" style="padding:22px">Nog geen deelnemers.</div>` : ""}
     ${actief.map(p => `
@@ -1790,12 +1851,14 @@ function renderSpelers(el){
   const nInf = players.filter(p => p.role === "infiltrant").length;
   const nRole = players.filter(p => p.role).length;
 
+  const inSpel = players.filter(p => !isMuted(p));
   el.innerHTML = `
-    <div class="stat-strip">
-      <div class="stat"><div class="num">${n}</div><div class="lbl">Spelers</div></div>
-      <div class="stat"><div class="num" style="color:var(--red)">${nInf}</div><div class="lbl">Infiltranten</div></div>
-      <div class="stat"><div class="num">${nRole}/${n}</div><div class="lbl">Rol toegewezen</div></div>
-    </div>
+    ${recapHtml(
+      tegel(inSpel.length, "Spelers") +
+      tegel(inSpel.filter(p => p.role === "infiltrant").length, "Infiltranten", "var(--red)") +
+      tegel(inSpel.filter(p => p.status === "gevangen").length, "Gevangenen", "var(--gold)")
+    )}
+    ${nRole < n ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">🎭 ${nRole} van de ${n} spelers heeft een rol${nInf ? ` · ${nInf} infiltrant${nInf === 1 ? "" : "en"} toegewezen` : ""}</div>` : ""}
     ${adv ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">💡 Advies bij ${n} spelers: <b style="color:var(--red)">${adv[0]} infiltranten</b> en <b style="color:var(--green)">${adv[1]} gelovigen</b>${n >= 17 ? " (2x veldwerker)" : " (alle speciale rollen 1x)"}</div>` : ""}
     <div class="switch-row">
       <div style="flex:1">
@@ -1840,6 +1903,7 @@ function renderSpelers(el){
     </div>
     ${verbannenHtml()}`;
 
+  bindRecap(el);
   $("#revealToggle").onchange = e => {
     haptic(12);
     DB.set("settings/main", {rolesRevealed: e.target.checked});
