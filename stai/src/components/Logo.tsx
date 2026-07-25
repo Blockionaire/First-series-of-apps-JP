@@ -4,13 +4,14 @@
  * SPlusMark is the ONLY logo variant allowed to carry gold.
  */
 export function SMark({ size = 28 }: { size?: number }) {
+  // currentColor: cream in the dark theme, navy in the light theme.
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-      <rect x="1" y="1" width="30" height="30" fill="none" stroke="#EDEAE3" strokeOpacity="0.35" strokeWidth="1.5" />
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false" className="text-cream-100">
+      <rect x="1" y="1" width="30" height="30" fill="none" stroke="currentColor" strokeOpacity="0.35" strokeWidth="1.5" />
       <path
         d="M22.5 9.5c-1.2-1.6-3.2-2.5-5.9-2.5-3.6 0-6.1 1.7-6.1 4.5 0 5.9 12.4 3.1 12.4 9 0 2.9-2.6 4.5-6.4 4.5-2.9 0-5.2-1-6.5-2.8"
         fill="none"
-        stroke="#EDEAE3"
+        stroke="currentColor"
         strokeWidth="2.6"
         strokeLinecap="square"
       />

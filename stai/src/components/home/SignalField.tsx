@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { canvasInk, onThemeChange } from "@/lib/theme";
 
 /**
  * The hero's signal field: a fine lattice of dots over which a slow
@@ -64,7 +65,7 @@ export default function SignalField() {
           const r = 0.8 + Math.max(0, wave) * 0.7 + local * 1.4;
           ctx.beginPath();
           ctx.arc(x, y, r, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(237, 234, 227, ${a.toFixed(3)})`;
+          ctx.fillStyle = canvasInk(Number(a.toFixed(3)));
           ctx.fill();
         }
       }
@@ -114,9 +115,12 @@ export default function SignalField() {
     canvas.parentElement?.addEventListener("pointermove", onMove);
     canvas.parentElement?.addEventListener("pointerleave", onLeave);
     window.addEventListener("resize", onResize);
+    // animated frames pick the theme up next tick; the static frame must redraw
+    const offTheme = onThemeChange(() => reduced && draw(9000));
 
     return () => {
       stop();
+      offTheme();
       io.disconnect();
       document.removeEventListener("visibilitychange", onVis);
       canvas.parentElement?.removeEventListener("pointermove", onMove);

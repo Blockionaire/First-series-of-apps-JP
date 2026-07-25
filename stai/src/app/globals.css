@@ -39,6 +39,57 @@
   --ink-muted: rgba(237, 234, 227, 0.6);
   --ink-faint: rgba(237, 234, 227, 0.38);
   --gold-line: rgba(201, 168, 76, 0.35);
+  color-scheme: dark;
+}
+
+/* ————————————————————————————————————————————————
+   Light theme — bright beige, navy as the voice.
+   The entire site reads semantic tokens, so light mode is a remap:
+   "navy" tokens become the beige surface scale, "cream" tokens become
+   the navy ink scale. Pairings invert together, so contrast is
+   preserved everywhere by construction. Gold stays premium-only;
+   its text shade deepens for contrast on beige.
+   ———————————————————————————————————————————————— */
+html[data-theme="light"] {
+  /* surfaces (formerly navy) */
+  --color-navy-950: #ece7db; /* consoles, code, ticker — deepest panel */
+  --color-navy-900: #f5f2ec; /* the page */
+  --color-navy-850: #f0ece3; /* alternating sections */
+  --color-navy-800: #efebe2; /* cards */
+  --color-navy-700: #e2dcce;
+  --color-navy-600: #c9c2b0;
+  /* ink (formerly cream) */
+  --color-cream-100: #0e1726; /* headlines, strongest text */
+  --color-cream-200: #1b2a3f; /* body — subtle navy */
+  --color-cream-400: #44536c; /* muted accent */
+  --color-cream-600: #68748a;
+  /* gold text deepens for contrast; gold surfaces unchanged */
+  --color-gold-300: #8f7326;
+  /* status */
+  --color-signal-up: #3f7a50;
+  --color-signal-down: #a64f3b;
+  /* hairlines & ink washes */
+  --line: rgba(14, 23, 38, 0.14);
+  --line-strong: rgba(14, 23, 38, 0.3);
+  --ink-muted: rgba(14, 23, 38, 0.64);
+  --ink-faint: rgba(14, 23, 38, 0.46);
+  --gold-line: rgba(143, 115, 38, 0.45);
+  color-scheme: light;
+}
+
+html[data-theme="light"] ::selection {
+  background: #1b2a3f;
+  color: #f5f2ec;
+}
+
+/* Ghost-button hover wash needs ink, not cream, on light */
+html[data-theme="light"] .btn-ghost:hover {
+  background: rgba(14, 23, 38, 0.05);
+}
+
+/* Light panels get a breath of depth that hairlines alone can't give on beige */
+html[data-theme="light"] .panel-lift {
+  box-shadow: 0 1px 2px rgba(14, 23, 38, 0.05), 0 8px 28px rgba(14, 23, 38, 0.06);
 }
 
 html {
@@ -290,13 +341,13 @@ body {
   background: transparent;
 }
 .btn-ghost:hover { border-color: var(--color-cream-400); background: rgba(237, 234, 227, 0.04); }
-/* Gold = STAI+ only */
+/* Gold = STAI+ only. Text is literal navy: gold surfaces keep dark ink in BOTH themes. */
 .btn-plus {
-  background: var(--color-gold-500);
-  color: var(--color-navy-950);
+  background: #c9a84c;
+  color: #0a111d;
   font-weight: 700;
 }
-.btn-plus:hover { background: var(--color-gold-300); }
+.btn-plus:hover { background: #e8c97a; }
 .btn-plus-ghost {
   border-color: var(--gold-line);
   color: var(--color-gold-300);
@@ -313,7 +364,7 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(19, 30, 46, 0) 0%, var(--color-navy-800) 78%);
+  background: linear-gradient(to bottom, transparent 0%, var(--color-navy-800) 78%);
   pointer-events: none;
 }
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { currentUser } from "@/lib/auth";
 import { SMark, PlusBadge } from "@/components/Logo";
 import EnforcementClock from "./EnforcementClock";
+import ThemeToggle from "./ThemeToggle";
 import MobileNav from "./MobileNav";
 
 export const NAV = [
@@ -28,7 +29,10 @@ export default async function Header() {
           <span className="live-dot inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-signal-up)" }} aria-hidden />
           Live
         </span>
-        <EnforcementClock />
+        <span className="flex items-center gap-3">
+          <ThemeToggle />
+          <EnforcementClock />
+        </span>
       </div>
 
       {/* Main nav */}

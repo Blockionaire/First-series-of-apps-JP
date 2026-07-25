@@ -55,6 +55,18 @@ Server-side integrations degrade honestly:
 | `STAI_ADMIN_EMAIL` / `STAI_ADMIN_PASSWORD` | Dev admin seeded as `desk@stai.ai` / `stai-desk-2026` — **set these in production** |
 | `TRAINING_INBOX` | Enquiry notifications default to `training@stai.ai` |
 
+## Theming
+
+Two themes, one component tree. Dark (default) is the intelligence terminal;
+light is bright beige with navy ink — toggled from the system bar, persisted in
+a `stai_theme` cookie so the server renders the right theme with no flash.
+Implementation is a token remap under `html[data-theme="light"]` in
+`globals.css`: "navy" tokens become the beige surface scale and "cream" tokens
+become the navy ink scale, so every existing pairing inverts together and
+contrast is preserved by construction. The hand-drawn canvases (signal field,
+radar) read the theme per frame via `src/lib/theme.ts`. Gold remains
+premium-only in both themes; its text shade deepens on beige for contrast.
+
 ## Accessibility & motion
 
 Keyboard paths everywhere (the Radar included: arrows cycle, Enter opens, with a

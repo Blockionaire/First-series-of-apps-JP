@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fmtDate } from "@/lib/format";
+import { canvasInk, canvasPanel, onThemeChange } from "@/lib/theme";
 
 /**
  * The Radar — the Briefing's spatial instrument. Every published piece is
@@ -99,7 +100,7 @@ export default function Radar({ items }: { items: RadarItem[] }) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
-    const cream = (a: number) => `rgba(237,234,227,${a})`;
+    const cream = canvasInk; // ink follows the theme: cream on dark, navy on light
 
     const draw = (animate: boolean) => {
       ctx.clearRect(0, 0, w, h);
@@ -212,7 +213,7 @@ export default function Radar({ items }: { items: RadarItem[] }) {
         const tw = ctx.measureText(label).width;
         const tx = Math.min(Math.max(b.x - tw / 2, 8), w - tw - 16);
         const ty = b.y - 22 < 14 ? b.y + 16 : b.y - 30;
-        ctx.fillStyle = "rgba(10,17,29,0.92)";
+        ctx.fillStyle = canvasPanel(0.94);
         ctx.fillRect(tx - 6, ty, tw + 12, 20);
         ctx.strokeStyle = cream(0.25);
         ctx.strokeRect(tx - 6, ty, tw + 12, 20);
@@ -277,9 +278,11 @@ export default function Radar({ items }: { items: RadarItem[] }) {
     canvas.addEventListener("pointerleave", onLeave);
     canvas.addEventListener("click", onClick);
     window.addEventListener("resize", onResize);
+    const offTheme = onThemeChange(() => mq.matches && draw(false));
 
     return () => {
       stop();
+      offTheme();
       io.disconnect();
       document.removeEventListener("visibilitychange", onVis);
       canvas.removeEventListener("pointermove", onMove);
