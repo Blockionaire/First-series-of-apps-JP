@@ -1513,7 +1513,16 @@ async function postReportMessage(reportId, r){
 /* =====================================================================
    RAADSEL & HET SCHILD
    ===================================================================== */
-const normAnswer = s => String(s || "").toLowerCase().replace(/\s+/g, "");
+// antwoorden vergelijken zonder hoofdletters, spaties, leestekens en lidwoorden (de/het/een/'t)
+const normAnswer = s => {
+  const words = String(s || "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .split(/\s+/)
+    .filter(Boolean);
+  const zonderLidwoorden = words.filter(w => !["de", "het", "een", "t"].includes(w));
+  return (zonderLidwoorden.length ? zonderLidwoorden : words).join("");
+};
 
 function leaderRiddleHtml(){
   const pending = S.riddles.filter(r => !r.published).sort((a,b) => (a.publishAt||0)-(b.publishAt||0));
@@ -1537,7 +1546,7 @@ function newRiddleModal(){
     return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16); };
   modal(`
     <h3>🛡️ Raadsel om het schild</h3>
-    <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Wie als eerste het goede antwoord instuurt, wint het schild en is veilig tijdens het eerstvolgende infiltrantenoverleg. Antwoorden zijn niet hoofdletter- of spatiegevoelig; spelers mogen elke 5 minuten één poging doen.</p>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Wie als eerste het goede antwoord instuurt, wint het schild en is veilig tijdens het eerstvolgende infiltrantenoverleg. Antwoorden zijn niet gevoelig voor hoofdletters, spaties, leestekens of lidwoorden ("de stoel" = "stoel"); spelers mogen elke 5 minuten één poging doen.</p>
     <div class="field"><label>Raadsel</label><textarea id="riQ" rows="4" placeholder="Bijv. Ik heb steden maar geen huizen, bossen maar geen bomen. Wat ben ik?"></textarea></div>
     <div class="field"><label>Het juiste antwoord (geheim)</label><input id="riA" placeholder="Bijv. een landkaart" maxlength="80"></div>
     <div class="field"><label>🕚 Inplannen voor (optioneel)</label><input id="riWhen" type="datetime-local" value="${defTime()}"></div>
