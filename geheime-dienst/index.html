@@ -54,7 +54,7 @@
   select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239b9ba3' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding-right:32px}
   input:focus,textarea:focus,select:focus{border-color:var(--green); box-shadow:0 0 0 3px rgba(98,197,84,.15)}
   ::placeholder{color:#6d6d75}
-  .app{max-width:540px; margin:0 auto; min-height:100dvh; display:flex; flex-direction:column; position:relative}
+  .app{max-width:540px; margin:0 auto; height:100dvh; display:flex; flex-direction:column; position:relative; overflow:hidden}
   .hidden{display:none !important}
   ::-webkit-scrollbar{width:0; height:0}
 
@@ -109,7 +109,8 @@
       radial-gradient(600px 320px at 85% -60px, rgba(255,59,48,.10), transparent 70%),
       radial-gradient(600px 320px at 10% 105%, rgba(98,197,84,.10), transparent 70%),
       linear-gradient(135deg,#1b1b1f 0%,#1b1b1f 49.9%,#232327 50%,#232327 100%);
-    min-height:100dvh;
+    min-height:100%;
+    overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
   }
   .join > *{animation:viewIn .5s var(--ease) backwards}
   .join > *:nth-child(2){animation-delay:.08s}
@@ -147,7 +148,7 @@
   .topbar h2{font-size:24px; text-transform:uppercase; flex:1}
   .topbar .me-chip{font-size:12px; color:var(--muted); text-align:right; line-height:1.3}
   .content{
-    flex:1; overflow-y:auto; padding:6px 16px 118px;
+    flex:1; min-height:0; overflow-y:auto; padding:6px 16px 118px;
     overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
     animation:viewIn .26s var(--ease);
   }
@@ -601,6 +602,22 @@
   }
   body.light .riddle-q{color:#3a3325}
   body.light .win-msg{color:#e8e8ee}
+
+  /* ---------- zoekopdracht (gevangenen) ---------- */
+  .huntcard{border-color:#7fa6ff !important; box-shadow:0 8px 24px -12px rgba(127,166,255,.4) !important}
+  .huntcard.done{border-color:var(--green) !important; box-shadow:0 8px 24px -12px rgba(98,197,84,.4) !important}
+  .hunt-obj{width:100%; border-radius:14px; display:block; margin-bottom:10px; cursor:pointer; min-height:90px;
+    background:linear-gradient(90deg,#2c2c33 25%,#37373f 50%,#2c2c33 75%); background-size:400px 100%;
+    animation:shimmer 1.2s linear infinite}
+  .hunt-obj[src]{min-height:0; animation:none; background:none}
+
+  /* ---------- ontmaskerd (alleen-lezen) ---------- */
+  .muted-note{
+    text-align:center; font-size:13px; color:var(--muted); padding:14px 18px calc(14px + env(safe-area-inset-bottom));
+    background:rgba(17,17,20,.85); border-top:1px solid var(--line);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  }
+  body.light .muted-note{background:rgba(250,249,245,.92)}
 </style>
 </head>
 <body>
@@ -651,7 +668,9 @@ const ROLES = {
     actie:"Geef je keuze door aan de spelleider tijdens de eerste avondbijeenkomst." }
 };
 const ROLE_ORDER = ["infiltrant","gelovige","veldwerker","hacker","held","bijbelsmokkelaar","verrader","twijfelaar"];
-const STATUSES = { actief:"Actief", gevangen:"Gevangen", uit:"Uit het spel" };
+const STATUSES = { actief:"Actief", gevangen:"Gevangen", ontmaskerd:"Ontmaskerd", uit:"Uit het spel" };
+const statusPill = st => st === "gevangen" ? "pill-gold" : st === "ontmaskerd" ? "pill-red" : "pill-gray";
+const isMuted = p => p && !p.isLeader && (p.status === "ontmaskerd" || p.status === "uit");
 const VERHOUDING = {8:[2,6],9:[2,7],10:[3,7],11:[3,8],12:[3,9],13:[3,10],14:[4,10],15:[4,11],16:[4,12],17:[5,12],18:[5,13],19:[5,14],20:[6,14],21:[6,15],22:[6,16],23:[7,16],24:[7,17],25:[7,18]};
 
 /* =====================================================================
@@ -750,6 +769,9 @@ const S = {
   riddles: [],
   riddleAttempts: [],
   roleRequests: [],
+  takeovers: [],
+  hunts: [],
+  huntEntries: [],
   settings: {rolesRevealed:false},
   tab: "chats",
   viewAnim: null,      // 'from-left' | 'from-right'
@@ -1184,7 +1206,7 @@ async function resetGame(wipePlayers){
     for(const ph of await DB.getAll(`missions/${mi.id}/photos`)) await DB.del(`missions/${mi.id}/photos/${ph.id}`);
     await DB.del("missions/" + mi.id);
   }
-  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","images"]) await delAll(col);
+  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","hunts","huntEntries","images"]) await delAll(col);
   await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null});
   if(wipePlayers){
     await delAll("players");
@@ -1236,7 +1258,7 @@ function renderSpelers(el){
             <div class="avatar ${p.role ? (ROLES[p.role].team === "infiltrant" ? "red" : "green") : ""}">${p.role ? ROLES[p.role].emoji : initial(p.name)}</div>
             <div class="row-main">
               <div class="row-title">${esc(p.name)}
-                ${p.status !== "actief" ? `<span class="pill ${p.status === "gevangen" ? "pill-gold" : "pill-gray"}">${STATUSES[p.status] || p.status}</span>` : ""}
+                ${p.status !== "actief" ? `<span class="pill ${statusPill(p.status)}">${STATUSES[p.status] || p.status}</span>` : ""}
               </div>
               <div class="row-sub">${p.role ? ROLES[p.role].naam : "Nog geen rol"}</div>
             </div>
@@ -1264,14 +1286,17 @@ function renderSpelers(el){
       setTimeout(syncAutoChats, 600);
     }
   };
-  el.querySelectorAll("[data-req-done]").forEach(b => b.onclick = async () => {
-    const r = S.roleRequests.find(x => x.id === b.dataset.reqDone);
+  el.querySelectorAll("[data-req-ok]").forEach(b => b.onclick = () => approveRequestModal(b.dataset.reqOk));
+  el.querySelectorAll("[data-req-ask]").forEach(b => b.onclick = () => askTakeoverModal(b.dataset.reqAsk));
+  el.querySelectorAll("[data-req-no]").forEach(b => b.onclick = () => {
+    const r = S.roleRequests.find(x => x.id === b.dataset.reqNo);
     if(!r) return;
-    b.disabled = true;
-    await DB.del("roleRequests/" + r.id);
-    await DB.set("chats/dm_" + r.pid, {type:"dm", dmFor:r.pid, at: now()});
-    await sendSystem("dm_" + r.pid, "🙋 De spelleider heeft je rolverzoek behandeld — bekijk je rol via het tabblad 'Mijn rol'.");
-    toast("Verzoek afgehandeld");
+    confirmModal(`Verzoek van <b>${esc(r.pn)}</b> afwijzen? De speler houdt zijn huidige rol en krijgt hiervan bericht.`, async () => {
+      await closeRequest(r.id, "afgewezen");
+      await DB.set("chats/dm_" + r.pid, {type:"dm", dmFor:r.pid, at: now()});
+      await sendSystem("dm_" + r.pid, "🙋 Je rolverzoek is helaas afgewezen — je houdt je huidige rol. Succes! 🤫");
+      toast("Verzoek afgewezen");
+    });
   });
   el.querySelectorAll("[data-riddle-now]").forEach(b => b.onclick = async () => {
     const r = S.riddles.find(x => x.id === b.dataset.riddleNow);
@@ -1351,13 +1376,125 @@ function leaderRequestsHtml(){
   return `
     <div class="card" style="border:1.5px solid var(--gold)">
       <h3>🙋 Rolverzoeken <span class="pill pill-gold">${open.length}</span></h3>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Wijzig eventueel de rol via de lijst hieronder en tik daarna op ✔.</p>
-      ${open.map(r => `
-        <div class="hq-item">
-          <div class="hq-q"><b>${esc(r.pn)}</b> wil liever een andere rol${r.text ? `<br><span style="color:var(--muted)">"${esc(r.text)}"</span>` : ""}<div class="hq-who">${fmtTime(r.at)}</div></div>
-          <button class="btn btn-sm btn-green" data-req-done="${r.id}">✔</button>
-        </div>`).join("")}
+      ${open.map(r => {
+        const p = S.players.find(x => x.id === r.pid);
+        const huidige = p && p.role ? ROLES[p.role].emoji + " " + ROLES[p.role].naam : "geen rol";
+        const pending = S.takeovers.filter(t => t.reqId === r.id && t.status === "open");
+        return `
+        <div class="set-card" style="margin-bottom:10px">
+          <div style="font-size:13.5px;margin-bottom:8px"><b>${esc(r.pn)}</b> wil een andere rol
+            <div style="font-size:12px;color:var(--muted)">nu: ${huidige}${r.text ? ` · "${esc(r.text)}"` : ""} · ${fmtTime(r.at)}</div>
+          </div>
+          ${pending.length ? `<div style="font-size:12px;color:var(--gold);margin-bottom:8px">⏳ Gevraagd aan ${esc(pending.map(t => t.targetPn).join(", "))} — wacht op antwoord</div>` : ""}
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-green" data-req-ok="${r.id}">✅ Goedkeuren</button>
+            <button class="btn btn-sm btn-ghost" data-req-ask="${r.id}">🔄 Spelers vragen</button>
+            <button class="btn btn-sm btn-red" data-req-no="${r.id}">❌ Afwijzen</button>
+          </div>
+        </div>`;
+      }).join("")}
     </div>`;
+}
+
+function approveRequestModal(reqId){
+  const r = S.roleRequests.find(x => x.id === reqId);
+  if(!r) return;
+  const p = S.players.find(x => x.id === r.pid);
+  modal(`
+    <h3>✅ Verzoek goedkeuren</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Kies de nieuwe rol voor <b style="color:var(--text)">${esc(r.pn)}</b>. De speler krijgt hiervan bericht.</p>
+    <div class="field"><label>Nieuwe rol</label>
+      <select id="arRole">
+        ${ROLE_ORDER.map(k => `<option value="${k}" ${p && p.role === k ? "selected" : ""}>${ROLES[k].emoji} ${ROLES[k].naam}</option>`).join("")}
+      </select>
+    </div>
+    <button class="btn btn-green btn-block" id="arSave">Rol toewijzen en goedkeuren</button>
+  `, m => {
+    m.querySelector("#arSave").onclick = async () => {
+      const nieuw = m.querySelector("#arRole").value;
+      await DB.set("players/" + r.pid, {role: nieuw});
+      await closeRequest(reqId, "goedgekeurd");
+      await sendSystem("dm_" + r.pid, `🙋 Je rolverzoek is goedgekeurd! Je hebt nu een nieuwe rol — bekijk hem via het tabblad 'Mijn rol'.`);
+      haptic(12); toast("Rol gewijzigd en verzoek goedgekeurd ✔");
+      closeModal();
+      setTimeout(syncAutoChats, 500);
+    };
+  });
+}
+
+function askTakeoverModal(reqId){
+  const r = S.roleRequests.find(x => x.id === reqId);
+  if(!r) return;
+  const p = S.players.find(x => x.id === r.pid);
+  const rol = p && p.role ? ROLES[p.role] : null;
+  const anderen = S.players.filter(x => !x.isLeader && x.id !== r.pid && x.status !== "uit");
+  modal(`
+    <h3>🔄 Wie wil deze rol overnemen?</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">De geselecteerde spelers krijgen de vraag of ze de rol ${rol ? `<b style="color:var(--text)">${rol.emoji} ${rol.naam}</b>` : "van deze speler"} willen overnemen. Wie als eerste ja zegt, ruilt van rol met <b style="color:var(--text)">${esc(r.pn)}</b> en het verzoek wordt automatisch goedgekeurd.<br><span style="color:var(--gold)">De naam van ${esc(r.pn)} wordt niet getoond.</span></p>
+    <div class="check-list">
+      ${anderen.map(x => `<label><input type="checkbox" value="${x.id}"> ${esc(x.name)} <span style="color:var(--muted);font-size:12px;margin-left:auto">${x.role ? ROLES[x.role].naam : "geen rol"}</span></label>`).join("")}
+    </div>
+    <button class="btn btn-green btn-block" id="atSend">Vraag versturen</button>
+  `, m => {
+    m.querySelector("#atSend").onclick = async () => {
+      const ids = [...m.querySelectorAll(".check-list input:checked")].map(cb => cb.value);
+      if(!ids.length){ toast("Kies minimaal één speler"); return; }
+      if(!p || !p.role){ toast("Deze speler heeft nog geen rol"); return; }
+      for(const id of ids){
+        const t = S.players.find(x => x.id === id);
+        await DB.add("takeovers", {reqId, fromPid:r.pid, fromPn:r.pn, role:p.role, targetPid:id, targetPn:t.name, status:"open", at: now()});
+        await DB.set("chats/dm_" + id, {type:"dm", dmFor:id, at: now()});
+        await sendSystem("dm_" + id, `🔄 De spelleider vraagt of je een andere rol wilt overnemen — bekijk het verzoek via het tabblad 'Mijn rol'.`);
+      }
+      haptic(12); toast(`Vraag verstuurd naar ${ids.length} speler${ids.length === 1 ? "" : "s"}`);
+      closeModal();
+    };
+  });
+}
+
+async function closeRequest(reqId, status){
+  await DB.set("roleRequests/" + reqId, {status, closedAt: now()});
+  for(const t of S.takeovers.filter(x => x.reqId === reqId && x.status === "open")){
+    await DB.set("takeovers/" + t.id, {status:"gesloten"});
+  }
+}
+
+async function acceptTakeover(takeoverId){
+  const t = S.takeovers.find(x => x.id === takeoverId);
+  if(!t) return;
+  const fresh = await DB.getDoc("takeovers/" + takeoverId);
+  if(!fresh || fresh.status !== "open"){ toast("Dit verzoek is niet meer geldig"); return; }
+  const req = S.roleRequests.find(x => x.id === t.reqId);
+  if(req && req.status !== "open"){ toast("Iemand anders was je voor"); await DB.set("takeovers/" + takeoverId, {status:"gesloten"}); return; }
+  const mijnRol = S.me.role || null;
+  // rollen ruilen
+  await DB.set("players/" + S.me.id, {role: t.role});
+  await DB.set("players/" + t.fromPid, {role: mijnRol});
+  await DB.set("takeovers/" + takeoverId, {status:"geaccepteerd", acceptedAt: now()});
+  await closeRequest(t.reqId, "goedgekeurd");
+  await sendSystem("dm_" + t.fromPid, `🔄 Goed nieuws! Je rolverzoek is goedgekeurd — een medespeler heeft je rol overgenomen. Bekijk je nieuwe rol via 'Mijn rol'.`);
+  await sendSystem("dm_" + S.me.id, `🔄 Je hebt de rol overgenomen! Bekijk je nieuwe rol via het tabblad 'Mijn rol'.`);
+  haptic(15);
+  toast("Je hebt de nieuwe rol! 🎭");
+  setTimeout(syncAutoChats, 500);
+}
+
+/* ---------- overnameverzoek (speler) ---------- */
+function takeoverHtml(){
+  const mine = S.takeovers.filter(t => t.targetPid === S.me.id && t.status === "open");
+  if(!mine.length) return "";
+  return mine.map(t => {
+    const r = ROLES[t.role];
+    return `
+    <div class="card" style="border:1.5px solid var(--gold)">
+      <h3>🔄 Rol overnemen?</h3>
+      <p style="font-size:13.5px;color:#d6d6dc;line-height:1.55;margin-bottom:12px">De spelleider vraagt of jij de rol <b style="color:var(--gold)">${r.emoji} ${r.naam}</b> wilt overnemen. Zeg je ja, dan ruil je van rol met een medespeler — je huidige rol gaat naar die speler.</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-green" style="flex:1" data-take-yes="${t.id}">✅ Ja, ik neem hem over</button>
+        <button class="btn btn-ghost" style="flex:1" data-take-no="${t.id}">Nee, bedankt</button>
+      </div>
+    </div>`;
+  }).join("");
 }
 
 /* ---------- hackervragen (spelleider) ---------- */
@@ -1646,6 +1783,14 @@ function riddleModal(rid){
     return;
   }
 
+  if(isMuted(S.me)){
+    modal(`
+      <h3>🛡️ Raadsel</h3>
+      <div class="riddle-q">${esc(r.q)}</div>
+      <div style="text-align:center;color:var(--muted);font-size:13px;padding:8px">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "uit het spel"} — je kunt niet meer meedoen aan het raadsel.</div>
+    `);
+    return;
+  }
   modal(`
     <h3>🛡️ Raadsel</h3>
     <div class="riddle-q">${esc(r.q)}</div>
@@ -1696,6 +1841,168 @@ function riddleModal(rid){
     m.querySelector("#riSubmit").onclick = submit;
     inp.onkeydown = e => { if(e.key === "Enter") submit(); };
   });
+}
+
+/* =====================================================================
+   ZOEKOPDRACHT GEHEIM VOORWERP (gevangenen)
+   ===================================================================== */
+function newHuntModal(chatId){
+  let pickedImg = null;
+  modal(`
+    <h3>🔎 Zoekopdracht geheim voorwerp</h3>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Stuur een foto van het verstopte voorwerp. De eerste gevangene die een selfie mét het voorwerp instuurt en door jou wordt goedgekeurd, ontsnapt en keert terug als gewone gelovige. Daarna sluit de opdracht voor de rest.</p>
+    <div class="field"><label>Foto van het voorwerp</label>
+      <button class="btn btn-ghost btn-block" id="huPick">📷 Foto kiezen</button>
+      <img id="huPreview" class="hidden" style="width:100%;border-radius:14px;margin-top:10px">
+    </div>
+    <div class="field"><label>Omschrijving / hint (optioneel)</label><input id="huDesc" placeholder="Bijv. ergens tussen de tennisbaan en het zwembad" maxlength="90"></div>
+    <div class="field"><label>Deadline (optioneel)</label><input id="huWhen" type="datetime-local"></div>
+    <button class="btn btn-green btn-block" id="huCreate">🔎 Zoekopdracht versturen</button>
+  `, m => {
+    m.querySelector("#huPick").onclick = async () => {
+      const f = await pickImage(); if(!f) return;
+      toast("Foto verwerken…");
+      try{
+        pickedImg = await uploadImage(f);
+        const doc = await DB.getDoc("images/" + pickedImg);
+        const prev = m.querySelector("#huPreview");
+        prev.src = doc.data; prev.classList.remove("hidden");
+        m.querySelector("#huPick").textContent = "📷 Andere foto kiezen";
+      }catch(e){ console.error(e); toast("Uploaden mislukt"); }
+    };
+    m.querySelector("#huCreate").onclick = async () => {
+      if(!pickedImg){ toast("Kies eerst een foto van het voorwerp"); return; }
+      const when = m.querySelector("#huWhen").value;
+      const hid = await DB.add("hunts", {
+        chatId, imgId: pickedImg, desc: m.querySelector("#huDesc").value.trim(),
+        deadline: when ? new Date(when).getTime() : null, status:"open", at: now()
+      });
+      await DB.add(`chats/${chatId}/messages`, {type:"hunt", hid, at: now()});
+      await DB.set("chats/" + chatId, {lastAt: now(), lastSid:S.me.id, lastText:"🔎 Zoekopdracht: vind het geheime voorwerp"});
+      haptic(12); toast("Zoekopdracht verstuurd 🔎"); closeModal();
+    };
+  });
+}
+
+function huntCardHtml(h){
+  const won = h.status === "gewonnen";
+  const verlopen = h.deadline && h.deadline < now() && !won;
+  return `
+    <div class="mission-card huntcard ${won ? "done" : ""}">
+      <div class="mc-top"><h4>🔎 Vind het geheime voorwerp</h4><span class="pill ${won ? "pill-green" : verlopen ? "pill-gray" : "pill-outline"}">${won ? "Gevonden" : verlopen ? "Verlopen" : "Open"}</span></div>
+      <img class="hunt-obj" data-img="${h.imgId}" alt="geheim voorwerp">
+      ${h.desc ? `<p>${esc(h.desc)}</p>` : ""}
+      <div class="mc-meta">
+        ${won ? `🏆 <b>${esc(h.winnerName)}</b> heeft het voorwerp gevonden en is ontsnapt!`
+        : `Stuur een selfie mét het voorwerp — de eerste die wordt goedgekeurd, ontsnapt${h.deadline ? ` · ⏰ ${fmtDT(h.deadline)}` : ""}`}
+      </div>
+      <button class="btn btn-sm ${won ? "btn-ghost" : "btn-green"}" data-huntopen="${h.id}">${S.me.isLeader ? "🔎 Inzendingen bekijken" : won ? "Bekijken" : "🤳 Selfie insturen"}</button>
+    </div>`;
+}
+
+function huntModal(hid){
+  const h = S.hunts.find(x => x.id === hid);
+  if(!h) return;
+  const isL = S.me.isLeader;
+  const won = h.status === "gewonnen";
+
+  if(isL){
+    modal(`
+      <h3>🔎 Inzendingen</h3>
+      ${won ? `<p style="font-size:13px;color:var(--green);margin-bottom:10px">🏆 Gevonden door <b>${esc(h.winnerName)}</b> — teruggekeerd als gelovige.</p>` : `<p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Keur een selfie goed: die speler ontsnapt, wordt weer een gewone gelovige en de opdracht sluit voor de rest.</p>`}
+      <div id="huEntries"><div class="empty" style="padding:20px">Nog geen inzendingen.</div></div>
+    `, m => {
+      const renderEntries = () => {
+        const docs = S.huntEntries.filter(e => e.hid === hid).sort((a,b) => (a.at||0)-(b.at||0));
+        const box = m.querySelector("#huEntries");
+        if(!box) return;
+        if(!docs.length) return;
+        box.innerHTML = docs.map(e => `
+          <div style="margin-bottom:12px">
+            <img data-img="${e.imgId}" style="width:100%;border-radius:14px;cursor:pointer">
+            <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+              <div style="flex:1;font-size:13px"><b>${esc(e.pn)}</b> <span style="color:var(--muted)">· ${fmtTime(e.at)}</span>${e.status === "goedgekeurd" ? ` <span class="pill pill-green">Goedgekeurd</span>` : ""}</div>
+              ${!won ? `<button class="btn btn-sm btn-green" data-approve-entry="${e.id}|${e.pid}|${esc(e.pn)}">✅ Goedkeuren</button>` : ""}
+            </div>
+          </div>`).join("");
+        box.querySelectorAll("img[data-img]").forEach(img => {
+          loadImageInto(img.dataset.img, img);
+          img.onclick = () => { if(img.src) viewImage(img.src); };
+        });
+        box.querySelectorAll("[data-approve-entry]").forEach(b => b.onclick = () => {
+          const [eid, pid, pn] = b.dataset.approveEntry.split("|");
+          confirmModal(`Selfie van <b>${esc(pn)}</b> goedkeuren?<br><span style="font-size:12.5px;color:var(--muted)">${esc(pn)} ontsnapt, wordt weer een gewone gelovige en de opdracht sluit voor de andere gevangenen.</span>`, async () => {
+            await approveHuntEntry(hid, eid, pid, pn);
+            closeModal();
+          });
+        });
+      };
+      renderEntries();
+      S.onHuntEntries = renderEntries;
+    }, () => { S.onHuntEntries = null; });
+    return;
+  }
+
+  if(won){
+    const me = h.winnerId === S.me.id;
+    modal(`
+      <div class="shield-win">
+        <div class="sh">${me ? "🔓" : "😔"}</div>
+        <h2>${me ? "Je bent ontsnapt!" : "Helaas…"}</h2>
+        <p style="font-size:14px;color:var(--muted);line-height:1.55">${me
+          ? "Je hebt het geheime voorwerp gevonden en keert terug in het spel als gewone gelovige. Welkom terug! 🎉"
+          : `<b style="color:var(--text)">${esc(h.winnerName)}</b> heeft het voorwerp als eerste gevonden. De zoekopdracht is gesloten.`}</p>
+      </div>`);
+    return;
+  }
+
+  const mijn = S.huntEntries.filter(e => e.hid === hid && e.pid === S.me.id);
+  modal(`
+    <h3>🤳 Selfie met het voorwerp</h3>
+    <img class="hunt-obj" data-img="${h.imgId}" alt="geheim voorwerp">
+    ${h.desc ? `<p style="font-size:13.5px;color:#d6d6dc;margin-bottom:10px">${esc(h.desc)}</p>` : ""}
+    ${h.deadline ? `<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">⏰ Deadline: ${fmtDT(h.deadline)}</div>` : ""}
+    ${isMuted(S.me) ? `<div style="text-align:center;color:var(--muted);font-size:13px;padding:8px">👁️ Je kunt niet meer meedoen.</div>` : `
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Vind je het voorwerp? Maak een selfie mét het voorwerp erbij en stuur die in. De spelleider beoordeelt je inzending.</p>
+    <button class="btn btn-green btn-block" id="huSend">🤳 Selfie insturen</button>
+    ${mijn.length ? `<div class="lock-note" style="color:var(--muted)">Je hebt ${mijn.length} selfie${mijn.length === 1 ? "" : "s"} ingestuurd — wacht op beoordeling.</div>` : ""}`}
+  `, m => {
+    m.querySelectorAll("img[data-img]").forEach(img => loadImageInto(img.dataset.img, img));
+    const btn = m.querySelector("#huSend");
+    if(btn) btn.onclick = async () => {
+      const f = await pickImage(); if(!f) return;
+      btn.disabled = true;
+      toast("Selfie uploaden…");
+      try{
+        const fresh = await DB.getDoc("hunts/" + hid);
+        if(!fresh || fresh.status !== "open"){ toast("De opdracht is al gesloten"); closeModal(); return; }
+        const imgId = await uploadImage(f);
+        await DB.add("huntEntries", {hid, imgId, pid:S.me.id, pn:S.me.name, status:"ingediend", at: now()});
+        await DB.add(`chats/${h.chatId}/messages`, {type:"sys", t:`🤳 ${S.me.name} heeft een selfie ingestuurd voor de zoekopdracht.`, at: now()});
+        await DB.set("chats/" + h.chatId, {lastAt: now(), lastSid:"sys", lastText:`🤳 ${S.me.name} stuurde een selfie in`});
+        haptic(12);
+        toast("Selfie ingestuurd! De spelleider beoordeelt hem.");
+        closeModal();
+      }catch(e){ console.error(e); toast("Uploaden mislukt"); btn.disabled = false; }
+    };
+  });
+}
+
+async function approveHuntEntry(hid, entryId, pid, pn){
+  const fresh = await DB.getDoc("hunts/" + hid);
+  if(!fresh || fresh.status !== "open"){ toast("Deze opdracht is al gesloten"); return; }
+  await DB.set("huntEntries/" + entryId, {status:"goedgekeurd"});
+  await DB.set("hunts/" + hid, {status:"gewonnen", winnerId:pid, winnerName:pn, wonAt: now()});
+  // speler keert terug als gewone gelovige
+  await DB.set("players/" + pid, {role:"gelovige", status:"actief", statusAt: now()});
+  await DB.add(`chats/${fresh.chatId}/messages`, {type:"sys", t:`🔓 ${pn} heeft het geheime voorwerp gevonden en is ontsnapt! ${pn} keert terug als gewone gelovige. De zoekopdracht is gesloten.`, at: now()});
+  await DB.set("chats/" + fresh.chatId, {lastAt: now(), lastSid:"sys", lastText:`🔓 ${pn} is ontsnapt!`});
+  await DB.set("chats/dm_" + pid, {type:"dm", dmFor:pid, at: now()});
+  await sendSystem("dm_" + pid, `🔓 Je selfie is goedgekeurd — je bent ontsnapt en keert terug als gewone gelovige! Bekijk je rol via 'Mijn rol'.`);
+  await sendSystem("all", `🔓 ${pn} heeft het geheime voorwerp gevonden en is ontsnapt uit de handen van de infiltranten!`);
+  haptic(18);
+  toast(`${pn} is ontsnapt! 🔓`);
+  setTimeout(syncAutoChats, 500);
 }
 
 let publishingRiddles = false;
@@ -1904,6 +2211,10 @@ function renderChat(){
       const r = S.riddles.find(x => x.id === m.rid);
       return r ? riddleCardHtml(r) : "";
     }
+    if(m.type === "hunt"){
+      const h = S.hunts.find(x => x.id === m.hid);
+      return h ? huntCardHtml(h) : "";
+    }
     const mine = m.sid === S.me.id;
     const showSender = c.type !== "dm" && !mine;
     return `
@@ -1928,13 +2239,16 @@ function renderChat(){
       <div class="msgs" id="msgs">
         ${S.msgs.length === 0 ? `<div class="empty"><div class="big">💬</div>Nog geen berichten.</div>` : msgHtml}
       </div>
+      ${!isL && isMuted(S.me) ? `
+      <div class="muted-note">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "uit het spel"} — je kunt meelezen, maar niet meer chatten of stemmen.</div>` : `
       <div class="composer">
         ${isL && c.type !== "dm" ? `<button class="icon-btn" id="btnMission" title="Nieuwe opdracht">📋</button><button class="icon-btn" id="btnPoll" title="Missielijst met stemming">🗳️</button>` : ""}
         ${isL && c.type === "all" ? `<button class="icon-btn" id="btnRiddle" title="Raadsel om het schild">🛡️</button>` : ""}
+        ${isL && c.id === "gevangenen" ? `<button class="icon-btn" id="btnHunt" title="Zoekopdracht geheim voorwerp">🔎</button>` : ""}
         <button class="icon-btn" id="btnPhoto" title="Foto sturen">📷</button>
         <textarea id="composerText" rows="1" placeholder="Bericht…"></textarea>
         <button class="icon-btn send" id="btnSend">➤</button>
-      </div>
+      </div>`}
     </div>`;
   S.chatJustOpened = false;
 
@@ -1972,6 +2286,7 @@ function renderChat(){
     castVote(pid, Number(idx));
   });
   msgsEl.querySelectorAll("[data-riddleopen]").forEach(b => b.onclick = () => riddleModal(b.dataset.riddleopen));
+  msgsEl.querySelectorAll("[data-huntopen]").forEach(b => b.onclick = () => huntModal(b.dataset.huntopen));
   msgsEl.querySelectorAll("[data-choose]").forEach(b => b.onclick = () => {
     const [pid, idx] = b.dataset.choose.split(":");
     const p = S.polls.find(x => x.id === pid);
@@ -1982,30 +2297,33 @@ function renderChat(){
 
   $("#chatBack").onclick = () => closeChat();
   const ta = $("#composerText");
-  ta.value = draft;
-  ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 110) + "px";
-  if(hadFocus){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
-  ta.oninput = () => { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 110) + "px"; };
-  ta.onkeydown = e => { if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); doSend(); } };
-  const doSend = async () => {
-    const t = ta.value.trim(); if(!t) return;
-    ta.value = ""; ta.style.height = "auto";
-    haptic(6);
-    await sendMessage(c.id, {type:"text", t});
-  };
-  $("#btnSend").onclick = doSend;
-  $("#btnPhoto").onclick = async () => {
-    const f = await pickImage(); if(!f) return;
-    toast("Foto uploaden…");
-    try{
-      const imgId = await uploadImage(f);
-      await sendMessage(c.id, {type:"img", imgId});
-      haptic(10);
-    }catch(e){ console.error(e); toast("Uploaden mislukt"); }
-  };
+  if(ta){
+    ta.value = draft;
+    ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 110) + "px";
+    if(hadFocus){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    ta.oninput = () => { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 110) + "px"; };
+    const doSend = async () => {
+      const t = ta.value.trim(); if(!t) return;
+      ta.value = ""; ta.style.height = "auto";
+      haptic(6);
+      await sendMessage(c.id, {type:"text", t});
+    };
+    ta.onkeydown = e => { if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); doSend(); } };
+    $("#btnSend").onclick = doSend;
+    $("#btnPhoto").onclick = async () => {
+      const f = await pickImage(); if(!f) return;
+      toast("Foto uploaden…");
+      try{
+        const imgId = await uploadImage(f);
+        await sendMessage(c.id, {type:"img", imgId});
+        haptic(10);
+      }catch(e){ console.error(e); toast("Uploaden mislukt"); }
+    };
+  }
   const bm = $("#btnMission"); if(bm) bm.onclick = () => newMissionModal(c.id);
   const bp = $("#btnPoll"); if(bp) bp.onclick = () => newPollModal(c.id);
   const br = $("#btnRiddle"); if(br) br.onclick = () => newRiddleModal();
+  const bh = $("#btnHunt"); if(bh) bh.onclick = () => newHuntModal(c.id);
   const ge = $("#grpEdit"); if(ge) ge.onclick = () => editGroupModal(c);
 }
 
@@ -2080,8 +2398,9 @@ function newMissionModal(chatId){
    MISSIESTEMMING (infiltranten kiezen de missie van de dag)
    ===================================================================== */
 function chatVoters(c){
-  if(c.type === "all") return S.players.filter(p => !p.isLeader && p.status !== "uit").map(p => p.id);
-  return (c.members || []).filter(id => { const p = S.players.find(x => x.id === id); return p && p.status !== "uit"; });
+  const mag = p => p && !p.isLeader && p.status !== "uit" && p.status !== "ontmaskerd";
+  if(c.type === "all") return S.players.filter(mag).map(p => p.id);
+  return (c.members || []).filter(id => mag(S.players.find(x => x.id === id)));
 }
 function pollVotes(p){
   const v = {};
@@ -2209,7 +2528,7 @@ function missionModal(missionId){
     ${mi.deadline ? `<div style="font-size:13px;color:var(--muted);margin-bottom:8px">⏰ Deadline: ${fmtDT(mi.deadline)}</div>` : ""}
     <div class="section-label" style="margin-top:14px">Bewijsfoto's</div>
     <div class="photo-grid" id="miPhotos"><div class="empty" style="grid-column:1/-1;padding:16px">Nog geen foto's.</div></div>
-    ${!isL && mi.status !== "goedgekeurd" ? `
+    ${!isL && !isMuted(S.me) && mi.status !== "goedgekeurd" ? `
       <button class="btn btn-ghost btn-block" id="miAddPhoto" style="margin-bottom:10px">📷 Bewijsfoto toevoegen</button>
       ${mi.status === "open" ? `<button class="btn btn-green btn-block" id="miSubmit">✅ Opdracht indienen als voltooid</button>` : ""}
       ${mi.status === "ingediend" ? `<div style="text-align:center;color:var(--muted);font-size:13px">Wacht op beoordeling door de spelleider…</div>` : ""}` : ""}
@@ -2293,8 +2612,19 @@ function renderRol(el){
   const r = ROLES[p.role];
   const isInf = r.team === "infiltrant";
   const teamCls = isInf ? "team-red" : "team-green";
+  const textCard = extra => `
+      <div class="rolecard ${teamCls} ${extra || ""}" ${extra ? 'id="roleFallback"' : ""}>
+        <div class="remoji">${r.emoji}</div>
+        <h2>${r.naam}</h2>
+        <div class="rteam"><span class="pill ${isInf ? "pill-red" : "pill-green"}">Team ${isInf ? "Infiltranten" : "Gelovigen"}</span></div>
+        <div class="roleblock"><b>Missie</b><div>${r.missie}</div></div>
+        <div class="roleblock"><b>Strategie</b><div>${r.strategie}</div></div>
+        <div class="roleblock"><b>Actie</b><div>${r.actie}</div></div>
+      </div>`;
   const roleCard = r.img
-    ? `<div class="rolecard has-img ${teamCls}"><img src="${r.img}" alt="${r.naam}" class="rolecard-img"></div>
+    ? `<div class="rolecard has-img ${teamCls}"><img src="${r.img}" alt="${r.naam}" class="rolecard-img"
+          onerror="this.closest('.rolecard').remove(); var f=document.getElementById('roleFallback'); if(f) f.classList.remove('hidden');"></div>
+       ${textCard("hidden")}
        <details class="role-details">
          <summary>📖 Volledige rolbeschrijving</summary>
          <div class="dbody">
@@ -2303,19 +2633,13 @@ function renderRol(el){
            <div class="roleblock"><b>Actie</b><div>${r.actie}</div></div>
          </div>
        </details>`
-    : `<div class="rolecard ${teamCls}">
-        <div class="remoji">${r.emoji}</div>
-        <h2>${r.naam}</h2>
-        <div class="rteam"><span class="pill ${isInf ? "pill-red" : "pill-green"}">Team ${isInf ? "Infiltranten" : "Gelovigen"}</span></div>
-        <div class="roleblock"><b>Missie</b><div>${r.missie}</div></div>
-        <div class="roleblock"><b>Strategie</b><div>${r.strategie}</div></div>
-        <div class="roleblock"><b>Actie</b><div>${r.actie}</div></div>
-      </div>`;
+    : textCard();
   el.innerHTML = `
     ${roleCard}
     <div class="card" style="text-align:center;font-size:13px;color:var(--muted)">
       🤫 <b>Houd je rol geheim!</b> Niemand mag zijn rol onthullen (spelregel 2).
     </div>
+    ${takeoverHtml()}
     ${roleRequestHtml()}
     ${p.status === "gevangen" ? `
     <div class="rolecard has-img" style="border-color:var(--gold);box-shadow:0 18px 44px -18px rgba(232,178,58,.4)">
@@ -2325,8 +2649,22 @@ function renderRol(el){
       <h3>⛓️ Je bent gevangengenomen</h3>
       <p style="font-size:13.5px;color:#d6d6dc;line-height:1.5">Vind het geheime voorwerp dat ergens op de camping is verstopt en lever het in bij de spelleider om te ontsnappen. Zoeken mag tussen 11:00 en 22:00. Wees andere gevangenen te slim af!</p>
     </div>` : ""}
-    ${p.role === "hacker" && p.status !== "uit" ? hackerSectionHtml() : ""}`;
+    ${p.role === "hacker" && !isMuted(p) && p.status !== "uit" ? hackerSectionHtml() : ""}`;
   el.querySelectorAll(".rolecard-img").forEach(img => img.onclick = () => viewImage(img.src));
+  el.querySelectorAll("[data-take-yes]").forEach(b => b.onclick = () => {
+    const t = S.takeovers.find(x => x.id === b.dataset.takeYes);
+    if(!t) return;
+    const r = ROLES[t.role];
+    confirmModal(`Wil je de rol <b>${r.emoji} ${r.naam}</b> echt overnemen? Je huidige rol gaat dan naar de andere speler.`, async () => {
+      b.disabled = true;
+      await acceptTakeover(t.id);
+    });
+  });
+  el.querySelectorAll("[data-take-no]").forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    await DB.set("takeovers/" + b.dataset.takeNo, {status:"afgewezen", closedAt: now()});
+    toast("Je hebt het verzoek afgewezen");
+  });
   const rrBtn = el.querySelector("#roleReqBtn");
   if(rrBtn) rrBtn.onclick = () => modal(`
     <h3>🙋 Andere rol aanvragen</h3>
@@ -2348,7 +2686,7 @@ function renderRol(el){
   if(p.role === "hacker") wireHackerSection(el);
 }
 function roleRequestHtml(){
-  if(S.settings.gameOver) return "";
+  if(S.settings.gameOver || isMuted(S.me)) return "";
   const open = S.roleRequests.find(r => r.pid === S.me.id && r.status === "open");
   if(open) return `<div class="card" style="text-align:center;font-size:13px;color:var(--muted)">⏳ Je rolverzoek ligt bij de spelleider.</div>`;
   return `<button class="btn btn-ghost btn-block" id="roleReqBtn" style="margin-bottom:12px">🙋 Liever een andere rol? Dien een verzoek in</button>`;
@@ -2410,7 +2748,7 @@ function renderUitslag(el){
         <div class="avatar ${r ? (inf ? "red" : "green") : ""}">${r ? r.emoji : initial(p.name)}</div>
         <div class="row-main">
           <div class="row-title">${esc(p.name)}
-            ${p.status !== "actief" ? `<span class="pill ${p.status === "gevangen" ? "pill-gold" : "pill-gray"}">${STATUSES[p.status] || p.status}</span>` : ""}
+            ${p.status !== "actief" ? `<span class="pill ${statusPill(p.status)}">${STATUSES[p.status] || p.status}</span>` : ""}
           </div>
           <div class="row-sub">${r ? r.emoji + " " + r.naam : "Geen rol"}</div>
         </div>
@@ -2729,6 +3067,12 @@ async function boot(){
     S.roleRequests = docs;
     if(S.me && !S.openChat && (S.tab === "spelers" || S.tab === "rol")) render();
   });
+  DB.listen("takeovers", docs => {
+    S.takeovers = docs;
+    if(S.me && !S.openChat && (S.tab === "spelers" || S.tab === "rol")) render();
+  });
+  DB.listen("hunts", docs => { S.hunts = docs; if(S.me && S.openChat) renderChat(); });
+  DB.listen("huntEntries", docs => { S.huntEntries = docs; if(S.onHuntEntries) S.onHuntEntries(); });
   // controleer elke halve minuut of een ingepland dagrapport of raadsel gepusht moet worden
   setInterval(() => { publishDueReports(); publishDueRiddles(); }, 30000);
   DB.listenDoc("settings/main", doc => { S.settings = doc || {rolesRevealed:false}; if(S.me && !S.openChat) render(); });
