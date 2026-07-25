@@ -221,11 +221,21 @@
   .row-sub-tags .pill{font-size:10px; padding:3px 9px}
   .row-side{text-align:right; font-size:11px; color:var(--muted); flex:none}
   .unread-dot{
-    background:var(--green); color:#0d1f0a; font-size:11px; font-weight:700;
-    min-width:20px; height:20px; border-radius:10px;
-    display:inline-flex; align-items:center; justify-content:center; padding:0 6px; margin-top:4px;
-    animation:pulse 1.6s ease infinite;
+    background:var(--green); color:#0d1f0a; font-size:12px; font-weight:700;
+    min-width:23px; height:23px; border-radius:12px;
+    display:inline-flex; align-items:center; justify-content:center; padding:0 7px; margin-top:5px;
+    box-shadow:0 2px 8px -2px rgba(98,197,84,.7);
   }
+  /* rij met ongelezen berichten springt eruit */
+  .list-row.unread{
+    border-color:rgba(98,197,84,.55);
+    background:linear-gradient(90deg, rgba(98,197,84,.10), var(--bg2) 42%);
+  }
+  .list-row.unread .row-title{font-weight:700}
+  .list-row.unread .row-sub{color:var(--text); font-weight:500}
+  .list-row.unread .avatar{box-shadow:0 0 0 2.5px var(--green)}
+  .list-row.unread .row-side{color:var(--green); font-weight:700}
+  body.light .list-row.unread{background:linear-gradient(90deg, rgba(98,197,84,.16), var(--bg2) 42%)}
   .section-label{
     font-size:12px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase;
     color:var(--muted); margin:20px 4px 10px;
@@ -335,6 +345,15 @@
   .msg .sender{font-size:11.5px; font-weight:700; color:var(--gold); margin-bottom:2px}
   .msg.mine .sender{display:none}
   .msg .mtime{font-size:10px; color:rgba(255,255,255,.45); text-align:right; margin-top:3px}
+  .read-badge{
+    display:inline-flex; align-items:center; gap:3px; margin-left:6px; cursor:pointer;
+    padding:1px 5px; border-radius:8px; background:rgba(255,255,255,.14); font-weight:700;
+  }
+  .read-badge.allen{background:rgba(255,255,255,.28)}
+  .lees-rij{display:flex; align-items:center; gap:10px; padding:9px 2px; border-bottom:1px solid var(--line); font-size:14px}
+  .lees-rij:last-child{border-bottom:none}
+  .lees-rij .lr-naam{flex:1}
+  .lees-rij .lr-tijd{font-size:12.5px; color:var(--muted)}
   .msg img{
     max-width:100%; border-radius:14px; display:block; margin-top:4px; cursor:pointer; min-height:90px;
     background:linear-gradient(90deg,#2c2c33 25%,#37373f 50%,#2c2c33 75%); background-size:400px 100%;
@@ -778,7 +797,16 @@ function makeDemoDB(){
     },
     async add(colPath, data){ const id = newId(); (store[colPath] ||= {})[id] = data; save(); notify(colPath); return id; },
     async set(docPath, data){ const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
-      (store[col] ||= {})[id] = {...(store[col][id]||{}), ...data}; save(); notify(col); },
+      const oud = (store[col] ||= {})[id] || {};
+      const nieuw = {...oud};
+      for(const [k, v] of Object.entries(data)){
+        nieuw[k] = (v && typeof v === "object" && !Array.isArray(v) && oud[k] && typeof oud[k] === "object" && !Array.isArray(oud[k]))
+          ? {...oud[k], ...v} : v;
+      }
+      store[col][id] = nieuw; save(); notify(col); },
+    async inc(docPath, veld, delta){ const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
+      const oud = (store[col] ||= {})[id] || {};
+      store[col][id] = {...oud, [veld]: (Number(oud[veld]) || 0) + delta}; save(); notify(col); },
     async del(docPath){ const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
       if(store[col]){ delete store[col][id]; save(); notify(col); } },
     async getDoc(docPath){ const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
@@ -808,6 +836,7 @@ async function makeFirebaseDB(){
     },
     async add(colPath, data){ const r = await F.addDoc(colRef(colPath), data); return r.id; },
     async set(docPath, data){ await F.setDoc(docRef(docPath), data, {merge:true}); },
+    async inc(docPath, veld, delta){ await F.setDoc(docRef(docPath), {[veld]: F.increment(delta)}, {merge:true}); },
     async del(docPath){ await F.deleteDoc(docRef(docPath)); },
     async getDoc(docPath){ const s = await F.getDoc(docRef(docPath)); return s.exists() ? {id:s.id, ...s.data()} : null; },
     async getAll(colPath){ const s = await F.getDocs(colRef(colPath)); return s.docs.map(d => ({id:d.id, ...d.data()})); }
@@ -923,6 +952,51 @@ function enableReplySwipe(el, msg){
     reset();
     if(genoeg) startReply(msg);
   });
+}
+// wie heeft dit bericht gelezen? (op basis van wanneer iemand de chat open had)
+function lezersVan(m, c){
+  const reads = c.reads || {};
+  const deelnemers = chatDeelnemers(c);
+  const gelezen = [], nietGelezen = [];
+  deelnemers.forEach(p => {
+    const t = Number(reads[p.id] || 0);
+    if(t >= m.at) gelezen.push({p, t}); else nietGelezen.push(p);
+  });
+  gelezen.sort((a,b) => a.t - b.t);
+  return {gelezen, nietGelezen, totaal: deelnemers.length};
+}
+function leesBadge(m, c){
+  if(m.type === "sys") return "";
+  const {gelezen, totaal} = lezersVan(m, c);
+  if(!totaal) return "";
+  const allen = gelezen.length === totaal;
+  return `<span class="read-badge ${allen ? "allen" : ""}" data-lees="${m.id}">${allen ? "✓✓" : "✓"} ${gelezen.length}/${totaal}</span>`;
+}
+function leesModal(mid){
+  const c = S.chats.find(x => x.id === S.openChat);
+  const m = S.msgs.find(x => x.id === mid);
+  if(!c || !m) return;
+  const {gelezen, nietGelezen} = lezersVan(m, c);
+  modal(`
+    <h3>👁️ Gelezen door</h3>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Jouw bericht van ${fmtDT(m.at)}: "${esc(berichtPreview(m))}"</p>
+    ${gelezen.length ? `<div class="section-label" style="margin-top:0">✓ Gelezen (${gelezen.length})</div>` : ""}
+    ${gelezen.map(({p, t}) => `
+      <div class="lees-rij">
+        <div class="avatar" style="width:34px;height:34px;font-size:14px">${initial(p.name)}</div>
+        <div class="lr-naam">${esc(p.name)}${p.isLeader ? " 🎩" : ""}</div>
+        <div class="lr-tijd">${fmtDT(t)}</div>
+      </div>`).join("")}
+    ${nietGelezen.length ? `<div class="section-label">◦ Nog niet gelezen (${nietGelezen.length})</div>` : ""}
+    ${nietGelezen.map(p => `
+      <div class="lees-rij" style="opacity:.6">
+        <div class="avatar" style="width:34px;height:34px;font-size:14px">${initial(p.name)}</div>
+        <div class="lr-naam">${esc(p.name)}${p.isLeader ? " 🎩" : ""}</div>
+        <div class="lr-tijd">—</div>
+      </div>`).join("")}
+    ${!gelezen.length && !nietGelezen.length ? `<div class="empty" style="padding:20px">Geen andere deelnemers in deze chat.</div>` : ""}
+    <p style="font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.5">De tijd is het moment waarop diegene deze chat voor het laatst open had nadat jij dit bericht stuurde.</p>
+  `);
 }
 function berichtPreview(m){
   if(m.type === "img") return "📷 Foto";
@@ -1150,13 +1224,31 @@ async function openDM(playerId){
   }
   openChat(id);
 }
-function lastReadKey(chatId){ return "gd_read_" + chatId; }
+function lastReadKey(chatId){ return "gd_read_" + (S.me ? S.me.id : "x") + "_" + chatId; }
+function seenKey(chatId){ return "gd_seen_" + (S.me ? S.me.id : "x") + "_" + chatId; }
+// aantal ongelezen berichten = wat er in de chat staat min wat dit apparaat al zag
 function unreadCount(c){
-  if(!c.lastAt) return 0;
-  if(c.lastSid === S.me.id) return 0;
-  const seen = Number(localStorage.getItem(lastReadKey(c.id)) || 0);
-  return c.lastAt > seen ? 1 : 0;
+  const totaal = Number(c.msgCount) || 0;
+  const gezien = Number(localStorage.getItem(seenKey(c.id)) || 0);
+  return Math.max(0, totaal - gezien);
 }
+function markeerGelezen(chatId){
+  const c = S.chats.find(x => x.id === chatId);
+  localStorage.setItem(seenKey(chatId), String(Number(c && c.msgCount) || 0));
+  localStorage.setItem(lastReadKey(chatId), String(now()));
+  // leesbevestiging voor de anderen
+  if(S.me) DB.set("chats/" + chatId, {reads: {[S.me.id]: now()}});
+}
+// wie zitten er in deze chat (behalve jijzelf)
+function chatDeelnemers(c){
+  const leider = S.players.find(p => p.isLeader);
+  let ids = [];
+  if(c.type === "all") ids = S.players.map(p => p.id);
+  else if(c.type === "dm") ids = [c.dmFor, leider && leider.id].filter(Boolean);
+  else ids = [...(c.members || []), leider && leider.id].filter(Boolean);
+  return [...new Set(ids)].filter(id => id !== S.me.id).map(id => S.players.find(p => p.id === id)).filter(Boolean);
+}
+
 async function sendMessage(chatId, data){
   const base = {sid:S.me.id, sn:S.me.name, at: now(), ...data};
   await DB.add(`chats/${chatId}/messages`, base);
@@ -1164,11 +1256,15 @@ async function sendMessage(chatId, data){
     lastAt: base.at, lastSid: base.sid,
     lastText: data.type === "img" ? "📷 Foto" : data.type === "mission" ? "📋 Opdracht" : (data.t || "")
   });
+  await DB.inc("chats/" + chatId, "msgCount", 1);
+  const c = S.chats.find(x => x.id === chatId);
+  localStorage.setItem(seenKey(chatId), String((Number(c && c.msgCount) || 0) + 1));
   localStorage.setItem(lastReadKey(chatId), String(base.at + 1));
 }
 async function sendSystem(chatId, text){
   await DB.add(`chats/${chatId}/messages`, {type:"sys", t:text, at: now()});
   await DB.set("chats/" + chatId, {lastAt: now(), lastSid:"sys", lastText: text});
+  await DB.inc("chats/" + chatId, "msgCount", 1);
 }
 
 /* =====================================================================
@@ -2223,8 +2319,10 @@ function renderChats(el){
   const groups = visible.filter(c => c.type === "group").sort((a,b) => (b.lastAt||0)-(a.lastAt||0));
   const isL = S.me.isLeader;
 
-  const chatRow = c => `
-    <div class="list-row tappable" data-cid="${c.id}">
+  const chatRow = c => {
+    const n = unreadCount(c);
+    return `
+    <div class="list-row tappable ${n ? "unread" : ""}" data-cid="${c.id}">
       <div class="avatar ${c.type === "all" ? "green" : ""}">${c.type === "all" ? "📣" : "👥"}</div>
       <div class="row-main">
         <div class="row-title">${esc(chatTitle(c).replace(/^\S+ /, ""))}</div>
@@ -2232,9 +2330,10 @@ function renderChats(el){
       </div>
       <div class="row-side">
         ${c.lastAt ? fmtTime(c.lastAt) : ""}
-        ${unreadCount(c) ? `<br><span class="unread-dot">●</span>` : ""}
+        ${n ? `<br><span class="unread-dot">${n > 99 ? "99+" : n}</span>` : ""}
       </div>
     </div>`;
+  };
 
   let dmSection = "";
   if(isL){
@@ -2244,27 +2343,29 @@ function renderChats(el){
       ${players.length === 0 ? `<div class="empty" style="padding:20px">Nog geen spelers aangemeld.</div>` : ""}
       ${players.map(p => {
         const c = S.chats.find(x => x.id === "dm_" + p.id);
+        const n = c ? unreadCount(c) : 0;
         return `
-        <div class="list-row tappable" data-dm="${p.id}">
+        <div class="list-row tappable ${n ? "unread" : ""}" data-dm="${p.id}">
           <div class="avatar">${initial(p.name)}</div>
           <div class="row-main">
             <div class="row-title">${esc(p.name)}</div>
             <div class="row-sub">${c && c.lastText ? esc(c.lastText) : "Start een privéchat"}</div>
           </div>
-          <div class="row-side">${c && c.lastAt ? fmtTime(c.lastAt) : ""}${c && unreadCount(c) ? `<br><span class="unread-dot">●</span>` : ""}</div>
+          <div class="row-side">${c && c.lastAt ? fmtTime(c.lastAt) : ""}${n ? `<br><span class="unread-dot">${n > 99 ? "99+" : n}</span>` : ""}</div>
         </div>`;
       }).join("")}`;
   } else {
     const myDm = S.chats.find(c => c.id === "dm_" + S.me.id);
+    const nDm = myDm ? unreadCount(myDm) : 0;
     dmSection = `
       <div class="section-label">Privé</div>
-      <div class="list-row tappable" data-dm="${S.me.id}">
+      <div class="list-row tappable ${nDm ? "unread" : ""}" data-dm="${S.me.id}">
         <div class="avatar gold">🎩</div>
         <div class="row-main">
           <div class="row-title">Spelleider</div>
           <div class="row-sub">${myDm && myDm.lastText ? esc(myDm.lastText) : "Stel je vragen aan de spelleider"}</div>
         </div>
-        <div class="row-side">${myDm && myDm.lastAt ? fmtTime(myDm.lastAt) : ""}${myDm && unreadCount(myDm) ? `<br><span class="unread-dot">●</span>` : ""}</div>
+        <div class="row-side">${myDm && myDm.lastAt ? fmtTime(myDm.lastAt) : ""}${nDm ? `<br><span class="unread-dot">${nDm > 99 ? "99+" : nDm}</span>` : ""}</div>
       </div>`;
   }
 
@@ -2326,7 +2427,7 @@ function openChat(chatId){
   S.replyTo = null;
   S.chatJustOpened = true;
   S.closingChat = false;
-  localStorage.setItem(lastReadKey(chatId), String(now()));
+  markeerGelezen(chatId);
   if(S.unsubMsgs) S.unsubMsgs();
   // eerder opgehaalde berichten meteen tonen, zodat je je geschiedenis direct ziet
   S.msgs = S.msgCache[chatId] || [];
@@ -2336,8 +2437,7 @@ function openChat(chatId){
     S.msgCache[chatId] = gesorteerd;
     S.msgs = gesorteerd;
     S.msgsLoaded = true;
-    localStorage.setItem(lastReadKey(chatId), String(now()));
-    if(S.openChat === chatId) renderChat();
+    if(S.openChat === chatId){ markeerGelezen(chatId); renderChat(); }
   });
   renderChat();
 }
@@ -2407,7 +2507,7 @@ function renderChat(){
         </div>` : ""}
         ${m.type === "img" ? `<img data-img="${m.imgId}" alt="foto">` : ""}
         ${m.t ? `<div>${esc(m.t)}</div>` : ""}
-        <div class="mtime">${fmtTime(m.at)}</div>
+        <div class="mtime">${fmtTime(m.at)}${mine ? leesBadge(m, c) : ""}</div>
       </div>`;
   }).join("");
 
@@ -2492,6 +2592,10 @@ function renderChat(){
     doel.classList.remove("highlight");
     void doel.offsetWidth;
     doel.classList.add("highlight");
+  });
+  msgsEl.querySelectorAll("[data-lees]").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    leesModal(b.dataset.lees);
   });
   const rc = $("#replyCancel");
   if(rc) rc.onclick = () => { S.replyTo = null; renderChat(); };
@@ -2842,43 +2946,59 @@ function renderRol(el){
   const r = ROLES[p.role];
   const isInf = r.team === "infiltrant";
   const teamCls = isInf ? "team-red" : "team-green";
+  const gevangen = p.status === "gevangen";
+  const rolBlokken = `
+    <div class="roleblock"><b>Missie</b><div>${r.missie}</div></div>
+    <div class="roleblock"><b>Strategie</b><div>${r.strategie}</div></div>
+    <div class="roleblock"><b>Actie</b><div>${r.actie}</div></div>`;
   const textCard = extra => `
       <div class="rolecard ${teamCls} ${extra || ""}" ${extra ? 'id="roleFallback"' : ""}>
         <div class="remoji">${r.emoji}</div>
         <h2>${r.naam}</h2>
         <div class="rteam"><span class="pill ${isInf ? "pill-red" : "pill-green"}">Team ${isInf ? "Infiltranten" : "Gelovigen"}</span></div>
-        <div class="roleblock"><b>Missie</b><div>${r.missie}</div></div>
-        <div class="roleblock"><b>Strategie</b><div>${r.strategie}</div></div>
-        <div class="roleblock"><b>Actie</b><div>${r.actie}</div></div>
+        ${rolBlokken}
       </div>`;
-  const roleCard = r.img
-    ? `<div class="rolecard has-img ${teamCls}"><img src="${r.img}" alt="${r.naam}" class="rolecard-img"
-          onerror="this.closest('.rolecard').remove(); var f=document.getElementById('roleFallback'); if(f) f.classList.remove('hidden');"></div>
-       ${textCard("hidden")}
+
+  // gevangen? dan vervangt de gevangenekaart je rolkaart
+  const hoofdKaart = gevangen
+    ? `<div class="rolecard has-img" style="border-color:var(--gold);box-shadow:0 18px 44px -18px rgba(232,178,58,.45)">
+         <img src="kaarten/gevangene.jpg" alt="Gevangene" class="rolecard-img"
+              onerror="this.closest('.rolecard').remove(); var f=document.getElementById('gevangenFallback'); if(f) f.classList.remove('hidden');">
+       </div>
+       <div class="rolecard hidden" id="gevangenFallback" style="border-color:var(--gold)">
+         <div class="remoji">⛓️</div><h2>Gevangene</h2>
+         <div class="rteam"><span class="pill pill-gold">Gevangengenomen</span></div>
+       </div>
+       <div class="card" style="border:1.5px solid var(--gold)">
+         <h3>⛓️ Je bent gevangengenomen</h3>
+         <p style="font-size:13.5px;color:#d6d6dc;line-height:1.5">Vind het geheime voorwerp dat ergens op de camping is verstopt en lever het in bij de spelleider om te ontsnappen. Zoeken mag tussen 11:00 en 22:00. Wees andere gevangenen te slim af!</p>
+       </div>
+       <div class="card" style="text-align:center">
+         <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1.1px;font-weight:700;margin-bottom:6px">Je oorspronkelijke rol</div>
+         <div style="font-size:17px;font-weight:600">${r.emoji} <b style="color:${isInf ? "var(--red)" : "var(--green)"}">${r.naam}</b></div>
+         <div style="font-size:12.5px;color:var(--muted);margin-top:3px">Team ${isInf ? "Infiltranten" : "Gelovigen"} · ontsnap je, dan keer je terug als gewone gelovige</div>
+       </div>
        <details class="role-details">
-         <summary>📖 Volledige rolbeschrijving</summary>
-         <div class="dbody">
-           <div class="roleblock"><b>Missie</b><div>${r.missie}</div></div>
-           <div class="roleblock"><b>Strategie</b><div>${r.strategie}</div></div>
-           <div class="roleblock"><b>Actie</b><div>${r.actie}</div></div>
-         </div>
+         <summary>📖 Wat je rol ook alweer inhield</summary>
+         <div class="dbody">${rolBlokken}</div>
        </details>`
-    : textCard();
+    : (r.img
+      ? `<div class="rolecard has-img ${teamCls}"><img src="${r.img}" alt="${r.naam}" class="rolecard-img"
+            onerror="this.closest('.rolecard').remove(); var f=document.getElementById('roleFallback'); if(f) f.classList.remove('hidden');"></div>
+         ${textCard("hidden")}
+         <details class="role-details">
+           <summary>📖 Volledige rolbeschrijving</summary>
+           <div class="dbody">${rolBlokken}</div>
+         </details>`
+      : textCard());
+
   el.innerHTML = `
-    ${roleCard}
+    ${hoofdKaart}
     <div class="card" style="text-align:center;font-size:13px;color:var(--muted)">
       🤫 <b>Houd je rol geheim!</b> Niemand mag zijn rol onthullen (spelregel 2).
     </div>
     ${takeoverHtml()}
     ${roleRequestHtml()}
-    ${p.status === "gevangen" ? `
-    <div class="rolecard has-img" style="border-color:var(--gold);box-shadow:0 18px 44px -18px rgba(232,178,58,.4)">
-      <img src="kaarten/gevangene.jpg" alt="Gevangene" class="rolecard-img">
-    </div>
-    <div class="card" style="border:1.5px solid var(--gold)">
-      <h3>⛓️ Je bent gevangengenomen</h3>
-      <p style="font-size:13.5px;color:#d6d6dc;line-height:1.5">Vind het geheime voorwerp dat ergens op de camping is verstopt en lever het in bij de spelleider om te ontsnappen. Zoeken mag tussen 11:00 en 22:00. Wees andere gevangenen te slim af!</p>
-    </div>` : ""}
     ${p.role === "hacker" && !isMuted(p) && p.status !== "uit" ? hackerSectionHtml() : ""}`;
   el.querySelectorAll(".rolecard-img").forEach(img => img.onclick = () => viewImage(img.src));
   el.querySelectorAll("[data-take-yes]").forEach(b => b.onclick = () => {
