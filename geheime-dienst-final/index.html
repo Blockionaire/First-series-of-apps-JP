@@ -54,7 +54,11 @@
   select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239b9ba3' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding-right:32px}
   input:focus,textarea:focus,select:focus{border-color:var(--green); box-shadow:0 0 0 3px rgba(98,197,84,.15)}
   ::placeholder{color:#6d6d75}
-  .app{max-width:540px; margin:0 auto; height:100dvh; display:flex; flex-direction:column; position:relative; overflow:hidden}
+  .app{
+    max-width:540px; margin:0 auto; height:100dvh; display:flex; flex-direction:column;
+    position:relative; overflow:hidden;
+    padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
+  }
   .hidden{display:none !important}
   ::-webkit-scrollbar{width:0; height:0}
 
@@ -104,7 +108,8 @@
   /* ---------- join screen ---------- */
   .join{
     flex:1; display:flex; flex-direction:column; justify-content:center;
-    padding:32px 24px 48px; text-align:center;
+    padding:calc(32px + env(safe-area-inset-top)) 24px calc(48px + env(safe-area-inset-bottom));
+    text-align:center;
     background:
       radial-gradient(600px 320px at 85% -60px, rgba(255,59,48,.10), transparent 70%),
       radial-gradient(600px 320px at 10% 105%, rgba(98,197,84,.10), transparent 70%),
@@ -135,13 +140,16 @@
   .link-btn{color:var(--muted); font-size:13px; text-decoration:underline; margin-top:18px; padding:8px}
   .demo-banner{
     background:var(--gold); color:#2b1f04; font-size:12px; font-weight:600;
-    text-align:center; padding:7px 12px;
+    text-align:center; padding:calc(7px + env(safe-area-inset-top)) 12px 7px;
   }
+  /* staat de demo-balk bovenaan, dan hoeft de topbar zelf geen veilige zone meer */
+  .demo-banner:not(.hidden) ~ .app .topbar{padding-top:14px}
   .err{color:var(--red); font-size:13px; font-weight:600; min-height:18px}
 
   /* ---------- app frame ---------- */
   .topbar{
-    display:flex; align-items:center; gap:10px; padding:16px 18px 12px;
+    display:flex; align-items:center; gap:10px;
+    padding:calc(14px + env(safe-area-inset-top)) 18px 12px;
     position:sticky; top:0; z-index:20;
     background:rgba(20,20,23,.8); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   }
@@ -247,11 +255,13 @@
   .chat-screen{
     position:fixed; inset:0; margin:0 auto; max-width:540px; background:var(--bg); z-index:40;
     display:flex; flex-direction:column; will-change:transform;
+    padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
   }
   .chat-screen.animate-in{animation:chatIn .3s var(--ease)}
   .chat-screen.closing{transition:transform .22s var(--ease); transform:translateX(105%)}
   .chat-head{
-    display:flex; align-items:center; gap:10px; padding:12px 14px;
+    display:flex; align-items:center; gap:10px;
+    padding:calc(12px + env(safe-area-inset-top)) 14px 12px;
     background:rgba(17,17,20,.85); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
     border-bottom:1px solid var(--line);
   }
@@ -2255,9 +2265,7 @@ function renderChat(){
       ${!isL && isMuted(S.me) ? `
       <div class="muted-note">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "uit het spel"} — je kunt meelezen, maar niet meer chatten of stemmen.</div>` : `
       <div class="composer">
-        ${isL && c.type !== "dm" ? `<button class="icon-btn" id="btnMission" title="Nieuwe opdracht">📋</button><button class="icon-btn" id="btnPoll" title="Missielijst met stemming">🗳️</button>` : ""}
-        ${isL && c.type === "all" ? `<button class="icon-btn" id="btnRiddle" title="Raadsel om het schild">🛡️</button>` : ""}
-        ${isL && c.id === "gevangenen" ? `<button class="icon-btn" id="btnHunt" title="Zoekopdracht geheim voorwerp">🔎</button>` : ""}
+        ${isL && c.type !== "dm" ? `<button class="icon-btn" id="btnPlus" title="Meer acties">＋</button>` : ""}
         <button class="icon-btn" id="btnPhoto" title="Foto sturen">📷</button>
         <textarea id="composerText" rows="1" placeholder="Bericht…"></textarea>
         <button class="icon-btn send" id="btnSend">➤</button>
@@ -2333,10 +2341,23 @@ function renderChat(){
       }catch(e){ console.error(e); toast("Uploaden mislukt"); }
     };
   }
-  const bm = $("#btnMission"); if(bm) bm.onclick = () => newMissionModal(c.id);
-  const bp = $("#btnPoll"); if(bp) bp.onclick = () => newPollModal(c.id);
-  const br = $("#btnRiddle"); if(br) br.onclick = () => newRiddleModal();
-  const bh = $("#btnHunt"); if(bh) bh.onclick = () => newHuntModal(c.id);
+  const bplus = $("#btnPlus");
+  if(bplus) bplus.onclick = () => modal(`
+    <h3>Wat wil je versturen?</h3>
+    <button class="btn btn-ghost btn-block" data-actie="mission" style="margin-bottom:10px;justify-content:flex-start">📋 &nbsp;Nieuwe opdracht</button>
+    <button class="btn btn-ghost btn-block" data-actie="poll" style="margin-bottom:10px;justify-content:flex-start">🗳️ &nbsp;Missielijst met stemming</button>
+    ${c.type === "all" ? `<button class="btn btn-ghost btn-block" data-actie="riddle" style="margin-bottom:10px;justify-content:flex-start">🛡️ &nbsp;Raadsel om het schild</button>` : ""}
+    ${c.id === "gevangenen" ? `<button class="btn btn-ghost btn-block" data-actie="hunt" style="margin-bottom:10px;justify-content:flex-start">🔎 &nbsp;Zoekopdracht geheim voorwerp</button>` : ""}
+  `, m => {
+    m.querySelectorAll("[data-actie]").forEach(b => b.onclick = () => {
+      const a = b.dataset.actie;
+      closeModal(true);
+      if(a === "mission") newMissionModal(c.id);
+      if(a === "poll") newPollModal(c.id);
+      if(a === "riddle") newRiddleModal();
+      if(a === "hunt") newHuntModal(c.id);
+    });
+  });
   const ge = $("#grpEdit"); if(ge) ge.onclick = () => editGroupModal(c);
 }
 
