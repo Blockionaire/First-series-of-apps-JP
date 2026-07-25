@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#17171a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Geheime Dienst</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#17171a; --bg2:#202024; --bg3:#2a2a2f; --bg4:#333339;
+    --text:#f4f4f5; --muted:#9b9ba3;
+    --green:#62c554; --green-dark:#3f8f35;
+    --red:#ff3b30; --red-dark:#c22a22;
+    --gold:#e8b23a;
+    --radius:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Poppins',system-ui,sans-serif; font-size:15px;
+    overscroll-behavior:none;
+  }
+  h1,h2,h3,.title-font{font-family:'Lilita One',cursive; letter-spacing:.5px; font-weight:400}
+  button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit}
+  input,textarea,select{
+    font-family:inherit; font-size:15px; color:var(--text);
+    background:var(--bg3); border:1.5px solid #3d3d44; border-radius:12px;
+    padding:12px 14px; width:100%; outline:none;
+  }
+  input:focus,textarea:focus,select:focus{border-color:var(--green)}
+  ::placeholder{color:#6d6d75}
+  .app{max-width:540px; margin:0 auto; min-height:100dvh; display:flex; flex-direction:column; position:relative}
+  .hidden{display:none !important}
+
+  /* ---------- knoppen ---------- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:13px 20px; border-radius:999px; font-weight:600; font-size:15px;
+    background:var(--bg3); color:var(--text); transition:transform .06s ease;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn-green{background:var(--green); color:#0d1f0a}
+  .btn-red{background:var(--red); color:#fff}
+  .btn-ghost{background:transparent; border:1.5px solid #45454d}
+  .btn-block{width:100%}
+  .btn-sm{padding:8px 14px; font-size:13px}
+
+  .pill{
+    display:inline-block; padding:4px 12px; border-radius:999px;
+    font-size:11px; font-weight:700; letter-spacing:.8px; text-transform:uppercase;
+  }
+  .pill-green{background:var(--green); color:#0d1f0a}
+  .pill-red{background:var(--red); color:#fff}
+  .pill-gray{background:#55555c; color:#fff}
+  .pill-gold{background:var(--gold); color:#2b1f04}
+  .pill-outline{border:1.5px solid #55555c; color:var(--muted)}
+
+  /* ---------- join screen ---------- */
+  .join{
+    flex:1; display:flex; flex-direction:column; justify-content:center;
+    padding:32px 24px 48px; text-align:center;
+    background:linear-gradient(135deg,#1b1b1f 0%,#1b1b1f 49.9%,#232327 50%,#232327 100%);
+    min-height:100dvh;
+  }
+  .join h1{font-size:52px; line-height:1.02; text-transform:uppercase}
+  .join .sub{font-style:italic; color:var(--muted); margin:10px 0 6px}
+  .join .vs{display:flex; justify-content:center; gap:14px; margin:26px 0 34px; align-items:center}
+  .join .vs .of{
+    width:44px;height:44px;border-radius:50%;background:#6d6d75;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-family:'Lilita One';font-size:15px
+  }
+  .join form{display:flex; flex-direction:column; gap:12px; text-align:left}
+  .join label{font-size:13px; color:var(--muted); font-weight:600; margin-left:4px}
+  .link-btn{color:var(--muted); font-size:13px; text-decoration:underline; margin-top:18px}
+  .demo-banner{
+    background:var(--gold); color:#2b1f04; font-size:12px; font-weight:600;
+    text-align:center; padding:7px 12px;
+  }
+  .err{color:var(--red); font-size:13px; font-weight:600; min-height:18px}
+
+  /* ---------- app frame ---------- */
+  .topbar{
+    display:flex; align-items:center; gap:10px; padding:14px 16px 10px;
+    position:sticky; top:0; background:var(--bg); z-index:20;
+  }
+  .topbar h2{font-size:22px; text-transform:uppercase; flex:1}
+  .topbar .me-chip{font-size:12px; color:var(--muted); text-align:right; line-height:1.3}
+  .content{flex:1; overflow-y:auto; padding:4px 16px 90px}
+  .tabbar{
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:540px; display:flex;
+    background:#111114; border-top:1px solid #2c2c31; z-index:30;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .tabbar button{
+    flex:1; padding:10px 4px 12px; display:flex; flex-direction:column; align-items:center; gap:3px;
+    color:#7a7a82; font-size:11px; font-weight:600; position:relative;
+  }
+  .tabbar button.active{color:var(--green)}
+  .tabbar .ticon{font-size:21px; line-height:1}
+  .badge{
+    position:absolute; top:4px; right:calc(50% - 22px);
+    background:var(--red); color:#fff; font-size:10px; font-weight:700;
+    min-width:17px; height:17px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px;
+  }
+
+  /* ---------- kaarten & lijsten ---------- */
+  .card{background:var(--bg2); border-radius:var(--radius); padding:16px; margin-bottom:12px}
+  .card h3{font-size:17px; margin-bottom:6px}
+  .list-row{
+    display:flex; align-items:center; gap:12px; background:var(--bg2);
+    border-radius:var(--radius); padding:12px 14px; margin-bottom:10px;
+  }
+  .avatar{
+    width:44px; height:44px; border-radius:50%; flex:none;
+    background:var(--bg4); color:var(--text);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Lilita One'; font-size:18px;
+  }
+  .avatar.green{background:var(--green-dark)} .avatar.red{background:var(--red-dark)}
+  .row-main{flex:1; min-width:0}
+  .row-title{font-weight:600; display:flex; align-items:center; gap:8px}
+  .row-sub{font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .row-side{text-align:right; font-size:11px; color:var(--muted); flex:none}
+  .unread-dot{
+    background:var(--green); color:#0d1f0a; font-size:11px; font-weight:700;
+    min-width:20px; height:20px; border-radius:10px;
+    display:inline-flex; align-items:center; justify-content:center; padding:0 6px; margin-top:4px;
+  }
+  .section-label{
+    font-size:12px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase;
+    color:var(--muted); margin:18px 4px 10px;
+  }
+
+  /* ---------- spelers (leider) ---------- */
+  .player-row{display:flex; flex-direction:column; gap:10px; background:var(--bg2); border-radius:var(--radius); padding:14px; margin-bottom:10px}
+  .player-row .top{display:flex; align-items:center; gap:12px}
+  .player-row .selects{display:flex; gap:8px}
+  .player-row select{padding:8px 10px; font-size:13px; border-radius:10px; flex:1}
+  .icon-btn{
+    width:38px; height:38px; border-radius:50%; background:var(--bg3);
+    display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;
+  }
+  .stat-strip{display:flex; gap:8px; margin-bottom:14px}
+  .stat{flex:1; background:var(--bg2); border-radius:14px; padding:10px 8px; text-align:center}
+  .stat .num{font-family:'Lilita One'; font-size:22px}
+  .stat .lbl{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; font-weight:600}
+  .switch-row{display:flex; align-items:center; gap:12px; background:var(--bg2); border-radius:var(--radius); padding:14px; margin-bottom:12px}
+  .switch{position:relative; width:48px; height:28px; flex:none}
+  .switch input{opacity:0; width:0; height:0}
+  .slider{position:absolute; inset:0; background:#45454d; border-radius:14px; transition:.2s}
+  .slider:before{content:""; position:absolute; width:22px; height:22px; border-radius:50%; background:#fff; top:3px; left:3px; transition:.2s}
+  .switch input:checked + .slider{background:var(--green)}
+  .switch input:checked + .slider:before{transform:translateX(20px)}
+
+  /* ---------- chat ---------- */
+  .chat-screen{position:fixed; inset:0; margin:0 auto; max-width:540px; background:var(--bg); z-index:40; display:flex; flex-direction:column}
+  .chat-head{display:flex; align-items:center; gap:10px; padding:12px 14px; background:#111114; border-bottom:1px solid #2c2c31}
+  .chat-head .back{font-size:22px; padding:4px 8px}
+  .chat-head .info{flex:1; min-width:0}
+  .chat-head .cname{font-weight:700; font-size:16px}
+  .chat-head .csub{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .msgs{flex:1; overflow-y:auto; padding:14px 14px 8px; display:flex; flex-direction:column; gap:4px}
+  .msg{max-width:80%; padding:9px 13px; border-radius:16px; background:var(--bg3); align-self:flex-start; word-wrap:break-word}
+  .msg.mine{background:var(--green-dark); align-self:flex-end}
+  .msg .sender{font-size:11.5px; font-weight:700; color:var(--gold); margin-bottom:2px}
+  .msg.mine .sender{display:none}
+  .msg .mtime{font-size:10px; color:rgba(255,255,255,.45); text-align:right; margin-top:3px}
+  .msg img{max-width:100%; border-radius:10px; display:block; margin-top:4px; cursor:pointer}
+  .msg.sys{
+    align-self:center; background:transparent; color:var(--muted);
+    font-size:12px; text-align:center; max-width:92%; padding:4px 8px;
+  }
+  .msg.gap{margin-top:10px}
+  .mission-card{
+    align-self:stretch; max-width:100%; background:var(--bg2);
+    border:1.5px solid var(--red); border-radius:var(--radius); padding:14px; margin:8px 0;
+  }
+  .mission-card.done{border-color:var(--green)}
+  .mission-card.sub{border-color:var(--gold)}
+  .mission-card .mc-top{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px}
+  .mission-card h4{font-family:'Lilita One'; font-size:16px; letter-spacing:.4px}
+  .mission-card p{font-size:13.5px; color:#cfcfd6; margin-bottom:10px; white-space:pre-wrap}
+  .mission-card .mc-meta{font-size:12px; color:var(--muted); margin-bottom:10px}
+  .composer{
+    display:flex; align-items:flex-end; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+    background:#111114; border-top:1px solid #2c2c31;
+  }
+  .composer textarea{
+    flex:1; resize:none; max-height:110px; min-height:44px; border-radius:22px; padding:11px 16px; line-height:1.4;
+  }
+  .composer .icon-btn{width:44px; height:44px; font-size:20px}
+  .composer .send{background:var(--green); color:#0d1f0a}
+
+  /* ---------- rolkaart ---------- */
+  .rolecard{
+    border-radius:22px; padding:28px 22px; text-align:center; margin-bottom:14px;
+    background:linear-gradient(160deg,#26262b, #1b1b1f);
+    border:2px solid #3a3a41;
+  }
+  .rolecard.team-red{border-color:var(--red); background:linear-gradient(160deg,#2d1b1a,#1c1416)}
+  .rolecard.team-green{border-color:var(--green); background:linear-gradient(160deg,#1c2b18,#141a12)}
+  .rolecard .remoji{font-size:56px; line-height:1; margin-bottom:10px}
+  .rolecard h2{font-size:34px; text-transform:uppercase; margin-bottom:8px}
+  .rolecard .rteam{margin-bottom:16px}
+  .roleblock{text-align:left; background:rgba(0,0,0,.25); border-radius:14px; padding:12px 14px; margin-top:10px}
+  .roleblock b{display:block; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--gold); margin-bottom:4px}
+  .roleblock div{font-size:13.5px; color:#e4e4ea; line-height:1.5}
+  .mystery{text-align:center; padding:48px 20px}
+  .mystery .q{font-size:64px}
+
+  /* ---------- deadlines ---------- */
+  .deadline-card{display:flex; align-items:center; gap:14px; background:var(--bg2); border-radius:var(--radius); padding:14px; margin-bottom:10px}
+  .deadline-card .cd{
+    font-family:'Lilita One'; font-size:15px; background:var(--bg3);
+    border-radius:12px; padding:8px 10px; min-width:86px; text-align:center; flex:none;
+  }
+  .deadline-card.soon .cd{background:var(--red); color:#fff}
+  .deadline-card.past{opacity:.5}
+  .deadline-card.past .cd{background:#45454d}
+
+  /* ---------- info ---------- */
+  details{background:var(--bg2); border-radius:var(--radius); margin-bottom:10px; overflow:hidden}
+  details summary{
+    list-style:none; cursor:pointer; padding:15px 16px; font-weight:700;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  details summary::-webkit-details-marker{display:none}
+  details summary:after{content:"▾"; color:var(--muted); transition:.2s}
+  details[open] summary:after{transform:rotate(180deg)}
+  details .dbody{padding:0 16px 16px; font-size:13.5px; color:#d6d6dc; line-height:1.55}
+  details .dbody ol,details .dbody ul{padding-left:18px; display:flex; flex-direction:column; gap:6px}
+  details table{width:100%; border-collapse:collapse; font-size:13px}
+  details td,details th{padding:6px 4px; border-bottom:1px solid #333338; text-align:center}
+  details th{color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.5px}
+
+  /* ---------- modals ---------- */
+  .modal-wrap{
+    position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:60;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .modal{
+    background:var(--bg2); width:100%; max-width:540px; border-radius:22px 22px 0 0;
+    padding:20px 18px calc(24px + env(safe-area-inset-bottom));
+    max-height:88dvh; overflow-y:auto; animation:up .18s ease;
+  }
+  @keyframes up{from{transform:translateY(40px); opacity:0} to{transform:none; opacity:1}}
+  .modal h3{font-size:20px; margin-bottom:14px; text-transform:uppercase}
+  .modal .field{margin-bottom:12px}
+  .modal .field label{display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:5px; margin-left:2px}
+  .check-list{display:flex; flex-direction:column; gap:6px; max-height:38dvh; overflow-y:auto; margin-bottom:12px}
+  .check-list label{
+    display:flex; align-items:center; gap:10px; background:var(--bg3);
+    border-radius:12px; padding:10px 12px; font-size:14px; font-weight:500;
+  }
+  .check-list input{width:18px; height:18px; accent-color:var(--green); flex:none}
+  .quick-row{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+
+  .photo-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0}
+  .photo-grid .ph{position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden; background:var(--bg3)}
+  .photo-grid img{width:100%; height:100%; object-fit:cover; cursor:pointer}
+  .photo-grid .who{
+    position:absolute; bottom:0; left:0; right:0; font-size:10px; padding:3px 6px;
+    background:rgba(0,0,0,.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  .img-viewer{position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:80; display:flex; align-items:center; justify-content:center}
+  .img-viewer img{max-width:96%; max-height:92%; border-radius:8px}
+
+  .toast{
+    position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
+    background:#f4f4f5; color:#141416; font-size:13.5px; font-weight:600;
+    padding:10px 18px; border-radius:999px; z-index:90; box-shadow:0 4px 18px rgba(0,0,0,.5);
+    animation:up .18s ease;
+  }
+  .empty{color:var(--muted); text-align:center; padding:44px 20px; font-size:14px}
+  .empty .big{font-size:44px; margin-bottom:10px}
+</style>
+</head>
+<body>
+<div id="demoBanner" class="demo-banner hidden">⚠️ DEMO-MODUS — alleen op dit apparaat. Koppel Firebase om samen te spelen (zie README).</div>
+<div class="app" id="root"></div>
+
+<script src="firebase-config.js"></script>
+<script type="module">
+/* =====================================================================
+   GEHEIME DIENST — camping app
+   ===================================================================== */
+const CFG = window.GD_CONFIG || {};
+const PIN = String(CFG.spelleiderPin || "1107");
+
+/* ---------------- rollen (uit de flyer) ---------------- */
+const ROLES = {
+  infiltrant: { naam:"Infiltrant", emoji:"🕵️", team:"infiltrant",
+    missie:"Kies dagelijks één missie uit de lijst, geef deze vóór 11:00 door aan de spelleider en voer de missie gedurende de dag ongezien uit. Door het voltooien van de missie mogen infiltranten één extra gelovige gevangennemen.",
+    strategie:"Voer de missie uit zonder betrapt te worden om te voorkomen dat dit in de avondbijeenkomst nadelig uitpakt.",
+    actie:"Overleg mag via de chat. Tijdens de avondbijeenkomst stemmen de infiltranten direct één of meerdere gelovigen weg." },
+  gelovige: { naam:"Gelovige", emoji:"✝️", team:"gelovige",
+    missie:"Ontmasker de infiltranten door observatie overdag en tijdens de avondbijeenkomsten.",
+    strategie:"Let op verdacht gedrag en bespreek verdenkingen in kleine groepjes om niet door de infiltranten gevangengenomen te worden.",
+    actie:"Deel je verdenkingen tijdens de avondbijeenkomsten en ontmasker infiltranten." },
+  veldwerker: { naam:"Veldwerker", emoji:"🔭", team:"gelovige",
+    missie:"Ontvang elke ochtend drie missies van de spelleider, waarvan één de echte infiltrantenmissie van die dag is (tussen 11:00 - 12:00).",
+    strategie:"Observeer overdag welke missie wordt uitgevoerd en door wie, om de infiltranten te ontmaskeren.",
+    actie:"Deel subtiele hints tijdens de avondbijeenkomst zonder je rol expliciet te onthullen." },
+  hacker: { naam:"Hacker", emoji:"💻", team:"gelovige",
+    missie:"Stel dagelijks twee ja/nee-vragen aan de spelleider (tussen 11:00 - 19:00).",
+    strategie:"Gebruik de verkregen informatie om de infiltranten te ontmaskeren.",
+    actie:"Deel subtiele hints tijdens de avondbijeenkomst zonder je rol expliciet te onthullen." },
+  held: { naam:"Held", emoji:"🦸", team:"gelovige",
+    missie:"Red twee keer een gelovige die door de infiltranten is weggestemd.",
+    strategie:"Kies het juiste moment om je reddingsactie in te zetten.",
+    actie:"Geef tijdens de avondbijeenkomst met je duim aan of je de gevangene wilt redden (duim omhoog) of niet (duim omlaag)." },
+  bijbelsmokkelaar: { naam:"Bijbelsmokkelaar", emoji:"📖", team:"gelovige",
+    missie:"Wijs elke nacht één extra stem toe aan een speler. De stem van deze speler telt in de gezamenlijke stemming dubbel.",
+    strategie:"Wijs deze extra stem strategisch toe om het spel te beïnvloeden.",
+    actie:"Wijs tijdens de avondbijeenkomst een medespeler aan die de extra stem krijgt. Iedere speler mag maar 1x aangewezen worden tijdens het spel, waaronder jezelf." },
+  verrader: { naam:"Verrader", emoji:"🐍", team:"gelovige",
+    missie:"Verraad een andere speler wanneer je gevangen wordt genomen.",
+    strategie:"Zorg ervoor dat je actie een grote impact heeft.",
+    actie:"Neem een andere speler mee wanneer je gevangengenomen wordt door de infiltranten tijdens een avondbijeenkomst." },
+  twijfelaar: { naam:"Twijfelaar", emoji:"🎲", team:"gelovige",
+    missie:"Wissel in de eerste avondbijeenkomst van rol als je dit wilt (kiezen ná het zien van de rol).",
+    strategie:"Bedenk goed of jouw rol bij je past — je mag maar één keer wisselen.",
+    actie:"Geef je keuze door aan de spelleider tijdens de eerste avondbijeenkomst." }
+};
+const ROLE_ORDER = ["infiltrant","gelovige","veldwerker","hacker","held","bijbelsmokkelaar","verrader","twijfelaar"];
+const STATUSES = { actief:"Actief", gevangen:"Gevangen", uit:"Uit het spel" };
+const VERHOUDING = {8:[2,6],9:[2,7],10:[3,7],11:[3,8],12:[3,9],13:[3,10],14:[4,10],15:[4,11],16:[4,12],17:[5,12],18:[5,13],19:[5,14],20:[6,14],21:[6,15],22:[6,16],23:[7,16],24:[7,17],25:[7,18]};
+
+/* =====================================================================
+   DATABASE-LAAG  (Firebase óf lokale demo-modus)
+   ===================================================================== */
+let DB;
+const DEMO = !CFG.firebase || !CFG.firebase.apiKey || String(CFG.firebase.apiKey).startsWith("PLAK");
+
+function makeDemoDB(){
+  const KEY = "gd_demo_db_v1";
+  let store = {};
+  try{ store = JSON.parse(localStorage.getItem(KEY) || "{}"); }catch(e){ store = {}; }
+  const listeners = []; // {path, isDoc, cb}
+  const save = () => { try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){ toast("Opslag vol — verwijder wat foto's (demo-modus)"); } };
+  const colOf = p => { const seg = p.split("/"); return seg.slice(0, seg.length-1).join("/"); };
+  const notify = colPath => {
+    listeners.forEach(l => {
+      if(l.isDoc && colOf(l.path) === colPath){
+        const seg = l.path.split("/"); const id = seg.pop(); const col = seg.join("/");
+        l.cb(store[col] && store[col][id] ? {id, ...store[col][id]} : null);
+      } else if(!l.isDoc && l.path === colPath){
+        l.cb(Object.entries(store[colPath]||{}).map(([id,d]) => ({id, ...d})));
+      }
+    });
+  };
+  window.addEventListener("storage", e => {
+    if(e.key !== KEY) return;
+    try{ store = JSON.parse(e.newValue || "{}"); }catch(err){ return; }
+    const paths = new Set(listeners.map(l => l.isDoc ? colOf(l.path) : l.path));
+    paths.forEach(notify);
+  });
+  const newId = () => "d" + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+  return {
+    demo:true,
+    listen(colPath, cb){
+      const l = {path:colPath, isDoc:false, cb}; listeners.push(l);
+      cb(Object.entries(store[colPath]||{}).map(([id,d]) => ({id, ...d})));
+      return () => listeners.splice(listeners.indexOf(l),1);
+    },
+    listenDoc(docPath, cb){
+      const l = {path:docPath, isDoc:true, cb}; listeners.push(l);
+      const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
+      cb(store[col] && store[col][id] ? {id, ...store[col][id]} : null);
+      return () => listeners.splice(listeners.indexOf(l),1);
+    },
+    async add(colPath, data){ const id = newId(); (store[colPath] ||= {})[id] = data; save(); notify(colPath); return id; },
+    async set(docPath, data){ const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
+      (store[col] ||= {})[id] = {...(store[col][id]||{}), ...data}; save(); notify(col); },
+    async del(docPath){ const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
+      if(store[col]){ delete store[col][id]; save(); notify(col); } },
+    async getDoc(docPath){ const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
+      return store[col] && store[col][id] ? {id, ...store[col][id]} : null; }
+  };
+}
+
+async function makeFirebaseDB(){
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  const F = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+  const app = initializeApp(CFG.firebase);
+  const db = F.getFirestore(app);
+  const colRef = p => F.collection(db, ...p.split("/"));
+  const docRef = p => F.doc(db, ...p.split("/"));
+  return {
+    demo:false,
+    listen(colPath, cb){
+      return F.onSnapshot(colRef(colPath),
+        snap => cb(snap.docs.map(d => ({id:d.id, ...d.data()}))),
+        err => console.error("listen", colPath, err));
+    },
+    listenDoc(docPath, cb){
+      return F.onSnapshot(docRef(docPath),
+        snap => cb(snap.exists() ? {id:snap.id, ...snap.data()} : null),
+        err => console.error("listenDoc", docPath, err));
+    },
+    async add(colPath, data){ const r = await F.addDoc(colRef(colPath), data); return r.id; },
+    async set(docPath, data){ await F.setDoc(docRef(docPath), data, {merge:true}); },
+    async del(docPath){ await F.deleteDoc(docRef(docPath)); },
+    async getDoc(docPath){ const s = await F.getDoc(docRef(docPath)); return s.exists() ? {id:s.id, ...s.data()} : null; }
+  };
+}
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+const S = {
+  me: null,            // {id, name, isLeader}
+  players: [],
+  chats: [],
+  deadlines: [],
+  missions: [],
+  settings: {rolesRevealed:false},
+  tab: "chats",
+  openChat: null,      // chat id
+  msgs: [],
+  unsubMsgs: null,
+  imgCache: {},
+  clockTimer: null
+};
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const now = () => Date.now();
+
+function toast(msg){
+  document.querySelectorAll(".toast").forEach(t => t.remove());
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
+}
+function fmtTime(ms){ return new Date(ms).toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"}); }
+function fmtDT(ms){
+  const d = new Date(ms);
+  const day = d.toLocaleDateString("nl-NL",{weekday:"short", day:"numeric", month:"short"});
+  return `${day} ${fmtTime(ms)}`;
+}
+function initial(name){ return (name||"?").trim().charAt(0).toUpperCase(); }
+
+/* ---------------- foto's ---------------- */
+function pickImage(){
+  return new Promise(resolve => {
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = "image/*";
+    inp.onchange = () => resolve(inp.files[0] || null);
+    inp.click();
+  });
+}
+function compressImage(file, maxDim = 1280){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let {width:w, height:h} = img;
+      const scale = Math.min(1, maxDim / Math.max(w,h));
+      w = Math.round(w*scale); h = Math.round(h*scale);
+      const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+      cv.getContext("2d").drawImage(img, 0, 0, w, h);
+      let q = 0.72, data = cv.toDataURL("image/jpeg", q);
+      while(data.length > 850000 && q > 0.3){ q -= 0.12; data = cv.toDataURL("image/jpeg", q); }
+      if(data.length > 950000){
+        cv.width = Math.round(w*0.6); cv.height = Math.round(h*0.6);
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        data = cv.toDataURL("image/jpeg", 0.5);
+      }
+      URL.revokeObjectURL(img.src);
+      resolve(data);
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+async function uploadImage(file){
+  const data = await compressImage(file);
+  return await DB.add("images", {data, at: now()});
+}
+async function loadImageInto(imgId, el){
+  if(S.imgCache[imgId]){ el.src = S.imgCache[imgId]; return; }
+  const doc = await DB.getDoc("images/" + imgId);
+  if(doc && doc.data){ S.imgCache[imgId] = doc.data; el.src = doc.data; }
+}
+function viewImage(src){
+  const w = document.createElement("div");
+  w.className = "img-viewer";
+  w.innerHTML = `<img src="${src}">`;
+  w.onclick = () => w.remove();
+  document.body.appendChild(w);
+}
+
+/* =====================================================================
+   INLOGGEN / AANMELDEN
+   ===================================================================== */
+function renderJoin(err = "", leaderMode = false){
+  const root = $("#root");
+  root.innerHTML = `
+  <div class="join">
+    <div>
+      <h1>${esc(CFG.spelNaam || "Geheime Dienst")}</h1>
+      <div class="sub">${esc(CFG.spelSubtitel || "Real life edition")}</div>
+      <div class="vs">
+        <span class="pill pill-green" style="font-size:14px;padding:8px 18px">Gelovige</span>
+        <span class="of">OF</span>
+        <span class="pill pill-red" style="font-size:14px;padding:8px 18px">Infiltrant</span>
+      </div>
+    </div>
+    <form id="joinForm">
+      <label>Jouw naam</label>
+      <input id="joinName" placeholder="Bijv. Sanne" maxlength="24" autocomplete="off">
+      <div id="pinWrap" class="${leaderMode ? "" : "hidden"}">
+        <label>Pincode spelleider</label>
+        <input id="joinPin" type="password" inputmode="numeric" placeholder="••••" autocomplete="off">
+      </div>
+      <div class="err" id="joinErr">${esc(err)}</div>
+      <button class="btn ${leaderMode ? "btn-red" : "btn-green"} btn-block" type="submit">
+        ${leaderMode ? "🎩 Inloggen als spelleider" : "Meedoen"}
+      </button>
+    </form>
+    <button class="link-btn" id="leaderToggle">${leaderMode ? "← Ik ben een speler" : "Ik ben de spelleider"}</button>
+  </div>`;
+  $("#leaderToggle").onclick = () => renderJoin("", !leaderMode);
+  $("#joinForm").onsubmit = async e => {
+    e.preventDefault();
+    const name = $("#joinName").value.trim();
+    if(!name){ $("#joinErr").textContent = "Vul je naam in."; return; }
+    if(leaderMode && $("#joinPin").value !== PIN){ $("#joinErr").textContent = "Pincode onjuist."; return; }
+    // bestaat deze naam al? -> zelfde account terugpakken
+    const existing = S.players.find(p => p.name.toLowerCase() === name.toLowerCase());
+    let id;
+    if(existing){
+      if(!!existing.isLeader !== leaderMode){
+        $("#joinErr").textContent = existing.isLeader
+          ? "Deze naam is van de spelleider — log in als spelleider."
+          : "Deze naam bestaat al als speler.";
+        return;
+      }
+      id = existing.id;
+    } else {
+      id = await DB.add("players", {name, role:null, status:"actief", isLeader:leaderMode, at: now()});
+    }
+    localStorage.setItem("gd_player_id", id);
+    await ensureBaseChats();
+    enterApp(id);
+  };
+}
+
+async function ensureBaseChats(){
+  if(!S.chats.find(c => c.id === "all")){
+    await DB.set("chats/all", {name:"Iedereen", type:"all", at: now()});
+  }
+}
+
+/* =====================================================================
+   APP-START
+   ===================================================================== */
+function enterApp(myId){
+  const sync = () => {
+    const p = S.players.find(x => x.id === myId);
+    if(!p){
+      // speler verwijderd door spelleider
+      if(S.me){ localStorage.removeItem("gd_player_id"); S.me = null; renderJoin("Je bent uit het spel verwijderd."); }
+      return;
+    }
+    const first = !S.me;
+    S.me = p;
+    if(first){ S.tab = p.isLeader ? "spelers" : "chats"; render(); }
+    else render();
+  };
+  sync();
+  S.syncMe = sync;
+  if(!S.clockTimer) S.clockTimer = setInterval(() => { if(S.tab === "deadlines" && !S.openChat) render(); }, 30000);
+}
+
+/* =====================================================================
+   HELPERS: chats & membership
+   ===================================================================== */
+function canSeeChat(c){
+  if(!S.me) return false;
+  if(S.me.isLeader) return true;
+  if(c.type === "all") return true;
+  if(c.type === "dm") return c.dmFor === S.me.id;
+  return (c.members || []).includes(S.me.id);
+}
+function chatTitle(c){
+  if(c.type === "all") return "📣 Iedereen";
+  if(c.type === "dm"){
+    if(S.me.isLeader){ const p = S.players.find(x => x.id === c.dmFor); return "👤 " + (p ? p.name : "Onbekend"); }
+    return "🎩 Spelleider";
+  }
+  return "👥 " + c.name;
+}
+function chatMembersLabel(c){
+  if(c.type === "all") return `${S.players.length} deelnemers`;
+  if(c.type === "dm") return "Privéchat met de spelleider";
+  const names = (c.members||[]).map(id => (S.players.find(p => p.id === id)||{}).name).filter(Boolean);
+  return names.join(", ") || "Geen leden";
+}
+async function openDM(playerId){
+  const id = "dm_" + playerId;
+  if(!S.chats.find(c => c.id === id)){
+    await DB.set("chats/" + id, {type:"dm", dmFor:playerId, at: now()});
+  }
+  openChat(id);
+}
+function lastReadKey(chatId){ return "gd_read_" + chatId; }
+function unreadCount(c){
+  if(!c.lastAt) return 0;
+  if(c.lastSid === S.me.id) return 0;
+  const seen = Number(localStorage.getItem(lastReadKey(c.id)) || 0);
+  return c.lastAt > seen ? 1 : 0;
+}
+async function sendMessage(chatId, data){
+  const base = {sid:S.me.id, sn:S.me.name, at: now(), ...data};
+  await DB.add(`chats/${chatId}/messages`, base);
+  await DB.set("chats/" + chatId, {
+    lastAt: base.at, lastSid: base.sid,
+    lastText: data.type === "img" ? "📷 Foto" : data.type === "mission" ? "📋 Opdracht" : (data.t || "")
+  });
+  localStorage.setItem(lastReadKey(chatId), String(base.at + 1));
+}
+async function sendSystem(chatId, text){
+  await DB.add(`chats/${chatId}/messages`, {type:"sys", t:text, at: now()});
+  await DB.set("chats/" + chatId, {lastAt: now(), lastSid:"sys", lastText: text});
+}
+
+/* =====================================================================
+   RENDER — hoofdframe
+   ===================================================================== */
+function render(){
+  if(!S.me) return;
+  if(S.openChat){ renderChat(); return; }
+  if(S.unsubMsgs){ S.unsubMsgs(); S.unsubMsgs = null; }
+
+  const root = $("#root");
+  const isL = S.me.isLeader;
+  const tabs = isL
+    ? [["spelers","👥","Spelers"],["chats","💬","Chats"],["deadlines","⏰","Deadlines"],["info","📖","Info"]]
+    : [["chats","💬","Chats"],["rol","🎭","Mijn rol"],["deadlines","⏰","Deadlines"],["info","📖","Info"]];
+  if(!tabs.find(t => t[0] === S.tab)) S.tab = tabs[0][0];
+
+  const totalUnread = S.chats.filter(canSeeChat).reduce((n,c) => n + unreadCount(c), 0);
+
+  root.innerHTML = `
+    <div class="topbar">
+      <h2 class="title-font">${tabs.find(t => t[0] === S.tab)[2]}</h2>
+      <div class="me-chip">${esc(S.me.name)}<br><span style="color:${isL ? "var(--gold)" : "var(--green)"}">${isL ? "🎩 Spelleider" : "Speler"}</span></div>
+    </div>
+    <div class="content" id="content"></div>
+    <div class="tabbar">
+      ${tabs.map(([id,icon,label]) => `
+        <button data-tab="${id}" class="${S.tab === id ? "active" : ""}">
+          <span class="ticon">${icon}</span>${label}
+          ${id === "chats" && totalUnread ? `<span class="badge">${totalUnread}</span>` : ""}
+        </button>`).join("")}
+    </div>`;
+  root.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); });
+
+  const view = {spelers:renderSpelers, chats:renderChats, rol:renderRol, deadlines:renderDeadlines, info:renderInfo}[S.tab];
+  view($("#content"));
+}
+
+/* =====================================================================
+   VIEW: Spelers (spelleider)
+   ===================================================================== */
+function renderSpelers(el){
+  const players = S.players.filter(p => !p.isLeader).sort((a,b) => (a.at||0)-(b.at||0));
+  const n = players.length;
+  const adv = VERHOUDING[n];
+  const nInf = players.filter(p => p.role === "infiltrant").length;
+  const nRole = players.filter(p => p.role).length;
+
+  el.innerHTML = `
+    <div class="stat-strip">
+      <div class="stat"><div class="num">${n}</div><div class="lbl">Spelers</div></div>
+      <div class="stat"><div class="num" style="color:var(--red)">${nInf}</div><div class="lbl">Infiltranten</div></div>
+      <div class="stat"><div class="num">${nRole}/${n}</div><div class="lbl">Rol toegewezen</div></div>
+    </div>
+    ${adv ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">💡 Advies bij ${n} spelers: <b style="color:var(--red)">${adv[0]} infiltranten</b> en <b style="color:var(--green)">${adv[1]} gelovigen</b>${n >= 17 ? " (2x veldwerker)" : " (alle speciale rollen 1x)"}</div>` : ""}
+    <div class="switch-row">
+      <div style="flex:1">
+        <div style="font-weight:700">Rollen zichtbaar voor spelers</div>
+        <div style="font-size:12px;color:var(--muted)">Zet aan als alle rollen zijn uitgedeeld</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="revealToggle" ${S.settings.rolesRevealed ? "checked" : ""}><span class="slider"></span></label>
+    </div>
+    <div class="section-label">Deelnemers</div>
+    <div id="playerList">
+      ${n === 0 ? `<div class="empty"><div class="big">🏕️</div>Nog geen aanmeldingen.<br>Deel de link van deze app met de groep!</div>` : ""}
+      ${players.map(p => `
+        <div class="player-row" data-pid="${p.id}">
+          <div class="top">
+            <div class="avatar ${p.role ? (ROLES[p.role].team === "infiltrant" ? "red" : "green") : ""}">${p.role && S.settings ? (p.role ? ROLES[p.role].emoji : initial(p.name)) : initial(p.name)}</div>
+            <div class="row-main">
+              <div class="row-title">${esc(p.name)}
+                ${p.status !== "actief" ? `<span class="pill ${p.status === "gevangen" ? "pill-gold" : "pill-gray"}">${STATUSES[p.status] || p.status}</span>` : ""}
+              </div>
+              <div class="row-sub">${p.role ? ROLES[p.role].naam : "Nog geen rol"}</div>
+            </div>
+            <button class="icon-btn act-chat" title="Chat">💬</button>
+            <button class="icon-btn act-del" title="Verwijderen">🗑️</button>
+          </div>
+          <div class="selects">
+            <select class="sel-role">
+              <option value="">— Rol kiezen —</option>
+              ${ROLE_ORDER.map(r => `<option value="${r}" ${p.role === r ? "selected" : ""}>${ROLES[r].emoji} ${ROLES[r].naam}</option>`).join("")}
+            </select>
+            <select class="sel-status">
+              ${Object.entries(STATUSES).map(([k,v]) => `<option value="${k}" ${(p.status||"actief") === k ? "selected" : ""}>${v}</option>`).join("")}
+            </select>
+          </div>
+        </div>`).join("")}
+    </div>`;
+
+  $("#revealToggle").onchange = e => {
+    DB.set("settings/main", {rolesRevealed: e.target.checked});
+    if(e.target.checked) sendSystem("all", "🎭 De rollen zijn uitgedeeld! Bekijk je rol via het tabblad 'Mijn rol'.");
+  };
+  el.querySelectorAll(".player-row").forEach(row => {
+    const pid = row.dataset.pid;
+    row.querySelector(".sel-role").onchange = e => DB.set("players/" + pid, {role: e.target.value || null});
+    row.querySelector(".sel-status").onchange = e => DB.set("players/" + pid, {status: e.target.value});
+    row.querySelector(".act-chat").onclick = () => openDM(pid);
+    row.querySelector(".act-del").onclick = () => {
+      const p = S.players.find(x => x.id === pid);
+      confirmModal(`Wil je <b>${esc(p.name)}</b> verwijderen uit het spel?`, async () => {
+        await DB.del("players/" + pid); toast("Speler verwijderd");
+      });
+    };
+  });
+}
+
+/* =====================================================================
+   VIEW: Chats-overzicht
+   ===================================================================== */
+function renderChats(el){
+  const visible = S.chats.filter(canSeeChat);
+  const all = visible.find(c => c.type === "all");
+  const groups = visible.filter(c => c.type === "group").sort((a,b) => (b.lastAt||0)-(a.lastAt||0));
+  const isL = S.me.isLeader;
+
+  const chatRow = c => `
+    <div class="list-row" data-cid="${c.id}" style="cursor:pointer">
+      <div class="avatar ${c.type === "all" ? "green" : ""}">${c.type === "all" ? "📣" : c.type === "dm" ? initial(S.me.isLeader ? ((S.players.find(p => p.id === c.dmFor)||{}).name||"?") : "S") : "👥"}</div>
+      <div class="row-main">
+        <div class="row-title">${esc(chatTitle(c).replace(/^\S+ /, ""))}</div>
+        <div class="row-sub">${c.lastText ? esc(c.lastText) : esc(chatMembersLabel(c))}</div>
+      </div>
+      <div class="row-side">
+        ${c.lastAt ? fmtTime(c.lastAt) : ""}
+        ${unreadCount(c) ? `<br><span class="unread-dot">●</span>` : ""}
+      </div>
+    </div>`;
+
+  let dmSection = "";
+  if(isL){
+    const players = S.players.filter(p => !p.isLeader).sort((a,b) => (a.name||"").localeCompare(b.name||""));
+    dmSection = `
+      <div class="section-label">Privéchats met spelers</div>
+      ${players.length === 0 ? `<div class="empty" style="padding:20px">Nog geen spelers aangemeld.</div>` : ""}
+      ${players.map(p => {
+        const c = S.chats.find(x => x.id === "dm_" + p.id);
+        return `
+        <div class="list-row" data-dm="${p.id}" style="cursor:pointer">
+          <div class="avatar">${initial(p.name)}</div>
+          <div class="row-main">
+            <div class="row-title">${esc(p.name)}</div>
+            <div class="row-sub">${c && c.lastText ? esc(c.lastText) : "Start een privéchat"}</div>
+          </div>
+          <div class="row-side">${c && c.lastAt ? fmtTime(c.lastAt) : ""}${c && unreadCount(c) ? `<br><span class="unread-dot">●</span>` : ""}</div>
+        </div>`;
+      }).join("")}`;
+  } else {
+    const myDm = S.chats.find(c => c.id === "dm_" + S.me.id);
+    dmSection = `
+      <div class="section-label">Privé</div>
+      <div class="list-row" data-dm="${S.me.id}" style="cursor:pointer">
+        <div class="avatar" style="background:var(--gold);color:#2b1f04">🎩</div>
+        <div class="row-main">
+          <div class="row-title">Spelleider</div>
+          <div class="row-sub">${myDm && myDm.lastText ? esc(myDm.lastText) : "Stel je vragen aan de spelleider"}</div>
+        </div>
+        <div class="row-side">${myDm && myDm.lastAt ? fmtTime(myDm.lastAt) : ""}${myDm && unreadCount(myDm) ? `<br><span class="unread-dot">●</span>` : ""}</div>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    ${isL ? `<button class="btn btn-green btn-block" id="newGroupBtn" style="margin-bottom:14px">➕ Nieuwe groepschat</button>` : ""}
+    <div class="section-label">Groepen</div>
+    ${all ? chatRow(all) : ""}
+    ${groups.map(chatRow).join("")}
+    ${dmSection}`;
+
+  el.querySelectorAll("[data-cid]").forEach(r => r.onclick = () => openChat(r.dataset.cid));
+  el.querySelectorAll("[data-dm]").forEach(r => r.onclick = () => openDM(r.dataset.dm));
+  if(isL) $("#newGroupBtn").onclick = newGroupModal;
+}
+
+function newGroupModal(){
+  const players = S.players.filter(p => !p.isLeader);
+  modal(`
+    <h3>Nieuwe groepschat</h3>
+    <div class="field"><label>Naam van de groep</label><input id="grpName" placeholder="Bijv. Infiltranten" maxlength="30"></div>
+    <div class="field"><label>Snel selecteren</label>
+      <div class="quick-row">
+        <button class="btn btn-sm btn-ghost" data-quick="infiltrant">🕵️ Alle infiltranten</button>
+        <button class="btn btn-sm btn-ghost" data-quick="gevangen">⛓️ Alle gevangenen</button>
+      </div>
+    </div>
+    <div class="check-list">
+      ${players.map(p => `<label><input type="checkbox" value="${p.id}"> ${esc(p.name)} <span style="color:var(--muted);font-size:12px;margin-left:auto">${p.role ? ROLES[p.role].naam : ""}</span></label>`).join("")}
+    </div>
+    <button class="btn btn-green btn-block" id="grpCreate">Groep aanmaken</button>
+  `, m => {
+    m.querySelectorAll("[data-quick]").forEach(b => b.onclick = () => {
+      const q = b.dataset.quick;
+      m.querySelectorAll(".check-list input").forEach(cb => {
+        const p = players.find(x => x.id === cb.value);
+        if(q === "infiltrant") cb.checked = p.role === "infiltrant";
+        if(q === "gevangen") cb.checked = p.status === "gevangen";
+      });
+      const name = m.querySelector("#grpName");
+      if(!name.value) name.value = q === "infiltrant" ? "Infiltranten" : "Gevangenen";
+    });
+    m.querySelector("#grpCreate").onclick = async () => {
+      const name = m.querySelector("#grpName").value.trim();
+      const members = [...m.querySelectorAll(".check-list input:checked")].map(cb => cb.value);
+      if(!name){ toast("Geef de groep een naam"); return; }
+      if(members.length === 0){ toast("Kies minimaal één speler"); return; }
+      const id = await DB.add("chats", {name, type:"group", members, at: now()});
+      closeModal();
+      openChat(id);
+    };
+  });
+}
+
+/* =====================================================================
+   VIEW: open chat
+   ===================================================================== */
+function openChat(chatId){
+  S.openChat = chatId;
+  localStorage.setItem(lastReadKey(chatId), String(now()));
+  if(S.unsubMsgs) S.unsubMsgs();
+  S.msgs = [];
+  S.unsubMsgs = DB.listen(`chats/${chatId}/messages`, docs => {
+    S.msgs = docs.sort((a,b) => (a.at||0)-(b.at||0));
+    localStorage.setItem(lastReadKey(chatId), String(now()));
+    if(S.openChat === chatId) renderChat(true);
+  });
+  renderChat();
+}
+function closeChat(){
+  if(S.unsubMsgs){ S.unsubMsgs(); S.unsubMsgs = null; }
+  S.openChat = null;
+  render();
+}
+
+function renderChat(keepScroll){
+  const c = S.chats.find(x => x.id === S.openChat);
+  if(!c){ closeChat(); return; }
+  const root = $("#root");
+  const isL = S.me.isLeader;
+  const draft = $("#composerText") ? $("#composerText").value : "";
+
+  const msgHtml = S.msgs.map((m, i) => {
+    const prev = S.msgs[i-1];
+    const gap = !prev || (m.at - (prev.at||0)) > 5*60*1000 || prev.sid !== m.sid;
+    if(m.type === "sys") return `<div class="msg sys">${esc(m.t)}</div>`;
+    if(m.type === "mission"){
+      const mi = S.missions.find(x => x.id === m.mid);
+      return mi ? missionCardHtml(mi) : "";
+    }
+    const mine = m.sid === S.me.id;
+    const showSender = c.type !== "dm" && !mine;
+    return `
+      <div class="msg ${mine ? "mine" : ""} ${gap ? "gap" : ""}">
+        ${showSender && gap ? `<div class="sender">${esc(m.sn)}</div>` : ""}
+        ${m.type === "img" ? `<img data-img="${m.imgId}" alt="foto">` : ""}
+        ${m.t ? `<div>${esc(m.t)}</div>` : ""}
+        <div class="mtime">${fmtTime(m.at)}</div>
+      </div>`;
+  }).join("");
+
+  root.innerHTML = `
+    <div class="chat-screen">
+      <div class="chat-head">
+        <button class="back" id="chatBack">‹</button>
+        <div class="info">
+          <div class="cname">${esc(chatTitle(c))}</div>
+          <div class="csub">${esc(chatMembersLabel(c))}</div>
+        </div>
+        ${isL && c.type === "group" ? `<button class="icon-btn" id="grpEdit" title="Leden">⚙️</button>` : ""}
+      </div>
+      <div class="msgs" id="msgs">
+        ${S.msgs.length === 0 ? `<div class="empty"><div class="big">💬</div>Nog geen berichten.</div>` : msgHtml}
+      </div>
+      <div class="composer">
+        ${isL && c.type !== "dm" ? `<button class="icon-btn" id="btnMission" title="Nieuwe opdracht">📋</button>` : ""}
+        <button class="icon-btn" id="btnPhoto" title="Foto sturen">📷</button>
+        <textarea id="composerText" rows="1" placeholder="Bericht…"></textarea>
+        <button class="icon-btn send" id="btnSend">➤</button>
+      </div>
+    </div>`;
+
+  $("#composerText").value = draft;
+  const msgsEl = $("#msgs");
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+
+  msgsEl.querySelectorAll("img[data-img]").forEach(img => {
+    loadImageInto(img.dataset.img, img).then(() => { msgsEl.scrollTop = msgsEl.scrollHeight; });
+    img.onclick = () => { if(img.src) viewImage(img.src); };
+  });
+  msgsEl.querySelectorAll("[data-mission]").forEach(b => b.onclick = () => missionModal(b.dataset.mission));
+
+  $("#chatBack").onclick = closeChat;
+  const ta = $("#composerText");
+  ta.oninput = () => { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 110) + "px"; };
+  ta.onkeydown = e => { if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); doSend(); } };
+  const doSend = async () => {
+    const t = ta.value.trim(); if(!t) return;
+    ta.value = ""; ta.style.height = "auto";
+    await sendMessage(c.id, {type:"text", t});
+  };
+  $("#btnSend").onclick = doSend;
+  $("#btnPhoto").onclick = async () => {
+    const f = await pickImage(); if(!f) return;
+    toast("Foto uploaden…");
+    try{
+      const imgId = await uploadImage(f);
+      await sendMessage(c.id, {type:"img", imgId});
+    }catch(e){ console.error(e); toast("Uploaden mislukt"); }
+  };
+  const bm = $("#btnMission"); if(bm) bm.onclick = () => newMissionModal(c.id);
+  const ge = $("#grpEdit"); if(ge) ge.onclick = () => editGroupModal(c);
+}
+
+function editGroupModal(c){
+  const players = S.players.filter(p => !p.isLeader);
+  modal(`
+    <h3>Groep: ${esc(c.name)}</h3>
+    <div class="check-list">
+      ${players.map(p => `<label><input type="checkbox" value="${p.id}" ${(c.members||[]).includes(p.id) ? "checked" : ""}> ${esc(p.name)}</label>`).join("")}
+    </div>
+    <button class="btn btn-green btn-block" id="grpSave" style="margin-bottom:10px">Opslaan</button>
+    <button class="btn btn-red btn-block" id="grpDel">Groep verwijderen</button>
+  `, m => {
+    m.querySelector("#grpSave").onclick = async () => {
+      const members = [...m.querySelectorAll(".check-list input:checked")].map(cb => cb.value);
+      await DB.set("chats/" + c.id, {members});
+      closeModal(); toast("Groep bijgewerkt"); renderChat();
+    };
+    m.querySelector("#grpDel").onclick = () => confirmModal(`Groep <b>${esc(c.name)}</b> verwijderen?`, async () => {
+      await DB.del("chats/" + c.id); closeChat();
+    });
+  });
+}
+
+/* =====================================================================
+   OPDRACHTEN (missies)
+   ===================================================================== */
+const MSTATUS = {
+  open:      {label:"Open",        cls:"",     pill:"pill-red"},
+  ingediend: {label:"Ingediend",   cls:"sub",  pill:"pill-gold"},
+  goedgekeurd:{label:"Goedgekeurd",cls:"done", pill:"pill-green"}
+};
+function missionCardHtml(mi){
+  const st = MSTATUS[mi.status] || MSTATUS.open;
+  const nPhotos = (mi.photoCount || 0);
+  return `
+    <div class="mission-card ${st.cls}">
+      <div class="mc-top"><h4>📋 ${esc(mi.title)}</h4><span class="pill ${st.pill}">${st.label}</span></div>
+      ${mi.desc ? `<p>${esc(mi.desc)}</p>` : ""}
+      <div class="mc-meta">
+        ${mi.deadline ? `⏰ Deadline: ${fmtDT(mi.deadline)}` : ""}
+        ${nPhotos ? ` · 📷 ${nPhotos} foto${nPhotos === 1 ? "" : "'s"}` : ""}
+      </div>
+      <button class="btn btn-sm btn-ghost" data-mission="${mi.id}">Opdracht openen</button>
+    </div>`;
+}
+function newMissionModal(chatId){
+  modal(`
+    <h3>Nieuwe opdracht</h3>
+    <div class="field"><label>Titel</label><input id="miTitle" placeholder="Bijv. Geheime missie dag 1" maxlength="60"></div>
+    <div class="field"><label>Omschrijving</label><textarea id="miDesc" rows="4" placeholder="Wat moet er gebeuren? Lever foto's in als bewijs."></textarea></div>
+    <div class="field"><label>Deadline (optioneel)</label><input id="miDeadline" type="datetime-local"></div>
+    <button class="btn btn-red btn-block" id="miCreate">📋 Opdracht versturen</button>
+  `, m => {
+    m.querySelector("#miCreate").onclick = async () => {
+      const title = m.querySelector("#miTitle").value.trim();
+      const desc = m.querySelector("#miDesc").value.trim();
+      const dl = m.querySelector("#miDeadline").value;
+      if(!title){ toast("Geef de opdracht een titel"); return; }
+      const mid = await DB.add("missions", {
+        chatId, title, desc, deadline: dl ? new Date(dl).getTime() : null,
+        status:"open", photoCount:0, at: now()
+      });
+      await sendMessage(chatId, {type:"mission", mid, t:"📋 " + title});
+      closeModal();
+    };
+  });
+}
+
+let missionUnsub = null;
+function missionModal(missionId){
+  const openIt = () => {
+    const mi = S.missions.find(x => x.id === missionId);
+    if(!mi){ closeModal(); return; }
+    const isL = S.me.isLeader;
+    const st = MSTATUS[mi.status] || MSTATUS.open;
+
+    modal(`
+      <h3 style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <span>📋 ${esc(mi.title)}</span><span class="pill ${st.pill}">${st.label}</span>
+      </h3>
+      ${mi.desc ? `<p style="font-size:14px;color:#d6d6dc;white-space:pre-wrap;margin-bottom:8px">${esc(mi.desc)}</p>` : ""}
+      ${mi.deadline ? `<div style="font-size:13px;color:var(--muted);margin-bottom:8px">⏰ Deadline: ${fmtDT(mi.deadline)}</div>` : ""}
+      <div class="section-label" style="margin-top:14px">Bewijsfoto's</div>
+      <div class="photo-grid" id="miPhotos"><div class="empty" style="grid-column:1/-1;padding:16px">Nog geen foto's.</div></div>
+      ${!isL && mi.status !== "goedgekeurd" ? `
+        <button class="btn btn-ghost btn-block" id="miAddPhoto" style="margin-bottom:10px">📷 Bewijsfoto toevoegen</button>
+        ${mi.status === "open" ? `<button class="btn btn-gold btn-block btn-green" id="miSubmit">✅ Opdracht indienen als voltooid</button>` : ""}
+        ${mi.status === "ingediend" ? `<div style="text-align:center;color:var(--muted);font-size:13px">Wacht op beoordeling door de spelleider…</div>` : ""}` : ""}
+      ${isL ? `
+        <div style="display:flex;gap:10px;margin-top:6px">
+          ${mi.status !== "goedgekeurd" ? `<button class="btn btn-green" style="flex:1" id="miApprove">✅ Goedkeuren</button>` : ""}
+          ${mi.status === "ingediend" ? `<button class="btn btn-ghost" style="flex:1" id="miReject">↩️ Afwijzen</button>` : ""}
+          <button class="btn btn-red btn-sm" id="miDelete">🗑️</button>
+        </div>` : ""}
+    `, m => {
+      // foto's live laden
+      if(missionUnsub) missionUnsub();
+      missionUnsub = DB.listen(`missions/${missionId}/photos`, docs => {
+        const grid = m.querySelector("#miPhotos");
+        if(!grid) return;
+        docs.sort((a,b) => (a.at||0)-(b.at||0));
+        if(docs.length === 0) return;
+        grid.innerHTML = docs.map(ph => `
+          <div class="ph"><img data-img="${ph.imgId}" alt="bewijs"><div class="who">${esc(ph.sn)} · ${fmtTime(ph.at)}</div></div>`).join("");
+        grid.querySelectorAll("img[data-img]").forEach(img => {
+          loadImageInto(img.dataset.img, img);
+          img.onclick = () => { if(img.src) viewImage(img.src); };
+        });
+      });
+
+      const addBtn = m.querySelector("#miAddPhoto");
+      if(addBtn) addBtn.onclick = async () => {
+        const f = await pickImage(); if(!f) return;
+        toast("Foto uploaden…");
+        try{
+          const imgId = await uploadImage(f);
+          await DB.add(`missions/${missionId}/photos`, {imgId, sid:S.me.id, sn:S.me.name, at: now()});
+          await DB.set("missions/" + missionId, {photoCount: (mi.photoCount||0) + 1});
+          toast("Foto toegevoegd ✔");
+        }catch(e){ console.error(e); toast("Uploaden mislukt"); }
+      };
+      const subBtn = m.querySelector("#miSubmit");
+      if(subBtn) subBtn.onclick = async () => {
+        await DB.set("missions/" + missionId, {status:"ingediend", submittedBy:S.me.name, submittedAt: now()});
+        await sendSystem(mi.chatId, `✅ ${S.me.name} heeft de opdracht "${mi.title}" ingediend als voltooid.`);
+        toast("Ingediend! De spelleider beoordeelt je opdracht.");
+      };
+      const ap = m.querySelector("#miApprove");
+      if(ap) ap.onclick = async () => {
+        await DB.set("missions/" + missionId, {status:"goedgekeurd", reviewedAt: now()});
+        await sendSystem(mi.chatId, `🏆 De opdracht "${mi.title}" is GOEDGEKEURD door de spelleider!`);
+        toast("Goedgekeurd");
+      };
+      const rj = m.querySelector("#miReject");
+      if(rj) rj.onclick = async () => {
+        await DB.set("missions/" + missionId, {status:"open"});
+        await sendSystem(mi.chatId, `↩️ De opdracht "${mi.title}" is afgewezen — probeer het opnieuw.`);
+        toast("Afgewezen — status weer open");
+      };
+      const del = m.querySelector("#miDelete");
+      if(del) del.onclick = () => confirmModal("Opdracht verwijderen?", async () => {
+        await DB.del("missions/" + missionId); closeModal();
+      });
+    }, () => { if(missionUnsub){ missionUnsub(); missionUnsub = null; } });
+  };
+  openIt();
+}
+
+/* =====================================================================
+   VIEW: Mijn rol (speler)
+   ===================================================================== */
+function renderRol(el){
+  const p = S.me;
+  if(!p.role || !S.settings.rolesRevealed){
+    el.innerHTML = `
+      <div class="rolecard">
+        <div class="mystery">
+          <div class="q">🎭</div>
+          <h2 style="font-size:26px;margin:10px 0">Nog even geduld…</h2>
+          <p style="color:var(--muted);font-size:14px">De spelleider heeft de rollen nog niet uitgedeeld.<br>Zodra dat gebeurd is, zie je hier jouw geheime rol.</p>
+        </div>
+      </div>`;
+    return;
+  }
+  const r = ROLES[p.role];
+  const isInf = r.team === "infiltrant";
+  el.innerHTML = `
+    <div class="rolecard ${isInf ? "team-red" : "team-green"}">
+      <div class="remoji">${r.emoji}</div>
+      <h2>${r.naam}</h2>
+      <div class="rteam"><span class="pill ${isInf ? "pill-red" : "pill-green"}">Team ${isInf ? "Infiltranten" : "Gelovigen"}</span></div>
+      <div class="roleblock"><b>Missie</b><div>${r.missie}</div></div>
+      <div class="roleblock"><b>Strategie</b><div>${r.strategie}</div></div>
+      <div class="roleblock"><b>Actie</b><div>${r.actie}</div></div>
+    </div>
+    <div class="card" style="text-align:center;font-size:13px;color:var(--muted)">
+      🤫 <b>Houd je rol geheim!</b> Niemand mag zijn rol onthullen (spelregel 2).
+    </div>
+    ${p.status === "gevangen" ? `
+    <div class="card" style="border:1.5px solid var(--gold)">
+      <h3>⛓️ Je bent gevangengenomen</h3>
+      <p style="font-size:13.5px;color:#d6d6dc;line-height:1.5">Vind het geheime voorwerp dat ergens op de camping is verstopt en lever het in bij de spelleider om te ontsnappen. Zoeken mag tussen 11:00 en 22:00. Wees andere gevangenen te slim af!</p>
+    </div>` : ""}`;
+}
+
+/* =====================================================================
+   VIEW: Deadlines
+   ===================================================================== */
+function countdown(ms){
+  const diff = ms - now();
+  if(diff <= 0) return "Verlopen";
+  const m = Math.floor(diff/60000);
+  if(m < 60) return m + " min";
+  const h = Math.floor(m/60);
+  if(h < 24) return h + "u " + (m%60) + "m";
+  return Math.floor(h/24) + "d " + (h%24) + "u";
+}
+function renderDeadlines(el){
+  const isL = S.me.isLeader;
+  const items = [...S.deadlines].sort((a,b) => (a.dueAt||0)-(b.dueAt||0));
+  const upcoming = items.filter(d => d.dueAt >= now());
+  const past = items.filter(d => d.dueAt < now());
+
+  const card = d => {
+    const soon = d.dueAt - now() < 60*60*1000 && d.dueAt > now();
+    const isPast = d.dueAt < now();
+    return `
+    <div class="deadline-card ${soon ? "soon" : ""} ${isPast ? "past" : ""}">
+      <div class="cd">${countdown(d.dueAt)}</div>
+      <div class="row-main">
+        <div class="row-title">${esc(d.title)}</div>
+        <div class="row-sub">${fmtDT(d.dueAt)}${d.desc ? " · " + esc(d.desc) : ""}</div>
+      </div>
+      ${isL ? `<button class="icon-btn" data-del="${d.id}">🗑️</button>` : ""}
+    </div>`;
+  };
+
+  el.innerHTML = `
+    ${isL ? `<button class="btn btn-green btn-block" id="newDeadline" style="margin-bottom:14px">➕ Nieuwe deadline</button>` : ""}
+    ${items.length === 0 ? `<div class="empty"><div class="big">⏰</div>Nog geen deadlines ingesteld.</div>` : ""}
+    ${upcoming.map(card).join("")}
+    ${past.length ? `<div class="section-label">Verlopen</div>` + past.map(card).join("") : ""}`;
+
+  el.querySelectorAll("[data-del]").forEach(b => b.onclick = () =>
+    confirmModal("Deadline verwijderen?", async () => { await DB.del("deadlines/" + b.dataset.del); }));
+  const nb = $("#newDeadline");
+  if(nb) nb.onclick = () => {
+    const today = new Date();
+    const dstr = (h,mn) => { const d = new Date(); d.setHours(h,mn,0,0); if(d < new Date()) d.setDate(d.getDate()+1);
+      return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16); };
+    modal(`
+      <h3>Nieuwe deadline</h3>
+      <div class="quick-row">
+        <button class="btn btn-sm btn-ghost" data-preset="missie">🕚 Missie doorgeven 11:00</button>
+        <button class="btn btn-sm btn-ghost" data-preset="avond">🌙 Avondbijeenkomst 22:30</button>
+      </div>
+      <div class="field"><label>Titel</label><input id="dlTitle" placeholder="Bijv. Missie doorgeven aan spelleider" maxlength="60"></div>
+      <div class="field"><label>Omschrijving (optioneel)</label><input id="dlDesc" placeholder="Bijv. via de infiltranten-chat" maxlength="80"></div>
+      <div class="field"><label>Datum & tijd</label><input id="dlWhen" type="datetime-local"></div>
+      <button class="btn btn-green btn-block" id="dlCreate">Deadline instellen</button>
+    `, m => {
+      m.querySelectorAll("[data-preset]").forEach(b => b.onclick = () => {
+        if(b.dataset.preset === "missie"){
+          m.querySelector("#dlTitle").value = "Geheime missie doorgeven aan spelleider";
+          m.querySelector("#dlWhen").value = dstr(11,0);
+        } else {
+          m.querySelector("#dlTitle").value = "Avondbijeenkomst op de tennisbaan";
+          m.querySelector("#dlWhen").value = dstr(22,30);
+        }
+      });
+      m.querySelector("#dlCreate").onclick = async () => {
+        const title = m.querySelector("#dlTitle").value.trim();
+        const when = m.querySelector("#dlWhen").value;
+        if(!title || !when){ toast("Vul titel en tijd in"); return; }
+        await DB.add("deadlines", {title, desc: m.querySelector("#dlDesc").value.trim(), dueAt: new Date(when).getTime(), at: now()});
+        await sendSystem("all", `⏰ Nieuwe deadline: ${title} — ${fmtDT(new Date(when).getTime())}`);
+        closeModal();
+      };
+    });
+  };
+}
+
+/* =====================================================================
+   VIEW: Info (spelregels uit de flyer)
+   ===================================================================== */
+function renderInfo(el){
+  el.innerHTML = `
+    <details>
+      <summary>⏱️ Spelduur & winnaar</summary>
+      <div class="dbody"><ul>
+        <li>Het spel duurt <b>3 dagen</b>. Speeltijd: iedere dag van <b>10:00 – 23:00</b>.</li>
+        <li>De infiltranten winnen wanneer zij na de derde avondbijeenkomst de overhand hebben.</li>
+        <li>Zijn er van beide groepen nog veel spelers over, dan wordt het spel afgemaakt met meerdere avondbijeenkomsten (incl. stemmingen) achter elkaar.</li>
+        <li><b>Let op:</b> word je als infiltrant weggestemd, dan word je uit de infiltrantengroep verwijderd en kun je niet meer terugkeren in het spel.</li>
+      </ul></div>
+    </details>
+    <details>
+      <summary>📅 Dagplanning</summary>
+      <div class="dbody"><ul>
+        <li><b>11:00</b> — deadline doorgeven geheime missie door infiltranten</li>
+        <li><b>11:00</b> — doorgeven foto geheim voorwerp aan gevangenen</li>
+        <li><b>12:00</b> — doorgeven 3 geheime missies aan veldwerker</li>
+        <li><b>11:00 – 18:00</b> — meeting hacker (initiatief vanuit de hacker)</li>
+        <li><b>22:30</b> — avondbijeenkomst alle spelers incl. stemronde (tennisbaan)</li>
+      </ul></div>
+    </details>
+    <details>
+      <summary>🌙 Avondbijeenkomst (22:30, tennisbaan)</summary>
+      <div class="dbody"><ol>
+        <li>Spelleider benoemt de infiltrantenmissie van de dag: succesvol uitgevoerd? Hoeveel gelovigen mogen gevangengenomen worden?</li>
+        <li>Spelleider laat het geheime voorwerp zien: gevonden? Wie is ontsnapt? (1 nacht beschermd)</li>
+        <li>Iedereen gaat slapen.</li>
+        <li>Infiltranten worden wakker en nemen gelovige(n) gevangen.</li>
+        <li>Held wordt wakker (indien actief) en kiest of hij iemand redt.</li>
+        <li>Bijbelsmokkelaar wordt wakker en geeft iemand een extra stem.</li>
+        <li>Iedereen wordt wakker — verdenkingen mogen geuit worden.</li>
+        <li>Na verdediging volgt de algehele stemming.</li>
+      </ol></div>
+    </details>
+    <details>
+      <summary>📜 Spelregels</summary>
+      <div class="dbody"><ol>
+        <li>Iedereen woont de avondbijeenkomsten bij.</li>
+        <li>Niemand mag zijn rol onthullen.</li>
+        <li>Wie verdacht wordt, mag zich verdedigen vóór de stemming.</li>
+        <li>Overleg mag via de chat, maar missies, vragen aan de spelleider en andere acties gebeuren in real life.</li>
+        <li>Overdag mag je informatie uitwisselen in kleine groepjes; openlijke beschuldigingen bewaar je tot de avondbijeenkomst.</li>
+        <li>Bluffen is toegestaan.</li>
+        <li>Iedereen houdt zich aan de dagelijkse routine en tijdschema's.</li>
+        <li>Weggestemde spelers doen niet meer actief mee, tenzij ze ontsnappen.</li>
+        <li>Pesten, bedreigingen of agressief gedrag = mogelijk diskwalificatie.</li>
+        <li>De spelleider is neutraal en heeft áltijd gelijk. 🎩</li>
+      </ol></div>
+    </details>
+    <details>
+      <summary>🛡️ Het schild</summary>
+      <div class="dbody"><ul>
+        <li>Op een willekeurig moment deelt de spelleider een raadsel in de groep.</li>
+        <li>Wie als eerste de goede oplossing privé naar de spelleider stuurt, wint het schild.</li>
+        <li>Met het schild ben je tijdens het eerstvolgende infiltrantenoverleg veilig (geldt niet voor de algemene stemronde daarvóór).</li>
+        <li>De spelleider deelt met de groep wie het schild heeft gewonnen.</li>
+      </ul></div>
+    </details>
+    <details>
+      <summary>😈 Verleiden</summary>
+      <div class="dbody"><ul>
+        <li>Infiltranten worden in een willekeurige nacht gevraagd te kiezen: gevangennemen óf een speler verleiden.</li>
+        <li>Een verleide speler mag kiezen om zich bij de infiltranten te voegen — de rol als gelovige vervalt dan.</li>
+      </ul></div>
+    </details>
+    <details>
+      <summary>🎭 Alle rollen</summary>
+      <div class="dbody">
+        ${ROLE_ORDER.map(k => { const r = ROLES[k]; return `
+          <div style="margin-bottom:12px">
+            <b style="color:${r.team === "infiltrant" ? "var(--red)" : "var(--green)"}">${r.emoji} ${r.naam}</b>
+            <div style="font-size:13px;margin-top:2px">${r.missie}</div>
+          </div>`; }).join("")}
+      </div>
+    </details>
+    <details>
+      <summary>⚖️ Spelersverhouding</summary>
+      <div class="dbody">
+        <table>
+          <tr><th>Spelers</th><th>Infiltranten</th><th>Gelovigen</th><th>Speciaal</th></tr>
+          ${Object.entries(VERHOUDING).map(([n,[i,g]]) => `<tr><td>${n}</td><td style="color:var(--red)">${i}</td><td style="color:var(--green)">${g}</td><td>${n >= 17 ? "2x veldwerker" : "alles 1x"}</td></tr>`).join("")}
+        </table>
+      </div>
+    </details>
+    <button class="btn btn-ghost btn-block" id="logoutBtn" style="margin-top:16px">Uitloggen op dit apparaat</button>`;
+  $("#logoutBtn").onclick = () => confirmModal("Weet je zeker dat je wilt uitloggen? Je kunt daarna opnieuw aanmelden met dezelfde naam.", () => {
+    localStorage.removeItem("gd_player_id"); location.reload();
+  });
+}
+
+/* =====================================================================
+   MODALS
+   ===================================================================== */
+let modalCloseCb = null;
+function modal(html, setup, onClose){
+  closeModal();
+  const w = document.createElement("div");
+  w.className = "modal-wrap"; w.id = "modalWrap";
+  w.innerHTML = `<div class="modal">${html}</div>`;
+  w.onclick = e => { if(e.target === w) closeModal(); };
+  document.body.appendChild(w);
+  modalCloseCb = onClose || null;
+  if(setup) setup(w.querySelector(".modal"));
+}
+function closeModal(){
+  const w = $("#modalWrap");
+  if(w) w.remove();
+  if(modalCloseCb){ const cb = modalCloseCb; modalCloseCb = null; cb(); }
+}
+function confirmModal(html, onYes){
+  modal(`
+    <h3>Weet je het zeker?</h3>
+    <p style="font-size:14px;color:#d6d6dc;margin-bottom:16px">${html}</p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" id="cNo">Annuleren</button>
+      <button class="btn btn-red" style="flex:1" id="cYes">Ja</button>
+    </div>
+  `, m => {
+    m.querySelector("#cNo").onclick = closeModal;
+    m.querySelector("#cYes").onclick = async () => { closeModal(); await onYes(); };
+  });
+}
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+async function boot(){
+  if(DEMO){
+    $("#demoBanner").classList.remove("hidden");
+    DB = makeDemoDB();
+  } else {
+    try{ DB = await makeFirebaseDB(); }
+    catch(e){
+      console.error(e);
+      $("#root").innerHTML = `<div class="join"><div><h1 style="font-size:30px">⚠️ Fout</h1>
+        <p style="color:var(--muted);margin-top:12px">Kan geen verbinding maken met Firebase. Controleer de config in <b>firebase-config.js</b> en je internetverbinding.</p></div></div>`;
+      return;
+    }
+  }
+
+  let attempted = false;
+  function maybeAutoLogin(){
+    if(attempted) return;
+    attempted = true;
+    const saved = localStorage.getItem("gd_player_id");
+    if(saved && S.players.find(p => p.id === saved)){
+      enterApp(saved);
+    } else {
+      localStorage.removeItem("gd_player_id");
+      renderJoin();
+    }
+  }
+
+  // live data
+  DB.listen("players", docs => { S.players = docs; if(S.syncMe) S.syncMe(); else maybeAutoLogin(); });
+  DB.listen("chats", docs => { S.chats = docs; if(S.me && !S.openChat) render(); });
+  DB.listen("deadlines", docs => { S.deadlines = docs; if(S.me && !S.openChat && S.tab === "deadlines") render(); });
+  DB.listen("missions", docs => { S.missions = docs; if(S.me && S.openChat) renderChat(true); });
+  DB.listenDoc("settings/main", doc => { S.settings = doc || {rolesRevealed:false}; if(S.me && !S.openChat) render(); });
+  // als players-collectie leeg blijft, toch join tonen
+  setTimeout(() => { if(!S.me && !attempted) maybeAutoLogin(); }, 1500);
+}
+boot();
+</script>
+</body>
+</html>
