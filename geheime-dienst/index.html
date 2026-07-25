@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Geheime Dienst</title>
+<link rel="icon" type="image/png" href="kaarten/icon.png">
+<link rel="apple-touch-icon" href="kaarten/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -106,6 +108,7 @@
   .join > *:nth-child(2){animation-delay:.08s}
   .join > *:nth-child(3){animation-delay:.16s}
   .join h1{font-size:52px; line-height:1.02; text-transform:uppercase; text-shadow:0 6px 30px rgba(0,0,0,.45)}
+  .join .join-logo{width:84%; max-width:340px; display:block; margin:0 auto; filter:drop-shadow(0 6px 30px rgba(0,0,0,.45))}
   .join .sub{font-style:italic; color:var(--muted); margin:10px 0 6px}
   .join .vs{display:flex; justify-content:center; gap:14px; margin:26px 0 34px; align-items:center}
   .join .vs .of{
@@ -464,19 +467,19 @@ const ROLES = {
     missie:"Ontmasker de infiltranten door observatie overdag en tijdens de avondbijeenkomsten.",
     strategie:"Let op verdacht gedrag en bespreek verdenkingen in kleine groepjes om niet door de infiltranten gevangengenomen te worden.",
     actie:"Deel je verdenkingen tijdens de avondbijeenkomsten en ontmasker infiltranten." },
-  veldwerker: { naam:"Veldwerker", emoji:"🔭", team:"gelovige",
+  veldwerker: { naam:"Veldwerker", emoji:"🔭", team:"gelovige", img:"kaarten/veldwerker.jpg",
     missie:"Ontvang elke ochtend drie missies van de spelleider, waarvan één de echte infiltrantenmissie van die dag is (tussen 11:00 - 12:00).",
     strategie:"Observeer overdag welke missie wordt uitgevoerd en door wie, om de infiltranten te ontmaskeren.",
     actie:"Deel subtiele hints tijdens de avondbijeenkomst zonder je rol expliciet te onthullen." },
-  hacker: { naam:"Hacker", emoji:"💻", team:"gelovige",
+  hacker: { naam:"Hacker", emoji:"💻", team:"gelovige", img:"kaarten/hacker.jpg",
     missie:"Stel dagelijks twee ja/nee-vragen aan de spelleider (tussen 11:00 - 19:00).",
     strategie:"Gebruik de verkregen informatie om de infiltranten te ontmaskeren.",
     actie:"Deel subtiele hints tijdens de avondbijeenkomst zonder je rol expliciet te onthullen." },
-  held: { naam:"Held", emoji:"🦸", team:"gelovige",
+  held: { naam:"Held", emoji:"🦸", team:"gelovige", img:"kaarten/held.jpg",
     missie:"Red twee keer een gelovige die door de infiltranten is weggestemd.",
     strategie:"Kies het juiste moment om je reddingsactie in te zetten.",
     actie:"Geef tijdens de avondbijeenkomst met je duim aan of je de gevangene wilt redden (duim omhoog) of niet (duim omlaag)." },
-  bijbelsmokkelaar: { naam:"Bijbelsmokkelaar", emoji:"📖", team:"gelovige",
+  bijbelsmokkelaar: { naam:"Bijbelsmokkelaar", emoji:"📖", team:"gelovige", img:"kaarten/bijbelsmokkelaar.jpg",
     missie:"Wijs elke nacht één extra stem toe aan een speler. De stem van deze speler telt in de gezamenlijke stemming dubbel.",
     strategie:"Wijs deze extra stem strategisch toe om het spel te beïnvloeden.",
     actie:"Wijs tijdens de avondbijeenkomst een medespeler aan die de extra stem krijgt. Iedere speler mag maar 1x aangewezen worden tijdens het spel, waaronder jezelf." },
@@ -726,7 +729,8 @@ function renderJoin(err = "", leaderMode = false){
   root.innerHTML = `
   <div class="join">
     <div>
-      <h1>${esc(CFG.spelNaam || "Geheime Dienst")}</h1>
+      <img src="kaarten/logo.png" alt="${esc(CFG.spelNaam || "Geheime Dienst")}" class="join-logo"
+           onerror="this.outerHTML='&lt;h1&gt;${esc(CFG.spelNaam || "Geheime Dienst")}&lt;/h1&gt;'">
       <div class="sub">${esc(CFG.spelSubtitel || "Real life edition")}</div>
       <div class="vs">
         <span class="pill pill-green" style="font-size:14px;padding:8px 18px">Gelovige</span>
