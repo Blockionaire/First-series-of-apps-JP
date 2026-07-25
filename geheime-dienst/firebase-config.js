@@ -24,7 +24,7 @@ window.GD_CONFIG = {
   firebase: null,
 
   // Pincode waarmee de spelleider inlogt (verander deze!)
-  spelleiderPin: "1107",
+  spelleiderPin: "1602",
 
   // Naam van het spel (mag je aanpassen)
   spelNaam: "GEHEIME DIENST",

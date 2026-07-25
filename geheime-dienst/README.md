@@ -20,7 +20,7 @@ Open `index.html` in je browser. Zolang Firebase nog niet gekoppeld is, draait d
 
 > Tip: in demo-modus kun je via **Info → Uitloggen** wisselen tussen spelers en de spelleider.
 
-**Standaard pincode spelleider: `1107`** (verander deze in `firebase-config.js`!)
+**Standaard pincode spelleider: `1602`** (aan te passen in `firebase-config.js`)
 
 ---
 
