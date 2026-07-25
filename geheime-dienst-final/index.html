@@ -154,6 +154,7 @@
   }
   .content.from-right{animation:viewInL .26s var(--ease)}
   .content.from-left{animation:viewInR .26s var(--ease)}
+  .content.no-anim{animation:none}
   .tabbar{
     position:fixed; bottom:calc(12px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
     width:calc(100% - 24px); max-width:516px; display:flex;
@@ -1086,7 +1087,14 @@ function render(){
   if(!tabs.find(t => t[0] === S.tab)) S.tab = tabs[0][0];
 
   const totalUnread = S.chats.filter(canSeeChat).reduce((n,c) => n + unreadCount(c), 0);
-  const anim = S.viewAnim || ""; S.viewAnim = null;
+  // scrollpositie bewaren zodat een live update je niet terugwerpt naar boven
+  const oldContent = $("#content");
+  const zelfdeTab = S.renderedTab === S.tab;
+  const bewaardeScroll = zelfdeTab && oldContent ? oldContent.scrollTop : 0;
+  const openBlokken = zelfdeTab && oldContent
+    ? [...oldContent.querySelectorAll("details")].map(d => d.open) : null;
+  const anim = S.viewAnim || (zelfdeTab ? "no-anim" : ""); S.viewAnim = null;
+  S.renderedTab = S.tab;
 
   root.innerHTML = `
     <div class="topbar">
@@ -1115,7 +1123,12 @@ function render(){
   $("#settingsBtn").onclick = settingsModal;
 
   const view = {spelers:renderSpelers, chats:renderChats, rol:renderRol, deadlines:renderDeadlines, info:renderInfo}[S.tab];
-  view($("#content"));
+  const contentEl = $("#content");
+  view(contentEl);
+  if(openBlokken){
+    contentEl.querySelectorAll("details").forEach((d, i) => { if(openBlokken[i]) d.open = true; });
+  }
+  if(bewaardeScroll) contentEl.scrollTop = bewaardeScroll;
 }
 
 /* =====================================================================
