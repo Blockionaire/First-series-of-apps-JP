@@ -12,16 +12,14 @@
 
 window.GD_CONFIG = {
 
-  // Vervang null door jouw config, bijvoorbeeld:
-  // firebase: {
-  //   apiKey: "AIza....",
-  //   authDomain: "geheime-dienst-xxxx.firebaseapp.com",
-  //   projectId: "geheime-dienst-xxxx",
-  //   storageBucket: "geheime-dienst-xxxx.appspot.com",
-  //   messagingSenderId: "123456789",
-  //   appId: "1:123456789:web:abcdef"
-  // },
-  firebase: null,
+  firebase: {
+    apiKey: "AIzaSyB_ekiYsV6RG7YsIK8kVXtghZNu7obHC4g",
+    authDomain: "geheime-dienst.firebaseapp.com",
+    projectId: "geheime-dienst",
+    storageBucket: "geheime-dienst.firebasestorage.app",
+    messagingSenderId: "996478249104",
+    appId: "1:996478249104:web:205651eb2e539b0cdd5015"
+  },
 
   // Pincode waarmee de spelleider inlogt (verander deze!)
   spelleiderPin: "1602",

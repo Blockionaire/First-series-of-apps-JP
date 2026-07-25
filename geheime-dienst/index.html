@@ -3023,12 +3023,31 @@ async function boot(){
     $("#demoBanner").classList.remove("hidden");
     DB = makeDemoDB();
   } else {
-    try{ DB = await makeFirebaseDB(); }
-    catch(e){
-      console.error(e);
-      $("#root").innerHTML = `<div class="join"><div><h1 style="font-size:30px">⚠️ Fout</h1>
-        <p style="color:var(--muted);margin-top:12px">Kan geen verbinding maken met Firebase. Controleer de config in <b>firebase-config.js</b> en je internetverbinding.</p></div></div>`;
-      return;
+    let poging = 0;
+    while(!DB){
+      try{ DB = await makeFirebaseDB(); }
+      catch(e){
+        console.error(e);
+        poging++;
+        const wacht = Math.min(15, poging * 3);
+        $("#root").innerHTML = `<div class="join"><div>
+          <h1 style="font-size:28px">📡 Geen verbinding</h1>
+          <p style="color:var(--muted);margin-top:14px;line-height:1.6">De app kan de server niet bereiken. Meestal is dit een slechte internetverbinding — loop even naar een plek met beter bereik.</p>
+          <p style="color:var(--muted);margin-top:10px;font-size:13px">Nieuwe poging over <b id="retryIn">${wacht}</b> seconden…</p>
+          <button class="btn btn-green btn-block" id="retryNow" style="margin-top:20px">🔄 Nu opnieuw proberen</button>
+        </div></div>`;
+        await new Promise(res => {
+          let left = wacht;
+          const el = $("#retryIn");
+          const tick = setInterval(() => {
+            left--;
+            if(el) el.textContent = Math.max(0, left);
+            if(left <= 0){ clearInterval(tick); res(); }
+          }, 1000);
+          const btn = $("#retryNow");
+          if(btn) btn.onclick = () => { clearInterval(tick); res(); };
+        });
+      }
     }
   }
 
