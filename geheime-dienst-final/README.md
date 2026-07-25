@@ -15,7 +15,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 
 **Voor iedereen**
 - Aanmelden met je naam; de app onthoudt je op je telefoon (je naam is gekoppeld aan je apparaat, dus niemand kan jouw account kapen)
-- **Eigen pincode van 4 cijfers**: die kies en bevestig je bij je eerste aanmelding en voer je daarna bij elke keer openen in. Handig als je een telefoon deelt — je partner ziet jouw rol en chats niet. Wijzigen kan via ⚙️ → *Pincode wijzigen*
+- **Eigen pincode van 4 cijfers** (ook voor de spelleider): die kies en bevestig je bij je eerste aanmelding en voer je daarna bij elke keer openen in. Handig als je een telefoon deelt — je partner ziet jouw rol en chats niet. Wijzigen kan via ⚙️ → *Pincode wijzigen*
 - Je geheime rolkaart met de officiële kaartafbeelding en de volledige rolbeschrijving
 - Chats: de groepschat met iedereen, automatische groepschats (infiltranten, gevangenen) en een privéchat met de spelleider
 - Deadlines met afteltimer
@@ -70,6 +70,8 @@ Alles wat je zou willen wijzigen staat bovenin `firebase-config.js`: de pincode 
 
 De Firestore-regels staan open tot en met 31 december 2026 — prima voor een besloten campingspel, maar deel de link alleen binnen je spelersgroep. De Firebase-sleutel in `firebase-config.js` hoort openbaar te zijn bij een web-app en is geen wachtwoord.
 
-Pincodes worden nooit als leesbare cijfers opgeslagen: van de code + je naam wordt een SHA-256-hash gemaakt en alleen die hash gaat de database in. De spelleider ontgrendelt met de spelleiderspincode (`1602`). De pincode is bedoeld tegen meekijkende medespelers op een gedeelde telefoon, niet tegen iemand die de database zelf openbreekt.
+Pincodes worden nooit als leesbare cijfers opgeslagen: van de code + je naam wordt een SHA-256-hash gemaakt en alleen die hash gaat de database in. De pincode is bedoeld tegen meekijkende medespelers op een gedeelde telefoon, niet tegen iemand die de database zelf openbreekt.
+
+De spelleider heeft twee losse codes: de **spelleiderscode** (`1602`) om het spelleidersaccount te claimen op het aanmeldscherm, en een **eigen pincode** die net als bij spelers bij het openen van de app gevraagd wordt. Vergeten? Tik op *Pincode vergeten?* op het slotscherm — met de spelleiderscode stel je een nieuwe in.
 
 Veel plezier op de camping! 🏕️

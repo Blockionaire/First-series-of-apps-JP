@@ -1139,7 +1139,7 @@ async function hashPin(pin, zout){
 }
 
 // toont een vergrendelscherm en geeft de ingetikte pincode terug (of null bij terug)
-function vraagPin({titel, sub, fout = "", terugLabel = ""}){
+function vraagPin({titel, sub, fout = "", terugLabel = "", extraLabel = ""}){
   return new Promise(resolve => {
     let pin = "";
     const root = $("#root");
@@ -1158,6 +1158,7 @@ function vraagPin({titel, sub, fout = "", terugLabel = ""}){
             <button data-k="del">⌫</button>
           </div>
           ${terugLabel ? `<button class="link-btn" id="pinTerug">${esc(terugLabel)}</button>` : ""}
+          ${extraLabel ? `<button class="link-btn" id="pinExtra">${esc(extraLabel)}</button>` : ""}
         </div>`;
       root.querySelectorAll("[data-k]").forEach(b => b.onclick = () => {
         const k = b.dataset.k;
@@ -1169,6 +1170,8 @@ function vraagPin({titel, sub, fout = "", terugLabel = ""}){
       });
       const t = root.querySelector("#pinTerug");
       if(t) t.onclick = () => resolve(null);
+      const x = root.querySelector("#pinExtra");
+      if(x) x.onclick = () => resolve("__extra__");
     };
     teken();
     // ook met het toetsenbord te bedienen
@@ -1217,7 +1220,9 @@ async function ontgrendel(speler){
       titel: "Voer je pincode in",
       sub: `Welkom terug, <b style="color:var(--text)">${esc(speler.name)}</b>${isLeider ? " 🎩" : ""}`,
       fout,
-      terugLabel: "Iemand anders? Uitloggen"
+      terugLabel: "Iemand anders? Uitloggen",
+      // de spelleider kan zichzelf altijd binnenlaten met de spelleiderscode
+      extraLabel: isLeider ? "Pincode vergeten?" : ""
     });
     if(pin === null){
       localStorage.removeItem("gd_player_id");
@@ -1225,10 +1230,38 @@ async function ontgrendel(speler){
       renderJoin();
       return false;
     }
-    const goed = isLeider ? (pin === PIN) : (await hashPin(pin, speler.name)) === speler.pinHash;
+    if(pin === "__extra__"){
+      if(await herstelLeiderPin(speler)) return true;
+      fout = "";
+      continue;
+    }
+    // geen eigen pincode ingesteld? dan geldt (nog) de spelleiderscode
+    const goed = speler.pinHash
+      ? (await hashPin(pin, speler.name)) === speler.pinHash
+      : (isLeider && pin === PIN);
     if(goed) return true;
     fout = "❌ Onjuiste pincode";
     haptic(20);
+  }
+}
+
+// spelleider die zijn eigen pincode kwijt is: spelleiderscode geeft recht op een nieuwe
+async function herstelLeiderPin(speler){
+  let fout = "";
+  while(true){
+    const code = await vraagPin({
+      titel: "Spelleiderscode",
+      sub: "Voer de spelleiderscode in om een nieuwe persoonlijke pincode te kiezen.",
+      fout,
+      terugLabel: "← Terug"
+    });
+    if(code === null) return false;
+    if(code !== PIN){ fout = "❌ Onjuiste spelleiderscode"; haptic(20); continue; }
+    const h = await kiesPin(speler.name, {titel:"Nieuwe pincode", terugLabel:"← Terug"});
+    if(h === null) return false;
+    await DB.set("players/" + speler.id, {pinHash: h});
+    speler.pinHash = h;
+    return true;
   }
 }
 
@@ -1288,7 +1321,14 @@ function renderJoin(err = "", leaderMode = false){
             : "Deze naam bestaat al als speler.";
           return;
         }
-        if(!leaderMode){
+        if(leaderMode){
+          // de spelleiderscode is hierboven al gecontroleerd; nog geen eigen pincode? nu kiezen
+          if(!existing.pinHash){
+            const h = await kiesPin(existing.name, {titel:"Stel je pincode in", terugLabel:"← Terug"});
+            if(h === null){ renderJoin("", true); return; }
+            await DB.set("players/" + existing.id, {pinHash: h});
+          }
+        } else {
           const tok = deviceToken();
           if(existing.device && existing.device !== tok){
             $("#joinErr").textContent = "Deze naam is al in gebruik op een ander apparaat. Nieuwe telefoon? Vraag de spelleider om jouw apparaat los te koppelen (🔓 bij Spelers).";
@@ -1306,11 +1346,9 @@ function renderJoin(err = "", leaderMode = false){
         }
         id = existing.id;
       } else {
-        let pinHash = null;
-        if(!leaderMode){
-          pinHash = await kiesPin(name);
-          if(pinHash === null){ renderJoin(); return; }
-        }
+        // iedereen kiest een eigen pincode, ook de spelleider
+        const pinHash = await kiesPin(name, leaderMode ? {titel:"Kies je pincode", terugLabel:"← Terug"} : {});
+        if(pinHash === null){ renderJoin("", leaderMode); return; }
         id = await DB.add("players", {name, role:null, status:"actief", isLeader:leaderMode,
           device: leaderMode ? null : deviceToken(), pinHash, at: now()});
       }
@@ -1504,7 +1542,7 @@ function settingsModal(){
     <div class="set-card">
       <h4>👤 Account</h4>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Ingelogd als <b style="color:var(--text)">${esc(S.me.name)}</b>${isL ? " (spelleider)" : ""}</p>
-      ${isL ? "" : `<button class="btn btn-ghost btn-block" id="pinBtn" style="margin-bottom:10px">🔒 Pincode wijzigen</button>`}
+      <button class="btn btn-ghost btn-block" id="pinBtn" style="margin-bottom:10px">🔒 Pincode wijzigen</button>
       <button class="btn btn-ghost btn-block" id="logoutBtn">Uitloggen op dit apparaat</button>
     </div>
     ${isL ? `
@@ -1541,9 +1579,11 @@ function settingsModal(){
       closeModal(true);
       let fout = "";
       while(true){
-        const huidig = await vraagPin({titel:"Huidige pincode", sub:"Voer eerst je huidige pincode in.", fout, terugLabel:"← Annuleren"});
-        if(huidig === null){ render(); return; }
-        if((await hashPin(huidig, S.me.name)) !== S.me.pinHash){ fout = "❌ Onjuiste pincode"; haptic(20); continue; }
+        if(S.me.pinHash){
+          const huidig = await vraagPin({titel:"Huidige pincode", sub:"Voer eerst je huidige pincode in.", fout, terugLabel:"← Annuleren"});
+          if(huidig === null){ render(); return; }
+          if((await hashPin(huidig, S.me.name)) !== S.me.pinHash){ fout = "❌ Onjuiste pincode"; haptic(20); continue; }
+        }
         const nieuweHash = await kiesPin(S.me.name, {titel:"Nieuwe pincode", terugLabel:"← Annuleren"});
         if(nieuweHash === null){ render(); return; }
         await DB.set("players/" + S.me.id, {pinHash: nieuweHash});
@@ -3585,8 +3625,8 @@ async function boot(){
       renderJoin();
       return;
     }
-    // spelleider gebruikt de spelleiderscode, spelers hun eigen pincode
-    if(speler.isLeader || speler.pinHash){
+    // iedereen ontgrendelt met zijn eigen pincode, spelleider incluis
+    if(speler.pinHash){
       if(!(await ontgrendel(speler))) return;
     } else {
       const h = await kiesPin(speler.name, {titel:"Stel je pincode in", terugLabel:"Uitloggen"});
