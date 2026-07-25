@@ -639,8 +639,9 @@
   body.light .btn-ghost{border-color:#c9c5bb; background:rgba(0,0,0,.03)}
   body.light .slider{background:#c9c5bb}
   body.light .avatar{background:linear-gradient(145deg,#dcd8cf,#cbc7bd); color:var(--text)}
-  body.light .msg{background:var(--bg2)}
-  body.light .msg.mine{color:#fff}
+  body.light .msg{background:var(--bg2); color:var(--text)}
+  body.light .msg.mine{background:linear-gradient(145deg,#478f39,#39762d); color:#fff; border:none}
+  body.light .msg.sys{background:transparent; color:var(--muted)}
   body.light .msg .mtime{color:rgba(0,0,0,.35)}
   body.light .msg.mine .mtime{color:rgba(255,255,255,.65)}
   body.light .mission-card p{color:#45443f}
@@ -839,6 +840,8 @@ const S = {
   closingChat: false,
   msgCounts: {},
   msgs: [],
+  msgCache: {},
+  msgsLoaded: false,
   replyTo: null,
   unsubMsgs: null,
   imgCache: {},
@@ -1326,7 +1329,7 @@ async function resetGame(wipePlayers){
   }
   for(const p of S.players.filter(x => !x.isLeader)) await DB.set("players/" + p.id, {role:null, status:"actief"});
   await DB.set("chats/all", {name:"Iedereen", type:"all", at: now(), lastAt:null, lastText:null, lastSid:null});
-  S.imgCache = {};
+  S.imgCache = {}; S.msgCache = {};
   closeModal();
   toast("Spel gereset ✔ Klaar voor een nieuwe ronde!");
 }
@@ -2325,9 +2328,14 @@ function openChat(chatId){
   S.closingChat = false;
   localStorage.setItem(lastReadKey(chatId), String(now()));
   if(S.unsubMsgs) S.unsubMsgs();
-  S.msgs = [];
+  // eerder opgehaalde berichten meteen tonen, zodat je je geschiedenis direct ziet
+  S.msgs = S.msgCache[chatId] || [];
+  S.msgsLoaded = Object.prototype.hasOwnProperty.call(S.msgCache, chatId);
   S.unsubMsgs = DB.listen(`chats/${chatId}/messages`, docs => {
-    S.msgs = docs.sort((a,b) => (a.at||0)-(b.at||0));
+    const gesorteerd = docs.sort((a,b) => (a.at||0)-(b.at||0));
+    S.msgCache[chatId] = gesorteerd;
+    S.msgs = gesorteerd;
+    S.msgsLoaded = true;
     localStorage.setItem(lastReadKey(chatId), String(now()));
     if(S.openChat === chatId) renderChat();
   });
@@ -2414,7 +2422,11 @@ function renderChat(){
         ${isL && c.type === "group" ? `<button class="icon-btn" id="grpEdit" title="Leden">⚙️</button>` : ""}
       </div>
       <div class="msgs" id="msgs">
-        ${S.msgs.length === 0 ? `<div class="empty"><div class="big">💬</div>Nog geen berichten.</div>` : msgHtml}
+        ${S.msgs.length === 0
+          ? (S.msgsLoaded
+              ? `<div class="empty"><div class="big">💬</div>Nog geen berichten.</div>`
+              : `<div class="empty"><div class="big">💬</div>Berichten laden…</div>`)
+          : msgHtml}
       </div>
       ${!isL && isMuted(S.me) ? `
       <div class="muted-note">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "verbannen"} — je kunt meelezen, maar niet meer chatten of stemmen.</div>` : `
