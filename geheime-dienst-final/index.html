@@ -228,6 +228,11 @@
     font-size:12px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase;
     color:var(--muted); margin:20px 4px 10px;
   }
+  .banned-row{opacity:.82; border-color:rgba(255,255,255,.12); align-items:flex-start}
+  .banned-row .row-title{text-decoration:line-through; text-decoration-color:rgba(255,255,255,.35)}
+  .banned-row .row-sub{white-space:normal; line-height:1.4}
+  .banned-row .pill{flex:none; margin-top:3px}
+  body.light .banned-row .row-title{text-decoration-color:rgba(0,0,0,.3)}
 
   /* ---------- spelers (leider) ---------- */
   .player-row{
@@ -1100,7 +1105,7 @@ function render(){
   const isL = S.me.isLeader;
   const tabs = isL
     ? [["spelers","👥","Spelers"],["chats","💬","Chats"],["deadlines","⏰","Deadlines"],["info","📖","Info"]]
-    : [["chats","💬","Chats"],["rol","🎭","Mijn rol"],["deadlines","⏰","Deadlines"],["info","📖","Info"]];
+    : [["chats","💬","Chats"],["rol","🎭","Mijn rol"],["spelers","👥","Spelers"],["deadlines","⏰","Deadlines"],["info","📖","Info"]];
   if(!tabs.find(t => t[0] === S.tab)) S.tab = tabs[0][0];
 
   const totalUnread = S.chats.filter(canSeeChat).reduce((n,c) => n + unreadCount(c), 0);
@@ -1252,9 +1257,68 @@ async function resetGame(wipePlayers){
 }
 
 /* =====================================================================
+   VERBANNEN SPELERS (zichtbaar voor iedereen)
+   ===================================================================== */
+// volgorde: laatst afgevallen bovenaan
+function verbannenSpelers(){
+  return S.players
+    .filter(p => !p.isLeader && p.status && p.status !== "actief")
+    .sort((a,b) => (b.statusAt||b.at||0)-(a.statusAt||a.at||0));
+}
+// team er alleen bij zetten als de rolnaam dat niet al zegt
+function rolMetTeam(r, inf){
+  const team = inf ? "Infiltrant" : "Gelovige";
+  const kleur = inf ? "var(--red)" : "var(--green)";
+  return `${r.emoji} <b style="color:${kleur}">${r.naam}</b>${r.naam === team ? "" : ` · team ${inf ? "Infiltranten" : "Gelovigen"}`}`;
+}
+function verbannenHtml(){
+  const uit = verbannenSpelers();
+  return `
+    <div class="section-label">⚰️ Verbannen spelers${uit.length ? ` (${uit.length})` : ""}</div>
+    ${uit.length === 0 ? `<div class="empty" style="padding:22px">Nog niemand uit het spel.<br>Iedereen is nog in de race! 🎭</div>` : ""}
+    ${uit.map(p => {
+      const r = p.role ? ROLES[p.role] : null;
+      const inf = r && r.team === "infiltrant";
+      return `
+      <div class="list-row banned-row">
+        <div class="avatar ${r ? (inf ? "red" : "green") : ""}">${r ? r.emoji : initial(p.name)}</div>
+        <div class="row-main">
+          <div class="row-title">${esc(p.name)}</div>
+          <div class="row-sub">${r ? rolMetTeam(r, inf) : "Rol onbekend"}</div>
+        </div>
+        <span class="pill ${statusPill(p.status)}">${p.status === "gevangen" ? "⛓️ Gevangene" : STATUSES[p.status] || p.status}</span>
+      </div>`;
+    }).join("")}`;
+}
+
+/* ---------- spelersoverzicht voor spelers (niet de spelleider) ---------- */
+function renderSpelersVoorSpeler(el){
+  const actief = S.players.filter(p => !p.isLeader && (p.status || "actief") === "actief")
+    .sort((a,b) => (a.name||"").localeCompare(b.name||""));
+  const uit = verbannenSpelers();
+  el.innerHTML = `
+    <div class="stat-strip">
+      <div class="stat"><div class="num">${actief.length}</div><div class="lbl">In het spel</div></div>
+      <div class="stat"><div class="num" style="color:var(--red)">${uit.length}</div><div class="lbl">Verbannen</div></div>
+    </div>
+    <div class="section-label">🎭 Nog in het spel</div>
+    ${actief.length === 0 ? `<div class="empty" style="padding:22px">Nog geen deelnemers.</div>` : ""}
+    ${actief.map(p => `
+      <div class="list-row">
+        <div class="avatar">${initial(p.name)}</div>
+        <div class="row-main">
+          <div class="row-title">${esc(p.name)}${p.id === S.me.id ? ` <span class="pill pill-outline">jij</span>` : ""}</div>
+          <div class="row-sub">Rol geheim 🤫</div>
+        </div>
+      </div>`).join("")}
+    ${verbannenHtml()}`;
+}
+
+/* =====================================================================
    VIEW: Spelers (spelleider)
    ===================================================================== */
 function renderSpelers(el){
+  if(!S.me.isLeader){ renderSpelersVoorSpeler(el); return; }
   const players = S.players.filter(p => !p.isLeader).sort((a,b) => (a.at||0)-(b.at||0));
   const n = players.length;
   const adv = VERHOUDING[n];
@@ -1306,7 +1370,8 @@ function renderSpelers(el){
             </select>
           </div>
         </div>`).join("")}
-    </div>`;
+    </div>
+    ${verbannenHtml()}`;
 
   $("#revealToggle").onchange = e => {
     haptic(12);
