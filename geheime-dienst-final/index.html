@@ -146,6 +146,39 @@
   .demo-banner:not(.hidden) ~ .app .topbar{padding-top:14px}
   .err{color:var(--red); font-size:13px; font-weight:600; min-height:18px}
 
+  /* ---------- vergrendelscherm ---------- */
+  .lock{
+    min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:calc(28px + env(safe-area-inset-top)) 22px calc(28px + env(safe-area-inset-bottom));
+    text-align:center; overflow-y:auto;
+    background:
+      radial-gradient(600px 320px at 85% -60px, rgba(255,59,48,.10), transparent 70%),
+      radial-gradient(600px 320px at 10% 105%, rgba(98,197,84,.10), transparent 70%);
+  }
+  .lock-logo{width:56%; max-width:210px; margin-bottom:22px; opacity:.92}
+  body.light .lock-logo{filter:invert(.92)}
+  .lock-titel{font-size:24px; text-transform:uppercase; margin-bottom:6px}
+  .lock-sub{font-size:13.5px; color:var(--muted); line-height:1.5; max-width:300px}
+  .lock-dots{display:flex; gap:16px; margin:26px 0 6px}
+  .lock-dots .dot{
+    width:15px; height:15px; border-radius:50%; border:2px solid #6a6a73;
+    transition:background .15s ease, transform .15s var(--ease), border-color .15s ease;
+  }
+  .lock-dots .dot.vol{background:var(--green); border-color:var(--green); transform:scale(1.14)}
+  .lock-fout{color:var(--red); font-size:13px; font-weight:600; min-height:20px; margin-bottom:6px}
+  .lock.shake .lock-dots{animation:shake .4s ease}
+  @keyframes shake{0%,100%{transform:none} 20%{transform:translateX(-9px)} 40%{transform:translateX(9px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)}}
+  .keypad{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; width:100%; max-width:280px; margin-top:8px}
+  .keypad button{
+    height:64px; border-radius:50%; font-size:24px; font-weight:600;
+    background:var(--bg3); border:1px solid var(--line); color:var(--text);
+    display:flex; align-items:center; justify-content:center;
+    transition:transform .12s var(--ease), background .12s ease;
+  }
+  .keypad button:active{transform:scale(.9); background:var(--bg4)}
+  .keypad button.leeg{background:none; border:none; pointer-events:none}
+  .keypad button[data-k="del"]{font-size:20px; background:none; border:none}
+
   /* ---------- app frame ---------- */
   .topbar{
     display:flex; align-items:center; gap:10px;
@@ -1090,6 +1123,116 @@ function viewImage(src){
 }
 
 /* =====================================================================
+   PERSOONLIJKE PINCODE (vergrendeling per speler)
+   ===================================================================== */
+// pincode nooit onversleuteld opslaan
+async function hashPin(pin, zout){
+  const data = new TextEncoder().encode("gd:" + String(zout).toLowerCase() + ":" + pin);
+  try{
+    const buf = await crypto.subtle.digest("SHA-256", data);
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  }catch(e){
+    let h = 2166136261;
+    for(const c of data){ h ^= c; h = Math.imul(h, 16777619) >>> 0; }
+    return "f" + h.toString(16);
+  }
+}
+
+// toont een vergrendelscherm en geeft de ingetikte pincode terug (of null bij terug)
+function vraagPin({titel, sub, fout = "", terugLabel = ""}){
+  return new Promise(resolve => {
+    let pin = "";
+    const root = $("#root");
+    const teken = (foutTekst = fout, schud = false) => {
+      root.innerHTML = `
+        <div class="lock${schud ? " shake" : ""}">
+          <img src="kaarten/logo.png" class="lock-logo" alt="" onerror="this.remove()">
+          <h2 class="lock-titel title-font">${esc(titel)}</h2>
+          <div class="lock-sub">${sub}</div>
+          <div class="lock-dots">${[0,1,2,3].map(i => `<span class="dot ${i < pin.length ? "vol" : ""}"></span>`).join("")}</div>
+          <div class="lock-fout">${esc(foutTekst)}</div>
+          <div class="keypad">
+            ${[1,2,3,4,5,6,7,8,9].map(n => `<button data-k="${n}">${n}</button>`).join("")}
+            <button class="leeg"></button>
+            <button data-k="0">0</button>
+            <button data-k="del">⌫</button>
+          </div>
+          ${terugLabel ? `<button class="link-btn" id="pinTerug">${esc(terugLabel)}</button>` : ""}
+        </div>`;
+      root.querySelectorAll("[data-k]").forEach(b => b.onclick = () => {
+        const k = b.dataset.k;
+        if(k === "del"){ pin = pin.slice(0, -1); teken(""); return; }
+        if(pin.length >= 4) return;
+        pin += k; haptic(4);
+        teken("");
+        if(pin.length === 4) setTimeout(() => resolve(pin), 140);
+      });
+      const t = root.querySelector("#pinTerug");
+      if(t) t.onclick = () => resolve(null);
+    };
+    teken();
+    // ook met het toetsenbord te bedienen
+    const opToets = e => {
+      if(/^[0-9]$/.test(e.key)){
+        if(pin.length >= 4) return;
+        pin += e.key; teken("");
+        if(pin.length === 4){ document.removeEventListener("keydown", opToets); setTimeout(() => resolve(pin), 140); }
+      } else if(e.key === "Backspace"){ pin = pin.slice(0, -1); teken(""); }
+    };
+    document.addEventListener("keydown", opToets);
+    const oud = resolve;
+    resolve = v => { document.removeEventListener("keydown", opToets); oud(v); };
+  });
+}
+
+// pincode kiezen en bevestigen
+async function kiesPin(naam, {titel = "Kies je pincode", terugLabel = "← Terug"} = {}){
+  while(true){
+    const eerste = await vraagPin({
+      titel,
+      sub: `Kies een pincode van 4 cijfers. Je hebt hem elke keer nodig om jouw account te openen — handig als je je telefoon deelt.`,
+      terugLabel
+    });
+    if(eerste === null) return null;
+    const tweede = await vraagPin({
+      titel: "Bevestig je pincode",
+      sub: "Voer dezelfde vier cijfers nog een keer in.",
+      terugLabel: "← Opnieuw kiezen"
+    });
+    if(tweede === null) continue;
+    if(eerste !== tweede){
+      await vraagPin({titel:"Pincodes verschillen", sub:"De twee pincodes waren niet gelijk. Tik iets in om het opnieuw te proberen.", fout:"❌ Probeer het opnieuw"});
+      continue;
+    }
+    return await hashPin(eerste, naam);
+  }
+}
+
+// vergrendelscherm bij het openen van de app
+async function ontgrendel(speler){
+  const isLeider = !!speler.isLeader;
+  let fout = "";
+  while(true){
+    const pin = await vraagPin({
+      titel: "Voer je pincode in",
+      sub: `Welkom terug, <b style="color:var(--text)">${esc(speler.name)}</b>${isLeider ? " 🎩" : ""}`,
+      fout,
+      terugLabel: "Iemand anders? Uitloggen"
+    });
+    if(pin === null){
+      localStorage.removeItem("gd_player_id");
+      S.me = null;
+      renderJoin();
+      return false;
+    }
+    const goed = isLeider ? (pin === PIN) : (await hashPin(pin, speler.name)) === speler.pinHash;
+    if(goed) return true;
+    fout = "❌ Onjuiste pincode";
+    haptic(20);
+  }
+}
+
+/* =====================================================================
    INLOGGEN / AANMELDEN
    ===================================================================== */
 function renderJoin(err = "", leaderMode = false){
@@ -1151,12 +1294,25 @@ function renderJoin(err = "", leaderMode = false){
             $("#joinErr").textContent = "Deze naam is al in gebruik op een ander apparaat. Nieuwe telefoon? Vraag de spelleider om jouw apparaat los te koppelen (🔓 bij Spelers).";
             return;
           }
+          // eerst bewijzen dat jij het bent
+          if(existing.pinHash){
+            if(!(await ontgrendel(existing))) return;
+          } else {
+            const h = await kiesPin(existing.name, {titel:"Stel je pincode in"});
+            if(h === null){ renderJoin(); return; }
+            await DB.set("players/" + existing.id, {pinHash: h});
+          }
           if(!existing.device) await DB.set("players/" + existing.id, {device: tok});
         }
         id = existing.id;
       } else {
+        let pinHash = null;
+        if(!leaderMode){
+          pinHash = await kiesPin(name);
+          if(pinHash === null){ renderJoin(); return; }
+        }
         id = await DB.add("players", {name, role:null, status:"actief", isLeader:leaderMode,
-          device: leaderMode ? null : deviceToken(), at: now()});
+          device: leaderMode ? null : deviceToken(), pinHash, at: now()});
       }
       localStorage.setItem("gd_player_id", id);
       await ensureBaseChats();
@@ -1348,6 +1504,7 @@ function settingsModal(){
     <div class="set-card">
       <h4>👤 Account</h4>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Ingelogd als <b style="color:var(--text)">${esc(S.me.name)}</b>${isL ? " (spelleider)" : ""}</p>
+      ${isL ? "" : `<button class="btn btn-ghost btn-block" id="pinBtn" style="margin-bottom:10px">🔒 Pincode wijzigen</button>`}
       <button class="btn btn-ghost btn-block" id="logoutBtn">Uitloggen op dit apparaat</button>
     </div>
     ${isL ? `
@@ -1379,6 +1536,22 @@ function settingsModal(){
       m.querySelectorAll("[data-theme]").forEach(x => x.classList.toggle("active", x === b));
       haptic(6);
     });
+    const pb = m.querySelector("#pinBtn");
+    if(pb) pb.onclick = async () => {
+      closeModal(true);
+      let fout = "";
+      while(true){
+        const huidig = await vraagPin({titel:"Huidige pincode", sub:"Voer eerst je huidige pincode in.", fout, terugLabel:"← Annuleren"});
+        if(huidig === null){ render(); return; }
+        if((await hashPin(huidig, S.me.name)) !== S.me.pinHash){ fout = "❌ Onjuiste pincode"; haptic(20); continue; }
+        const nieuweHash = await kiesPin(S.me.name, {titel:"Nieuwe pincode", terugLabel:"← Annuleren"});
+        if(nieuweHash === null){ render(); return; }
+        await DB.set("players/" + S.me.id, {pinHash: nieuweHash});
+        render();
+        toast("Pincode gewijzigd 🔒");
+        return;
+      }
+    };
     m.querySelector("#logoutBtn").onclick = () => confirmModal("Weet je zeker dat je wilt uitloggen? Je kunt daarna opnieuw aanmelden met dezelfde naam.", () => {
       localStorage.removeItem("gd_player_id"); location.reload();
     });
@@ -3402,16 +3575,25 @@ async function boot(){
   }
 
   let attempted = false;
-  function maybeAutoLogin(){
+  async function maybeAutoLogin(){
     if(attempted) return;
     attempted = true;
     const saved = localStorage.getItem("gd_player_id");
-    if(saved && S.players.find(p => p.id === saved)){
-      enterApp(saved);
-    } else {
+    const speler = saved && S.players.find(p => p.id === saved);
+    if(!speler){
       localStorage.removeItem("gd_player_id");
       renderJoin();
+      return;
     }
+    // spelleider gebruikt de spelleiderscode, spelers hun eigen pincode
+    if(speler.isLeader || speler.pinHash){
+      if(!(await ontgrendel(speler))) return;
+    } else {
+      const h = await kiesPin(speler.name, {titel:"Stel je pincode in", terugLabel:"Uitloggen"});
+      if(h === null){ localStorage.removeItem("gd_player_id"); renderJoin(); return; }
+      await DB.set("players/" + speler.id, {pinHash: h});
+    }
+    enterApp(saved);
   }
 
   // live data
