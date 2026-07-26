@@ -515,6 +515,8 @@
     font-family:'Lilita One'; font-size:15px; background:var(--bg3);
     border-radius:14px; padding:9px 10px; min-width:88px; text-align:center; flex:none;
   }
+  /* naam van de groep mag doorlopen op een tweede regel */
+  .deadline-card .row-sub{white-space:normal; line-height:1.45}
   .deadline-card.soon .cd{background:var(--red); color:#fff; animation:pulse 2s ease infinite}
   .deadline-card.past{opacity:.5}
   .deadline-card.past .cd{background:#45454d; animation:none}
@@ -3563,21 +3565,37 @@ function countdown(ms){
   if(h < 24) return h + "u " + (m%60) + "m";
   return Math.floor(h/24) + "d " + (h%24) + "u";
 }
+// chats waarin de spelleider een deadline kwijt kan: eerst iedereen, dan de groepen
+function deadlineChats(){
+  const all = S.chats.filter(c => c.type === "all");
+  const groepen = S.chats.filter(c => c.type === "group").sort((a,b) => (a.at||0)-(b.at||0));
+  return [...all, ...groepen];
+}
+// een deadline hoort bij een chat; wie daar niet in zit, ziet hem ook niet staan
+function magDeadlineZien(d){
+  const chat = S.chats.find(c => c.id === (d.chatId || "all"));
+  // groep verwijderd? dan houdt alleen de spelleider hem in beeld
+  return chat ? canSeeChat(chat) : !!S.me.isLeader;
+}
+
 function renderDeadlines(el){
   const isL = S.me.isLeader;
-  const items = [...S.deadlines].sort((a,b) => (a.dueAt||0)-(b.dueAt||0));
+  const items = S.deadlines.filter(magDeadlineZien).sort((a,b) => (a.dueAt||0)-(b.dueAt||0));
   const upcoming = items.filter(d => d.dueAt >= now());
   const past = items.filter(d => d.dueAt < now());
 
   const card = d => {
     const soon = d.dueAt - now() < 60*60*1000 && d.dueAt > now();
     const isPast = d.dueAt < now();
+    const chat = S.chats.find(c => c.id === (d.chatId || "all"));
+    // bij "iedereen" is het label overbodig, bij een groep juist niet
+    const voor = chat && chat.type !== "all" ? chatTitle(chat) : "";
     return `
     <div class="deadline-card ${soon ? "soon" : ""} ${isPast ? "past" : ""}">
       <div class="cd">${countdown(d.dueAt)}</div>
       <div class="row-main">
         <div class="row-title">${esc(d.title)}</div>
-        <div class="row-sub">${fmtDT(d.dueAt)}${d.desc ? " · " + esc(d.desc) : ""}</div>
+        <div class="row-sub">${fmtDT(d.dueAt)}${voor ? " · " + esc(voor) : ""}${d.desc ? " · " + esc(d.desc) : ""}</div>
       </div>
       ${isL ? `<button class="icon-btn" data-del="${d.id}">🗑️</button>` : ""}
     </div>`;
@@ -3604,23 +3622,34 @@ function renderDeadlines(el){
       <div class="field"><label>Titel</label><input id="dlTitle" placeholder="Bijv. Missie doorgeven aan spelleider" maxlength="60"></div>
       <div class="field"><label>Omschrijving (optioneel)</label><input id="dlDesc" placeholder="Bijv. via de infiltranten-chat" maxlength="80"></div>
       <div class="field"><label>Datum & tijd</label><input id="dlWhen" type="datetime-local"></div>
+      <div class="field">
+        <label>Voor wie?</label>
+        <select id="dlChat">${deadlineChats().map(c =>
+          `<option value="${c.id}">${esc(chatTitle(c))}</option>`).join("")}</select>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">De melding komt in deze chat en alleen die spelers zien de deadline staan.</div>
+      </div>
       <button class="btn btn-green btn-block" id="dlCreate">Deadline instellen</button>
     `, m => {
+      const kiesChat = id => { const s = m.querySelector("#dlChat"); if([...s.options].some(o => o.value === id)) s.value = id; };
       m.querySelectorAll("[data-preset]").forEach(b => b.onclick = () => {
         if(b.dataset.preset === "missie"){
           m.querySelector("#dlTitle").value = "Geheime missie doorgeven aan spelleider";
           m.querySelector("#dlWhen").value = dstr(11,0);
+          kiesChat("infiltranten");   // die deadline is alleen voor de infiltranten
         } else {
           m.querySelector("#dlTitle").value = "Avondbijeenkomst op de tennisbaan";
           m.querySelector("#dlWhen").value = dstr(22,30);
+          kiesChat("all");
         }
       });
       m.querySelector("#dlCreate").onclick = async () => {
         const title = m.querySelector("#dlTitle").value.trim();
         const when = m.querySelector("#dlWhen").value;
         if(!title || !when){ toast("Vul titel en tijd in"); return; }
-        await DB.add("deadlines", {title, desc: m.querySelector("#dlDesc").value.trim(), dueAt: new Date(when).getTime(), at: now()});
-        await sendSystem("all", `⏰ Nieuwe deadline: ${title} — ${fmtDT(new Date(when).getTime())}`);
+        const chatId = m.querySelector("#dlChat").value || "all";
+        await DB.add("deadlines", {title, desc: m.querySelector("#dlDesc").value.trim(),
+          dueAt: new Date(when).getTime(), chatId, at: now()});
+        await sendSystem(chatId, `⏰ Nieuwe deadline: ${title} — ${fmtDT(new Date(when).getTime())}`);
         haptic(12);
         closeModal();
       };

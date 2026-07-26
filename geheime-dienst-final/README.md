@@ -19,7 +19,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Je geheime rolkaart met de officiële kaartafbeelding en de volledige rolbeschrijving
 - Chats: de groepschat met iedereen, automatische groepschats (infiltranten, gevangenen) en een privéchat met de spelleider
 - Recap op de tab *Spelers*: welke speeldag het is (1, 2 of de finaledag) plus het aantal spelers, gevangenen en verbannen spelers — het aantal infiltranten blijft geheim en ziet alleen de spelleider
-- Deadlines met afteltimer
+- Deadlines met afteltimer — je ziet alleen de deadlines van de chats waar je in zit
 - Alle spelregels, rollen, dagplanning en de avondbijeenkomst-volgorde uit de flyer
 - Donker of licht thema via ⚙️ rechtsboven
 
@@ -36,6 +36,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Rollen in één keer onthullen — de infiltranten-groepschat wordt dan automatisch aangemaakt
 - Rolverzoeken goedkeuren (met nieuwe rol), afwijzen, of andere spelers vragen de rol over te nemen
 - Vergeten pincodes: wie zijn code kwijt is vraagt toestemming, jij keurt goed of wijst af
+- Deadlines instellen per chat: kies of de melding naar iedereen gaat of alleen naar bijvoorbeeld de infiltranten
 - Opdrachten versturen en ingediende bewijzen goedkeuren of afwijzen
 - Missiestemmingen als checklist versturen; de meerderheid wordt automatisch de opdracht van de dag
 - Raadsels en dagrapporten versturen of inplannen (worden automatisch gepusht)
