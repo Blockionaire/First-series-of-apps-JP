@@ -688,6 +688,13 @@
   .po-row input{flex:1}
   .po-row .po-del{width:38px; height:38px; border-radius:50%; background:var(--bg4); flex:none; display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--muted)}
 
+  /* ---------- voorvraag aan de infiltranten ---------- */
+  .voorvraag{border:1.5px solid var(--red); background:linear-gradient(160deg, rgba(255,59,48,.10), var(--bg2) 60%)}
+  .voorvraag h3{color:var(--red)}
+  .vv-wacht{text-align:center; font-size:13px; color:var(--muted); padding:10px; background:var(--bg3); border-radius:14px}
+  .chat-head .info.tikbaar{cursor:pointer; border-radius:12px; padding:4px 8px; margin:-4px -8px; transition:background .2s var(--ease)}
+  .chat-head .info.tikbaar:active{background:rgba(255,255,255,.06)}
+
   /* ---------- opgeslagen opdrachten ---------- */
   .ml-item{
     display:flex; align-items:center; gap:10px; background:var(--bg3);
@@ -1791,7 +1798,7 @@ async function resetGame(wipePlayers){
     await DB.del("missions/" + mi.id);
   }
   for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","hunts","huntEntries","images"]) await delAll(col);
-  await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null, dag:1});
+  await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null, dag:1, infCheck:false});
   if(wipePlayers){
     await delAll("missionLib");   // ook de opdrachtenlijst weg bij een volledige wis
     await delAll("players");
@@ -1925,10 +1932,11 @@ function renderSpelers(el){
     )}
     ${nRole < n ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">🎭 ${nRole} van de ${n} spelers heeft een rol${nInf ? ` · ${nInf} infiltrant${nInf === 1 ? "" : "en"} toegewezen` : ""}</div>` : ""}
     ${adv ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">💡 Advies bij ${n} spelers: <b style="color:var(--red)">${adv[0]} infiltranten</b> en <b style="color:var(--green)">${adv[1]} gelovigen</b>${n >= 17 ? " (2x veldwerker)" : " (alle speciale rollen 1x)"}</div>` : ""}
+    ${infCheckHtml(nInf)}
     <div class="switch-row">
       <div style="flex:1">
         <div style="font-weight:700">Rollen zichtbaar voor spelers</div>
-        <div style="font-size:12px;color:var(--muted)">Zet aan als alle rollen zijn uitgedeeld</div>
+        <div style="font-size:12px;color:var(--muted)">Zet aan als alle rollen zijn uitgedeeld${S.settings.infCheck && !S.settings.rolesRevealed ? " — dit sluit de voorvraag" : ""}</div>
       </div>
       <label class="switch"><input type="checkbox" id="revealToggle" ${S.settings.rolesRevealed ? "checked" : ""}><span class="slider"></span></label>
     </div>
@@ -1971,9 +1979,16 @@ function renderSpelers(el){
 
   bindRecap(el);
   wireMissionLib(el);
+  const icb = el.querySelector("#infCheckBtn");
+  if(icb) icb.onclick = async () => {
+    haptic(8);
+    await DB.set("settings/main", {infCheck: !S.settings.infCheck});
+    toast(S.settings.infCheck ? "Voorvraag gestopt" : "De infiltranten zijn stilletjes ingelicht 🤫");
+  };
   $("#revealToggle").onchange = e => {
     haptic(12);
-    DB.set("settings/main", {rolesRevealed: e.target.checked});
+    // onthullen sluit meteen de voorvraag: vanaf nu liggen de rollen vast
+    DB.set("settings/main", {rolesRevealed: e.target.checked, infCheck: e.target.checked ? false : S.settings.infCheck});
     if(e.target.checked){
       sendSystem("all", "🎭 De rollen zijn uitgedeeld! Bekijk je rol via het tabblad 'Mijn rol'.");
       setTimeout(syncAutoChats, 600);
@@ -2076,6 +2091,32 @@ async function syncAutoChats(){
   if(gev.length || gevChat){
     await DB.set("chats/gevangenen", {name:"Gevangenen", type:"group", members:gev, at: gevChat ? (gevChat.at || now()) : now()});
   }
+}
+
+/* ---------- voorvraag aan de infiltranten (spelleider) ----------
+   Alleen infiltranten mogen om een andere rol vragen, en alleen zolang de
+   rollen nog niet onthuld zijn — daarna zitten ze al samen in de groepschat.
+   Daarom dit tussenmoment: de infiltranten horen het stilletjes vast, de rest
+   merkt er niets van, en pas bij de onthulling ligt alles vast. */
+const infCheckActief = () => !!S.settings.infCheck && !S.settings.rolesRevealed;
+const isInfiltrant = p => !!(p && p.role && ROLES[p.role] && ROLES[p.role].team === "infiltrant");
+
+function infCheckHtml(nInf){
+  if(S.settings.rolesRevealed || !nInf) return "";
+  const aan = !!S.settings.infCheck;
+  const open = S.roleRequests.filter(r => r.status === "open").length;
+  return `
+    <div class="card" style="border:1.5px solid ${aan ? "var(--gold)" : "var(--line)"}">
+      <h3>🤫 Voorvraag aan de infiltranten</h3>
+      <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:4px 0 10px">
+        ${aan
+          ? `De ${nInf} ingedeelde infiltrant${nInf === 1 ? "" : "en"} ${nInf === 1 ? "ziet" : "zien"} nu stilletjes dat ${nInf === 1 ? "hij" : "ze"} infiltrant ${nInf === 1 ? "is" : "zijn"}, met de mogelijkheid om te ruilen. De rest merkt er niets van.${open ? ` Er ${open === 1 ? "ligt 1 verzoek" : `liggen ${open} verzoeken`} bij je.` : ""}`
+          : `Laat de ingedeelde infiltranten vooraf weten dat ze infiltrant zijn, zodat wie het niet ziet zitten nog kan ruilen. Alleen zij krijgen dit te zien — hun rolkaart blijft nog verborgen.`}
+      </p>
+      <button class="btn btn-sm ${aan ? "btn-ghost" : "btn-green"}" id="infCheckBtn">
+        ${aan ? "⏹️ Voorvraag stoppen" : "🤫 Vraag de infiltranten om akkoord"}
+      </button>
+    </div>`;
 }
 
 /* ---------- opdrachtenlijst infiltranten (spelleider) ---------- */
@@ -3023,9 +3064,9 @@ function renderChat(){
     <div class="chat-screen ${firstRender ? "animate-in" : ""}">
       <div class="chat-head">
         <button class="back" id="chatBack">‹</button>
-        <div class="info">
+        <div class="info ${c.type === "dm" ? "" : "tikbaar"}" ${c.type === "dm" ? "" : 'id="chatInfo"'}>
           <div class="cname">${esc(chatTitle(c))}</div>
-          <div class="csub">${esc(chatMembersLabel(c))}</div>
+          <div class="csub">${esc(chatMembersLabel(c))}${c.type === "dm" ? "" : " ›"}</div>
         </div>
         ${isL && c.type === "group" ? `<button class="icon-btn" id="grpEdit" title="Leden">⚙️</button>` : ""}
       </div>
@@ -3169,7 +3210,32 @@ function renderChat(){
       if(a === "veld") veldwerkerModal(c.id, vw.name);
     });
   });
+  const ci = $("#chatInfo"); if(ci) ci.onclick = () => ledenModal(c);
   const ge = $("#grpEdit"); if(ge) ge.onclick = () => editGroupModal(c);
+}
+
+/* wie zit er in deze chat? zichtbaar voor iedereen die er zelf in zit */
+function ledenModal(c){
+  const leden = c.type === "all"
+    ? S.players.filter(p => !p.isLeader)
+    : (c.members || []).map(id => S.players.find(p => p.id === id)).filter(Boolean);
+  const leider = S.players.find(p => p.isLeader);
+  const rij = (p, extra) => `
+    <div class="list-row" style="margin-bottom:8px">
+      <div class="avatar">${initial(p.name)}</div>
+      <div class="row-main">
+        <div class="row-title">${esc(p.name)}${p.id === S.me.id ? ` <span class="pill pill-outline">jij</span>` : ""}</div>
+        <div class="row-sub">${extra}</div>
+      </div>
+    </div>`;
+  modal(`
+    <h3>${esc(chatTitle(c))}</h3>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">${leden.length} ${leden.length === 1 ? "deelnemer" : "deelnemers"}${leider ? " · de spelleider leest altijd mee" : ""}</p>
+    ${leider ? rij(leider, "🎩 Spelleider") : ""}
+    ${leden.length === 0 ? `<div class="empty" style="padding:18px">Nog niemand in deze chat.</div>` : ""}
+    ${leden.sort((a,b) => (a.name||"").localeCompare(b.name||""))
+        .map(p => rij(p, isMuted(p) ? "Uit het spel" : p.status === "gevangen" ? "⛓️ Gevangene" : "Actief")).join("")}
+  `);
 }
 
 function editGroupModal(c){
@@ -3532,13 +3598,27 @@ function renderRol(el){
   const p = S.me;
   if(S.settings.gameOver){ renderUitslag(el); return; }
   if(!p.role || !S.settings.rolesRevealed){
+    // in de voorvraag hoort een ingedeelde infiltrant het alvast, zodat hij nog kan ruilen
+    const voorvraag = infCheckActief() && isInfiltrant(p) && !isMuted(p);
     el.innerHTML = `
       <div class="cardback">
         <img class="cb-logo" src="kaarten/logo.png" alt="Geheime Dienst" onerror="this.remove()">
         <div class="cb-q">?</div>
         <div class="cb-sub">De spelleider heeft de rollen nog niet uitgedeeld.<br>Zodra dat gebeurd is, verschijnt hier jouw geheime rol.</div>
       </div>
+      ${voorvraag ? `
+        <div class="card voorvraag">
+          <h3>🕵️ Je bent voorlopig infiltrant</h3>
+          <p style="font-size:13px;color:var(--muted);line-height:1.55;margin:6px 0 12px">
+            De spelleider heeft je ingedeeld bij de infiltranten. Zie je dat niet zitten? Vraag het nu —
+            zodra de rollen onthuld worden ligt het vast en zit je in de infiltranten-groepschat.
+            Niemand anders ziet dit bericht.
+          </p>
+          ${roleRequestHtml()}
+        </div>` : ""}
+      ${takeoverHtml()}
       <div class="card" style="text-align:center;font-size:13px;color:var(--muted)">🤫 Tot die tijd: vertrouw niemand.</div>`;
+    wireRolActies(el);
     return;
   }
   const r = ROLES[p.role];
@@ -3599,6 +3679,12 @@ function renderRol(el){
     ${roleRequestHtml()}
     ${p.role === "hacker" && !isMuted(p) && p.status !== "uit" ? hackerSectionHtml() : ""}`;
   el.querySelectorAll(".rolecard-img").forEach(img => img.onclick = () => viewImage(img.src));
+  wireRolActies(el);
+  if(p.role === "hacker") wireHackerSection(el);
+}
+
+// knoppen die zowel vóór als na de onthulling kunnen staan
+function wireRolActies(el){
   el.querySelectorAll("[data-take-yes]").forEach(b => b.onclick = () => {
     const t = S.takeovers.find(x => x.id === b.dataset.takeYes);
     if(!t) return;
@@ -3631,13 +3717,15 @@ function renderRol(el){
       closeModal();
     };
   });
-  if(p.role === "hacker") wireHackerSection(el);
 }
+/* Alleen infiltranten mogen ruilen, en alleen tijdens de voorvraag: daarna
+   staan de rollen vast en zit je al in de infiltranten-groepschat. */
 function roleRequestHtml(){
   if(S.settings.gameOver || isMuted(S.me)) return "";
+  if(!infCheckActief() || !isInfiltrant(S.me)) return "";
   const open = S.roleRequests.find(r => r.pid === S.me.id && r.status === "open");
-  if(open) return `<div class="card" style="text-align:center;font-size:13px;color:var(--muted)">⏳ Je rolverzoek ligt bij de spelleider.</div>`;
-  return `<button class="btn btn-ghost btn-block" id="roleReqBtn" style="margin-bottom:12px">🙋 Liever een andere rol? Dien een verzoek in</button>`;
+  if(open) return `<div class="vv-wacht">⏳ Je verzoek ligt bij de spelleider.</div>`;
+  return `<button class="btn btn-green btn-block" id="roleReqBtn">🙋 Liever niet — vraag een andere rol</button>`;
 }
 
 /* ---------- uitslag na einde spel ---------- */
