@@ -21,6 +21,8 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Recap op de tab *Spelers*: welke speeldag het is (1, 2 of de finaledag) plus het aantal spelers, gevangenen en verbannen spelers — het aantal infiltranten blijft geheim en ziet alleen de spelleider
 - Deadlines met afteltimer — je ziet alleen de deadlines van de chats waar je in zit
 - Alle spelregels, rollen, dagplanning en de avondbijeenkomst-volgorde uit de flyer
+- Foto's uit de chat bewaren: tik de foto aan en kies 💾 Bewaren
+- 🏁 **Eindkaart** na afloop: een poster met alle statistieken en alle rollen, om te bewaren of als opgemaakte tekst in WhatsApp te plakken
 - Donker of licht thema via ⚙️ rechtsboven
 
 **Rol-specifiek**
@@ -59,6 +61,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 6. **Het schild** — stuur met 🛡️ in de Iedereen-chat een raadsel met geheim antwoord (direct of ingepland)
 7. **Einde van de dag** — stel het dagrapport op (tab *Spelers*): wie eruit ligt, hoofdverdachte, missie gehaald. Plan het in op 23:00 en het wordt automatisch gepusht
 8. **Afsluiten** — ⚙️ → *Spel beëindigen* → kies de winnaar; iedereen ziet de uitslag en alle rollen
+9. **Souvenir** — druk op 🏁 *Eindkaart*, vul eventueel het hoogtepunt van het spel in en zet de kaart in de groepschat. Iedereen kan hem daarna zelf bewaren of als tekst in WhatsApp delen
 
 ---
 

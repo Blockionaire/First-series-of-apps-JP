@@ -588,8 +588,15 @@
     position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:80;
     display:flex; align-items:center; justify-content:center; animation:fadeBg .2s ease;
   }
-  .img-viewer img{max-width:96%; max-height:92%; border-radius:12px; animation:popIn .25s var(--ease)}
+  .img-viewer img{max-width:96%; max-height:80%; border-radius:12px; animation:popIn .25s var(--ease)}
   .img-viewer.closing{animation:fadeOutBg .18s ease forwards}
+  .iv-bar{
+    position:absolute; left:0; right:0; bottom:calc(22px + env(safe-area-inset-bottom));
+    display:flex; gap:10px; justify-content:center; animation:popIn .3s var(--ease);
+  }
+  .iv-bar .btn{background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.28); color:#fff; padding:11px 20px}
+  .ek-laden{text-align:center; color:var(--muted); font-size:13.5px; padding:26px 0}
+  .ek-preview{width:100%; border-radius:16px; margin-bottom:14px; border:1px solid var(--line)}
 
   .toast{
     position:fixed; bottom:calc(100px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
@@ -1202,9 +1209,42 @@ async function loadImageInto(imgId, el, onload){
 function viewImage(src){
   const w = document.createElement("div");
   w.className = "img-viewer";
-  w.innerHTML = `<img src="${src}">`;
-  w.onclick = () => { w.classList.add("closing"); setTimeout(() => w.remove(), 170); };
+  w.innerHTML = `
+    <img src="${src}">
+    <div class="iv-bar">
+      <button class="btn btn-sm btn-ghost" id="ivSave">💾 Bewaren</button>
+      <button class="btn btn-sm btn-ghost" id="ivClose">Sluiten</button>
+    </div>`;
+  const sluit = () => { w.classList.add("closing"); setTimeout(() => w.remove(), 170); };
+  w.onclick = e => { if(!e.target.closest(".iv-bar")) sluit(); };
+  w.querySelector("#ivClose").onclick = sluit;
+  w.querySelector("#ivSave").onclick = () => bewaarAfbeelding(src, "geheime-dienst.jpg");
   document.body.appendChild(w);
+}
+
+/* Op de telefoon opent dit het deelmenu (daar zit "Bewaar afbeelding" in),
+   op een computer wordt het bestand gewoon gedownload. */
+async function bewaarAfbeelding(bron, naam){
+  try{
+    const blob = bron instanceof Blob ? bron : await (await fetch(bron)).blob();
+    const type = blob.type || "image/jpeg";
+    const file = new File([blob], naam, {type});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file]}); return true; }
+      catch(err){ if(err && err.name === "AbortError") return false; }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = naam;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast("Afbeelding bewaard 💾");
+    return true;
+  }catch(e){
+    console.error(e);
+    toast("Bewaren lukte niet — houd de foto lang ingedrukt om hem op te slaan");
+    return false;
+  }
 }
 
 /* =====================================================================
@@ -1805,7 +1845,7 @@ async function resetGame(wipePlayers){
     await DB.del("missions/" + mi.id);
   }
   for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","hunts","huntEntries","images"]) await delAll(col);
-  await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null, dag:1, infCheck:false});
+  await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null, dag:1, infCheck:false, hoogtepunt:""});
   if(wipePlayers){
     await delAll("missionLib");   // ook de opdrachtenlijst weg bij een volledige wis
     await delAll("players");
@@ -1937,6 +1977,7 @@ function renderSpelers(el){
       tegel(inSpel.filter(p => p.role === "infiltrant").length, "Infiltranten", "var(--red)") +
       tegel(inSpel.filter(p => p.status === "gevangen").length, "Gevangenen", "var(--gold)")
     )}
+    ${S.settings.gameOver ? `<button class="btn btn-green btn-block" id="eindkaartBtn" style="margin-bottom:12px">🏁 Eindkaart met alle statistieken</button>` : ""}
     ${nRole < n ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">🎭 ${nRole} van de ${n} spelers heeft een rol${nInf ? ` · ${nInf} infiltrant${nInf === 1 ? "" : "en"} toegewezen` : ""}</div>` : ""}
     ${adv ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">💡 Advies bij ${n} spelers: <b style="color:var(--red)">${adv[0]} infiltranten</b> en <b style="color:var(--green)">${adv[1]} gelovigen</b>${n >= 17 ? " (2x veldwerker)" : " (alle speciale rollen 1x)"}</div>` : ""}
     ${infCheckHtml(nInf)}
@@ -1986,6 +2027,8 @@ function renderSpelers(el){
 
   bindRecap(el);
   wireMissionLib(el);
+  const ekb = el.querySelector("#eindkaartBtn");
+  if(ekb) ekb.onclick = () => eindkaartModal();
   const icb = el.querySelector("#infCheckBtn");
   if(icb) icb.onclick = async () => {
     haptic(8);
@@ -3770,6 +3813,262 @@ function roleRequestHtml(){
     </div>`;
 }
 
+/* =====================================================================
+   EINDKAART: statistieken, poster om te bewaren en tekst voor WhatsApp
+   ===================================================================== */
+async function verzamelStats(){
+  const spelers = S.players.filter(p => !p.isLeader);
+  const inf = spelers.filter(p => isInfiltrant(p));
+  const missies = S.missions || [];
+  const gehaald = missies.filter(m => m.status === "goedgekeurd");
+  const raadsels = (S.riddles || []).filter(r => r.published);
+  const schilden = raadsels.filter(r => r.status === "gewonnen");
+  const vragen = S.hackerQs || [];
+  const hunts = S.hunts || [];
+  const ontsnapt = hunts.filter(h => h.status === "gewonnen");
+  const gevangen = spelers.filter(p => p.status === "gevangen").length + ontsnapt.length;
+
+  // berichten tellen over alle chats waar de app van weet
+  let berichten = 0, fotos = 0;
+  const perSpeler = {};
+  for(const c of S.chats){
+    let msgs = [];
+    try{ msgs = await DB.getAll(`chats/${c.id}/messages`); }catch(e){ msgs = []; }
+    for(const m of msgs){
+      if(m.type === "sys" || m.type === "poll" || m.type === "mission" || m.type === "veld") continue;
+      berichten++;
+      if(m.type === "img") fotos++;
+      if(m.sid) perSpeler[m.sid] = (perSpeler[m.sid] || 0) + 1;
+    }
+  }
+  const drukste = Object.entries(perSpeler)
+    .map(([id, n]) => ({p: S.players.find(x => x.id === id), n}))
+    .filter(x => x.p && !x.p.isLeader)
+    .sort((a,b) => b.n - a.n)[0];
+
+  // wie lag er als eerste uit, en wie hield het tot het eind vol
+  const eruit = spelers.filter(p => p.status === "uit" || p.status === "ontmaskerd")
+    .sort((a,b) => (a.statusAt||0) - (b.statusAt||0));
+  const overlevers = spelers.filter(p => p.status === "actief" || p.status === "gevangen");
+
+  return {
+    winnaar: S.settings.winner === "infiltrant" ? "infiltrant" : "gelovige",
+    dagen: spelDag(),
+    spelers, nSpelers: spelers.length, nInf: inf.length,
+    missiesTotaal: missies.length, missiesGehaald: gehaald.length,
+    nRaadsels: raadsels.length, schilden,
+    nVragen: vragen.length, nBeantwoord: vragen.filter(q => q.answer).length,
+    gevangen, nOntsnapt: ontsnapt.length,
+    berichten, fotos, drukste,
+    eersteEruit: eruit[0] || null, overlevers,
+    hoogtepunt: (S.settings.hoogtepunt || "").trim(),
+  };
+}
+
+function statsTekst(s){
+  const rol = p => {
+    const r = p.role ? ROLES[p.role] : null;
+    return r ? `${r.emoji} ${p.name} — ${r.naam}` : `❔ ${p.name} — geen rol`;
+  };
+  const infs = s.spelers.filter(p => isInfiltrant(p));
+  const rest = s.spelers.filter(p => !isInfiltrant(p));
+  const regels = [
+    `🕵️ *GEHEIME DIENST* — de uitslag`,
+    `🏆 *${s.winnaar === "infiltrant" ? "De infiltranten winnen!" : "De gelovigen winnen!"}*`,
+    ``,
+    `📅 ${s.dagen} ${s.dagen === 1 ? "dag" : "dagen"} · 👥 ${s.nSpelers} spelers · 🕵️ ${s.nInf} infiltrant${s.nInf === 1 ? "" : "en"}`,
+    `✅ ${s.missiesGehaald} van de ${s.missiesTotaal} opdrachten gehaald`,
+    `🛡️ ${s.nRaadsels} raadsels${s.schilden.length ? ` · schild voor ${s.schilden.map(r => r.winnerName).join(", ")}` : ""}`,
+    `💻 ${s.nVragen} hackervragen gesteld`,
+    `⛓️ ${s.gevangen} gevangen · ${s.nOntsnapt} ontsnapt`,
+    `💬 ${s.berichten} berichten en ${s.fotos} ${s.fotos === 1 ? "foto" : "foto's"}`,
+  ];
+  if(s.drukste) regels.push(`🗣️ Meeste berichten: ${s.drukste.p.name} (${s.drukste.n})`);
+  if(s.eersteEruit) regels.push(`💀 Als eerste eruit: ${s.eersteEruit.name}`);
+  if(s.hoogtepunt) regels.push(``, `⭐ *Hoogtepunt:* ${s.hoogtepunt}`);
+  regels.push(``, `🎭 *De rollen:*`);
+  infs.forEach(p => regels.push(rol(p)));
+  rest.forEach(p => regels.push(rol(p)));
+  return regels.join("\n");
+}
+
+/* Poster tekenen op canvas — geen externe bibliotheek nodig, en het resultaat
+   is een echte afbeelding die je kunt bewaren of delen. */
+async function tekenEindkaart(s){
+  const B = 1080, PAD = 70;
+  const inf = s.winnaar === "infiltrant";
+  const ACC = inf ? "#ff5b4d" : "#62c554";
+  const cv = document.createElement("canvas");
+  cv.width = B; cv.height = 4200;
+  const x = cv.getContext("2d");
+  try{ await document.fonts.ready; }catch(e){}
+  // altijd een lijst meegeven: canvas valt anders terug op een serif
+  const kop = '"Lilita One", "Poppins", Arial, sans-serif';
+  const tekst = '"Poppins", -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+
+  x.fillStyle = "#141417"; x.fillRect(0, 0, B, cv.height);
+  const gl = x.createRadialGradient(B/2, 300, 60, B/2, 300, 900);
+  gl.addColorStop(0, inf ? "rgba(255,59,48,.22)" : "rgba(98,197,84,.22)");
+  gl.addColorStop(1, "rgba(0,0,0,0)");
+  x.fillStyle = gl; x.fillRect(0, 0, B, 1300);
+
+  const rond = (px, py, w, h, r) => {
+    x.beginPath(); x.moveTo(px+r, py);
+    x.arcTo(px+w, py, px+w, py+h, r); x.arcTo(px+w, py+h, px, py+h, r);
+    x.arcTo(px, py+h, px, py, r); x.arcTo(px, py, px+w, py, r); x.closePath();
+  };
+  const mid = (t, f, kl, py) => { x.font = f; x.fillStyle = kl; x.textAlign = "center"; x.fillText(t, B/2, py); };
+
+  let y = 110;
+  const logo = await new Promise(res => {
+    const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = "kaarten/logo.png";
+  });
+  if(logo && logo.naturalWidth){
+    const w = 440, h = w * logo.naturalHeight / logo.naturalWidth;
+    x.drawImage(logo, (B-w)/2, y, w, h); y += h + 26;
+  } else { mid("GEHEIME DIENST", `700 74px ${kop}`, "#f4f4f5", y + 60); y += 100; }
+  mid((CFG.spelSubtitel || "Real life edition").toUpperCase(), `600 26px ${tekst}`, "#9b9ba3", y);
+  y += 90;
+
+  mid("🏆", `100px ${tekst}`, "#fff", y + 84); y += 176;
+  x.textAlign = "center";
+  const titel = inf ? ["DE INFILTRANTEN", "WINNEN"] : ["DE GELOVIGEN", "WINNEN"];
+  x.font = `700 78px ${kop}`; x.fillStyle = ACC;
+  titel.forEach(r => { x.fillText(r, B/2, y); y += 86; });
+  y += 40;
+
+  // tegels met de cijfers
+  const tegels = [
+    [s.dagen, s.dagen === 1 ? "DAG GESPEELD" : "DAGEN GESPEELD"],
+    [s.nSpelers, "SPELERS"],
+    [s.nInf, s.nInf === 1 ? "INFILTRANT" : "INFILTRANTEN"],
+    [`${s.missiesGehaald}/${s.missiesTotaal}`, "OPDRACHTEN GEHAALD"],
+    [s.nRaadsels, s.nRaadsels === 1 ? "RAADSEL" : "RAADSELS"],
+    [s.nVragen, "HACKERVRAGEN"],
+    [s.gevangen, "GEVANGEN"],
+    [s.berichten, "BERICHTEN"],
+  ];
+  const tw = (B - PAD*2 - 24) / 2, th = 150;
+  tegels.forEach((t, i) => {
+    const px = PAD + (i % 2) * (tw + 24), py = y + Math.floor(i/2) * (th + 20);
+    x.fillStyle = "#1e1e23"; rond(px, py, tw, th, 26); x.fill();
+    x.strokeStyle = "rgba(255,255,255,.07)"; x.lineWidth = 2; x.stroke();
+    x.textAlign = "center";
+    x.font = `700 58px ${kop}`; x.fillStyle = "#f4f4f5"; x.fillText(String(t[0]), px + tw/2, py + 76);
+    x.font = `600 22px ${tekst}`; x.fillStyle = "#9b9ba3"; x.fillText(t[1], px + tw/2, py + 112);
+  });
+  y += Math.ceil(tegels.length/2) * (th + 20) + 26;
+
+  const regel = (t, py) => { x.textAlign = "center"; x.font = `500 27px ${tekst}`; x.fillStyle = "#c9c9d1"; x.fillText(t, B/2, py); };
+  if(s.fotos) { regel(`📷 ${s.fotos} ${s.fotos === 1 ? "foto" : "foto's"} gedeeld`, y); y += 44; }
+  if(s.drukste) { regel(`🗣️ Meeste berichten: ${s.drukste.p.name} (${s.drukste.n})`, y); y += 44; }
+  if(s.schilden.length) { regel(`🛡️ Schild: ${s.schilden.map(r => r.winnerName).join(", ")}`, y); y += 44; }
+  if(s.eersteEruit) { regel(`💀 Als eerste eruit: ${s.eersteEruit.name}`, y); y += 44; }
+  y += 20;
+
+  if(s.hoogtepunt){
+    x.textAlign = "left";
+    x.font = `500 30px ${tekst}`;
+    const woorden = s.hoogtepunt.split(/\s+/); const lijnen = []; let r = "";
+    for(const wo of woorden){
+      if(x.measureText(r ? r + " " + wo : wo).width > B - PAD*2 - 80){ lijnen.push(r); r = wo; }
+      else r = r ? r + " " + wo : wo;
+    }
+    if(r) lijnen.push(r);
+    const hh = 84 + lijnen.length * 42;
+    x.fillStyle = "rgba(214,175,84,.10)"; rond(PAD, y, B - PAD*2, hh, 26); x.fill();
+    x.strokeStyle = "rgba(214,175,84,.45)"; x.lineWidth = 2; x.stroke();
+    x.textAlign = "center";
+    x.font = `600 24px ${tekst}`; x.fillStyle = "#d6af54"; x.fillText("⭐ HOOGTEPUNT", B/2, y + 44);
+    x.font = `500 30px ${tekst}`; x.fillStyle = "#f0eadb";
+    lijnen.forEach((l, i) => x.fillText(l, B/2, y + 88 + i*42));
+    y += hh + 34;
+  }
+
+  mid("DE ROLLEN ONTHULD", `700 40px ${kop}`, "#f4f4f5", y + 20); y += 74;
+  const gesorteerd = [...s.spelers].sort((a,b) => {
+    const ta = isInfiltrant(a) ? 0 : 1, tb = isInfiltrant(b) ? 0 : 1;
+    return ta - tb || (a.name||"").localeCompare(b.name||"");
+  });
+  for(const p of gesorteerd){
+    const r = p.role ? ROLES[p.role] : null;
+    const isInf = isInfiltrant(p);
+    const kl = isInf ? "#ff5b4d" : "#62c554";
+    x.fillStyle = "#1e1e23"; rond(PAD, y, B - PAD*2, 76, 22); x.fill();
+    x.fillStyle = kl; rond(PAD, y, 8, 76, 4); x.fill();
+    x.textAlign = "left";
+    x.font = `40px ${tekst}`; x.fillText(r ? r.emoji : "❔", PAD + 30, y + 52);
+    x.font = `600 32px ${tekst}`; x.fillStyle = "#f4f4f5"; x.fillText(p.name, PAD + 92, y + 50);
+    x.textAlign = "right";
+    x.font = `500 27px ${tekst}`; x.fillStyle = kl;
+    x.fillText(r ? r.naam : "geen rol", B - PAD - 26, y + 50);
+    y += 88;
+  }
+
+  y += 26;
+  const d = new Date(S.settings.endedAt || Date.now());
+  mid(`${d.getDate()}-${d.getMonth()+1}-${d.getFullYear()} · Camping Vell Emporda`, `500 24px ${tekst}`, "#6f6f78", y);
+  y += 70;
+
+  // bijsnijden op de werkelijke hoogte
+  const uit = document.createElement("canvas");
+  uit.width = B; uit.height = y;
+  uit.getContext("2d").drawImage(cv, 0, 0);
+  return await new Promise(res => uit.toBlob(res, "image/png"));
+}
+
+async function eindkaartModal(){
+  modal(`<h3>🏁 Eindkaart</h3><div class="ek-laden">Statistieken verzamelen…</div>`);
+  const s = await verzamelStats();
+  const blob = await tekenEindkaart(s);
+  const url = URL.createObjectURL(blob);
+  const isL = S.me.isLeader;
+  modal(`
+    <h3>🏁 Eindkaart</h3>
+    <img class="ek-preview" src="${url}" alt="Eindkaart">
+    <button class="btn btn-green btn-block" id="ekSave" style="margin-bottom:9px">💾 Bewaar als afbeelding</button>
+    <button class="btn btn-ghost btn-block" id="ekText" style="margin-bottom:9px">📝 Deel als tekst (WhatsApp)</button>
+    ${isL ? `<button class="btn btn-ghost btn-block" id="ekChat" style="margin-bottom:9px">💬 In de groepschat plaatsen</button>
+    <button class="btn btn-ghost btn-block" id="ekTop">⭐ Hoogtepunt ${s.hoogtepunt ? "aanpassen" : "toevoegen"}</button>` : ""}
+  `, m => {
+    m.querySelector("#ekSave").onclick = () => bewaarAfbeelding(blob, "geheime-dienst-uitslag.png");
+    m.querySelector("#ekText").onclick = async () => {
+      const t = statsTekst(s);
+      if(navigator.share){
+        try{ await navigator.share({text: t}); return; }
+        catch(err){ if(err && err.name === "AbortError") return; }
+      }
+      try{ await navigator.clipboard.writeText(t); toast("Tekst gekopieerd — plak hem in WhatsApp 📝"); }
+      catch(e){ toast("Kopiëren lukte niet"); }
+    };
+    const ekChat = m.querySelector("#ekChat");
+    if(ekChat) ekChat.onclick = async () => {
+      ekChat.disabled = true;
+      toast("Eindkaart plaatsen…");
+      try{
+        const data = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(blob); });
+        const imgId = await DB.add("images", {data, at: now()});
+        await sendMessage("all", {type:"img", imgId});
+        toast("Eindkaart staat in de groepschat 💬");
+        closeModal();
+      }catch(e){ console.error(e); toast("Plaatsen mislukt"); ekChat.disabled = false; }
+    };
+    const ekTop = m.querySelector("#ekTop");
+    if(ekTop) ekTop.onclick = () => modal(`
+      <h3>⭐ Hoogtepunt van het spel</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Eén zin die op de eindkaart komt — de leukste actie, de gekste missie of het moment dat iedereen erin trapte.</p>
+      <div class="field"><textarea id="ekTopText" rows="3" maxlength="160" placeholder="Bijv. Tim werd ontmaskerd omdat hij zijn eigen handdoek verstopte">${esc(s.hoogtepunt)}</textarea></div>
+      <button class="btn btn-green btn-block" id="ekTopSave">Opslaan</button>
+    `, m2 => {
+      m2.querySelector("#ekTopSave").onclick = async () => {
+        await DB.set("settings/main", {hoogtepunt: m2.querySelector("#ekTopText").value.trim()});
+        closeModal(true);
+        eindkaartModal();
+      };
+    });
+  }, () => URL.revokeObjectURL(url));
+}
+
 /* ---------- uitslag na einde spel ---------- */
 function spawnConfetti(team){
   if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -3817,6 +4116,7 @@ function renderUitslag(el){
             : "Helaas — jouw team heeft verloren. Volgende keer beter!<br>Bedankt voor het spelen van Geheime Dienst."}</div>
       </div>
     </div>
+    <button class="btn btn-green btn-block" id="eindkaartBtn" style="margin-bottom:14px">🏁 Eindkaart met alle statistieken</button>
     <div class="section-label">Alle rollen onthuld</div>
     ${players.map((p, i) => {
       const r = p.role ? ROLES[p.role] : null;
@@ -3833,6 +4133,8 @@ function renderUitslag(el){
         ${r ? `<span class="pill ${inf ? "pill-red" : "pill-green"}">${inf ? "Infiltrant" : "Gelovige"}</span>` : ""}
       </div>`;
     }).join("")}`;
+  const ek = el.querySelector("#eindkaartBtn");
+  if(ek) ek.onclick = () => eindkaartModal();
   if(S.lastConfettiFor !== S.settings.endedAt){
     S.lastConfettiFor = S.settings.endedAt;
     spawnConfetti(S.settings.winner);
