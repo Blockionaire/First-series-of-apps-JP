@@ -457,6 +457,10 @@
   .hq-item{display:flex; align-items:center; gap:10px; background:var(--bg3); border:1px solid var(--line); border-radius:14px; padding:10px 12px; margin-bottom:8px}
   .hq-item .hq-q{flex:1; font-size:13.5px; min-width:0}
   .hq-item .hq-q .hq-who{font-size:11px; color:var(--muted)}
+  .hq-dicht{
+    background:var(--bg3); border:1px solid var(--line); border-radius:14px;
+    padding:10px 12px; margin-bottom:10px; font-size:12.5px; color:var(--muted); line-height:1.45;
+  }
   .hq-answer{display:flex; gap:6px; flex:none}
 
   .report-card{
@@ -787,7 +791,7 @@ const ROLES = {
     strategie:"Observeer overdag welke missie wordt uitgevoerd en door wie, om de infiltranten te ontmaskeren.",
     actie:"Deel subtiele hints tijdens de avondbijeenkomst zonder je rol expliciet te onthullen." },
   hacker: { naam:"Hacker", emoji:"💻", team:"gelovige", img:"kaarten/hacker.jpg",
-    missie:"Stel dagelijks twee ja/nee-vragen aan de spelleider (tussen 11:00 - 19:00).",
+    missie:"Stel dagelijks twee ja/nee-vragen aan de spelleider, tussen 11:00 en 22:00.",
     strategie:"Gebruik de verkregen informatie om de infiltranten te ontmaskeren.",
     actie:"Deel subtiele hints tijdens de avondbijeenkomst zonder je rol expliciet te onthullen." },
   held: { naam:"Held", emoji:"🦸", team:"gelovige", img:"kaarten/held.jpg",
@@ -808,6 +812,9 @@ const ROLES = {
     actie:"Geef je keuze door aan de spelleider tijdens de eerste avondbijeenkomst." }
 };
 const ROLE_ORDER = ["infiltrant","gelovige","veldwerker","hacker","held","bijbelsmokkelaar","verrader","twijfelaar"];
+// de hacker mag zijn vragen alleen binnen dit tijdvak insturen
+const HACKER_VAN = 11, HACKER_TOT = 22;
+const hackerVensterOpen = () => { const u = new Date().getHours(); return u >= HACKER_VAN && u < HACKER_TOT; };
 const STATUSES = { actief:"Actief", gevangen:"Gevangen", ontmaskerd:"Ontmaskerd", uit:"Verbannen" };
 const statusPill = st => st === "gevangen" ? "pill-gold" : st === "ontmaskerd" ? "pill-red" : "pill-gray";
 const isMuted = p => p && !p.isLeader && (p.status === "ontmaskerd" || p.status === "uit");
@@ -1483,7 +1490,12 @@ function enterApp(myId){
   };
   sync();
   S.syncMe = sync;
-  if(!S.clockTimer) S.clockTimer = setInterval(() => { if(S.tab === "deadlines" && !S.openChat) render(); }, 30000);
+  // aftellers bijwerken, en het vragenluik van de hacker vanzelf open/dicht laten gaan
+  if(!S.clockTimer) S.clockTimer = setInterval(() => {
+    if(S.openChat) return;
+    const hackerTab = S.tab === "rol" && S.me && S.me.role === "hacker";
+    if(S.tab === "deadlines" || hackerTab) render();
+  }, 30000);
 }
 
 /* =====================================================================
@@ -2180,7 +2192,7 @@ function leaderHackerHtml(){
   return `
     <div class="card" style="border:1.5px solid ${pending.length ? "var(--gold)" : "var(--line)"}">
       <h3>💻 Hackervragen ${pending.length ? `<span class="pill pill-gold">${pending.length} nieuw</span>` : ""}</h3>
-      ${pending.length === 0 && answered.length === 0 ? `<div style="font-size:12.5px;color:var(--muted)">Geen openstaande vragen. De hacker mag 2 ja/nee-vragen per dag stellen.</div>` : ""}
+      ${pending.length === 0 && answered.length === 0 ? `<div style="font-size:12.5px;color:var(--muted)">Geen openstaande vragen. De hacker mag 2 ja/nee-vragen per dag stellen, tussen ${HACKER_VAN}:00 en ${HACKER_TOT}:00.</div>` : ""}
       ${pending.map(q => `
         <div class="hq-item">
           <div class="hq-q">${esc(q.q)}<div class="hq-who">van ${esc(q.pn)} · ${fmtTime(q.at)}</div></div>
@@ -3523,16 +3535,19 @@ function hackerSectionHtml(){
   const chip = q => q.answer === "ja" ? `<span class="pill pill-green">Ja</span>`
               : q.answer === "nee" ? `<span class="pill pill-red">Nee</span>`
               : `<span class="pill pill-outline">⏳ wacht</span>`;
+  const open = hackerVensterOpen();
+  const dicht = !open || left === 0;
   return `
     <div class="card" style="border:1.5px solid var(--green)">
       <h3>💻 Hackervragen</h3>
       <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px">
-        Stel elke dag maximaal 2 ja/nee-vragen aan de spelleider (officieel tussen 11:00 – 19:00).
+        Stel elke dag maximaal 2 ja/nee-vragen aan de spelleider, tussen ${HACKER_VAN}:00 en ${HACKER_TOT}:00.
         Vandaag nog <b style="color:var(--text)">${left}</b> ${left === 1 ? "vraag" : "vragen"} over.
       </p>
+      ${!open ? `<div class="hq-dicht">🔒 Het vragenluik is nu gesloten. Je kunt weer vragen sturen tussen ${HACKER_VAN}:00 en ${HACKER_TOT}:00.</div>` : ""}
       <div style="display:flex;gap:8px;margin-bottom:12px">
-        <input id="hqInput" placeholder="Bijv. Is Sanne een infiltrant?" maxlength="120" ${left === 0 ? "disabled" : ""}>
-        <button class="btn btn-green" id="hqSend" style="flex:none" ${left === 0 ? "disabled" : ""}>➤</button>
+        <input id="hqInput" placeholder="${open ? "Bijv. Is Sanne een infiltrant?" : "Buiten het tijdvak"}" maxlength="120" ${dicht ? "disabled" : ""}>
+        <button class="btn btn-green" id="hqSend" style="flex:none" ${dicht ? "disabled" : ""}>➤</button>
       </div>
       ${myQs.length === 0 ? `<div style="font-size:12.5px;color:var(--muted);text-align:center">Nog geen vragen gesteld.</div>` : ""}
       ${myQs.slice(0, 8).map(q => `
@@ -3549,6 +3564,11 @@ function wireHackerSection(el){
   const send = async () => {
     const q = inp.value.trim();
     if(!q) return;
+    if(!hackerVensterOpen()){
+      toast(`Vragen kan alleen tussen ${HACKER_VAN}:00 en ${HACKER_TOT}:00 🔒`);
+      render();
+      return;
+    }
     const todays = S.hackerQs.filter(x => x.pid === S.me.id && x.day === todayKey());
     if(todays.length >= 2){ toast("Je hebt je 2 vragen voor vandaag al gesteld"); return; }
     btn.disabled = true;
@@ -3686,7 +3706,7 @@ function renderInfo(el){
         <li><b>11:00</b> — deadline doorgeven geheime missie door infiltranten</li>
         <li><b>11:00</b> — doorgeven foto geheim voorwerp aan gevangenen</li>
         <li><b>12:00</b> — doorgeven 3 geheime missies aan veldwerker</li>
-        <li><b>11:00 – 18:00</b> — meeting hacker (initiatief vanuit de hacker)</li>
+        <li><b>11:00 – 22:00</b> — de hacker mag 2 ja/nee-vragen aan de spelleider stellen</li>
         <li><b>22:30</b> — avondbijeenkomst alle spelers incl. stemronde (tennisbaan)</li>
       </ul></div>
     </details>
@@ -3728,7 +3748,7 @@ function renderInfo(el){
       </ul></div>
     </details>
     <details>
-      <summary>😈 Verleiden</summary>
+      <summary>🍎 Verleiden</summary>
       <div class="dbody"><ul>
         <li>Infiltranten worden in een willekeurige nacht gevraagd te kiezen: gevangennemen óf een speler verleiden.</li>
         <li>Een verleide speler mag kiezen om zich bij de infiltranten te voegen — de rol als gelovige vervalt dan.</li>

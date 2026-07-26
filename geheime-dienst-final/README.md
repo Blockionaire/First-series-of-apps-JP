@@ -25,7 +25,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 
 **Rol-specifiek**
 - 🕵️ **Infiltranten** — stemmen samen op de missie van de dag, leveren foto's als bewijs en dienen de opdracht in
-- 💻 **Hacker** — stelt maximaal 2 ja/nee-vragen per dag; de spelleider antwoordt met één tik
+- 💻 **Hacker** — stelt maximaal 2 ja/nee-vragen per dag, alleen tussen 11:00 en 22:00; buiten dat tijdvak is het formulier op slot. De spelleider antwoordt met één tik
 - ⛓️ **Gevangenen** — krijgen een foto van het geheime voorwerp; wie als eerste een goedgekeurde selfie mét het voorwerp instuurt, ontsnapt en keert terug als gewone gelovige
 - 🛡️ **Iedereen** — raadsels om het schild: de eerste met het goede antwoord wint (1 poging per 5 minuten)
 - 🙋 Liever een andere rol? Dien een verzoek in bij de spelleider
