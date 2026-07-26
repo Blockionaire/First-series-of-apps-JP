@@ -2,10 +2,16 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<!-- Geen viewport-fit=cover en geen black-translucent: daarmee tekent iOS de
+     pagina onder de statusbalk door terwijl de pagina zelf korter is dan het
+     scherm, en houd je onderaan een strook over waar niets in te tekenen valt.
+     Met deze instelling loopt de pagina precies van onder de statusbalk tot de
+     onderrand van het scherm — dezelfde als de verbouw-app gebruikt. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#141417">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Geheime Dienst">
 <title>Geheime Dienst</title>
 <link rel="icon" type="image/png" href="kaarten/icon.png">
 <link rel="apple-touch-icon" href="kaarten/icon.png">
@@ -1623,7 +1629,11 @@ function render(){
    INSTELLINGEN
    ===================================================================== */
 function applyTheme(){
-  document.body.classList.toggle("light", localStorage.getItem("gd_theme") === "light");
+  const licht = localStorage.getItem("gd_theme") === "light";
+  document.body.classList.toggle("light", licht);
+  // iOS kleurt de statusbalk met theme-color, dus die moet meebewegen
+  const tc = document.querySelector('meta[name="theme-color"]');
+  if(tc) tc.setAttribute("content", licht ? "#f2f0ea" : "#141417");
 }
 
 function settingsModal(){
