@@ -22,6 +22,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Deadlines met afteltimer — je ziet alleen de deadlines van de chats waar je in zit
 - Alle spelregels, rollen, dagplanning en de avondbijeenkomst-volgorde uit de flyer
 - Foto's uit de chat bewaren: tik de foto aan en kies 💾 Bewaren
+- Peilingen van de spelleider: tik je antwoord aan (soms mag je er meer kiezen), wijzig je stem zolang de peiling open staat en zie bij een niet-anonieme peiling wie wat stemde
 - 🏁 **Eindkaart** na afloop: een poster met alle statistieken en alle rollen, om te bewaren of als opgemaakte tekst in WhatsApp te plakken
 - Donker of licht thema via ⚙️ rechtsboven
 
@@ -43,6 +44,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Opdrachten versturen en ingediende bewijzen goedkeuren of afwijzen
 - Opdrachtenlijst infiltranten (tab *Spelers*): zet je opdrachten één keer klaar en kies ze daarna met één tik
 - Missiestemmingen als checklist versturen; de meerderheid wordt automatisch de opdracht van de dag
+- 📊 Peiling in élke chat (＋, ook in een privéchat): een gewone poll met 2 tot 12 antwoorden, eventueel met meerdere antwoorden per persoon of anoniem. Iedereen ziet de balkjes live meelopen, kan zijn stem nog wijzigen en (als hij niet anoniem is) zien wie wat stemde. Jij sluit de peiling wanneer je wilt
 - Drie missies naar de veldwerker (＋ in zijn privéchat): de echte missie van de dag plus twee afleiders, in willekeurige volgorde
 - Raadsels en dagrapporten versturen of inplannen (worden automatisch gepusht)
 - Nachtkeuze naar de infiltranten (＋ in hun groepschat): verleiden of gevangennemen — de nog actieve infiltranten stemmen, bij gelijkspel hak jij de knoop door

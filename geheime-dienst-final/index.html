@@ -27,6 +27,7 @@
     --green:#62c554; --green-dark:#3f8f35;
     --red:#ff3b30; --red-dark:#c22a22;
     --gold:#e8b23a;
+    --blue:#5a96ff;
     --radius:20px;
     --ease:cubic-bezier(.32,.72,.33,1);
   }
@@ -725,6 +726,33 @@
   .lib-chip:active{transform:scale(.96)}
   .lib-chip.gekozen{border-color:var(--green); background:rgba(98,197,84,.14)}
 
+  /* ---------- peiling (gewone poll) ---------- */
+  .peilingcard{border-color:var(--blue) !important; box-shadow:0 8px 24px -12px rgba(90,150,255,.35) !important}
+  .peilingcard.done{border-color:var(--line) !important; box-shadow:none !important; opacity:.9}
+  .peil-optie{
+    position:relative; width:100%; display:flex; align-items:center; gap:10px; text-align:left;
+    background:var(--bg3); border:1.5px solid transparent; border-radius:14px;
+    padding:11px 13px; margin-bottom:7px; color:var(--text); overflow:hidden;
+    transition:border-color .2s var(--ease), transform .14s var(--ease);
+  }
+  .peil-optie:not(:disabled):active{transform:scale(.985)}
+  .peil-optie.mijn{border-color:var(--blue)}
+  .peil-optie:disabled{opacity:.9}
+  .pe-balk{
+    position:absolute; left:0; top:0; bottom:0; z-index:0;
+    background:rgba(90,150,255,.16); border-radius:14px 0 0 14px;
+    transition:width .35s var(--ease);
+  }
+  .peil-optie.mijn .pe-balk{background:rgba(90,150,255,.26)}
+  .pe-vink{position:relative; z-index:1; flex:none; font-size:16px; color:var(--muted); line-height:1}
+  .peil-optie.mijn .pe-vink{color:var(--blue)}
+  .pe-tekst{position:relative; z-index:1; flex:1; font-size:13.5px; line-height:1.35}
+  .pe-tel{position:relative; z-index:1; flex:none; font-size:12.5px; font-weight:700; color:var(--muted); min-width:16px; text-align:right}
+  .link-inline{
+    display:inline; padding:0; background:none; border:none; color:var(--blue);
+    font-size:inherit; font-family:inherit; text-decoration:underline; cursor:pointer;
+  }
+
   /* ---------- verleiden of gevangennemen ---------- */
   .verleidcard{border-color:var(--gold) !important}
   .verleidcard.done{border-color:var(--green) !important}
@@ -784,6 +812,7 @@
   body.light{
     --bg:#f2f0ea; --bg2:#ffffff; --bg3:#edeae2; --bg4:#dfdbd1;
     --line:rgba(0,0,0,.09); --text:#1d1c19; --muted:#6d6c66;
+    --blue:#2f6fe0;
     background:
       radial-gradient(800px 440px at 92% -8%, rgba(255,59,48,.06), transparent 62%),
       radial-gradient(800px 440px at -5% 108%, rgba(98,197,84,.07), transparent 62%),
@@ -1007,6 +1036,7 @@ const S = {
   pinResets: [],
   missionLib: [],      // vaste lijst opdrachten om uit te kiezen
   verleidingen: [],    // keuze van de infiltranten: verleiden of gevangennemen
+  peilingen: [],       // gewone polls van de spelleider in een chat
   hunts: [],
   huntEntries: [],
   settings: {rolesRevealed:false},
@@ -1114,7 +1144,7 @@ function lezersVan(m, c){
   return {gelezen, nietGelezen, totaal: deelnemers.length};
 }
 function leesBadge(m, c){
-  if(m.type === "sys" || m.type === "veld" || m.type === "verleid") return "";
+  if(m.type === "sys" || m.type === "veld" || m.type === "verleid" || m.type === "peiling") return "";
   const {gelezen, totaal} = lezersVan(m, c);
   if(!totaal) return "";
   const allen = gelezen.length === totaal;
@@ -1150,6 +1180,10 @@ function berichtPreview(m){
   if(m.type === "img") return "📷 Foto";
   if(m.type === "veld") return "🕵️ Drie missies";
   if(m.type === "verleid") return "🙈 Verleiden of gevangennemen?";
+  if(m.type === "peiling"){
+    const pe = S.peilingen.find(x => x.id === m.pid);
+    return "📊 " + (pe ? pe.vraag : "Peiling");
+  }
   const t = (m.t || "").trim();
   return t.length > 80 ? t.slice(0, 80) + "…" : (t || "Bericht");
 }
@@ -1889,7 +1923,7 @@ async function resetGame(wipePlayers){
     for(const ph of await DB.getAll(`missions/${mi.id}/photos`)) await DB.del(`missions/${mi.id}/photos/${ph.id}`);
     await DB.del("missions/" + mi.id);
   }
-  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","hunts","huntEntries","images"]) await delAll(col);
+  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","peilingen","hunts","huntEntries","images"]) await delAll(col);
   await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null, dag:1, infCheck:false, hoogtepunt:""});
   if(wipePlayers){
     await delAll("missionLib");   // ook de opdrachtenlijst weg bij een volledige wis
@@ -3145,6 +3179,10 @@ function renderChat(){
       const v = S.verleidingen.find(x => x.id === m.vid);
       return v ? verleidKaartHtml(v) : "";
     }
+    if(m.type === "peiling"){
+      const pe = S.peilingen.find(x => x.id === m.pid);
+      return pe ? peilingKaartHtml(pe) : "";
+    }
     if(m.type === "mission"){
       const mi = S.missions.find(x => x.id === m.mid);
       return mi ? missionCardHtml(mi) : "";
@@ -3210,7 +3248,7 @@ function renderChat(){
         <button class="icon-btn" id="replyCancel" title="Annuleren">✕</button>
       </div>` : ""}
       <div class="composer">
-        ${isL && (c.type !== "dm" || isVeldwerkerChat(c)) ? `<button class="icon-btn" id="btnPlus" title="Meer acties">＋</button>` : ""}
+        ${isL ? `<button class="icon-btn" id="btnPlus" title="Meer acties">＋</button>` : ""}
         <button class="icon-btn" id="btnPhoto" title="Foto sturen">📷</button>
         <textarea id="composerText" rows="1" placeholder="Bericht…"></textarea>
         <button class="icon-btn send" id="btnSend">➤</button>
@@ -3278,6 +3316,21 @@ function renderChat(){
     const [vid, keuze] = b.dataset.verleid.split(":");
     stemVerleid(vid, keuze);
   });
+  msgsEl.querySelectorAll("[data-peil]").forEach(b => b.onclick = () => {
+    const [pid, idx] = b.dataset.peil.split(":");
+    stemPeiling(pid, Number(idx));
+  });
+  msgsEl.querySelectorAll("[data-peil-wie]").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    peilingWieModal(b.dataset.peilWie);
+  });
+  msgsEl.querySelectorAll("[data-peil-sluit]").forEach(b => b.onclick = () => {
+    const pid = b.dataset.peilSluit;
+    confirmModal("Peiling sluiten? Er kan daarna niet meer gestemd worden.", async () => {
+      await DB.set("peilingen/" + pid, {status:"gesloten", closedAt: now()});
+      haptic(12);
+    });
+  });
   msgsEl.querySelectorAll("[data-verleid-kies]").forEach(b => b.onclick = () => {
     const [vid, keuze] = b.dataset.verleidKies.split(":");
     confirmModal(`Vannacht wordt er <b>${keuze === "verleiden" ? "verleid" : "gevangengenomen"}</b>?`, async () => {
@@ -3331,9 +3384,11 @@ function renderChat(){
   const vw = isVeldwerkerChat(c);
   if(bplus) bplus.onclick = () => modal(`
     <h3>Wat wil je versturen?</h3>
-    ${vw ? `<button class="btn btn-ghost btn-block" data-actie="veld" style="margin-bottom:10px;justify-content:flex-start">🕵️ &nbsp;Drie missies (één is de echte)</button>` : `
+    ${vw ? `<button class="btn btn-ghost btn-block" data-actie="veld" style="margin-bottom:10px;justify-content:flex-start">🕵️ &nbsp;Drie missies (één is de echte)</button>` : ""}
+    ${c.type !== "dm" ? `
     <button class="btn btn-ghost btn-block" data-actie="mission" style="margin-bottom:10px;justify-content:flex-start">📋 &nbsp;Nieuwe opdracht</button>
-    <button class="btn btn-ghost btn-block" data-actie="poll" style="margin-bottom:10px;justify-content:flex-start">🗳️ &nbsp;Missielijst met stemming</button>`}
+    <button class="btn btn-ghost btn-block" data-actie="poll" style="margin-bottom:10px;justify-content:flex-start">🗳️ &nbsp;Missielijst met stemming</button>` : ""}
+    <button class="btn btn-ghost btn-block" data-actie="peiling" style="margin-bottom:10px;justify-content:flex-start">📊 &nbsp;Peiling (gewone poll)</button>
     ${c.type === "all" ? `<button class="btn btn-ghost btn-block" data-actie="riddle" style="margin-bottom:10px;justify-content:flex-start">🛡️ &nbsp;Raadsel om het schild</button>` : ""}
     ${c.id === "infiltranten" ? `<button class="btn btn-ghost btn-block" data-actie="verleid" style="margin-bottom:10px;justify-content:flex-start">🙈 &nbsp;Verleiden of gevangennemen?</button>` : ""}
     ${c.id === "gevangenen" ? `<button class="btn btn-ghost btn-block" data-actie="hunt" style="margin-bottom:10px;justify-content:flex-start">🔎 &nbsp;Zoekopdracht geheim voorwerp</button>` : ""}
@@ -3346,6 +3401,7 @@ function renderChat(){
       if(a === "riddle") newRiddleModal();
       if(a === "hunt") newHuntModal(c.id);
       if(a === "verleid") newVerleidModal(c.id);
+      if(a === "peiling") newPeilingModal(c.id);
       if(a === "veld") veldwerkerModal(c.id, vw.name);
     });
   });
@@ -3553,6 +3609,145 @@ function newPollModal(chatId){
     };
   });
 }
+/* =====================================================================
+   PEILING: gewone poll in een chat (los van de missiestemming)
+   ===================================================================== */
+function peilingStemmen(p){
+  const v = {};
+  Object.keys(p).forEach(k => { if(k.startsWith("v_")) v[k.slice(2)] = p[k] || []; });
+  return v;
+}
+function peilingKaartHtml(p){
+  const stemmen = peilingStemmen(p);
+  const kiezers = Object.keys(stemmen).filter(id => (stemmen[id] || []).length);
+  const totaal = kiezers.length;
+  const telOptie = i => kiezers.filter(id => (stemmen[id] || []).includes(i)).length;
+  const mijn = stemmen[S.me.id] || [];
+  const gesloten = p.status === "gesloten";
+  const magStemmen = !gesloten && !S.settings.gameOver && !isMuted(S.me);
+  const isL = S.me.isLeader;
+  const maxN = Math.max(1, ...p.opties.map((_, i) => telOptie(i)));
+  return `
+    <div class="mission-card peilingcard ${gesloten ? "done" : ""}">
+      <div class="mc-top">
+        <h4>📊 ${esc(p.vraag)}</h4>
+        <span class="pill ${gesloten ? "pill-green" : "pill-gold"}">${gesloten ? "Gesloten" : "Open"}</span>
+      </div>
+      <p class="mc-desc">${p.multi ? "Meerdere antwoorden mogelijk" : "Eén antwoord"}${p.anoniem ? " · anoniem" : ""}</p>
+      ${p.opties.map((o, i) => {
+        const n = telOptie(i);
+        const gekozen = mijn.includes(i);
+        const breed = totaal ? Math.round(n / maxN * 100) : 0;
+        return `
+        <button class="peil-optie ${gekozen ? "mijn" : ""}" data-peil="${p.id}:${i}" ${magStemmen ? "" : "disabled"}>
+          <span class="pe-balk" style="width:${breed}%"></span>
+          <span class="pe-vink">${gekozen ? (p.multi ? "☑" : "◉") : (p.multi ? "☐" : "◯")}</span>
+          <span class="pe-tekst">${esc(o)}</span>
+          <span class="pe-tel">${n}</span>
+        </button>`;
+      }).join("")}
+      <div class="mc-meta">
+        ${totaal} ${totaal === 1 ? "stem" : "stemmen"}${gesloten ? "" : magStemmen ? (mijn.length ? " · je kunt je stem nog wijzigen" : " · tik om te stemmen") : ""}
+        ${!p.anoniem && totaal ? ` · <button class="link-inline" data-peil-wie="${p.id}">wie stemde wat?</button>` : ""}
+      </div>
+      ${isL && !gesloten ? `<button class="btn btn-sm btn-ghost" data-peil-sluit="${p.id}" style="margin-top:8px">🔒 Peiling sluiten</button>` : ""}
+    </div>`;
+}
+async function stemPeiling(pid, idx){
+  const p = S.peilingen.find(x => x.id === pid);
+  if(!p || p.status === "gesloten") return;
+  const huidig = (peilingStemmen(p)[S.me.id] || []).slice();
+  let nieuw;
+  if(p.multi){
+    nieuw = huidig.includes(idx) ? huidig.filter(i => i !== idx) : [...huidig, idx].sort((a,b) => a-b);
+  } else {
+    nieuw = huidig.includes(idx) ? [] : [idx];
+  }
+  haptic(6);
+  await DB.set("peilingen/" + pid, {["v_" + S.me.id]: nieuw});
+}
+function peilingWieModal(pid){
+  const p = S.peilingen.find(x => x.id === pid);
+  if(!p) return;
+  const stemmen = peilingStemmen(p);
+  const naam = id => {
+    const sp = S.players.find(x => x.id === id);
+    return sp ? sp.name + (sp.isLeader ? " 🎩" : "") : "Onbekend";
+  };
+  modal(`
+    <h3>📊 ${esc(p.vraag)}</h3>
+    ${p.opties.map((o, i) => {
+      const wie = Object.keys(stemmen).filter(id => (stemmen[id] || []).includes(i));
+      return `
+      <div class="set-card" style="margin-bottom:10px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:6px">${esc(o)} <span class="pill pill-outline">${wie.length}</span></div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5">${wie.length ? wie.map(id => esc(naam(id))).join(", ") : "Nog niemand"}</div>
+      </div>`;
+    }).join("")}
+  `);
+}
+function newPeilingModal(chatId){
+  modal(`
+    <h3>📊 Nieuwe peiling</h3>
+    <div class="field"><label>Vraag</label><input id="peVraag" placeholder="Bijv. Hoe laat beginnen we vanavond?" maxlength="100"></div>
+    <div class="field"><label>Antwoorden</label>
+      <div id="peList">
+        ${[1,2].map(i => `
+        <div class="po-row">
+          <input class="pe-opt-input" placeholder="Antwoord ${i}" maxlength="80">
+          <button class="po-del" title="Verwijderen">✕</button>
+        </div>`).join("")}
+      </div>
+      <button class="btn btn-sm btn-ghost" id="peAdd">➕ Antwoord toevoegen</button>
+    </div>
+    <div class="switch-row" style="margin-bottom:10px">
+      <div style="flex:1"><div style="font-weight:700;font-size:14px">Meerdere antwoorden</div>
+        <div style="font-size:12px;color:var(--muted)">Spelers mogen meer dan één vakje aankruisen</div></div>
+      <label class="switch"><input type="checkbox" id="peMulti"><span class="slider"></span></label>
+    </div>
+    <div class="switch-row" style="margin-bottom:14px">
+      <div style="flex:1"><div style="font-weight:700;font-size:14px">Anoniem</div>
+        <div style="font-size:12px;color:var(--muted)">Niemand ziet wie wat stemde, alleen de aantallen</div></div>
+      <label class="switch"><input type="checkbox" id="peAnon"><span class="slider"></span></label>
+    </div>
+    <button class="btn btn-green btn-block" id="peCreate">📊 Peiling versturen</button>
+  `, m => {
+    const wireDel = row => { row.querySelector(".po-del").onclick = () => {
+      if(m.querySelectorAll("#peList .po-row").length > 2) row.remove();
+      else { row.querySelector("input").value = ""; toast("Minimaal 2 antwoorden"); }
+    }; };
+    m.querySelectorAll("#peList .po-row").forEach(wireDel);
+    m.querySelector("#peAdd").onclick = () => {
+      const n = m.querySelectorAll("#peList .po-row").length + 1;
+      if(n > 12){ toast("Maximaal 12 antwoorden"); return; }
+      const row = document.createElement("div");
+      row.className = "po-row";
+      row.innerHTML = `<input class="pe-opt-input" placeholder="Antwoord ${n}" maxlength="80"><button class="po-del" title="Verwijderen">✕</button>`;
+      m.querySelector("#peList").appendChild(row);
+      wireDel(row);
+      row.querySelector("input").focus();
+    };
+    m.querySelector("#peCreate").onclick = async () => {
+      const vraag = m.querySelector("#peVraag").value.trim();
+      const opties = [...m.querySelectorAll(".pe-opt-input")].map(i => i.value.trim()).filter(Boolean);
+      if(!vraag){ toast("Vul een vraag in"); return; }
+      if(opties.length < 2){ toast("Vul minimaal 2 antwoorden in"); return; }
+      if(new Set(opties.map(o => o.toLowerCase())).size < opties.length){ toast("Antwoorden moeten verschillen"); return; }
+      m.querySelector("#peCreate").disabled = true;
+      const pid = await DB.add("peilingen", {
+        chatId, vraag, opties,
+        multi: m.querySelector("#peMulti").checked,
+        anoniem: m.querySelector("#peAnon").checked,
+        status:"open", at: now(),
+      });
+      await DB.add(`chats/${chatId}/messages`, {type:"peiling", pid, at: now()});
+      await DB.set("chats/" + chatId, {lastAt: now(), lastSid: S.me.id, lastText: "📊 " + vraag});
+      haptic(12);
+      closeModal();
+    };
+  });
+}
+
 /* ---------- verleiden of gevangennemen (infiltranten) ---------- */
 const VERLEID_KEUZES = {
   verleiden: {emoji:"🙈", naam:"Verleiden",     uitleg:"Iemand overhalen om over te lopen"},
@@ -3998,7 +4193,7 @@ async function verzamelStats(){
     let msgs = [];
     try{ msgs = await DB.getAll(`chats/${c.id}/messages`); }catch(e){ msgs = []; }
     for(const m of msgs){
-      if(m.type === "sys" || m.type === "poll" || m.type === "mission" || m.type === "veld" || m.type === "verleid") continue;
+      if(m.type === "sys" || m.type === "poll" || m.type === "mission" || m.type === "veld" || m.type === "verleid" || m.type === "peiling") continue;
       berichten++;
       if(m.type === "img") fotos++;
       if(m.sid) perSpeler[m.sid] = (perSpeler[m.sid] || 0) + 1;
@@ -4658,6 +4853,7 @@ async function boot(){
   DB.listen("missions", docs => { S.missions = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("missionPolls", docs => { S.polls = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("verleidingen", docs => { S.verleidingen = docs; if(S.me && S.openChat) renderChat(); });
+  DB.listen("peilingen", docs => { S.peilingen = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("missionLib", docs => {
     S.missionLib = docs.sort((a,b) => (a.at||0)-(b.at||0));
     if(S.me && S.me.isLeader && !S.openChat && S.tab === "spelers") render();
