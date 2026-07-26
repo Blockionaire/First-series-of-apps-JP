@@ -688,6 +688,39 @@
   .po-row input{flex:1}
   .po-row .po-del{width:38px; height:38px; border-radius:50%; background:var(--bg4); flex:none; display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--muted)}
 
+  /* ---------- opgeslagen opdrachten ---------- */
+  .ml-item{
+    display:flex; align-items:center; gap:10px; background:var(--bg3);
+    border-radius:14px; padding:10px 12px; margin-bottom:7px; font-size:13.5px;
+  }
+  .ml-item span{flex:1; line-height:1.35}
+  .ml-del{width:30px; height:30px; border-radius:50%; background:var(--bg4); flex:none; font-size:12px; color:var(--muted)}
+  .lib-kies{display:flex; flex-wrap:wrap; gap:7px; max-height:150px; overflow-y:auto}
+  .lib-chip{
+    background:var(--bg3); border:1px solid var(--line); border-radius:99px;
+    padding:7px 13px; font-size:12.5px; color:var(--text); text-align:left;
+    transition:background .2s var(--ease), border-color .2s var(--ease);
+  }
+  .lib-chip:active{transform:scale(.96)}
+  .lib-chip.gekozen{border-color:var(--green); background:rgba(98,197,84,.14)}
+
+  /* ---------- drie missies voor de veldwerker ---------- */
+  .veld-kaart{
+    text-align:left !important; background:var(--bg2) !important; color:var(--text) !important;
+    border:1.5px solid var(--gold); border-radius:18px; padding:14px !important;
+    max-width:none !important; width:100%;
+  }
+  .vk-kop{font-weight:700; font-size:13.5px; margin-bottom:10px; line-height:1.4}
+  .vk-rij{
+    display:flex; align-items:flex-start; gap:10px; background:var(--bg3);
+    border-radius:12px; padding:9px 11px; margin-bottom:7px; font-size:13.5px; line-height:1.4;
+  }
+  .vk-nr{
+    flex:none; width:21px; height:21px; border-radius:50%; background:var(--gold); color:#241c05;
+    font-family:'Lilita One'; font-size:12px; display:flex; align-items:center; justify-content:center;
+  }
+  .vk-voet{font-size:12px; color:var(--muted); margin-top:8px}
+
   /* ---------- raadsel / schild ---------- */
   .riddlecard{border-color:var(--gold) !important; box-shadow:0 8px 24px -12px rgba(232,178,58,.4) !important}
   .riddlecard.done{border-color:var(--green) !important}
@@ -928,6 +961,7 @@ const S = {
   roleRequests: [],
   takeovers: [],
   pinResets: [],
+  missionLib: [],      // vaste lijst opdrachten om uit te kiezen
   hunts: [],
   huntEntries: [],
   settings: {rolesRevealed:false},
@@ -1035,7 +1069,7 @@ function lezersVan(m, c){
   return {gelezen, nietGelezen, totaal: deelnemers.length};
 }
 function leesBadge(m, c){
-  if(m.type === "sys") return "";
+  if(m.type === "sys" || m.type === "veld") return "";
   const {gelezen, totaal} = lezersVan(m, c);
   if(!totaal) return "";
   const allen = gelezen.length === totaal;
@@ -1069,6 +1103,7 @@ function leesModal(mid){
 }
 function berichtPreview(m){
   if(m.type === "img") return "📷 Foto";
+  if(m.type === "veld") return "🕵️ Drie missies";
   const t = (m.t || "").trim();
   return t.length > 80 ? t.slice(0, 80) + "…" : (t || "Bericht");
 }
@@ -1508,6 +1543,12 @@ function canSeeChat(c){
   if(c.type === "dm") return c.dmFor === S.me.id;
   return (c.members || []).includes(S.me.id);
 }
+// privéchat van de spelleider met een veldwerker? geeft de speler terug
+function isVeldwerkerChat(c){
+  if(!c || c.type !== "dm" || !S.me || !S.me.isLeader) return null;
+  const p = S.players.find(x => x.id === c.dmFor);
+  return p && p.role === "veldwerker" ? p : null;
+}
 function chatTitle(c){
   if(c.type === "all") return "📣 Iedereen";
   if(c.type === "dm"){
@@ -1752,6 +1793,7 @@ async function resetGame(wipePlayers){
   for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","hunts","huntEntries","images"]) await delAll(col);
   await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null, dag:1});
   if(wipePlayers){
+    await delAll("missionLib");   // ook de opdrachtenlijst weg bij een volledige wis
     await delAll("players");
     localStorage.removeItem("gd_player_id");
     location.reload();
@@ -1891,6 +1933,7 @@ function renderSpelers(el){
       <label class="switch"><input type="checkbox" id="revealToggle" ${S.settings.rolesRevealed ? "checked" : ""}><span class="slider"></span></label>
     </div>
     ${pinResetHtml()}
+    ${missionLibHtml()}
     ${leaderRequestsHtml()}
     ${leaderHackerHtml()}
     ${leaderReportHtml()}
@@ -1927,6 +1970,7 @@ function renderSpelers(el){
     ${verbannenHtml()}`;
 
   bindRecap(el);
+  wireMissionLib(el);
   $("#revealToggle").onchange = e => {
     haptic(12);
     DB.set("settings/main", {rolesRevealed: e.target.checked});
@@ -2032,6 +2076,53 @@ async function syncAutoChats(){
   if(gev.length || gevChat){
     await DB.set("chats/gevangenen", {name:"Gevangenen", type:"group", members:gev, at: gevChat ? (gevChat.at || now()) : now()});
   }
+}
+
+/* ---------- opdrachtenlijst infiltranten (spelleider) ---------- */
+function missionLibHtml(){
+  const lijst = S.missionLib;
+  return `
+    <div class="card">
+      <details ${lijst.length ? "" : "open"}>
+        <summary style="font-family:'Lilita One';font-size:17px;cursor:pointer">
+          📋 Opdrachtenlijst infiltranten <span class="pill pill-outline">${lijst.length}</span>
+        </summary>
+        <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:8px 0 10px">
+          Zet hier de opdrachten klaar die je wilt gebruiken. Bij een missiestemming en bij de
+          drie missies voor de veldwerker kies je er zo eentje uit de lijst.
+        </p>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input id="mlInput" placeholder="Bijv. Verstop de handdoek van de spelleider" maxlength="90">
+          <button class="btn btn-green" id="mlAdd" style="flex:none">➕</button>
+        </div>
+        ${lijst.length === 0
+          ? `<div style="font-size:12.5px;color:var(--muted);text-align:center;padding:6px 0">Nog geen opdrachten in de lijst.</div>`
+          : lijst.map(o => `
+            <div class="ml-item">
+              <span>${esc(o.text)}</span>
+              <button class="ml-del" data-ml-del="${o.id}" title="Verwijderen">✕</button>
+            </div>`).join("")}
+      </details>
+    </div>`;
+}
+function wireMissionLib(el){
+  const inp = el.querySelector("#mlInput");
+  const add = el.querySelector("#mlAdd");
+  if(!inp || !add) return;
+  const voegToe = async () => {
+    const text = inp.value.trim();
+    if(!text) return;
+    if(S.missionLib.some(o => o.text.toLowerCase() === text.toLowerCase())){ toast("Staat al in de lijst"); return; }
+    inp.value = "";
+    await DB.add("missionLib", {text, at: now()});
+    haptic(8);
+  };
+  add.onclick = voegToe;
+  inp.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); voegToe(); } };
+  el.querySelectorAll("[data-ml-del]").forEach(b => b.onclick = async () => {
+    await DB.del("missionLib/" + b.dataset.mlDel);
+    haptic(6);
+  });
 }
 
 /* ---------- vergeten pincodes (spelleider) ---------- */
@@ -2891,6 +2982,7 @@ function renderChat(){
     const prev = S.msgs[i-1];
     const gap = !prev || (m.at - (prev.at||0)) > 5*60*1000 || prev.sid !== m.sid;
     if(m.type === "sys") return `<div class="msg sys">${esc(m.t)}</div>`;
+    if(m.type === "veld") return veldwerkKaartHtml(m.opts);
     if(m.type === "mission"){
       const mi = S.missions.find(x => x.id === m.mid);
       return mi ? missionCardHtml(mi) : "";
@@ -2956,7 +3048,7 @@ function renderChat(){
         <button class="icon-btn" id="replyCancel" title="Annuleren">✕</button>
       </div>` : ""}
       <div class="composer">
-        ${isL && c.type !== "dm" ? `<button class="icon-btn" id="btnPlus" title="Meer acties">＋</button>` : ""}
+        ${isL && (c.type !== "dm" || isVeldwerkerChat(c)) ? `<button class="icon-btn" id="btnPlus" title="Meer acties">＋</button>` : ""}
         <button class="icon-btn" id="btnPhoto" title="Foto sturen">📷</button>
         <textarea id="composerText" rows="1" placeholder="Bericht…"></textarea>
         <button class="icon-btn send" id="btnSend">➤</button>
@@ -3058,10 +3150,12 @@ function renderChat(){
     };
   }
   const bplus = $("#btnPlus");
+  const vw = isVeldwerkerChat(c);
   if(bplus) bplus.onclick = () => modal(`
     <h3>Wat wil je versturen?</h3>
+    ${vw ? `<button class="btn btn-ghost btn-block" data-actie="veld" style="margin-bottom:10px;justify-content:flex-start">🕵️ &nbsp;Drie missies (één is de echte)</button>` : `
     <button class="btn btn-ghost btn-block" data-actie="mission" style="margin-bottom:10px;justify-content:flex-start">📋 &nbsp;Nieuwe opdracht</button>
-    <button class="btn btn-ghost btn-block" data-actie="poll" style="margin-bottom:10px;justify-content:flex-start">🗳️ &nbsp;Missielijst met stemming</button>
+    <button class="btn btn-ghost btn-block" data-actie="poll" style="margin-bottom:10px;justify-content:flex-start">🗳️ &nbsp;Missielijst met stemming</button>`}
     ${c.type === "all" ? `<button class="btn btn-ghost btn-block" data-actie="riddle" style="margin-bottom:10px;justify-content:flex-start">🛡️ &nbsp;Raadsel om het schild</button>` : ""}
     ${c.id === "gevangenen" ? `<button class="btn btn-ghost btn-block" data-actie="hunt" style="margin-bottom:10px;justify-content:flex-start">🔎 &nbsp;Zoekopdracht geheim voorwerp</button>` : ""}
   `, m => {
@@ -3072,6 +3166,7 @@ function renderChat(){
       if(a === "poll") newPollModal(c.id);
       if(a === "riddle") newRiddleModal();
       if(a === "hunt") newHuntModal(c.id);
+      if(a === "veld") veldwerkerModal(c.id, vw.name);
     });
   });
   const ge = $("#grpEdit"); if(ge) ge.onclick = () => editGroupModal(c);
@@ -3186,11 +3281,23 @@ function pollCardHtml(p, chat){
       </div>
     </div>`;
 }
+/* keuzelijstje met de opgeslagen opdrachten; tikken vult het veld ernaast */
+function libKiezerHtml(label){
+  if(!S.missionLib.length) return "";
+  return `
+    <div class="field">
+      <label>${esc(label)}</label>
+      <div class="lib-kies">
+        ${S.missionLib.map(o => `<button type="button" class="lib-chip" data-lib="${esc(o.text)}">${esc(o.text)}</button>`).join("")}
+      </div>
+    </div>`;
+}
 function newPollModal(chatId){
   modal(`
     <h3>Missielijst infiltranten</h3>
     <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Alle leden van deze chat stemmen op één missie. De meerderheid wint en wordt automatisch de opdracht van de dag. Bij gelijkspel kies jij de winnaar met 👑.</p>
     <div class="field"><label>Titel</label><input id="poTitle" value="Stem op de geheime missie van vandaag" maxlength="60"></div>
+    ${libKiezerHtml("Uit je opdrachtenlijst")}
     <div class="field"><label>Missies</label>
       <div id="poList">
         ${[1,2,3].map(i => `
@@ -3208,6 +3315,17 @@ function newPollModal(chatId){
       else { row.querySelector("input").value = ""; toast("Minimaal 2 missies nodig"); }
     }; };
     m.querySelectorAll(".po-row").forEach(wireDel);
+    // uit de lijst kiezen: vult de eerste lege regel, of maakt er een bij
+    m.querySelectorAll("[data-lib]").forEach(b => b.onclick = () => {
+      const tekst = b.dataset.lib;
+      const velden = [...m.querySelectorAll(".po-opt-input")];
+      if(velden.some(v => v.value.trim() === tekst)){ toast("Staat al in de lijst"); return; }
+      const leeg = velden.find(v => !v.value.trim());
+      if(leeg){ leeg.value = tekst; }
+      else { m.querySelector("#poAdd").click(); [...m.querySelectorAll(".po-opt-input")].pop().value = tekst; }
+      b.classList.add("gekozen");
+      haptic(5);
+    });
     m.querySelector("#poAdd").onclick = () => {
       const n = m.querySelectorAll(".po-row").length + 1;
       if(n > 10){ toast("Maximaal 10 missies"); return; }
@@ -3230,6 +3348,70 @@ function newPollModal(chatId){
     };
   });
 }
+/* ---------- drie missies voor de veldwerker ---------- */
+// de missie die vandaag uit de stemming kwam, als voorzet voor "de echte"
+function missieVanVandaag(){
+  const poll = S.polls
+    .filter(p => p.status === "besloten" && p.day === todayKey() && p.winner != null)
+    .sort((a,b) => (b.closedAt||0)-(a.closedAt||0))[0];
+  if(poll) return poll.options[poll.winner] || "";
+  const mi = S.missions.filter(m => (m.at||0) > 0).sort((a,b) => (b.at||0)-(a.at||0))[0];
+  return mi ? mi.title : "";
+}
+function veldwerkerModal(chatId, naam){
+  const echt = missieVanVandaag();
+  modal(`
+    <h3>Drie missies voor ${esc(naam)}</h3>
+    <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:12px">
+      De veldwerker krijgt drie missies te zien, waarvan er één de echte infiltrantenmissie van
+      vandaag is. Welke van de drie dat is, bepaalt het toeval — jij ziet het achteraf niet terug
+      in de chat, dus onthoud hem zelf.
+    </p>
+    ${libKiezerHtml("Tik een opdracht aan om het geselecteerde veld te vullen")}
+    <div class="field"><label>De echte infiltrantenmissie</label>
+      <input id="vwEcht" class="vw-veld" value="${esc(echt)}" placeholder="De missie van vandaag" maxlength="90"></div>
+    <div class="field"><label>Afleider 1</label>
+      <input id="vwA" class="vw-veld" placeholder="Een missie die níét speelt" maxlength="90"></div>
+    <div class="field"><label>Afleider 2</label>
+      <input id="vwB" class="vw-veld" placeholder="Nog een afleider" maxlength="90"></div>
+    <button class="btn btn-green btn-block" id="vwSend" style="margin-top:8px">🕵️ Stuur de drie missies</button>
+  `, m => {
+    // het laatst aangeraakte veld krijgt de gekozen opdracht
+    let doel = m.querySelector("#vwEcht");
+    m.querySelectorAll(".vw-veld").forEach(v => v.addEventListener("focus", () => { doel = v; }));
+    m.querySelectorAll("[data-lib]").forEach(b => b.onclick = () => {
+      const leeg = [...m.querySelectorAll(".vw-veld")].find(v => !v.value.trim());
+      const veld = (doel && !doel.value.trim()) ? doel : (leeg || doel);
+      veld.value = b.dataset.lib;
+      haptic(5);
+    });
+    m.querySelector("#vwSend").onclick = async () => {
+      const echteMissie = m.querySelector("#vwEcht").value.trim();
+      const a = m.querySelector("#vwA").value.trim();
+      const b2 = m.querySelector("#vwB").value.trim();
+      if(!echteMissie || !a || !b2){ toast("Vul alle drie de missies in"); return; }
+      const uniek = new Set([echteMissie.toLowerCase(), a.toLowerCase(), b2.toLowerCase()]);
+      if(uniek.size < 3){ toast("De drie missies moeten verschillen"); return; }
+      // echte missie op een willekeurige plek zetten
+      const opts = [a, b2];
+      opts.splice(Math.floor(Math.random() * 3), 0, echteMissie);
+      await DB.add(`chats/${chatId}/messages`, {type:"veld", opts, at: now()});
+      await DB.set("chats/" + chatId, {lastAt: now(), lastSid:"sys", lastText:"🕵️ Drie missies verstuurd"});
+      haptic(12);
+      closeModal();
+      toast("Verstuurd — de echte staat op plek " + (opts.indexOf(echteMissie) + 1));
+    };
+  });
+}
+function veldwerkKaartHtml(opts){
+  return `
+    <div class="msg sys veld-kaart">
+      <div class="vk-kop">🕵️ Drie missies — één hiervan is de infiltrantenmissie van vandaag</div>
+      ${(opts || []).map((o, i) => `<div class="vk-rij"><span class="vk-nr">${i + 1}</span>${esc(o)}</div>`).join("")}
+      <div class="vk-voet">Welke het is, moet je zelf zien uit te vinden.</div>
+    </div>`;
+}
+
 async function castVote(pollId, idx){
   haptic(6);
   await DB.set("missionPolls/" + pollId, {["v_" + S.me.id]: idx});
@@ -3880,6 +4062,10 @@ async function boot(){
   DB.listen("deadlines", docs => { S.deadlines = docs; if(S.me && !S.openChat && S.tab === "deadlines") render(); });
   DB.listen("missions", docs => { S.missions = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("missionPolls", docs => { S.polls = docs; if(S.me && S.openChat) renderChat(); });
+  DB.listen("missionLib", docs => {
+    S.missionLib = docs.sort((a,b) => (a.at||0)-(b.at||0));
+    if(S.me && S.me.isLeader && !S.openChat && S.tab === "spelers") render();
+  });
   DB.listen("hackerQuestions", docs => { S.hackerQs = docs; if(S.me && !S.openChat && (S.tab === "rol" || S.tab === "spelers")) render(); });
   DB.listen("reports", docs => {
     S.reports = docs;

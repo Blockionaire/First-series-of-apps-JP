@@ -38,7 +38,9 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Vergeten pincodes: wie zijn code kwijt is vraagt toestemming, jij keurt goed of wijst af
 - Deadlines instellen per chat: kies of de melding naar iedereen gaat of alleen naar bijvoorbeeld de infiltranten
 - Opdrachten versturen en ingediende bewijzen goedkeuren of afwijzen
+- Opdrachtenlijst infiltranten (tab *Spelers*): zet je opdrachten één keer klaar en kies ze daarna met één tik
 - Missiestemmingen als checklist versturen; de meerderheid wordt automatisch de opdracht van de dag
+- Drie missies naar de veldwerker (＋ in zijn privéchat): de echte missie van de dag plus twee afleiders, in willekeurige volgorde
 - Raadsels en dagrapporten versturen of inplannen (worden automatisch gepusht)
 - Zoekopdracht met foto van het geheime voorwerp in de gevangenen-chat
 - Spel beëindigen met winnaarsscherm en onthulling van alle rollen
