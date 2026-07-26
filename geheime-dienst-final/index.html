@@ -55,7 +55,8 @@
   input:focus,textarea:focus,select:focus{border-color:var(--green); box-shadow:0 0 0 3px rgba(98,197,84,.15)}
   ::placeholder{color:#6d6d75}
   .app{
-    max-width:540px; margin:0 auto; height:100dvh; display:flex; flex-direction:column;
+    max-width:540px; margin:0 auto; display:flex; flex-direction:column;
+    height:calc(100dvh + var(--onderrand, 0px));
     position:relative; overflow:hidden;
     padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
   }
@@ -200,18 +201,20 @@
   .content.from-left{animation:viewInR .26s var(--ease)}
   .content.no-anim{animation:none}
   .tabbar{
-    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
-    width:100%; max-width:540px; display:flex;
-    background:rgba(24,24,28,.92); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
-    border-top:1px solid var(--line); border-radius:24px 24px 0 0; z-index:30;
-    box-shadow:0 -6px 26px -10px rgba(0,0,0,.6);
+    position:fixed; bottom:calc(-1 * var(--onderrand, 0px)); left:50%; transform:translateX(-50%);
+    width:100%; max-width:540px; display:flex; z-index:30;
     padding:6px 8px calc(6px + env(safe-area-inset-bottom));
   }
-  /* trekt de balkkleur door tot de onderrand van het scherm, ook als het
-     toestel onder de weergavehoogte nog een strook overhoudt */
-  .tabbar:after{
-    content:""; position:absolute; left:0; right:0; top:100%; height:160px;
-    background:inherit; pointer-events:none;
+  /* De gekleurde balk is een aparte laag die ver onder de balk doorloopt.
+     Twee redenen: Safari knipt een achtergrond mét backdrop-filter af op de
+     afgeronde rand (dus een gewone ::after werd nooit getekend), en op iPhones
+     in app-modus ligt de onderrand van de pagina hoger dan die van het scherm. */
+  .tabbar:before{
+    content:""; position:absolute; left:0; right:0; top:0; bottom:-240px;
+    background:rgba(24,24,28,.92); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border-top:1px solid var(--line); border-radius:24px 24px 0 0;
+    box-shadow:0 -6px 26px -10px rgba(0,0,0,.6);
+    z-index:-1; pointer-events:none;
   }
   .tabbar button{
     flex:1; padding:9px 4px 8px; display:flex; flex-direction:column; align-items:center; gap:3px;
@@ -332,7 +335,8 @@
 
   /* ---------- chat ---------- */
   .chat-screen{
-    position:fixed; inset:0; margin:0 auto; max-width:540px; background:var(--bg); z-index:40;
+    position:fixed; inset:0; bottom:calc(-1 * var(--onderrand, 0px));
+    margin:0 auto; max-width:540px; background:var(--bg); z-index:40;
     display:flex; flex-direction:column; will-change:transform;
     padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);
   }
@@ -472,9 +476,14 @@
   .report-row .rv{line-height:1.45}
   .report-card .rc-foot{font-size:11px; color:var(--muted); text-align:right; margin-top:10px}
   .composer{
+    position:relative;
     display:flex; align-items:flex-end; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+  /* zelfde truc als bij de tabbalk: kleurlaag die tot onder het scherm doorloopt */
+  .composer:before{
+    content:""; position:absolute; left:0; right:0; top:0; bottom:-240px;
     background:rgba(17,17,20,.85); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-    border-top:1px solid var(--line);
+    border-top:1px solid var(--line); z-index:-1; pointer-events:none;
   }
   .composer textarea{
     flex:1; resize:none; max-height:110px; min-height:46px; border-radius:23px; padding:12px 18px; line-height:1.4;
@@ -707,10 +716,11 @@
     background-attachment:fixed;
   }
   body.light .topbar{background:rgba(242,240,234,.85)}
-  body.light .tabbar{background:rgba(255,255,255,.94); box-shadow:0 -6px 26px -12px rgba(0,0,0,.25)}
+  body.light .tabbar:before{background:rgba(255,255,255,.94); box-shadow:0 -6px 26px -12px rgba(0,0,0,.25)}
   body.light .tabbar button{color:#8b8a83}
   body.light .chat-screen{background:var(--bg)}
-  body.light .chat-head,body.light .composer{background:rgba(250,249,245,.92)}
+  body.light .chat-head{background:rgba(250,249,245,.92)}
+  body.light .composer:before{background:rgba(250,249,245,.92)}
   body.light input,body.light textarea,body.light select{border-color:#d3cfc5}
   body.light .btn-ghost{border-color:#c9c5bb; background:rgba(0,0,0,.03)}
   body.light .slider{background:#c9c5bb}
@@ -1626,6 +1636,24 @@ function render(){
    ===================================================================== */
 function applyTheme(){
   document.body.classList.toggle("light", localStorage.getItem("gd_theme") === "light");
+}
+
+/* Zet je de app op je beginscherm, dan tekent iOS de pagina vanaf de bovenrand
+   van het scherm, maar is de pagina zelf de hoogte van de statusbalk korter.
+   Alles met "onderaan" komt dan die strook tekort. Hier meten we hoeveel dat
+   is, zodat de tabbalk en de chatbalk alsnog tot de schermrand doorlopen.
+   Alleen in app-modus: in een gewone browser hoort onderin juist de
+   werkbalk van de browser te staan. */
+function meetOnderrand(){
+  let gat = 0;
+  const appModus = window.navigator.standalone === true ||
+    (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+  if(appModus && window.screen && screen.height){
+    const verschil = Math.round(screen.height - window.innerHeight);
+    // alleen een plausibele strook; in liggende stand klopt screen.height niet
+    if(verschil > 0 && verschil <= 120) gat = verschil;
+  }
+  document.documentElement.style.setProperty("--onderrand", gat + "px");
 }
 function settingsModal(){
   const isL = S.me && S.me.isLeader;
@@ -3791,6 +3819,9 @@ function confirmModal(html, onYes){
    ===================================================================== */
 async function boot(){
   applyTheme();
+  meetOnderrand();
+  addEventListener("resize", meetOnderrand);
+  addEventListener("orientationchange", () => setTimeout(meetOnderrand, 350));
   if(DEMO){
     $("#demoBanner").classList.remove("hidden");
     DB = makeDemoDB();
