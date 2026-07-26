@@ -28,7 +28,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - 💻 **Hacker** — stelt maximaal 2 ja/nee-vragen per dag, alleen tussen 11:00 en 22:00; buiten dat tijdvak is het formulier op slot. De spelleider antwoordt met één tik
 - ⛓️ **Gevangenen** — krijgen een foto van het geheime voorwerp; wie als eerste een goedgekeurde selfie mét het voorwerp instuurt, ontsnapt en keert terug als gewone gelovige
 - 🛡️ **Iedereen** — raadsels om het schild: de eerste met het goede antwoord wint (1 poging per 5 minuten)
-- 🙋 Alleen infiltranten kunnen om een andere rol vragen, en alleen tijdens de voorvraag — daarna liggen de rollen vast
+- 🙋 Alleen infiltranten reageren op de voorvraag: de rol aannemen of om een andere vragen. Dat kan alleen vóór de onthulling — daarna liggen de rollen vast
 - 👥 In een groepschat tik je op de naam bovenin om te zien wie er nog meer in zit
 
 **Voor de spelleider**
@@ -52,7 +52,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 ## Spelverloop in de app (spiekbriefje spelleider)
 
 1. **Vooraf** — deel de link, iedereen meldt zich aan met zijn/haar naam
-2. **Rollen** — tab *Spelers* → wijs per speler een rol toe → druk op **🤫 Vraag de infiltranten om akkoord**. Alleen zij zien dan stilletjes dat ze infiltrant zijn en kunnen nog ruilen; hun rolkaart blijft verborgen en de rest merkt niets. Verzoeken handel je af op dezelfde tab
+2. **Rollen** — tab *Spelers* → wijs per speler een rol toe → druk op **🤫 Vraag de infiltranten om akkoord**. Alleen zij zien dan stilletjes dat ze infiltrant zijn en kiezen: de rol aannemen of om een andere vragen. Hun rolkaart blijft verborgen en de rest merkt niets. In diezelfde kaart zie je per infiltrant of hij akkoord is, wil ruilen of nog niet gereageerd heeft
 3. **Vastleggen** — zet daarna de schakelaar **"Rollen zichtbaar voor spelers"** aan. Dat sluit de voorvraag, iedereen ziet zijn rol en de infiltranten-chat ontstaat automatisch
 4. **Dagelijks** — stuur 's ochtends de missielijst (🗳️) in de infiltranten-chat; de meerderheid bepaalt de missie en die wordt meteen een opdracht met foto-bewijs
 5. **Gevangenen** — zet spelers op *Gevangen*; de gevangenen-chat ontstaat automatisch. Stuur daar met 🔎 de foto van het geheime voorwerp

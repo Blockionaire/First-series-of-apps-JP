@@ -692,6 +692,13 @@
   .voorvraag{border:1.5px solid var(--red); background:linear-gradient(160deg, rgba(255,59,48,.10), var(--bg2) 60%)}
   .voorvraag h3{color:var(--red)}
   .vv-wacht{text-align:center; font-size:13px; color:var(--muted); padding:10px; background:var(--bg3); border-radius:14px}
+  .vv-ok{color:var(--green); font-weight:600}
+  .vv-keuze{display:flex; gap:8px}
+  .vv-keuze .btn{flex:1; font-size:13.5px; padding:13px 8px}
+  .vv-tel{font-size:12px; color:var(--muted); margin-bottom:9px}
+  .vv-rij{display:flex; align-items:center; gap:10px; background:var(--bg3); border-radius:14px;
+    padding:8px 11px; margin-bottom:7px; font-size:13.5px}
+  .vv-rij .pill{flex:none; font-size:10.5px}
   .chat-head .info.tikbaar{cursor:pointer; border-radius:12px; padding:4px 8px; margin:-4px -8px; transition:background .2s var(--ease)}
   .chat-head .info.tikbaar:active{background:rgba(255,255,255,.06)}
 
@@ -1806,7 +1813,7 @@ async function resetGame(wipePlayers){
     location.reload();
     return;
   }
-  for(const p of S.players.filter(x => !x.isLeader)) await DB.set("players/" + p.id, {role:null, status:"actief"});
+  for(const p of S.players.filter(x => !x.isLeader)) await DB.set("players/" + p.id, {role:null, status:"actief", infAkkoord:false});
   await DB.set("chats/all", {name:"Iedereen", type:"all", at: now(), lastAt:null, lastText:null, lastSid:null});
   S.imgCache = {}; S.msgCache = {};
   closeModal();
@@ -1982,8 +1989,13 @@ function renderSpelers(el){
   const icb = el.querySelector("#infCheckBtn");
   if(icb) icb.onclick = async () => {
     haptic(8);
-    await DB.set("settings/main", {infCheck: !S.settings.infCheck});
-    toast(S.settings.infCheck ? "Voorvraag gestopt" : "De infiltranten zijn stilletjes ingelicht 🤫");
+    const starten = !S.settings.infCheck;
+    // schoon beginnen: eerdere antwoorden tellen niet meer mee
+    if(starten) for(const p of S.players.filter(x => !x.isLeader && x.infAkkoord)){
+      await DB.set("players/" + p.id, {infAkkoord: false});
+    }
+    await DB.set("settings/main", {infCheck: starten});
+    toast(starten ? "De infiltranten zijn stilletjes ingelicht 🤫" : "Voorvraag gestopt");
   };
   $("#revealToggle").onchange = e => {
     haptic(12);
@@ -2104,16 +2116,30 @@ const isInfiltrant = p => !!(p && p.role && ROLES[p.role] && ROLES[p.role].team 
 function infCheckHtml(nInf){
   if(S.settings.rolesRevealed || !nInf) return "";
   const aan = !!S.settings.infCheck;
-  const open = S.roleRequests.filter(r => r.status === "open").length;
+  const infs = S.players.filter(p => !p.isLeader && isInfiltrant(p))
+    .sort((a,b) => (a.name||"").localeCompare(b.name||""));
+  const stand = p => S.roleRequests.some(r => r.pid === p.id && r.status === "open")
+    ? {tekst:"Wil ruilen", kleur:"pill-gold", icoon:"🙋"}
+    : p.infAkkoord ? {tekst:"Akkoord", kleur:"pill-green", icoon:"✅"}
+    : {tekst:"Nog geen reactie", kleur:"pill-gray", icoon:"⏳"};
+  const tel = k => infs.filter(p => stand(p).tekst === k).length;
   return `
     <div class="card" style="border:1.5px solid ${aan ? "var(--gold)" : "var(--line)"}">
       <h3>🤫 Voorvraag aan de infiltranten</h3>
       <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:4px 0 10px">
         ${aan
-          ? `De ${nInf} ingedeelde infiltrant${nInf === 1 ? "" : "en"} ${nInf === 1 ? "ziet" : "zien"} nu stilletjes dat ${nInf === 1 ? "hij" : "ze"} infiltrant ${nInf === 1 ? "is" : "zijn"}, met de mogelijkheid om te ruilen. De rest merkt er niets van.${open ? ` Er ${open === 1 ? "ligt 1 verzoek" : `liggen ${open} verzoeken`} bij je.` : ""}`
+          ? `De ${nInf} ingedeelde infiltrant${nInf === 1 ? "" : "en"} ${nInf === 1 ? "ziet" : "zien"} nu stilletjes dat ${nInf === 1 ? "hij" : "ze"} infiltrant ${nInf === 1 ? "is" : "zijn"} en kan ${nInf === 1 ? "" : "kunnen "}de rol aannemen of om een andere vragen. De rest merkt er niets van.`
           : `Laat de ingedeelde infiltranten vooraf weten dat ze infiltrant zijn, zodat wie het niet ziet zitten nog kan ruilen. Alleen zij krijgen dit te zien — hun rolkaart blijft nog verborgen.`}
       </p>
-      <button class="btn btn-sm ${aan ? "btn-ghost" : "btn-green"}" id="infCheckBtn">
+      ${aan ? `
+        <div class="vv-tel">✅ ${tel("Akkoord")} akkoord · 🙋 ${tel("Wil ruilen")} wil ruilen · ⏳ ${tel("Nog geen reactie")} nog geen reactie</div>
+        ${infs.map(p => { const s = stand(p); return `
+          <div class="vv-rij">
+            <div class="avatar red" style="width:34px;height:34px;font-size:14px">${initial(p.name)}</div>
+            <span style="flex:1">${esc(p.name)}</span>
+            <span class="pill ${s.kleur}">${s.icoon} ${s.tekst}</span>
+          </div>`; }).join("")}` : ""}
+      <button class="btn btn-sm ${aan ? "btn-ghost" : "btn-green"}" id="infCheckBtn" style="margin-top:${aan ? "10px" : "0"}">
         ${aan ? "⏹️ Voorvraag stoppen" : "🤫 Vraag de infiltranten om akkoord"}
       </button>
     </div>`;
@@ -3685,6 +3711,13 @@ function renderRol(el){
 
 // knoppen die zowel vóór als na de onthulling kunnen staan
 function wireRolActies(el){
+  const ok = el.querySelector("#infOkBtn");
+  if(ok) ok.onclick = async () => {
+    ok.disabled = true;
+    await DB.set("players/" + S.me.id, {infAkkoord: true, infAkkoordAt: now()});
+    haptic(10);
+    toast("Doorgegeven aan de spelleider ✅");
+  };
   el.querySelectorAll("[data-take-yes]").forEach(b => b.onclick = () => {
     const t = S.takeovers.find(x => x.id === b.dataset.takeYes);
     if(!t) return;
@@ -3710,6 +3743,8 @@ function wireRolActies(el){
       m.querySelector("#rrSend").disabled = true;
       const text = m.querySelector("#rrText").value.trim();
       await DB.add("roleRequests", {pid:S.me.id, pn:S.me.name, text, status:"open", at: now()});
+      // een verzoek trekt een eerder akkoord in
+      await DB.set("players/" + S.me.id, {infAkkoord: false});
       await DB.set("chats/dm_" + S.me.id, {type:"dm", dmFor:S.me.id, at: now()});
       await sendSystem("dm_" + S.me.id, `🙋 Rolverzoek ingediend${text ? `: "${text}"` : ""}`);
       haptic(10);
@@ -3725,7 +3760,14 @@ function roleRequestHtml(){
   if(!infCheckActief() || !isInfiltrant(S.me)) return "";
   const open = S.roleRequests.find(r => r.pid === S.me.id && r.status === "open");
   if(open) return `<div class="vv-wacht">⏳ Je verzoek ligt bij de spelleider.</div>`;
-  return `<button class="btn btn-green btn-block" id="roleReqBtn">🙋 Liever niet — vraag een andere rol</button>`;
+  if(S.me.infAkkoord) return `
+    <div class="vv-wacht vv-ok">✅ Je hebt de rol aangenomen. De spelleider ziet dit.</div>
+    <button class="btn btn-ghost btn-block" id="roleReqBtn" style="margin-top:8px">🙋 Toch liever ruilen</button>`;
+  return `
+    <div class="vv-keuze">
+      <button class="btn btn-green" id="infOkBtn">✅ Prima, ik doe het</button>
+      <button class="btn btn-ghost" id="roleReqBtn">🙋 Liever niet</button>
+    </div>`;
 }
 
 /* ---------- uitslag na einde spel ---------- */
