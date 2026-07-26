@@ -725,6 +725,29 @@
   .lib-chip:active{transform:scale(.96)}
   .lib-chip.gekozen{border-color:var(--green); background:rgba(98,197,84,.14)}
 
+  /* ---------- verleiden of gevangennemen ---------- */
+  .verleidcard{border-color:var(--gold) !important}
+  .verleidcard.done{border-color:var(--green) !important}
+  .verleid-optie{
+    width:100%; display:flex; align-items:center; gap:12px; text-align:left;
+    background:var(--bg3); border:1.5px solid transparent; border-radius:16px;
+    padding:12px 14px; margin-bottom:9px; color:var(--text);
+    transition:border-color .2s var(--ease), background .2s var(--ease), transform .14s var(--ease);
+  }
+  .verleid-optie:not(:disabled):active{transform:scale(.98)}
+  .verleid-optie.mijn{border-color:var(--green); background:rgba(98,197,84,.12)}
+  .verleid-optie.gewonnen{border-color:var(--green); background:rgba(98,197,84,.18)}
+  .verleid-optie:disabled{opacity:.85}
+  .vo-emoji{font-size:26px; flex:none}
+  .vo-main{flex:1; display:flex; flex-direction:column; gap:2px; line-height:1.3}
+  .vo-main b{font-size:14.5px}
+  .vo-main span{font-size:12px; color:var(--muted)}
+  .vo-tel{
+    flex:none; min-width:34px; height:34px; border-radius:17px; background:var(--bg4);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Lilita One'; font-size:16px;
+  }
+
   /* ---------- drie missies voor de veldwerker ---------- */
   .veld-kaart{
     text-align:left !important; background:var(--bg2) !important; color:var(--text) !important;
@@ -983,6 +1006,7 @@ const S = {
   takeovers: [],
   pinResets: [],
   missionLib: [],      // vaste lijst opdrachten om uit te kiezen
+  verleidingen: [],    // keuze van de infiltranten: verleiden of gevangennemen
   hunts: [],
   huntEntries: [],
   settings: {rolesRevealed:false},
@@ -1090,7 +1114,7 @@ function lezersVan(m, c){
   return {gelezen, nietGelezen, totaal: deelnemers.length};
 }
 function leesBadge(m, c){
-  if(m.type === "sys" || m.type === "veld") return "";
+  if(m.type === "sys" || m.type === "veld" || m.type === "verleid") return "";
   const {gelezen, totaal} = lezersVan(m, c);
   if(!totaal) return "";
   const allen = gelezen.length === totaal;
@@ -1125,6 +1149,7 @@ function leesModal(mid){
 function berichtPreview(m){
   if(m.type === "img") return "📷 Foto";
   if(m.type === "veld") return "🕵️ Drie missies";
+  if(m.type === "verleid") return "🙈 Verleiden of gevangennemen?";
   const t = (m.t || "").trim();
   return t.length > 80 ? t.slice(0, 80) + "…" : (t || "Bericht");
 }
@@ -1166,12 +1191,32 @@ function enableSheetDrag(wrap, m){
 }
 
 /* ---------- foto's ---------- */
+/* Het invoerveld moet echt in de pagina staan en daarna weer weg: een los
+   veld dat blijft hangen zorgt op de telefoon dat een tweede foto kiezen
+   niets meer doet. Annuleren lost de belofte nu ook op. */
 function pickImage(){
   return new Promise(resolve => {
     const inp = document.createElement("input");
     inp.type = "file"; inp.accept = "image/*";
-    inp.onchange = () => resolve(inp.files[0] || null);
+    inp.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0;width:1px;height:1px";
+    let klaar = false;
+    const af = bestand => {
+      if(klaar) return;
+      klaar = true;
+      setTimeout(() => inp.remove(), 0);
+      resolve(bestand || null);
+    };
+    inp.onchange = () => af(inp.files && inp.files[0]);
+    inp.oncancel = () => af(null);
+    document.body.appendChild(inp);
+    inp.value = "";
     inp.click();
+    // vangnet: als er niets gekozen is en het venster weer actief wordt, opruimen
+    const opFocus = () => {
+      window.removeEventListener("focus", opFocus);
+      setTimeout(() => { if(!klaar && !(inp.files && inp.files.length)) af(null); }, 1200);
+    };
+    window.addEventListener("focus", opFocus);
   });
 }
 function compressImage(file, maxDim = 1280){
@@ -1844,7 +1889,7 @@ async function resetGame(wipePlayers){
     for(const ph of await DB.getAll(`missions/${mi.id}/photos`)) await DB.del(`missions/${mi.id}/photos/${ph.id}`);
     await DB.del("missions/" + mi.id);
   }
-  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","hunts","huntEntries","images"]) await delAll(col);
+  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","hunts","huntEntries","images"]) await delAll(col);
   await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null, dag:1, infCheck:false, hoogtepunt:""});
   if(wipePlayers){
     await delAll("missionLib");   // ook de opdrachtenlijst weg bij een volledige wis
@@ -2954,7 +2999,10 @@ function renderChats(el){
 
   let dmSection = "";
   if(isL){
-    const players = S.players.filter(p => !p.isLeader).sort((a,b) => (a.name||"").localeCompare(b.name||""));
+    // meest recente gesprekken bovenaan; wie nog nooit iets stuurde onderaan op naam
+    const laatst = p => { const c = S.chats.find(x => x.id === "dm_" + p.id); return (c && c.lastAt) || 0; };
+    const players = S.players.filter(p => !p.isLeader).sort((a,b) =>
+      laatst(b) - laatst(a) || (a.name||"").localeCompare(b.name||""));
     dmSection = `
       <div class="section-label">Privéchats met spelers</div>
       ${players.length === 0 ? `<div class="empty" style="padding:20px">Nog geen spelers aangemeld.</div>` : ""}
@@ -3093,6 +3141,10 @@ function renderChat(){
     const gap = !prev || (m.at - (prev.at||0)) > 5*60*1000 || prev.sid !== m.sid;
     if(m.type === "sys") return `<div class="msg sys">${esc(m.t)}</div>`;
     if(m.type === "veld") return veldwerkKaartHtml(m.opts);
+    if(m.type === "verleid"){
+      const v = S.verleidingen.find(x => x.id === m.vid);
+      return v ? verleidKaartHtml(v) : "";
+    }
     if(m.type === "mission"){
       const mi = S.missions.find(x => x.id === m.mid);
       return mi ? missionCardHtml(mi) : "";
@@ -3222,6 +3274,16 @@ function renderChat(){
     const [pid, idx] = b.dataset.vote.split(":");
     castVote(pid, Number(idx));
   });
+  msgsEl.querySelectorAll("[data-verleid]").forEach(b => b.onclick = () => {
+    const [vid, keuze] = b.dataset.verleid.split(":");
+    stemVerleid(vid, keuze);
+  });
+  msgsEl.querySelectorAll("[data-verleid-kies]").forEach(b => b.onclick = () => {
+    const [vid, keuze] = b.dataset.verleidKies.split(":");
+    confirmModal(`Vannacht wordt er <b>${keuze === "verleiden" ? "verleid" : "gevangengenomen"}</b>?`, async () => {
+      await sluitVerleiding(vid, keuze); haptic(12);
+    });
+  });
   msgsEl.querySelectorAll("[data-riddleopen]").forEach(b => b.onclick = () => riddleModal(b.dataset.riddleopen));
   msgsEl.querySelectorAll("[data-huntopen]").forEach(b => b.onclick = () => huntModal(b.dataset.huntopen));
   msgsEl.querySelectorAll("[data-choose]").forEach(b => b.onclick = () => {
@@ -3248,15 +3310,21 @@ function renderChat(){
     };
     ta.onkeydown = e => { if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); doSend(); } };
     $("#btnSend").onclick = doSend;
-    $("#btnPhoto").onclick = async () => {
-      const f = await pickImage(); if(!f) return;
-      toast("Foto uploaden…");
+    // binnen dít chatscherm zoeken: een sluitend scherm kan nog even blijven staan
+    const fotoBtn = scr.querySelector("#btnPhoto");
+    fotoBtn.onclick = async () => {
+      if(fotoBtn.dataset.bezig) return;
+      fotoBtn.dataset.bezig = "1";
       try{
+        const f = await pickImage();
+        if(!f) return;
+        toast("Foto uploaden…");
         const imgId = await uploadImage(f);
         const re = S.replyTo; S.replyTo = null;
         await sendMessage(c.id, {type:"img", imgId, ...(re ? {re} : {})});
         haptic(10);
       }catch(e){ console.error(e); toast("Uploaden mislukt"); }
+      finally{ delete fotoBtn.dataset.bezig; }
     };
   }
   const bplus = $("#btnPlus");
@@ -3267,6 +3335,7 @@ function renderChat(){
     <button class="btn btn-ghost btn-block" data-actie="mission" style="margin-bottom:10px;justify-content:flex-start">📋 &nbsp;Nieuwe opdracht</button>
     <button class="btn btn-ghost btn-block" data-actie="poll" style="margin-bottom:10px;justify-content:flex-start">🗳️ &nbsp;Missielijst met stemming</button>`}
     ${c.type === "all" ? `<button class="btn btn-ghost btn-block" data-actie="riddle" style="margin-bottom:10px;justify-content:flex-start">🛡️ &nbsp;Raadsel om het schild</button>` : ""}
+    ${c.id === "infiltranten" ? `<button class="btn btn-ghost btn-block" data-actie="verleid" style="margin-bottom:10px;justify-content:flex-start">🙈 &nbsp;Verleiden of gevangennemen?</button>` : ""}
     ${c.id === "gevangenen" ? `<button class="btn btn-ghost btn-block" data-actie="hunt" style="margin-bottom:10px;justify-content:flex-start">🔎 &nbsp;Zoekopdracht geheim voorwerp</button>` : ""}
   `, m => {
     m.querySelectorAll("[data-actie]").forEach(b => b.onclick = () => {
@@ -3276,6 +3345,7 @@ function renderChat(){
       if(a === "poll") newPollModal(c.id);
       if(a === "riddle") newRiddleModal();
       if(a === "hunt") newHuntModal(c.id);
+      if(a === "verleid") newVerleidModal(c.id);
       if(a === "veld") veldwerkerModal(c.id, vw.name);
     });
   });
@@ -3483,6 +3553,99 @@ function newPollModal(chatId){
     };
   });
 }
+/* ---------- verleiden of gevangennemen (infiltranten) ---------- */
+const VERLEID_KEUZES = {
+  verleiden: {emoji:"🙈", naam:"Verleiden",     uitleg:"Iemand overhalen om over te lopen"},
+  gevangen:  {emoji:"⛓️", naam:"Gevangennemen", uitleg:"Een gelovige vannacht gevangenzetten"},
+};
+function verleidStemmers(c){
+  // alleen infiltranten die nog echt meedoen
+  return chatVoters(c).filter(id => {
+    const p = S.players.find(x => x.id === id);
+    return p && isInfiltrant(p) && (p.status || "actief") === "actief";
+  });
+}
+function verleidKaartHtml(v){
+  const c = S.chats.find(x => x.id === v.chatId);
+  if(!c) return "";
+  const stemmers = verleidStemmers(c);
+  const stemmen = pollVotes(v);
+  const mijn = stemmen[S.me.id];
+  const magStemmen = !S.me.isLeader && stemmers.includes(S.me.id) && v.status === "open" && !S.settings.gameOver;
+  const gesloten = v.status === "besloten";
+  const tel = k => stemmers.filter(id => stemmen[id] === k).length;
+  const gestemd = stemmers.filter(id => stemmen[id] != null).length;
+  const isL = S.me.isLeader;
+  const gelijk = !gesloten && stemmers.length > 0 && gestemd === stemmers.length
+    && tel("verleiden") === tel("gevangen");
+  return `
+    <div class="mission-card verleidcard ${gesloten ? "done" : ""}">
+      <div class="mc-top">
+        <h4>🙈 Verleiden of gevangennemen?</h4>
+        <span class="pill ${gesloten ? "pill-green" : "pill-gold"}">${gesloten ? "Besloten" : "Stemmen"}</span>
+      </div>
+      <p class="mc-desc">Wat doen jullie vannacht? Iedere infiltrant die nog meedoet brengt één stem uit.</p>
+      ${Object.entries(VERLEID_KEUZES).map(([k, o]) => `
+        <button class="verleid-optie ${mijn === k ? "mijn" : ""} ${gesloten && v.uitkomst === k ? "gewonnen" : ""}"
+                data-verleid="${v.id}:${k}" ${magStemmen ? "" : "disabled"}>
+          <span class="vo-emoji">${o.emoji}</span>
+          <span class="vo-main"><b>${o.naam}</b><span>${o.uitleg}</span></span>
+          <span class="vo-tel">${tel(k)}</span>
+        </button>
+        ${isL && gelijk ? `<button class="btn btn-sm btn-ghost" data-verleid-kies="${v.id}:${k}" style="margin:-4px 0 8px">👑 Kies "${o.naam}"</button>` : ""}`).join("")}
+      <div class="mc-meta">${gesloten
+        ? `${VERLEID_KEUZES[v.uitkomst] ? VERLEID_KEUZES[v.uitkomst].emoji : "🙈"} Besloten: vannacht wordt er <b>${v.uitkomst === "verleiden" ? "verleid" : "gevangengenomen"}</b>`
+        : `${gestemd}/${stemmers.length} gestemd${gelijk ? " · 🤝 Gelijkspel — de spelleider hakt de knoop door (👑)" : ""}${magStemmen && mijn == null ? " · Tik op een keuze" : ""}${magStemmen && mijn != null ? " · Je kunt je stem nog wijzigen" : ""}`}</div>
+    </div>`;
+}
+async function stemVerleid(vid, keuze){
+  haptic(6);
+  await DB.set("verleidingen/" + vid, {["v_" + S.me.id]: keuze});
+  const v = await DB.getDoc("verleidingen/" + vid);
+  if(!v || v.status !== "open") return;
+  const c = S.chats.find(x => x.id === v.chatId);
+  if(!c) return;
+  const stemmers = verleidStemmers(c);
+  const stemmen = pollVotes(v);
+  if(!stemmers.length || !stemmers.every(id => stemmen[id] != null)) return;
+  const a = stemmers.filter(id => stemmen[id] === "verleiden").length;
+  const b = stemmers.filter(id => stemmen[id] === "gevangen").length;
+  if(a === b) return;                       // gelijkspel: de spelleider beslist
+  await sluitVerleiding(vid, a > b ? "verleiden" : "gevangen");
+}
+async function sluitVerleiding(vid, uitkomst){
+  const v = await DB.getDoc("verleidingen/" + vid);
+  if(!v || v.status !== "open") return;
+  await DB.set("verleidingen/" + vid, {status:"besloten", uitkomst, closedAt: now()});
+  const o = VERLEID_KEUZES[uitkomst];
+  await DB.add(`chats/${v.chatId}/messages`, {
+    type:"sys", at: now(),
+    t:`${o.emoji} Besloten: vannacht gaan de infiltranten ${uitkomst === "verleiden" ? "verleiden" : "iemand gevangennemen"}.`,
+  });
+  await DB.set("chats/" + v.chatId, {lastAt: now(), lastSid:"sys", lastText:`${o.emoji} ${o.naam}`});
+}
+function newVerleidModal(chatId){
+  const c = S.chats.find(x => x.id === chatId);
+  const n = c ? verleidStemmers(c).length : 0;
+  modal(`
+    <h3>🙈 Verleiden of gevangennemen?</h3>
+    <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px">
+      De infiltranten die nog meedoen (${n}) kiezen samen wat ze vannacht doen: iemand verleiden om over
+      te lopen, of iemand gevangennemen. De meerderheid beslist; bij gelijkspel hak jij de knoop door.
+    </p>
+    <button class="btn btn-green btn-block" id="vlSend">🙈 Keuze versturen</button>
+  `, m => {
+    m.querySelector("#vlSend").onclick = async () => {
+      m.querySelector("#vlSend").disabled = true;
+      const vid = await DB.add("verleidingen", {chatId, status:"open", day: todayKey(), at: now()});
+      await DB.add(`chats/${chatId}/messages`, {type:"verleid", vid, at: now()});
+      await DB.set("chats/" + chatId, {lastAt: now(), lastSid: S.me.id, lastText:"🙈 Verleiden of gevangennemen?"});
+      haptic(12);
+      closeModal();
+    };
+  });
+}
+
 /* ---------- drie missies voor de veldwerker ---------- */
 // de missie die vandaag uit de stemming kwam, als voorzet voor "de echte"
 function missieVanVandaag(){
@@ -3835,7 +3998,7 @@ async function verzamelStats(){
     let msgs = [];
     try{ msgs = await DB.getAll(`chats/${c.id}/messages`); }catch(e){ msgs = []; }
     for(const m of msgs){
-      if(m.type === "sys" || m.type === "poll" || m.type === "mission" || m.type === "veld") continue;
+      if(m.type === "sys" || m.type === "poll" || m.type === "mission" || m.type === "veld" || m.type === "verleid") continue;
       berichten++;
       if(m.type === "img") fotos++;
       if(m.sid) perSpeler[m.sid] = (perSpeler[m.sid] || 0) + 1;
@@ -4494,6 +4657,7 @@ async function boot(){
   DB.listen("deadlines", docs => { S.deadlines = docs; if(S.me && !S.openChat && S.tab === "deadlines") render(); });
   DB.listen("missions", docs => { S.missions = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("missionPolls", docs => { S.polls = docs; if(S.me && S.openChat) renderChat(); });
+  DB.listen("verleidingen", docs => { S.verleidingen = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("missionLib", docs => {
     S.missionLib = docs.sort((a,b) => (a.at||0)-(b.at||0));
     if(S.me && S.me.isLeader && !S.openChat && S.tab === "spelers") render();
