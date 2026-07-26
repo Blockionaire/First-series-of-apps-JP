@@ -199,27 +199,21 @@
   .content.from-right{animation:viewInL .26s var(--ease)}
   .content.from-left{animation:viewInR .26s var(--ease)}
   .content.no-anim{animation:none}
+  /* Zwevende balk, net als in de verbouw-app: hij probeert de onderrand van
+     het scherm niet te raken, maar houdt overal marge. Daardoor staat hij op
+     elke telefoon vanzelf goed — er valt niets te meten of te raden. */
   .tabbar{
-    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
-    width:100%; max-width:540px; display:flex; z-index:30;
-    padding:6px 8px calc(6px + env(safe-area-inset-bottom));
-  }
-  /* De gekleurde balk is een aparte laag die ver onder de balk doorloopt.
-     Twee redenen: Safari knipt een achtergrond mét backdrop-filter af op de
-     afgeronde rand (dus een gewone ::after werd nooit getekend), en op sommige
-     iPhones ligt de onderrand van de pagina hoger dan die van het scherm.
-     De knoppen blijven staan waar ze staan; alleen de kleur loopt door. */
-  .tabbar:before{
-    content:""; position:absolute; left:0; right:0; top:0; bottom:-300px;
-    background:rgba(24,24,28,.92); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
-    border-top:1px solid var(--line); border-radius:24px 24px 0 0;
-    box-shadow:0 -6px 26px -10px rgba(0,0,0,.6);
-    z-index:-1; pointer-events:none;
+    position:fixed; bottom:calc(14px + env(safe-area-inset-bottom));
+    left:50%; transform:translateX(-50%);
+    width:calc(100% - 32px); max-width:448px;
+    display:flex; align-items:stretch; z-index:30;
+    background:#25252b; border:1px solid var(--line); border-radius:99px;
+    box-shadow:0 6px 26px rgba(0,0,0,.42), 0 1px 4px rgba(0,0,0,.25);
   }
   .tabbar button{
-    flex:1; padding:9px 4px 8px; display:flex; flex-direction:column; align-items:center; gap:3px;
+    flex:1; padding:11px 4px; display:flex; flex-direction:column; align-items:center; gap:3px;
     color:#7a7a82; font-size:11px; font-weight:600; position:relative;
-    border-radius:22px; transition:color .2s ease, background .25s var(--ease), transform .14s var(--ease);
+    border-radius:99px; transition:color .2s ease, background .25s var(--ease), transform .14s var(--ease);
   }
   .tabbar button:active{transform:scale(.94)}
   .tabbar button.active{color:var(--green); background:rgba(98,197,84,.12)}
@@ -475,14 +469,9 @@
   .report-row .rv{line-height:1.45}
   .report-card .rc-foot{font-size:11px; color:var(--muted); text-align:right; margin-top:10px}
   .composer{
-    position:relative;
     display:flex; align-items:flex-end; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom));
-  }
-  /* zelfde truc als bij de tabbalk: kleurlaag die tot onder het scherm doorloopt */
-  .composer:before{
-    content:""; position:absolute; left:0; right:0; top:0; bottom:-300px;
     background:rgba(17,17,20,.85); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-    border-top:1px solid var(--line); z-index:-1; pointer-events:none;
+    border-top:1px solid var(--line);
   }
   .composer textarea{
     flex:1; resize:none; max-height:110px; min-height:46px; border-radius:23px; padding:12px 18px; line-height:1.4;
@@ -715,11 +704,11 @@
     background-attachment:fixed;
   }
   body.light .topbar{background:rgba(242,240,234,.85)}
-  body.light .tabbar:before{background:rgba(255,255,255,.94); box-shadow:0 -6px 26px -12px rgba(0,0,0,.25)}
+  body.light .tabbar{background:#ffffff; border-color:rgba(44,44,46,.10);
+    box-shadow:0 4px 24px rgba(0,0,0,.10), 0 1px 4px rgba(0,0,0,.06)}
   body.light .tabbar button{color:#8b8a83}
   body.light .chat-screen{background:var(--bg)}
-  body.light .chat-head{background:rgba(250,249,245,.92)}
-  body.light .composer:before{background:rgba(250,249,245,.92)}
+  body.light .chat-head,body.light .composer{background:rgba(250,249,245,.92)}
   body.light input,body.light textarea,body.light select{border-color:#d3cfc5}
   body.light .btn-ghost{border-color:#c9c5bb; background:rgba(0,0,0,.03)}
   body.light .slider{background:#c9c5bb}
