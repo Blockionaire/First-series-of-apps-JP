@@ -22,6 +22,9 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Deadlines met afteltimer — je ziet alleen de deadlines van de chats waar je in zit
 - Alle spelregels, rollen, dagplanning en de avondbijeenkomst-volgorde uit de flyer
 - Foto's uit de chat bewaren: tik de foto aan en kies 💾 Bewaren
+- Reageren met een emoji: houd een bericht ingedrukt en kies er een. Tik op een reactie om die van jezelf weer weg te halen
+- 🔍 Zoeken in een chat: tik het vergrootglas bovenin aan, typ waar je naar zoekt en spring met één tik naar dat bericht
+- 🌙 Nachtstand: zet de spelleider die aan, dan liggen alle chats stil tot de ochtend — alleen de infiltranten kunnen dan nog overleggen
 - Loopt er een opdracht in een chat? Dan staat de **opdracht van vandaag** met status (en afteller) vast bovenaan die chat — hoe ver je ook terugscrolt. Eén tik erop opent de opdracht. Zodra de spelleider hem goedkeurt verdwijnt de balk
 - Peilingen van de spelleider: tik je antwoord aan (soms mag je er meer kiezen), wijzig je stem zolang de peiling open staat en zie bij een niet-anonieme peiling wie wat stemde
 - 🏁 **Eindkaart** na afloop: een poster met alle statistieken en alle rollen, om te bewaren of als opgemaakte tekst in WhatsApp te plakken
@@ -52,6 +55,8 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - 💘 Verleidingsverzoek (＋ in de infiltrantenchat): *wie* halen ze over? De infiltranten stemmen op een naam; zijn ze het unaniem eens dan gaat het verzoek meteen de deur uit, anders bevestig jij het doelwit met 👑. Pas daarna krijgt die speler zelf de vraag — neemt hij aan, dan wordt hij infiltrant en komt hij in de groepschat mét de hele voorgeschiedenis; weigert hij, dan verandert er niets en zien de infiltranten dat hij geweigerd heeft
 - Zoekopdracht met foto van het geheime voorwerp in de gevangenen-chat
 - Spel beëindigen met winnaarsscherm en onthulling van alle rollen
+- 🌙 **Draaiboek avondbijeenkomst** (tab *Spelers*): de acht stappen uit de flyer als afvinklijst, zodat je met de hele groep om je heen niets overslaat. Elke speeldag begint hij weer leeg
+- 🌙 **Nachtstand**: één schakelaar zet alle chats op slot behalve die van de infiltranten, met automatisch een bericht in de groepschat als de nacht begint en eindigt
 - Spel resetten na een testronde (⚙️ → Instellingen)
 
 ---
@@ -64,9 +69,10 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 4. **Dagelijks** — stuur 's ochtends de missielijst (🗳️) in de infiltranten-chat; de meerderheid bepaalt de missie en die wordt meteen een opdracht met foto-bewijs
 5. **Gevangenen** — zet spelers op *Gevangen*; de gevangenen-chat ontstaat automatisch. Stuur daar met 🔎 de foto van het geheime voorwerp
 6. **Het schild** — stuur met 🛡️ in de Iedereen-chat een raadsel met geheim antwoord (direct of ingepland)
-7. **Einde van de dag** — stel het dagrapport op (tab *Spelers*): wie eruit ligt, hoofdverdachte, missie gehaald. Plan het in op 23:00 en het wordt automatisch gepusht
-8. **Afsluiten** — ⚙️ → *Spel beëindigen* → kies de winnaar; iedereen ziet de uitslag en alle rollen
-9. **Souvenir** — druk op 🏁 *Eindkaart*, vul eventueel het hoogtepunt van het spel in en zet de kaart in de groepschat. Iedereen kan hem daarna zelf bewaren of als tekst in WhatsApp delen
+7. **Avond** — druk op 🌙 *Nachtstand* zodra iedereen gaat slapen; loop daarna het draaiboek af, stap voor stap
+8. **Einde van de dag** — stel het dagrapport op (tab *Spelers*): wie eruit ligt, hoofdverdachte, missie gehaald. Plan het in op 23:00 en het wordt automatisch gepusht
+9. **Afsluiten** — ⚙️ → *Spel beëindigen* → kies de winnaar; iedereen ziet de uitslag en alle rollen
+10. **Souvenir** — druk op 🏁 *Eindkaart*, vul eventueel het hoogtepunt van het spel in en zet de kaart in de groepschat. Iedereen kan hem daarna zelf bewaren of als tekst in WhatsApp delen
 
 ---
 

@@ -746,6 +746,62 @@
   .lib-chip:active{transform:scale(.96)}
   .lib-chip.gekozen{border-color:var(--green); background:rgba(98,197,84,.14)}
 
+  /* ---------- draaiboek avondbijeenkomst ---------- */
+  .draaiboek summary{display:flex; align-items:center; gap:8px}
+  .draaiboek summary .pill{margin-left:auto; flex:none}
+  .db-stap{
+    width:100%; display:flex; align-items:flex-start; gap:10px; text-align:left;
+    background:var(--bg3); border-radius:14px; padding:11px 13px; margin-bottom:7px;
+    color:var(--text); font-size:13.5px; line-height:1.4;
+    transition:background .15s ease, opacity .15s ease;
+  }
+  .db-stap:active{transform:scale(.99)}
+  .db-stap.af{opacity:.55}
+  .db-stap.af .db-tekst{text-decoration:line-through}
+  .db-vink{flex:none; font-size:15px; line-height:1.3}
+  .db-tekst{flex:1}
+
+  /* ---------- nachtstand ---------- */
+  .switch-row.nacht-aan{border-color:var(--gold); background:rgba(232,178,58,.10)}
+  .nacht-note{color:var(--gold)}
+
+  /* ---------- reacties op berichten ---------- */
+  .reacties{display:flex; flex-wrap:wrap; gap:4px; margin:6px 0 -2px}
+  .reactie{
+    display:flex; align-items:center; gap:3px; font-size:11.5px; line-height:1;
+    background:rgba(255,255,255,.10); border:1px solid transparent; border-radius:99px;
+    padding:4px 8px; color:var(--text);
+  }
+  .reactie.mijn{border-color:var(--green); background:rgba(98,197,84,.20)}
+  .msg.mine .reactie{background:rgba(0,0,0,.18)}
+  body.light .reactie{background:rgba(0,0,0,.07)}
+  .reactie-kies{display:flex; flex-wrap:wrap; gap:10px; justify-content:center}
+  .rk{
+    width:54px; height:54px; border-radius:50%; background:var(--bg3);
+    border:1.5px solid transparent; font-size:25px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    transition:transform .13s var(--ease), border-color .15s ease;
+  }
+  .rk:active{transform:scale(.9)}
+  .rk.mijn{border-color:var(--green); background:rgba(98,197,84,.16)}
+
+  /* ---------- zoeken in de chat ---------- */
+  .chat-zoek{
+    flex:none; display:flex; align-items:center; gap:8px; padding:9px 12px;
+    background:var(--bg2); border-bottom:1px solid var(--line);
+  }
+  .chat-zoek input{flex:1; font-size:14px}
+  .zoek-tel{font-size:12px; color:var(--muted); padding:2px 4px 8px}
+  .zoek-rij{
+    width:100%; text-align:left; background:var(--bg2); border:1px solid var(--line);
+    border-radius:14px; padding:10px 13px; margin-bottom:7px; color:var(--text);
+  }
+  .zoek-rij:active{transform:scale(.99)}
+  .zr-top{display:flex; justify-content:space-between; gap:10px; font-size:12px; margin-bottom:3px}
+  .zr-top span{color:var(--muted); flex:none}
+  .zr-tekst{font-size:13.5px; line-height:1.4; word-break:break-word}
+  .zr-tekst mark{background:rgba(232,178,58,.38); color:inherit; border-radius:3px; padding:0 2px}
+
   /* ---------- peiling (gewone poll) ---------- */
   .peilingcard{border-color:var(--blue) !important; box-shadow:0 8px 24px -12px rgba(90,150,255,.35) !important}
   .peilingcard.done{border-color:var(--line) !important; box-shadow:none !important; opacity:.9}
@@ -950,6 +1006,14 @@ const hackerVensterOpen = () => { const u = new Date().getHours(); return u >= H
 const STATUSES = { actief:"Actief", gevangen:"Gevangen", ontmaskerd:"Ontmaskerd", uit:"Verbannen" };
 const statusPill = st => st === "gevangen" ? "pill-gold" : st === "ontmaskerd" ? "pill-red" : "pill-gray";
 const isMuted = p => p && !p.isLeader && (p.status === "ontmaskerd" || p.status === "uit");
+// 's nachts liggen alle chats stil, behalve die van de infiltranten — die zijn juist dan aan zet
+const nachtSlot = c => !!S.settings.nacht && !S.me.isLeader && c && c.id !== "infiltranten";
+// mag ik in deze chat iets versturen of ergens op reageren?
+const magChatten = c => {
+  if(!S.me) return false;
+  if(S.me.isLeader) return true;
+  return !isMuted(S.me) && !nachtSlot(c) && !S.settings.gameOver;
+};
 const VERHOUDING = {8:[2,6],9:[2,7],10:[3,7],11:[3,8],12:[3,9],13:[3,10],14:[4,10],15:[4,11],16:[4,12],17:[5,12],18:[5,13],19:[5,14],20:[6,14],21:[6,15],22:[6,16],23:[7,16],24:[7,17],25:[7,18]};
 
 /* =====================================================================
@@ -1070,6 +1134,7 @@ const S = {
   tab: "chats",
   viewAnim: null,      // 'from-left' | 'from-right'
   openChat: null,      // chat id
+  chatZoek: null,      // zoekterm in de open chat (null = zoeken staat uit)
   renderedChat: null,  // welk chatscherm er nu daadwerkelijk staat
   chatJustOpened: false,
   closingChat: false,
@@ -1136,14 +1201,21 @@ function enableSwipeBack(el, onBack, negeerSel){
 }
 // naar rechts vegen op een bericht = erop reageren (zoals in WhatsApp)
 function enableReplySwipe(el, msg){
-  let sx = 0, sy = 0, dx = 0, actief = false;
+  let sx = 0, sy = 0, dx = 0, actief = false, langTimer = null;
   const reset = () => { el.style.transition = "transform .2s cubic-bezier(.32,.72,.33,1)"; el.style.transform = ""; el.classList.remove("swiping"); };
+  const stopLang = () => { if(langTimer){ clearTimeout(langTimer); langTimer = null; } };
+  // lang indrukken opent de reactiekiezer; naar rechts vegen blijft reageren
+  el.addEventListener("contextmenu", e => { e.preventDefault(); stopLang(); reactieKiezer(msg); });
   el.addEventListener("touchstart", e => {
     const t = e.touches[0]; sx = t.clientX; sy = t.clientY; dx = 0; actief = true;
+    stopLang();
+    langTimer = setTimeout(() => { langTimer = null; actief = false; reset(); haptic(12); reactieKiezer(msg); }, 480);
   }, {passive:true});
+  el.addEventListener("touchcancel", () => { stopLang(); actief = false; reset(); });
   el.addEventListener("touchmove", e => {
-    if(!actief) return;
+    if(!actief){ stopLang(); return; }
     const t = e.touches[0]; dx = t.clientX - sx; const dy = t.clientY - sy;
+    if(Math.abs(dx) > 8 || Math.abs(dy) > 8) stopLang();
     if(Math.abs(dy) > 26 && Math.abs(dy) > Math.abs(dx)){ actief = false; reset(); return; }
     if(dx > 6){
       el.style.transition = "none";
@@ -1152,6 +1224,7 @@ function enableReplySwipe(el, msg){
     }
   }, {passive:true});
   el.addEventListener("touchend", () => {
+    stopLang();
     if(!actief) return;
     actief = false;
     const genoeg = dx > 52;
@@ -1171,6 +1244,90 @@ function lezersVan(m, c){
   gelezen.sort((a,b) => a.t - b.t);
   return {gelezen, nietGelezen, totaal: deelnemers.length};
 }
+/* ---------- reacties op een bericht ----------
+   Iedere reactie staat als los veld r_<spelerId> op het bericht, net als de
+   stemmen bij een peiling. Zo hoeft er nooit een heel bericht overschreven
+   te worden en kunnen twee mensen tegelijk reageren. */
+const REACTIES = ["👍", "😂", "😮", "❤️", "🤔", "🕵️", "🔥", "💀"];
+function berichtReacties(m){
+  const per = {};
+  Object.keys(m).forEach(k => {
+    if(k.startsWith("r_") && m[k]) (per[m[k]] = per[m[k]] || []).push(k.slice(2));
+  });
+  return per;
+}
+function reactieBalkHtml(m){
+  const per = berichtReacties(m);
+  const emojis = Object.keys(per);
+  if(!emojis.length) return "";
+  return `<div class="reacties">${emojis.map(e =>
+    `<button class="reactie ${per[e].includes(S.me.id) ? "mijn" : ""}" data-reactie="${m.id}:${e}"
+             title="${esc(per[e].map(id => { const p = S.players.find(x => x.id === id); return p ? p.name : "?"; }).join(", "))}"
+      >${e} ${per[e].length}</button>`).join("")}</div>`;
+}
+async function zetReactie(mid, emoji){
+  const c = S.chats.find(x => x.id === S.openChat);
+  const m = S.msgs.find(x => x.id === mid);
+  if(!c || !m || !magChatten(c)) return;
+  haptic(6);
+  const huidig = m["r_" + S.me.id];
+  await DB.set(`chats/${c.id}/messages/${mid}`, {["r_" + S.me.id]: huidig === emoji ? null : emoji});
+}
+function reactieKiezer(m){
+  const c = S.chats.find(x => x.id === S.openChat);
+  if(!c || !magChatten(c)) return;
+  const huidig = m["r_" + S.me.id];
+  modal(`
+    <h3>Reageren</h3>
+    <div class="reactie-kies">
+      ${REACTIES.map(e => `<button class="rk ${huidig === e ? "mijn" : ""}" data-rk="${e}">${e}</button>`).join("")}
+    </div>
+    <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:12px">
+      Tik je huidige reactie nog eens aan om hem weg te halen.</p>
+  `, el => {
+    el.querySelectorAll("[data-rk]").forEach(b => b.onclick = async () => {
+      closeModal();
+      await zetReactie(m.id, b.dataset.rk);
+    });
+  });
+}
+
+/* ---------- zoeken in de open chat ---------- */
+function zoekResultatenHtml(c){
+  const q = (S.chatZoek || "").trim().toLowerCase();
+  if(!q) return `<div class="empty" style="padding:26px"><div class="big">🔍</div>Typ waar je naar zoekt.</div>`;
+  const treffers = S.msgs.filter(m =>
+    (m.t && m.t.toLowerCase().includes(q)) || (m.sn && m.sn.toLowerCase().includes(q))
+  ).slice().reverse();
+  if(!treffers.length) return `<div class="empty" style="padding:26px"><div class="big">🔍</div>Niets gevonden voor “${esc(S.chatZoek)}”.</div>`;
+  const markeer = t => {
+    const i = t.toLowerCase().indexOf(q);
+    if(i < 0) return esc(t);
+    const start = Math.max(0, i - 34);
+    const kort = (start ? "…" : "") + t.slice(start);
+    const j = kort.toLowerCase().indexOf(q);
+    return esc(kort.slice(0, j)) + "<mark>" + esc(kort.slice(j, j + q.length)) + "</mark>" +
+           esc(kort.slice(j + q.length, j + q.length + 90));
+  };
+  return `
+    <div class="zoek-tel">${treffers.length} ${treffers.length === 1 ? "bericht" : "berichten"} gevonden</div>
+    ${treffers.map(m => `
+      <button class="zoek-rij" data-zoekhit="${m.id}">
+        <div class="zr-top"><b>${esc(m.sn || (m.type === "sys" ? "Spelleider" : "Onbekend"))}</b><span>${fmtDT(m.at)}</span></div>
+        <div class="zr-tekst">${m.type === "img" ? "📷 Foto" : markeer(m.t || "")}</div>
+      </button>`).join("")}`;
+}
+function springNaarBericht(mid){
+  const msgsEl = $("#msgs");
+  if(!msgsEl) return;
+  const doel = msgsEl.querySelector(`.msg[data-mid="${mid}"]`);
+  if(!doel){ toast("Dat bericht staat niet meer in beeld"); return; }
+  doel.scrollIntoView({behavior:"smooth", block:"center"});
+  doel.classList.remove("highlight");
+  void doel.offsetWidth;
+  doel.classList.add("highlight");
+}
+
 function leesBadge(m, c){
   if(m.type === "sys" || m.type === "veld" || m.type === "verleid" || m.type === "peiling" || m.type === "verleidDoel") return "";
   const {gelezen, totaal} = lezersVan(m, c);
@@ -1217,6 +1374,8 @@ function berichtPreview(m){
   return t.length > 80 ? t.slice(0, 80) + "…" : (t || "Bericht");
 }
 function startReply(m){
+  const c = S.chats.find(x => x.id === S.openChat);
+  if(c && !magChatten(c)) return;
   S.replyTo = {id:m.id, sn:m.sn || "Onbekend", t: berichtPreview(m)};
   haptic(8);
   renderChat();
@@ -1837,8 +1996,11 @@ function render(){
   const oldContent = $("#content");
   const zelfdeTab = S.renderedTab === S.tab;
   const bewaardeScroll = zelfdeTab && oldContent ? oldContent.scrollTop : 0;
+  // opengeklapte blokken onthouden op naam, niet op volgnummer: komt er een
+  // blok bij of valt er eentje weg, dan klapt anders het verkeerde blok open
+  const blokSleutel = d => d.id || (d.querySelector("summary") || {}).textContent || "";
   const openBlokken = zelfdeTab && oldContent
-    ? [...oldContent.querySelectorAll("details")].map(d => d.open) : null;
+    ? new Set([...oldContent.querySelectorAll("details")].filter(d => d.open).map(blokSleutel)) : null;
   // wat er al ingetypt is bewaren: een live update mag je invoer niet wissen
   const bewaardeVelden = [];
   if(zelfdeTab && oldContent){
@@ -1880,7 +2042,7 @@ function render(){
   const contentEl = $("#content");
   view(contentEl);
   if(openBlokken){
-    contentEl.querySelectorAll("details").forEach((d, i) => { if(openBlokken[i]) d.open = true; });
+    contentEl.querySelectorAll("details").forEach(d => { if(openBlokken.has(blokSleutel(d))) d.open = true; });
   }
   bewaardeVelden.forEach(([id, waarde]) => {
     const el = contentEl.querySelector(`#${CSS.escape(id)}`);
@@ -2002,7 +2164,7 @@ async function resetGame(wipePlayers){
     await DB.del("missions/" + mi.id);
   }
   for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","peilingen","verleidDoelen","hunts","huntEntries","images"]) await delAll(col);
-  await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null, dag:1, infCheck:false, hoogtepunt:""});
+  await DB.set("settings/main", {nacht:false, draaiboek:{dag:0, gedaan:[]}, rolesRevealed:false, gameOver:false, winner:null, dag:1, infCheck:false, hoogtepunt:""});
   if(wipePlayers){
     await delAll("missionLib");   // ook de opdrachtenlijst weg bij een volledige wis
     await delAll("players");
@@ -2116,6 +2278,57 @@ function renderSpelersVoorSpeler(el){
     ${verbannenHtml()}`;
 }
 
+/* ---------- draaiboek voor de avondbijeenkomst (alleen spelleider) ----------
+   De volgorde uit de flyer als afvinklijst, zodat je met vijftien mensen om
+   je heen niets overslaat. Per speeldag begint hij weer leeg. */
+const AVOND_STAPPEN = [
+  "Infiltrantenmissie benoemen: gehaald? En hoeveel gelovigen mogen er vannacht gevangen?",
+  "Geheim voorwerp laten zien: gevonden? Wie is er ontsnapt? (1 nacht beschermd)",
+  "Iedereen gaat slapen 😴",
+  "Infiltranten wakker — wie nemen ze gevangen?",
+  "Held wakker (als die er nog is) — redt hij de gevangene?",
+  "Bijbelsmokkelaar wakker — wie krijgt de extra stem?",
+  "Iedereen wakker — verdenkingen uitspreken",
+  "Verdediging, daarna de algehele stemming 🗳️",
+];
+function draaiboekStand(){
+  const db = S.settings.draaiboek || {};
+  const dag = spelDag();
+  return {dag, gedaan: (db.dag === dag && Array.isArray(db.gedaan)) ? db.gedaan : []};
+}
+function draaiboekHtml(){
+  if(!S.settings.rolesRevealed || S.settings.gameOver) return "";
+  const {gedaan} = draaiboekStand();
+  const klaar = gedaan.length === AVOND_STAPPEN.length;
+  return `
+    <details class="card draaiboek" id="draaiboek" ${gedaan.length && !klaar ? "open" : ""}>
+      <summary>🌙 Draaiboek avondbijeenkomst
+        <span class="pill ${klaar ? "pill-green" : gedaan.length ? "pill-gold" : "pill-outline"}">${gedaan.length}/${AVOND_STAPPEN.length}</span>
+      </summary>
+      <div class="dbody">
+        ${AVOND_STAPPEN.map((t, i) => `
+          <button class="db-stap ${gedaan.includes(i) ? "af" : ""}" data-db="${i}">
+            <span class="db-vink">${gedaan.includes(i) ? "✅" : "⬜"}</span>
+            <span class="db-tekst">${i + 1}. ${t}</span>
+          </button>`).join("")}
+        <button class="btn btn-sm btn-ghost btn-block" id="dbReset" style="margin-top:10px">↺ Opnieuw beginnen</button>
+      </div>
+    </details>`;
+}
+function wireDraaiboek(el){
+  const zet = async gedaan => {
+    await DB.set("settings/main", {draaiboek: {dag: spelDag(), gedaan}});
+  };
+  el.querySelectorAll("[data-db]").forEach(b => b.onclick = async () => {
+    const i = Number(b.dataset.db);
+    const {gedaan} = draaiboekStand();
+    haptic(6);
+    await zet(gedaan.includes(i) ? gedaan.filter(x => x !== i) : [...gedaan, i].sort((a, c) => a - c));
+  });
+  const r = el.querySelector("#dbReset");
+  if(r) r.onclick = async () => { haptic(8); await zet([]); toast("Draaiboek leeggemaakt"); };
+}
+
 /* =====================================================================
    VIEW: Spelers (spelleider)
    ===================================================================== */
@@ -2145,6 +2358,15 @@ function renderSpelers(el){
       </div>
       <label class="switch"><input type="checkbox" id="revealToggle" ${S.settings.rolesRevealed ? "checked" : ""}><span class="slider"></span></label>
     </div>
+    ${S.settings.rolesRevealed && !S.settings.gameOver ? `
+    <div class="switch-row${S.settings.nacht ? " nacht-aan" : ""}">
+      <div style="flex:1">
+        <div style="font-weight:700">🌙 Nachtstand</div>
+        <div style="font-size:12px;color:var(--muted)">Zet alle chats op slot — alleen de infiltranten kunnen nog overleggen</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="nachtToggle" ${S.settings.nacht ? "checked" : ""}><span class="slider"></span></label>
+    </div>` : ""}
+    ${draaiboekHtml()}
     ${pinResetHtml()}
     ${missionLibHtml()}
     ${leaderRequestsHtml()}
@@ -2197,6 +2419,17 @@ function renderSpelers(el){
     await DB.set("settings/main", {infCheck: starten});
     toast(starten ? "De infiltranten zijn stilletjes ingelicht 🤫" : "Voorvraag gestopt");
   };
+  const nt = el.querySelector("#nachtToggle");
+  if(nt) nt.onchange = async e => {
+    const aan = e.target.checked;
+    await DB.set("settings/main", {nacht: aan});
+    await sendSystem("all", aan
+      ? "🌙 Nachtstand: de chats zijn dicht tot de spelleider ze weer opent."
+      : "☀️ Goedemorgen — de chats zijn weer open.");
+    haptic(10);
+    toast(aan ? "Nachtstand aan 🌙" : "Nachtstand uit ☀️");
+  };
+  wireDraaiboek(el);
   $("#revealToggle").onchange = e => {
     haptic(12);
     // onthullen sluit meteen de voorvraag: vanaf nu liggen de rollen vast
@@ -2350,7 +2583,7 @@ function missionLibHtml(){
   const lijst = S.missionLib;
   return `
     <div class="card">
-      <details ${lijst.length ? "" : "open"}>
+      <details id="opdrachtenlijst" ${lijst.length ? "" : "open"}>
         <summary style="font-family:'Lilita One';font-size:17px;cursor:pointer">
           📋 Opdrachtenlijst infiltranten <span class="pill pill-outline">${lijst.length}</span>
         </summary>
@@ -3202,6 +3435,7 @@ function newGroupModal(){
 function openChat(chatId){
   S.openChat = chatId;
   S.replyTo = null;
+  S.chatZoek = null;
   S.chatJustOpened = true;
   S.closingChat = false;
   markeerGelezen(chatId);
@@ -3221,7 +3455,7 @@ function openChat(chatId){
 function closeChat(skipAnim){
   const done = () => {
     if(S.unsubMsgs){ S.unsubMsgs(); S.unsubMsgs = null; }
-    S.openChat = null; S.renderedChat = null; S.closingChat = false; S.replyTo = null;
+    S.openChat = null; S.renderedChat = null; S.closingChat = false; S.replyTo = null; S.chatZoek = null;
     render();
   };
   const scr = document.querySelector(".chat-screen");
@@ -3298,22 +3532,33 @@ function renderChat(){
         ${m.type === "img" ? `<img data-img="${m.imgId}" alt="foto">` : ""}
         ${m.t ? `<div>${esc(m.t)}</div>` : ""}
         <div class="mtime">${fmtTime(m.at)}${mine ? leesBadge(m, c) : ""}</div>
+        ${reactieBalkHtml(m)}
       </div>`;
   }).join("");
 
-  const stil = !isL && isMuted(S.me);
+  const nacht = nachtSlot(c);
+  const stil = (!isL && isMuted(S.me)) || nacht;
+  const zoekAan = S.chatZoek !== null;
   const kopHtml = `
         <button class="back" id="chatBack">‹</button>
         <div class="info ${c.type === "dm" ? "" : "tikbaar"}" ${c.type === "dm" ? "" : 'id="chatInfo"'}>
           <div class="cname">${esc(chatTitle(c))}</div>
           <div class="csub">${esc(chatMembersLabel(c))}${c.type === "dm" ? "" : " ›"}</div>
         </div>
+        <button class="icon-btn" id="chatZoekBtn" title="Zoeken in deze chat">🔍</button>
         ${isL && c.type === "group" ? `<button class="icon-btn" id="grpEdit" title="Leden">⚙️</button>` : ""}`;
-  const lijstHtml = S.msgs.length === 0
-    ? (S.msgsLoaded
-        ? `<div class="empty"><div class="big">💬</div>Nog geen berichten.</div>`
-        : `<div class="empty"><div class="big">💬</div>Berichten laden…</div>`)
-    : msgHtml;
+  const zoekHtml = `
+      <div class="chat-zoek">
+        <input id="zoekInput" placeholder="Zoek in deze chat…" autocomplete="off" value="${esc(S.chatZoek || "")}">
+        <button class="icon-btn" id="zoekSluit" title="Sluiten">✕</button>
+      </div>`;
+  const lijstHtml = zoekAan
+    ? zoekResultatenHtml(c)
+    : S.msgs.length === 0
+      ? (S.msgsLoaded
+          ? `<div class="empty"><div class="big">💬</div>Nog geen berichten.</div>`
+          : `<div class="empty"><div class="big">💬</div>Berichten laden…</div>`)
+      : msgHtml;
   const replyHtml = S.replyTo ? `
       <div class="reply-bar">
         <div class="rb-line"></div>
@@ -3323,7 +3568,8 @@ function renderChat(){
         </div>
         <button class="icon-btn" id="replyCancel" title="Annuleren">✕</button>
       </div>` : "";
-  const staartHtml = stil ? `
+  const staartHtml = nacht ? `
+      <div class="muted-note nacht-note">🌙 Nachtstand — de chats zijn dicht tot de spelleider ze weer opent.</div>` : stil ? `
       <div class="muted-note">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "verbannen"} — je kunt meelezen, maar niet meer chatten of stemmen.</div>` : `
       ${replyHtml}
       <div class="composer">
@@ -3342,6 +3588,10 @@ function renderChat(){
 
   if(bijwerken){
     scr.querySelector(".chat-head").innerHTML = kopHtml;
+    // de zoekbalk alleen aan- of uitzetten: opnieuw opbouwen zou je tekst wissen
+    const bestaandeZoek = scr.querySelector(".chat-zoek");
+    if(zoekAan && !bestaandeZoek) scr.querySelector(".chat-head").insertAdjacentHTML("afterend", zoekHtml);
+    if(!zoekAan && bestaandeZoek) bestaandeZoek.remove();
     const lijst = scr.querySelector("#msgs");
     const oudeBalk = scr.querySelector("#opdrachtBalk");
     if(oudeBalk) oudeBalk.remove();
@@ -3356,6 +3606,7 @@ function renderChat(){
     root.innerHTML = `
       <div class="chat-screen ${firstRender ? "animate-in" : ""}">
         <div class="chat-head">${kopHtml}</div>
+        ${zoekAan ? zoekHtml : ""}
         ${opdrachtBalkHtml(c)}
         <div class="msgs" id="msgs">${lijstHtml}</div>
         ${staartHtml}
@@ -3414,6 +3665,17 @@ function renderChat(){
   });
   const rc = $("#replyCancel");
   if(rc) rc.onclick = () => { S.replyTo = null; renderChat(); };
+  msgsEl.querySelectorAll("[data-reactie]").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const i = b.dataset.reactie.lastIndexOf(":");
+    zetReactie(b.dataset.reactie.slice(0, i), b.dataset.reactie.slice(i + 1));
+  });
+  msgsEl.querySelectorAll("[data-zoekhit]").forEach(b => b.onclick = () => {
+    const mid = b.dataset.zoekhit;
+    S.chatZoek = null;
+    renderChat();
+    setTimeout(() => springNaarBericht(mid), 60);
+  });
   msgsEl.querySelectorAll("[data-mission]").forEach(b => b.onclick = () => missionModal(b.dataset.mission));
   msgsEl.querySelectorAll("[data-vote]").forEach(b => b.onclick = () => {
     const [pid, idx] = b.dataset.vote.split(":");
@@ -3529,6 +3791,20 @@ function renderChat(){
       if(a === "veld") veldwerkerModal(c.id, vw.name);
     });
   });
+  const zb = $("#chatZoekBtn");
+  if(zb) zb.onclick = () => {
+    S.chatZoek = S.chatZoek === null ? "" : null;
+    renderChat();
+    const inp = $("#zoekInput");
+    if(inp) inp.focus();
+  };
+  const zi = $("#zoekInput");
+  if(zi){
+    zi.oninput = () => { S.chatZoek = zi.value; renderChat(); };
+    zi.onkeydown = e => { if(e.key === "Escape"){ S.chatZoek = null; renderChat(); } };
+  }
+  const zs = $("#zoekSluit");
+  if(zs) zs.onclick = () => { S.chatZoek = null; renderChat(); };
   const ob = $("#opdrachtBalk"); if(ob) ob.onclick = () => missionModal(ob.dataset.obmid);
   const ci = $("#chatInfo"); if(ci) ci.onclick = () => ledenModal(c);
   const ge = $("#grpEdit"); if(ge) ge.onclick = () => editGroupModal(c);
@@ -4389,7 +4665,7 @@ function renderRol(el){
          <div style="font-size:17px;font-weight:600">${r.emoji} <b style="color:${isInf ? "var(--red)" : "var(--green)"}">${r.naam}</b></div>
          <div style="font-size:12.5px;color:var(--muted);margin-top:3px">Team ${isInf ? "Infiltranten" : "Gelovigen"} · ontsnap je, dan keer je terug als gewone gelovige</div>
        </div>
-       <details class="role-details">
+       <details class="role-details" id="rolbeschrijving">
          <summary>📖 Wat je rol ook alweer inhield</summary>
          <div class="dbody">${rolBlokken}</div>
        </details>`
@@ -4397,7 +4673,7 @@ function renderRol(el){
       ? `<div class="rolecard has-img ${teamCls}"><img src="${r.img}" alt="${r.naam}" class="rolecard-img"
             onerror="this.closest('.rolecard').remove(); var f=document.getElementById('roleFallback'); if(f) f.classList.remove('hidden');"></div>
          ${textCard("hidden")}
-         <details class="role-details">
+         <details class="role-details" id="rolbeschrijving">
            <summary>📖 Volledige rolbeschrijving</summary>
            <div class="dbody">${rolBlokken}</div>
          </details>`
