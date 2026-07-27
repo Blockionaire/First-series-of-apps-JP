@@ -357,6 +357,26 @@
   .chat-head .info{flex:1; min-width:0}
   .chat-head .cname{font-weight:700; font-size:16px}
   .chat-head .csub{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  /* vaste opdrachtbalk: blijft staan hoe ver je ook terugscrolt */
+  .opdrachtbalk{
+    flex:none; display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+    padding:10px 14px; background:rgba(255,59,48,.11);
+    border:none; border-bottom:1px solid var(--line); border-left:3px solid var(--red);
+    color:var(--text); transition:background .15s ease;
+  }
+  .opdrachtbalk.sub{background:rgba(232,178,58,.12); border-left-color:var(--gold)}
+  .opdrachtbalk:active{background:rgba(255,255,255,.09)}
+  .ob-icoon{font-size:19px; flex:none; line-height:1}
+  .ob-body{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px}
+  .ob-label{
+    font-size:11px; letter-spacing:.2px; color:var(--muted); font-weight:700;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .ob-titel{font-size:13.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .opdrachtbalk .pill{flex:none; font-size:10px}
+  .ob-chev{font-size:20px; color:var(--muted); flex:none; line-height:1}
+  body.light .opdrachtbalk:active{background:rgba(0,0,0,.06)}
+
   .msgs{
     flex:1; overflow-y:auto; padding:14px 14px 8px; display:flex; flex-direction:column; gap:4px;
     overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
@@ -1660,7 +1680,16 @@ function enterApp(myId){
   S.syncMe = sync;
   // aftellers bijwerken, en het vragenluik van de hacker vanzelf open/dicht laten gaan
   if(!S.clockTimer) S.clockTimer = setInterval(() => {
-    if(S.openChat) return;
+    if(S.openChat){
+      // alleen de afteller in de opdrachtbalk bijwerken, niet de hele chat opnieuw tekenen
+      const bal = $("#opdrachtBalk");
+      if(bal){
+        const mi = (S.missions || []).find(m => m.id === bal.dataset.obmid);
+        const lab = bal.querySelector(".ob-label");
+        if(mi && mi.deadline && lab) lab.textContent = `Opdracht van vandaag · ⏰ ${countdown(mi.deadline)}`;
+      }
+      return;
+    }
     const hackerTab = S.tab === "rol" && S.me && S.me.role === "hacker";
     if(S.tab === "deadlines" || hackerTab) render();
   }, 30000);
@@ -3229,6 +3258,7 @@ function renderChat(){
         </div>
         ${isL && c.type === "group" ? `<button class="icon-btn" id="grpEdit" title="Leden">⚙️</button>` : ""}
       </div>
+      ${opdrachtBalkHtml(c)}
       <div class="msgs" id="msgs">
         ${S.msgs.length === 0
           ? (S.msgsLoaded
@@ -3405,6 +3435,7 @@ function renderChat(){
       if(a === "veld") veldwerkerModal(c.id, vw.name);
     });
   });
+  const ob = $("#opdrachtBalk"); if(ob) ob.onclick = () => missionModal(ob.dataset.obmid);
   const ci = $("#chatInfo"); if(ci) ci.onclick = () => ledenModal(c);
   const ge = $("#grpEdit"); if(ge) ge.onclick = () => editGroupModal(c);
 }
@@ -3462,6 +3493,31 @@ const MSTATUS = {
   ingediend: {label:"Ingediend",   cls:"sub",  pill:"pill-gold"},
   goedgekeurd:{label:"Goedgekeurd",cls:"done", pill:"pill-green"}
 };
+/* De opdracht die in deze chat nog loopt: open of ingediend, de nieuwste eerst.
+   Goedgekeurde opdrachten zijn klaar en verdwijnen dus uit de balk. */
+function lopendeOpdracht(chatId){
+  return (S.missions || [])
+    .filter(m => m.chatId === chatId && m.status !== "goedgekeurd")
+    .sort((a, b) => (b.at || 0) - (a.at || 0))[0] || null;
+}
+/* Vaste balk onder de chatkop, zodat de opdracht van vandaag in beeld blijft
+   hoe ver je ook terugscrolt in de chat. */
+function opdrachtBalkHtml(c){
+  const mi = lopendeOpdracht(c.id);
+  if(!mi) return "";
+  const st = MSTATUS[mi.status] || MSTATUS.open;
+  const dl = mi.deadline ? countdown(mi.deadline) : "";
+  return `
+    <button class="opdrachtbalk ${st.cls}" id="opdrachtBalk" data-obmid="${mi.id}">
+      <span class="ob-icoon">📋</span>
+      <span class="ob-body">
+        <span class="ob-label">Opdracht van vandaag${dl ? ` · ⏰ ${dl}` : ""}</span>
+        <span class="ob-titel">${esc(mi.title)}</span>
+      </span>
+      <span class="pill ${st.pill}">${st.label}</span>
+      <span class="ob-chev">›</span>
+    </button>`;
+}
 function missionCardHtml(mi){
   const st = MSTATUS[mi.status] || MSTATUS.open;
   const nPhotos = (mi.photoCount || 0);

@@ -22,6 +22,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Deadlines met afteltimer — je ziet alleen de deadlines van de chats waar je in zit
 - Alle spelregels, rollen, dagplanning en de avondbijeenkomst-volgorde uit de flyer
 - Foto's uit de chat bewaren: tik de foto aan en kies 💾 Bewaren
+- Loopt er een opdracht in een chat? Dan staat de **opdracht van vandaag** met status (en afteller) vast bovenaan die chat — hoe ver je ook terugscrolt. Eén tik erop opent de opdracht. Zodra de spelleider hem goedkeurt verdwijnt de balk
 - Peilingen van de spelleider: tik je antwoord aan (soms mag je er meer kiezen), wijzig je stem zolang de peiling open staat en zie bij een niet-anonieme peiling wie wat stemde
 - 🏁 **Eindkaart** na afloop: een poster met alle statistieken en alle rollen, om te bewaren of als opgemaakte tekst in WhatsApp te plakken
 - Donker of licht thema via ⚙️ rechtsboven
