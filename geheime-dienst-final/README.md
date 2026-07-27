@@ -49,6 +49,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Drie missies naar de veldwerker (＋ in zijn privéchat): de echte missie van de dag plus twee afleiders, in willekeurige volgorde
 - Raadsels en dagrapporten versturen of inplannen (worden automatisch gepusht)
 - Nachtkeuze naar de infiltranten (＋ in hun groepschat): verleiden of gevangennemen — de nog actieve infiltranten stemmen, bij gelijkspel hak jij de knoop door
+- 💘 Verleidingsverzoek (＋ in de infiltrantenchat): *wie* halen ze over? De infiltranten stemmen op een naam; zijn ze het unaniem eens dan gaat het verzoek meteen de deur uit, anders bevestig jij het doelwit met 👑. Pas daarna krijgt die speler zelf de vraag — neemt hij aan, dan wordt hij infiltrant en komt hij in de groepschat mét de hele voorgeschiedenis; weigert hij, dan verandert er niets en zien de infiltranten dat hij geweigerd heeft
 - Zoekopdracht met foto van het geheime voorwerp in de gevangenen-chat
 - Spel beëindigen met winnaarsscherm en onthulling van alle rollen
 - Spel resetten na een testronde (⚙️ → Instellingen)

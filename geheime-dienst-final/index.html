@@ -773,6 +773,12 @@
     font-size:inherit; font-family:inherit; text-decoration:underline; cursor:pointer;
   }
 
+  .verleiddoelcard{border-color:var(--red) !important}
+  .verleiddoelcard.done{border-color:var(--green) !important}
+  .verleiddoelcard.afgewezen{border-color:var(--line) !important; box-shadow:none !important; opacity:.9}
+  .verleidvraag{border:1.5px solid var(--red); background:linear-gradient(160deg, rgba(255,59,48,.12), var(--bg2) 60%)}
+  .verleidvraag h3{color:var(--red)}
+
   /* ---------- verleiden of gevangennemen ---------- */
   .verleidcard{border-color:var(--gold) !important}
   .verleidcard.done{border-color:var(--green) !important}
@@ -1057,12 +1063,14 @@ const S = {
   missionLib: [],      // vaste lijst opdrachten om uit te kiezen
   verleidingen: [],    // keuze van de infiltranten: verleiden of gevangennemen
   peilingen: [],       // gewone polls van de spelleider in een chat
+  verleidDoelen: [],   // wie proberen de infiltranten over te halen?
   hunts: [],
   huntEntries: [],
   settings: {rolesRevealed:false},
   tab: "chats",
   viewAnim: null,      // 'from-left' | 'from-right'
   openChat: null,      // chat id
+  renderedChat: null,  // welk chatscherm er nu daadwerkelijk staat
   chatJustOpened: false,
   closingChat: false,
   msgCounts: {},
@@ -1164,7 +1172,7 @@ function lezersVan(m, c){
   return {gelezen, nietGelezen, totaal: deelnemers.length};
 }
 function leesBadge(m, c){
-  if(m.type === "sys" || m.type === "veld" || m.type === "verleid" || m.type === "peiling") return "";
+  if(m.type === "sys" || m.type === "veld" || m.type === "verleid" || m.type === "peiling" || m.type === "verleidDoel") return "";
   const {gelezen, totaal} = lezersVan(m, c);
   if(!totaal) return "";
   const allen = gelezen.length === totaal;
@@ -1200,6 +1208,7 @@ function berichtPreview(m){
   if(m.type === "img") return "📷 Foto";
   if(m.type === "veld") return "🕵️ Drie missies";
   if(m.type === "verleid") return "🙈 Verleiden of gevangennemen?";
+  if(m.type === "verleidDoel") return "💘 Wie verleiden jullie?";
   if(m.type === "peiling"){
     const pe = S.peilingen.find(x => x.id === m.pid);
     return "📊 " + (pe ? pe.vraag : "Peiling");
@@ -1674,7 +1683,7 @@ function enterApp(myId){
     const first = !S.me;
     S.me = p;
     if(first){ S.tab = p.isLeader ? "spelers" : "chats"; render(); }
-    else render();
+    else liveRender();
   };
   sync();
   S.syncMe = sync;
@@ -1691,7 +1700,7 @@ function enterApp(myId){
       return;
     }
     const hackerTab = S.tab === "rol" && S.me && S.me.role === "hacker";
-    if(S.tab === "deadlines" || hackerTab) render();
+    if(S.tab === "deadlines" || hackerTab) liveRender();
   }, 30000);
 }
 
@@ -1778,8 +1787,37 @@ async function sendSystem(chatId, text){
 /* =====================================================================
    RENDER — hoofdframe
    ===================================================================== */
+/* Terwijl iemand in een tekstveld typt mag een live update het scherm niet
+   opnieuw opbouwen: op iOS klapt dan het toetsenbord dicht en ben je je half
+   getypte tekst kwijt. We onthouden de update en doen hem alsnog zodra het
+   veld de focus verliest. In een chatscherm mag het wel: dat werkt zichzelf
+   in stukjes bij en laat het tekstvak met rust. */
+let uitgesteldeRender = false;
+// alleen echte tekstvelden tellen; een schakelaar of datumkiezer mag een
+// update nooit tegenhouden, want daar valt niets aan weg te gooien
+const TEKSTVELD = new Set(["text", "search", "url", "tel", "email", "password", "number"]);
+function typtNu(){
+  const a = document.activeElement;
+  if(!a || a.disabled || a.readOnly) return false;
+  if(a.tagName === "INPUT"){
+    if(!TEKSTVELD.has((a.getAttribute("type") || "text").toLowerCase())) return false;
+  } else if(a.tagName !== "TEXTAREA") return false;
+  const r = document.getElementById("root");
+  return !!r && r.contains(a);
+}
+function liveRender(){
+  if(!S.openChat && typtNu()){ uitgesteldeRender = true; return; }
+  render();
+}
+document.addEventListener("focusout", () => {
+  setTimeout(() => {
+    if(uitgesteldeRender && !typtNu()){ uitgesteldeRender = false; render(); }
+  }, 80);
+}, true);
+
 function render(){
   if(!S.me) return;
+  uitgesteldeRender = false;
   if(S.openChat){ renderChat(); return; }
   if(S.unsubMsgs){ S.unsubMsgs(); S.unsubMsgs = null; }
 
@@ -1801,6 +1839,13 @@ function render(){
   const bewaardeScroll = zelfdeTab && oldContent ? oldContent.scrollTop : 0;
   const openBlokken = zelfdeTab && oldContent
     ? [...oldContent.querySelectorAll("details")].map(d => d.open) : null;
+  // wat er al ingetypt is bewaren: een live update mag je invoer niet wissen
+  const bewaardeVelden = [];
+  if(zelfdeTab && oldContent){
+    oldContent.querySelectorAll("input[id], textarea[id]").forEach(i => {
+      if(i.type !== "checkbox" && i.type !== "radio" && i.value) bewaardeVelden.push([i.id, i.value]);
+    });
+  }
   const anim = S.viewAnim || (zelfdeTab ? "no-anim" : ""); S.viewAnim = null;
   S.renderedTab = S.tab;
 
@@ -1837,6 +1882,10 @@ function render(){
   if(openBlokken){
     contentEl.querySelectorAll("details").forEach((d, i) => { if(openBlokken[i]) d.open = true; });
   }
+  bewaardeVelden.forEach(([id, waarde]) => {
+    const el = contentEl.querySelector(`#${CSS.escape(id)}`);
+    if(el && !el.value) el.value = waarde;
+  });
   if(bewaardeScroll) contentEl.scrollTop = bewaardeScroll;
 }
 
@@ -1952,7 +2001,7 @@ async function resetGame(wipePlayers){
     for(const ph of await DB.getAll(`missions/${mi.id}/photos`)) await DB.del(`missions/${mi.id}/photos/${ph.id}`);
     await DB.del("missions/" + mi.id);
   }
-  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","peilingen","hunts","huntEntries","images"]) await delAll(col);
+  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","peilingen","verleidDoelen","hunts","huntEntries","images"]) await delAll(col);
   await DB.set("settings/main", {rolesRevealed:false, gameOver:false, winner:null, dag:1, infCheck:false, hoogtepunt:""});
   if(wipePlayers){
     await delAll("missionLib");   // ook de opdrachtenlijst weg bij een volledige wis
@@ -3172,7 +3221,7 @@ function openChat(chatId){
 function closeChat(skipAnim){
   const done = () => {
     if(S.unsubMsgs){ S.unsubMsgs(); S.unsubMsgs = null; }
-    S.openChat = null; S.closingChat = false; S.replyTo = null;
+    S.openChat = null; S.renderedChat = null; S.closingChat = false; S.replyTo = null;
     render();
   };
   const scr = document.querySelector(".chat-screen");
@@ -3212,6 +3261,10 @@ function renderChat(){
       const pe = S.peilingen.find(x => x.id === m.pid);
       return pe ? peilingKaartHtml(pe) : "";
     }
+    if(m.type === "verleidDoel"){
+      const vd = S.verleidDoelen.find(x => x.id === m.vdid);
+      return vd ? verleidDoelKaartHtml(vd) : "";
+    }
     if(m.type === "mission"){
       const mi = S.missions.find(x => x.id === m.mid);
       return mi ? missionCardHtml(mi) : "";
@@ -3248,27 +3301,20 @@ function renderChat(){
       </div>`;
   }).join("");
 
-  root.innerHTML = `
-    <div class="chat-screen ${firstRender ? "animate-in" : ""}">
-      <div class="chat-head">
+  const stil = !isL && isMuted(S.me);
+  const kopHtml = `
         <button class="back" id="chatBack">‹</button>
         <div class="info ${c.type === "dm" ? "" : "tikbaar"}" ${c.type === "dm" ? "" : 'id="chatInfo"'}>
           <div class="cname">${esc(chatTitle(c))}</div>
           <div class="csub">${esc(chatMembersLabel(c))}${c.type === "dm" ? "" : " ›"}</div>
         </div>
-        ${isL && c.type === "group" ? `<button class="icon-btn" id="grpEdit" title="Leden">⚙️</button>` : ""}
-      </div>
-      ${opdrachtBalkHtml(c)}
-      <div class="msgs" id="msgs">
-        ${S.msgs.length === 0
-          ? (S.msgsLoaded
-              ? `<div class="empty"><div class="big">💬</div>Nog geen berichten.</div>`
-              : `<div class="empty"><div class="big">💬</div>Berichten laden…</div>`)
-          : msgHtml}
-      </div>
-      ${!isL && isMuted(S.me) ? `
-      <div class="muted-note">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "verbannen"} — je kunt meelezen, maar niet meer chatten of stemmen.</div>` : `
-      ${S.replyTo ? `
+        ${isL && c.type === "group" ? `<button class="icon-btn" id="grpEdit" title="Leden">⚙️</button>` : ""}`;
+  const lijstHtml = S.msgs.length === 0
+    ? (S.msgsLoaded
+        ? `<div class="empty"><div class="big">💬</div>Nog geen berichten.</div>`
+        : `<div class="empty"><div class="big">💬</div>Berichten laden…</div>`)
+    : msgHtml;
+  const replyHtml = S.replyTo ? `
       <div class="reply-bar">
         <div class="rb-line"></div>
         <div class="rb-body">
@@ -3276,19 +3322,50 @@ function renderChat(){
           <div class="rb-text">${esc(S.replyTo.t)}</div>
         </div>
         <button class="icon-btn" id="replyCancel" title="Annuleren">✕</button>
-      </div>` : ""}
+      </div>` : "";
+  const staartHtml = stil ? `
+      <div class="muted-note">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "verbannen"} — je kunt meelezen, maar niet meer chatten of stemmen.</div>` : `
+      ${replyHtml}
       <div class="composer">
         ${isL ? `<button class="icon-btn" id="btnPlus" title="Meer acties">＋</button>` : ""}
         <button class="icon-btn" id="btnPhoto" title="Foto sturen">📷</button>
         <textarea id="composerText" rows="1" placeholder="Bericht…"></textarea>
         <button class="icon-btn send" id="btnSend">➤</button>
-      </div>`}
-    </div>`;
-  S.chatJustOpened = false;
+      </div>`;
 
-  const scr = root.querySelector(".chat-screen");
-  // swipe-terug niet starten op een bericht: daar betekent naar rechts vegen "reageren"
-  enableSwipeBack(scr, () => closeChat(true), ".msg[data-mid]");
+  // Staat hetzelfde chatscherm al op het scherm? Dan alleen de gewijzigde stukken
+  // vervangen. Het tekstvak opnieuw opbouwen zou op iOS het toetsenbord sluiten
+  // en je half getypte bericht weggooien.
+  let scr = root.querySelector(".chat-screen");
+  const bijwerken = scr && !firstRender && S.renderedChat === c.id
+    && !!scr.querySelector(".composer") === !stil;
+
+  if(bijwerken){
+    scr.querySelector(".chat-head").innerHTML = kopHtml;
+    const lijst = scr.querySelector("#msgs");
+    const oudeBalk = scr.querySelector("#opdrachtBalk");
+    if(oudeBalk) oudeBalk.remove();
+    const balk = opdrachtBalkHtml(c);
+    if(balk) lijst.insertAdjacentHTML("beforebegin", balk);
+    lijst.innerHTML = lijstHtml;
+    const oudeReply = scr.querySelector(".reply-bar");
+    if(oudeReply) oudeReply.remove();
+    const comp = scr.querySelector(".composer");
+    if(replyHtml && comp) comp.insertAdjacentHTML("beforebegin", replyHtml);
+  } else {
+    root.innerHTML = `
+      <div class="chat-screen ${firstRender ? "animate-in" : ""}">
+        <div class="chat-head">${kopHtml}</div>
+        ${opdrachtBalkHtml(c)}
+        <div class="msgs" id="msgs">${lijstHtml}</div>
+        ${staartHtml}
+      </div>`;
+    scr = root.querySelector(".chat-screen");
+    // swipe-terug niet starten op een bericht: daar betekent naar rechts vegen "reageren"
+    enableSwipeBack(scr, () => closeChat(true), ".msg[data-mid]");
+  }
+  S.chatJustOpened = false;
+  S.renderedChat = c.id;
 
   // nieuw-bericht-animatie (alleen het laatste bericht, niet bij eerste render)
   const msgsEl = $("#msgs");
@@ -3361,6 +3438,17 @@ function renderChat(){
       haptic(12);
     });
   });
+  msgsEl.querySelectorAll("[data-vdoel]").forEach(b => b.onclick = () => {
+    const [vdid, pid] = b.dataset.vdoel.split(":");
+    stemVerleidDoel(vdid, pid);
+  });
+  msgsEl.querySelectorAll("[data-vdoel-kies]").forEach(b => b.onclick = () => {
+    const [vdid, pid] = b.dataset.vdoelKies.split(":");
+    const sp = S.players.find(x => x.id === pid);
+    confirmModal(`Het verleidingsverzoek naar <b>${esc(sp ? sp.name : "deze speler")}</b> sturen?`, async () => {
+      await bevestigVerleidDoel(vdid, pid); haptic(12);
+    });
+  });
   msgsEl.querySelectorAll("[data-verleid-kies]").forEach(b => b.onclick = () => {
     const [vid, keuze] = b.dataset.verleidKies.split(":");
     confirmModal(`Vannacht wordt er <b>${keuze === "verleiden" ? "verleid" : "gevangengenomen"}</b>?`, async () => {
@@ -3380,9 +3468,13 @@ function renderChat(){
   $("#chatBack").onclick = () => closeChat();
   const ta = $("#composerText");
   if(ta){
-    ta.value = draft;
-    ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 110) + "px";
-    if(hadFocus){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    // bij een bijwerking is dit hetzelfde tekstvak: niets aanraken, anders
+    // springt de cursor naar het eind of klapt het toetsenbord dicht
+    if(!bijwerken){
+      ta.value = draft;
+      ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 110) + "px";
+      if(hadFocus){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+    }
     ta.oninput = () => { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 110) + "px"; };
     const doSend = async () => {
       const t = ta.value.trim(); if(!t) return;
@@ -3420,7 +3512,8 @@ function renderChat(){
     <button class="btn btn-ghost btn-block" data-actie="poll" style="margin-bottom:10px;justify-content:flex-start">🗳️ &nbsp;Missielijst met stemming</button>` : ""}
     <button class="btn btn-ghost btn-block" data-actie="peiling" style="margin-bottom:10px;justify-content:flex-start">📊 &nbsp;Peiling (gewone poll)</button>
     ${c.type === "all" ? `<button class="btn btn-ghost btn-block" data-actie="riddle" style="margin-bottom:10px;justify-content:flex-start">🛡️ &nbsp;Raadsel om het schild</button>` : ""}
-    ${c.id === "infiltranten" ? `<button class="btn btn-ghost btn-block" data-actie="verleid" style="margin-bottom:10px;justify-content:flex-start">🙈 &nbsp;Verleiden of gevangennemen?</button>` : ""}
+    ${c.id === "infiltranten" ? `<button class="btn btn-ghost btn-block" data-actie="verleid" style="margin-bottom:10px;justify-content:flex-start">🙈 &nbsp;Verleiden of gevangennemen?</button>
+    <button class="btn btn-ghost btn-block" data-actie="verleiddoel" style="margin-bottom:10px;justify-content:flex-start">💘 &nbsp;Wie verleiden jullie?</button>` : ""}
     ${c.id === "gevangenen" ? `<button class="btn btn-ghost btn-block" data-actie="hunt" style="margin-bottom:10px;justify-content:flex-start">🔎 &nbsp;Zoekopdracht geheim voorwerp</button>` : ""}
   `, m => {
     m.querySelectorAll("[data-actie]").forEach(b => b.onclick = () => {
@@ -3431,6 +3524,7 @@ function renderChat(){
       if(a === "riddle") newRiddleModal();
       if(a === "hunt") newHuntModal(c.id);
       if(a === "verleid") newVerleidModal(c.id);
+      if(a === "verleiddoel") newVerleidDoelModal(c.id);
       if(a === "peiling") newPeilingModal(c.id);
       if(a === "veld") veldwerkerModal(c.id, vw.name);
     });
@@ -3897,6 +3991,162 @@ function newVerleidModal(chatId){
   });
 }
 
+/* =====================================================================
+   VERLEIDINGSVERZOEK: wie halen de infiltranten over om over te lopen?
+   De infiltranten stemmen op een doelwit, de spelleider (of een unanieme
+   uitslag) bevestigt, en dan pas krijgt het doelwit zelf de vraag.
+   ===================================================================== */
+// wie kun je verleiden? iedereen die nog echt meespeelt en nog geen infiltrant is
+function verleidDoelKandidaten(){
+  return S.players
+    .filter(p => !p.isLeader && !isInfiltrant(p) && (p.status || "actief") === "actief")
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+}
+function verleidDoelKaartHtml(v){
+  const c = S.chats.find(x => x.id === v.chatId);
+  if(!c) return "";
+  const stemmers = verleidStemmers(c);
+  const stemmen = pollVotes(v);
+  const mijn = stemmen[S.me.id];
+  const isL = S.me.isLeader;
+  const stemfase = v.status === "stemmen";
+  const magStemmen = stemfase && !isL && stemmers.includes(S.me.id) && !S.settings.gameOver;
+  const gestemd = stemmers.filter(id => stemmen[id] != null).length;
+  const tel = id => stemmers.filter(x => stemmen[x] === id).length;
+  const kandidaten = verleidDoelKandidaten();
+  const maxN = Math.max(1, ...kandidaten.map(p => tel(p.id)));
+  const doel = S.players.find(p => p.id === v.doelPid);
+  const doelNaam = esc(v.doelPn || (doel ? doel.name : "die speler"));
+
+  const kop = {
+    stemmen:    {pil:"pill-gold",  tekst:"Stemmen"},
+    gevraagd:   {pil:"pill-gold",  tekst:"Verzoek verstuurd"},
+    aangenomen: {pil:"pill-green", tekst:"Aangenomen"},
+    geweigerd:  {pil:"pill-red",   tekst:"Geweigerd"},
+  }[v.status] || {pil:"pill-gold", tekst:"Stemmen"};
+
+  const staart =
+    v.status === "gevraagd"   ? `⏳ Het verzoek ligt bij <b>${doelNaam}</b> — nog geen antwoord.`
+  : v.status === "aangenomen" ? `🕵️ <b>${doelNaam}</b> heeft de verleiding aangenomen en is nu infiltrant.`
+  : v.status === "geweigerd"  ? `❌ <b>${doelNaam}</b> heeft de verleiding geweigerd. Er verandert niets.`
+  : `${gestemd}/${stemmers.length} gestemd${magStemmen ? (mijn == null ? " · tik op een naam" : " · je kunt je stem nog wijzigen") : ""}`;
+
+  return `
+    <div class="mission-card verleiddoelcard ${v.status === "aangenomen" ? "done" : ""} ${v.status === "geweigerd" ? "afgewezen" : ""}">
+      <div class="mc-top">
+        <h4>💘 Wie verleiden jullie?</h4>
+        <span class="pill ${kop.pil}">${kop.tekst}</span>
+      </div>
+      <p class="mc-desc">Iedere infiltrant die nog meedoet kiest één speler. Pas als het doelwit bevestigd is, krijgt diegene zelf de vraag.</p>
+      ${stemfase ? kandidaten.map(p => {
+        const n = tel(p.id);
+        const gekozen = mijn === p.id;
+        return `
+        <button class="peil-optie ${gekozen ? "mijn" : ""}" data-vdoel="${v.id}:${p.id}" ${magStemmen ? "" : "disabled"}>
+          <span class="pe-balk" style="width:${gestemd ? Math.round(n / maxN * 100) : 0}%"></span>
+          <span class="pe-vink">${gekozen ? "◉" : "◯"}</span>
+          <span class="pe-tekst">${esc(p.name)}</span>
+          <span class="pe-tel">${n}</span>
+        </button>
+        ${isL && n > 0 ? `<button class="btn btn-sm btn-ghost" data-vdoel-kies="${v.id}:${p.id}" style="margin:-3px 0 8px">👑 ${esc(p.name)} verleiden</button>` : ""}`;
+      }).join("") : ""}
+      ${stemfase && kandidaten.length === 0 ? `<div class="empty" style="padding:14px">Er is niemand meer om te verleiden.</div>` : ""}
+      <div class="mc-meta">${staart}</div>
+    </div>`;
+}
+async function stemVerleidDoel(vdid, targetId){
+  const v = S.verleidDoelen.find(x => x.id === vdid);
+  if(!v || v.status !== "stemmen") return;
+  haptic(6);
+  const huidig = pollVotes(v)[S.me.id];
+  await DB.set("verleidDoelen/" + vdid, {["v_" + S.me.id]: huidig === targetId ? null : targetId});
+  // iedereen het eens? dan hoeft de spelleider er niet aan te pas te komen
+  const vers = await DB.getDoc("verleidDoelen/" + vdid);
+  if(!vers || vers.status !== "stemmen") return;
+  const c = S.chats.find(x => x.id === vers.chatId);
+  if(!c) return;
+  const stemmers = verleidStemmers(c);
+  const stemmen = pollVotes(vers);
+  if(!stemmers.length || !stemmers.every(id => stemmen[id] != null)) return;
+  const keuzes = [...new Set(stemmers.map(id => stemmen[id]))];
+  if(keuzes.length === 1) await bevestigVerleidDoel(vdid, keuzes[0]);
+}
+async function bevestigVerleidDoel(vdid, targetId){
+  const v = await DB.getDoc("verleidDoelen/" + vdid);
+  if(!v || v.status !== "stemmen") return;
+  const doel = S.players.find(p => p.id === targetId);
+  if(!doel) return;
+  await DB.set("verleidDoelen/" + vdid, {
+    status:"gevraagd", doelPid: targetId, doelPn: doel.name, bevestigdAt: now(),
+  });
+  await sendSystem(v.chatId, `💘 Het verleidingsverzoek is naar ${doel.name} gestuurd. Nu is het afwachten.`);
+  // een privéberichtje zodat diegene een melding krijgt, zonder te verklappen wat er speelt
+  await DB.set("chats/dm_" + targetId, {type:"dm", dmFor: targetId, at: now()});
+  await sendSystem("dm_" + targetId, "💘 Er ligt een geheim verzoek voor je klaar. Kijk bij het tabblad 'Mijn rol'.");
+}
+async function antwoordVerleiding(vdid, ja){
+  const v = S.verleidDoelen.find(x => x.id === vdid);
+  if(!v || v.status !== "gevraagd" || v.doelPid !== S.me.id) return;
+  if(!ja){
+    await DB.set("verleidDoelen/" + vdid, {status:"geweigerd", antwoordAt: now()});
+    await sendSystem(v.chatId, `❌ ${S.me.name} heeft de verleiding geweigerd. Er verandert niets.`);
+    haptic(10);
+    toast("Geweigerd — er verandert niets aan je rol");
+    return;
+  }
+  await DB.set("players/" + S.me.id, {role:"infiltrant", verleidAt: now()});
+  // meteen toevoegen aan de groepschat; de hele geschiedenis staat er dan open
+  const chat = S.chats.find(c => c.id === "infiltranten");
+  const leden = [...new Set([...((chat && chat.members) || []), S.me.id])];
+  await DB.set("chats/infiltranten", {name:"Infiltranten", type:"group", members: leden, at: chat ? (chat.at || now()) : now()});
+  await DB.set("verleidDoelen/" + vdid, {status:"aangenomen", antwoordAt: now()});
+  await sendSystem(v.chatId, `🕵️ ${S.me.name} heeft de verleiding aangenomen en is vanaf nu infiltrant!`);
+  haptic(15);
+  toast("Je bent nu infiltrant 🕵️ — kijk in de infiltrantenchat");
+}
+function newVerleidDoelModal(chatId){
+  const c = S.chats.find(x => x.id === chatId);
+  const n = c ? verleidStemmers(c).length : 0;
+  const k = verleidDoelKandidaten().length;
+  modal(`
+    <h3>💘 Wie verleiden jullie?</h3>
+    <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px">
+      De ${n} infiltrant${n === 1 ? "" : "en"} die nog meedoen kiezen samen één van de ${k} overgebleven
+      spelers. Zijn ze het unaniem eens, dan gaat het verzoek er meteen uit; anders bevestig jij het doelwit
+      met 👑. Pas daarna krijgt diegene zelf de vraag of hij overloopt.
+    </p>
+    ${k === 0 ? `<div class="empty" style="padding:16px;margin-bottom:12px">Er is niemand meer om te verleiden.</div>` : ""}
+    <button class="btn btn-green btn-block" id="vdSend" ${k === 0 ? "disabled" : ""}>💘 Verzoek versturen</button>
+  `, m => {
+    m.querySelector("#vdSend").onclick = async () => {
+      m.querySelector("#vdSend").disabled = true;
+      const vdid = await DB.add("verleidDoelen", {chatId, status:"stemmen", day: todayKey(), at: now()});
+      await DB.add(`chats/${chatId}/messages`, {type:"verleidDoel", vdid, at: now()});
+      await DB.set("chats/" + chatId, {lastAt: now(), lastSid: S.me.id, lastText:"💘 Wie verleiden jullie?"});
+      haptic(12);
+      closeModal();
+    };
+  });
+}
+/* de vraag zoals het doelwit hem op zijn eigen roltabblad ziet */
+function verleidVerzoekHtml(){
+  const v = S.verleidDoelen.find(x => x.doelPid === S.me.id && x.status === "gevraagd");
+  if(!v || S.settings.gameOver || isMuted(S.me)) return "";
+  return `
+    <div class="card verleidvraag">
+      <h3>💘 Je bent verleid</h3>
+      <p style="font-size:13.5px;color:#d6d6dc;line-height:1.55;margin-bottom:12px">
+        De infiltranten hebben jou uitgekozen. Loop je over? Dan word je vanaf nu <b style="color:var(--red)">🕵️ Infiltrant</b>
+        en kom je in hun groepschat, inclusief alles wat daar al besproken is. Weiger je, dan verandert er
+        niets en blijft je rol geheim.
+      </p>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-red" style="flex:1" data-vd-ja="${v.id}">🕵️ Ja, ik loop over</button>
+        <button class="btn btn-ghost" style="flex:1" data-vd-nee="${v.id}">Nee, bedankt</button>
+      </div>
+    </div>`;
+}
+
 /* ---------- drie missies voor de veldwerker ---------- */
 // de missie die vandaag uit de stemming kwam, als voorzet voor "de echte"
 function missieVanVandaag(){
@@ -4158,6 +4408,7 @@ function renderRol(el){
     <div class="card" style="text-align:center;font-size:13px;color:var(--muted)">
       🤫 <b>Houd je rol geheim!</b> Niemand mag zijn rol onthullen (spelregel 2).
     </div>
+    ${verleidVerzoekHtml()}
     ${takeoverHtml()}
     ${roleRequestHtml()}
     ${p.role === "hacker" && !isMuted(p) && p.status !== "uit" ? hackerSectionHtml() : ""}`;
@@ -4175,6 +4426,18 @@ function wireRolActies(el){
     haptic(10);
     toast("Doorgegeven aan de spelleider ✅");
   };
+  el.querySelectorAll("[data-vd-ja]").forEach(b => b.onclick = () => {
+    confirmModal("Weet je het zeker? Je wordt dan <b>infiltrant</b> en de infiltranten zien dat jij bent overgelopen.", async () => {
+      b.disabled = true;
+      await antwoordVerleiding(b.dataset.vdJa, true);
+    });
+  });
+  el.querySelectorAll("[data-vd-nee]").forEach(b => b.onclick = () => {
+    confirmModal("De verleiding weigeren? Er verandert dan niets aan je rol.", async () => {
+      b.disabled = true;
+      await antwoordVerleiding(b.dataset.vdNee, false);
+    });
+  });
   el.querySelectorAll("[data-take-yes]").forEach(b => b.onclick = () => {
     const t = S.takeovers.find(x => x.id === b.dataset.takeYes);
     if(!t) return;
@@ -4249,7 +4512,7 @@ async function verzamelStats(){
     let msgs = [];
     try{ msgs = await DB.getAll(`chats/${c.id}/messages`); }catch(e){ msgs = []; }
     for(const m of msgs){
-      if(m.type === "sys" || m.type === "poll" || m.type === "mission" || m.type === "veld" || m.type === "verleid" || m.type === "peiling") continue;
+      if(m.type === "sys" || m.type === "poll" || m.type === "mission" || m.type === "veld" || m.type === "verleid" || m.type === "peiling" || m.type === "verleidDoel") continue;
       berichten++;
       if(m.type === "img") fotos++;
       if(m.sid) perSpeler[m.sid] = (perSpeler[m.sid] || 0) + 1;
@@ -4600,6 +4863,7 @@ function wireHackerSection(el){
     const todays = S.hackerQs.filter(x => x.pid === S.me.id && x.day === todayKey());
     if(todays.length >= 2){ toast("Je hebt je 2 vragen voor vandaag al gesteld"); return; }
     btn.disabled = true;
+    inp.value = "";   // leeg, anders zet de herstelregel je vraag zo weer terug
     await DB.add("hackerQuestions", {pid:S.me.id, pn:S.me.name, q, answer:null, day: todayKey(), at: now()});
     await DB.set("chats/dm_" + S.me.id, {type:"dm", dmFor:S.me.id, at: now()});
     await sendSystem("dm_" + S.me.id, `💻 Hackervraag: "${q}"`);
@@ -4904,47 +5168,51 @@ async function boot(){
 
   // live data
   DB.listen("players", docs => { S.players = docs; if(S.syncMe) S.syncMe(); else maybeAutoLogin(); });
-  DB.listen("chats", docs => { S.chats = docs; if(S.me && !S.openChat) render(); });
-  DB.listen("deadlines", docs => { S.deadlines = docs; if(S.me && !S.openChat && S.tab === "deadlines") render(); });
+  DB.listen("chats", docs => { S.chats = docs; if(S.me && !S.openChat) liveRender(); });
+  DB.listen("deadlines", docs => { S.deadlines = docs; if(S.me && !S.openChat && S.tab === "deadlines") liveRender(); });
   DB.listen("missions", docs => { S.missions = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("missionPolls", docs => { S.polls = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("verleidingen", docs => { S.verleidingen = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("peilingen", docs => { S.peilingen = docs; if(S.me && S.openChat) renderChat(); });
+  DB.listen("verleidDoelen", docs => {
+    S.verleidDoelen = docs;
+    if(S.me){ if(S.openChat) renderChat(); else if(S.tab === "rol" || S.tab === "spelers") liveRender(); }
+  });
   DB.listen("missionLib", docs => {
     S.missionLib = docs.sort((a,b) => (a.at||0)-(b.at||0));
-    if(S.me && S.me.isLeader && !S.openChat && S.tab === "spelers") render();
+    if(S.me && S.me.isLeader && !S.openChat && S.tab === "spelers") liveRender();
   });
-  DB.listen("hackerQuestions", docs => { S.hackerQs = docs; if(S.me && !S.openChat && (S.tab === "rol" || S.tab === "spelers")) render(); });
+  DB.listen("hackerQuestions", docs => { S.hackerQs = docs; if(S.me && !S.openChat && (S.tab === "rol" || S.tab === "spelers")) liveRender(); });
   DB.listen("reports", docs => {
     S.reports = docs;
-    if(S.me){ if(S.openChat) renderChat(); else if(S.tab === "spelers") render(); }
+    if(S.me){ if(S.openChat) renderChat(); else if(S.tab === "spelers") liveRender(); }
     publishDueReports();
   });
   DB.listen("riddles", docs => {
     S.riddles = docs;
-    if(S.me){ if(S.openChat) renderChat(); else if(S.tab === "spelers") render(); }
+    if(S.me){ if(S.openChat) renderChat(); else if(S.tab === "spelers") liveRender(); }
     publishDueRiddles();
   });
   DB.listen("riddleAttempts", docs => { S.riddleAttempts = docs; });
   DB.listen("roleRequests", docs => {
     S.roleRequests = docs;
-    if(S.me && !S.openChat && (S.tab === "spelers" || S.tab === "rol")) render();
+    if(S.me && !S.openChat && (S.tab === "spelers" || S.tab === "rol")) liveRender();
   });
   DB.listen("takeovers", docs => {
     S.takeovers = docs;
-    if(S.me && !S.openChat && (S.tab === "spelers" || S.tab === "rol")) render();
+    if(S.me && !S.openChat && (S.tab === "spelers" || S.tab === "rol")) liveRender();
   });
   DB.listen("pinResets", docs => {
     S.pinResets = docs;
     // het wachtscherm hangt buiten de gewone weergave, dus die roept zichzelf aan
     if(S.onPinResets) S.onPinResets();
-    else if(S.me && !S.openChat && S.tab === "spelers") render();
+    else if(S.me && !S.openChat && S.tab === "spelers") liveRender();
   });
   DB.listen("hunts", docs => { S.hunts = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("huntEntries", docs => { S.huntEntries = docs; if(S.onHuntEntries) S.onHuntEntries(); });
   // controleer elke halve minuut of een ingepland dagrapport of raadsel gepusht moet worden
   setInterval(() => { publishDueReports(); publishDueRiddles(); }, 30000);
-  DB.listenDoc("settings/main", doc => { S.settings = doc || {rolesRevealed:false}; if(S.me && !S.openChat) render(); });
+  DB.listenDoc("settings/main", doc => { S.settings = doc || {rolesRevealed:false}; if(S.me && !S.openChat) liveRender(); });
 
   // als players-collectie leeg blijft, toch join tonen
   setTimeout(() => { if(!S.me && !attempted) maybeAutoLogin(); }, 1500);
