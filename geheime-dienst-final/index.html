@@ -799,10 +799,10 @@
   .reactie.mijn{border-color:var(--green); background:rgba(98,197,84,.20)}
   .msg.mine .reactie{background:rgba(0,0,0,.18)}
   body.light .reactie{background:rgba(0,0,0,.07)}
-  .reactie-kies{display:flex; flex-wrap:wrap; gap:10px; justify-content:center}
+  .reactie-kies{display:flex; flex-wrap:wrap; gap:9px; justify-content:center}
   .rk{
-    width:54px; height:54px; border-radius:50%; background:var(--bg3);
-    border:1.5px solid transparent; font-size:25px; line-height:1;
+    width:48px; height:48px; border-radius:50%; background:var(--bg3);
+    border:1.5px solid transparent; font-size:23px; line-height:1;
     display:flex; align-items:center; justify-content:center;
     transition:transform .13s var(--ease), border-color .15s ease;
   }
@@ -1272,7 +1272,7 @@ function lezersVan(m, c){
    Iedere reactie staat als los veld r_<spelerId> op het bericht, net als de
    stemmen bij een peiling. Zo hoeft er nooit een heel bericht overschreven
    te worden en kunnen twee mensen tegelijk reageren. */
-const REACTIES = ["👍", "😂", "😮", "❤️", "🤔", "🕵️", "🔥", "💀"];
+const REACTIES = ["👍", "😂", "😮", "❤️", "🤔", "🕵️", "🔥", "🫨", "🧐", "🤨", "🤫"];
 function berichtReacties(m){
   const per = {};
   Object.keys(m).forEach(k => {
