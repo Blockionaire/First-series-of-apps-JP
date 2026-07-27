@@ -1,0 +1,11 @@
+{
+  "name": "geheime-dienst-meldingen",
+  "description": "Stuurt anonieme pushmeldingen voor de Geheime Dienst-app",
+  "main": "index.js",
+  "private": true,
+  "engines": { "node": "20" },
+  "dependencies": {
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.0"
+  }
+}

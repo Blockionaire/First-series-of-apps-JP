@@ -24,7 +24,8 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Foto's uit de chat bewaren: tik de foto aan en kies 💾 Bewaren
 - Reageren met een emoji: houd een bericht ingedrukt en kies er een. Tik op een reactie om die van jezelf weer weg te halen
 - 🔍 Zoeken in een chat: tik het vergrootglas bovenin aan, typ waar je naar zoekt en spring met één tik naar dat bericht
-- 🌙 Nachtstand: zet de spelleider die aan, dan liggen alle chats stil tot de ochtend — alleen de infiltranten kunnen dan nog overleggen
+- 🌙 Nachtstand: zet de spelleider die aan, dan krijg je in elke chat een groot nachtscherm — *De nacht is van de infiltranten, slaap lekker!* Alleen de infiltranten kunnen dan nog overleggen
+- 🔔 **Meldingen** (⚙️ → *Meldingen aanzetten*): een seintje bij een nieuw bericht, een verzoek of een antwoord van de spelleider. De melding is **altijd anoniem** — geen naam, geen inhoud, niet eens in welke chat het staat, dus meekijkers worden er niets wijzer van
 - Loopt er een opdracht in een chat? Dan staat de **opdracht van vandaag** met status (en afteller) vast bovenaan die chat — hoe ver je ook terugscrolt. Eén tik erop opent de opdracht. Zodra de spelleider hem goedkeurt verdwijnt de balk
 - Peilingen van de spelleider: tik je antwoord aan (soms mag je er meer kiezen), wijzig je stem zolang de peiling open staat en zie bij een niet-anonieme peiling wie wat stemde
 - 🏁 **Eindkaart** na afloop: een poster met alle statistieken en alle rollen, om te bewaren of als opgemaakte tekst in WhatsApp te plakken
@@ -79,6 +80,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 ## Technisch
 
 - De app is één losse webpagina (`index.html`) zonder installatie of build-stap
+- `sw.js` is een bewust minimale service worker: hij bewaart de app **niet** in een cache, zodat iedereen bij het openen altijd de nieuwste versie krijgt. Hij bestaat alleen om meldingen te kunnen tonen
 - **Hosting:** GitHub Pages, direct vanuit deze repository — elke wijziging die naar de branch wordt gepusht staat binnen een minuut live
 - **Database:** Firebase Firestore (gratis Spark-plan), geconfigureerd in `firebase-config.js`
 - Foto's worden in de browser verkleind (max ~1280px) en in de database opgeslagen, dus aparte foto-opslag is niet nodig
@@ -87,6 +89,24 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 ### Instellingen aanpassen
 
 Alles wat je zou willen wijzigen staat bovenin `firebase-config.js`: de pincode van de spelleider, de spelnaam en de ondertitel.
+
+### Pushmeldingen aanzetten
+
+Meldingen werken in twee stappen. De eerste laag werkt meteen: zet ze aan via ⚙️ → *Meldingen aanzetten* en je krijgt een seintje zolang de app nog draait (open of net weggeklikt). Op een iPhone moet de app daarvoor wel via de deelknop op je **beginscherm** staan en daarvandaan geopend worden — Apple staat meldingen anders niet toe.
+
+Wil je ook meldingen als de app helemaal dicht is, dan is er eenmalig wat werk nodig:
+
+1. **Firebase Console → Project settings → Cloud Messaging → Web Push certificates** → *Generate key pair*. Plak die sleutel in `firebase-config.js` bij `vapidKey`.
+2. Zet het project op het **Blaze-abonnement**. Cloud Functions draaien niet op het gratis Spark-plan; bij een groep van deze omvang blijf je ruim binnen de gratis limieten, maar een creditcard koppelen is verplicht.
+3. Rol de functies uit:
+   ```bash
+   cd geheime-dienst-final/functions && npm install
+   firebase deploy --only functions
+   ```
+
+Daarna sturen de functies in `functions/index.js` automatisch een melding bij een nieuw bericht, een verzoek, een antwoord op een hackervraag of een nieuwe deadline. Er gaat nooit inhoud mee over de lijn: de functie stuurt alleen wélk soort melding het is, en de app maakt daar zelf een anonieme zin van.
+
+Zonder die stappen blijft alles gewoon werken — je mist alleen de meldingen terwijl de app dicht is.
 
 ### Beveiliging
 

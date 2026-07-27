@@ -764,6 +764,30 @@
   /* ---------- nachtstand ---------- */
   .switch-row.nacht-aan{border-color:var(--gold); background:rgba(232,178,58,.10)}
   .nacht-note{color:var(--gold)}
+  .nacht-scherm{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:30px 26px; margin:-14px -14px -8px; gap:2px;
+    background:
+      radial-gradient(560px 300px at 50% 22%, rgba(232,178,58,.13), transparent 68%),
+      linear-gradient(175deg, #10121c 0%, #0b0c12 60%, #08080c 100%);
+  }
+  .ns-sterren{font-size:13px; color:rgba(232,178,58,.45); letter-spacing:3px; margin-bottom:16px}
+  .ns-maan{font-size:74px; line-height:1; margin-bottom:16px; animation:nsZweef 5s ease-in-out infinite}
+  @keyframes nsZweef{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+  .nacht-scherm h2{
+    font-family:'Lilita One'; font-size:25px; line-height:1.2; color:var(--gold);
+    letter-spacing:.4px; max-width:16ch;
+  }
+  .ns-groet{font-size:16px; color:#e6e4dd; margin-top:8px; font-weight:600}
+  .ns-sub{
+    font-size:12.5px; color:#8b8a96; line-height:1.5; margin-top:20px; max-width:30ch;
+    border-top:1px solid rgba(255,255,255,.07); padding-top:16px;
+  }
+  body.light .nacht-scherm{
+    background:
+      radial-gradient(560px 300px at 50% 22%, rgba(232,178,58,.16), transparent 68%),
+      linear-gradient(175deg, #1c1f2e 0%, #14161f 60%, #101118 100%);
+  }
 
   /* ---------- reacties op berichten ---------- */
   .reacties{display:flex; flex-wrap:wrap; gap:4px; margin:6px 0 -2px}
@@ -1290,6 +1314,139 @@ function reactieKiezer(m){
       await zetReactie(m.id, b.dataset.rk);
     });
   });
+}
+
+/* =====================================================================
+   MELDINGEN
+   =====================================================================
+   Twee lagen, zodat het ook werkt zonder extra Firebase-configuratie:
+
+   1. Zolang de app nog draait (open of net weggeklikt) merkt de app zelf
+      dat er iets nieuws is en toont hij een melding.
+   2. Staat er een vapidKey in firebase-config.js én is de Cloud Function
+      uitgerold, dan komen meldingen ook binnen als de app helemaal dicht
+      is. Zie README.md.
+
+   De tekst is altijd anoniem: nooit een naam, nooit de inhoud van een
+   bericht en nooit in welke chat het staat. Iemand die met je meekijkt
+   mag er niets uit kunnen opmaken. */
+const MELDING_TITEL = "🕵️ Geheime Dienst";
+const MELDING_TEKST = {
+  bericht:  "Je hebt een nieuw bericht",
+  verzoek:  "Er ligt een verzoek voor je klaar",
+  rol:      "De spelleider heeft iets voor je",
+  deadline: "Er staat een nieuwe deadline",
+};
+const meldingTekst = soort => MELDING_TEKST[soort] || "Er is iets nieuws in de app";
+const meldingenAan = () => typeof Notification !== "undefined" && Notification.permission === "granted";
+let swReg = null;
+// staat de app op het beginscherm? op iOS is dat een harde eis voor meldingen
+const alsAppGeopend = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function meldingStatusTekst(){
+  if(typeof Notification === "undefined") return "Deze browser kan geen meldingen tonen.";
+  if(Notification.permission === "denied")
+    return "Meldingen staan geblokkeerd. Zet ze weer aan bij de instellingen van je telefoon.";
+  if(Notification.permission === "granted")
+    return "Meldingen staan aan. Je krijgt een seintje bij een nieuw bericht, een verzoek of een antwoord van de spelleider — <b>altijd zonder namen of inhoud</b>, zodat meekijkers niets wijzer worden.";
+  if(isIOS() && !alsAppGeopend())
+    return "Zet de app eerst op je beginscherm (deelknop → <b>Zet op beginscherm</b>) en open hem daarvandaan. Alleen dan kan een iPhone meldingen tonen.";
+  return "Krijg een seintje bij een nieuw bericht, een verzoek of een antwoord van de spelleider. De melding is <b>altijd anoniem</b>: geen namen, geen inhoud.";
+}
+
+async function registreerServiceWorker(){
+  if(!("serviceWorker" in navigator)) return null;
+  try{
+    swReg = await navigator.serviceWorker.register("sw.js");
+    return swReg;
+  }catch(e){ console.warn("service worker mislukt", e); return null; }
+}
+async function toonMelding(soort){
+  if(!meldingenAan()) return;
+  const opties = {
+    body: meldingTekst(soort),
+    icon: "kaarten/icon-192.png",
+    badge: "kaarten/icon-192.png",
+    tag: "gd-" + soort,
+    renotify: true,
+  };
+  try{
+    const reg = swReg || (navigator.serviceWorker && await navigator.serviceWorker.getRegistration());
+    if(reg) await reg.showNotification(MELDING_TITEL, opties);
+    else new Notification(MELDING_TITEL, opties);
+  }catch(e){ console.warn("melding tonen mislukt", e); }
+}
+async function vraagMeldingen(){
+  if(typeof Notification === "undefined"){ toast("Meldingen werken niet in deze browser"); return false; }
+  if(Notification.permission === "denied"){
+    toast("Meldingen staan uit — zet ze aan bij de instellingen van je telefoon");
+    return false;
+  }
+  if(Notification.permission !== "granted"){
+    const antwoord = await Notification.requestPermission();
+    if(antwoord !== "granted"){ toast("Geen meldingen dan 🤐"); return false; }
+  }
+  await registreerServiceWorker();
+  await koppelPushToken();
+  localStorage.setItem("gd_meldingen", "1");
+  haptic(10);
+  toast("Meldingen staan aan 🔔");
+  return true;
+}
+/* Alleen nodig voor meldingen terwijl de app dicht is. Zonder vapidKey
+   slaat dit stilletjes over en werkt de rest gewoon. */
+async function koppelPushToken(){
+  if(!CFG.vapidKey || DEMO || !S.me) return;
+  try{
+    const [{getMessaging, getToken}] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js"),
+    ]);
+    const reg = await navigator.serviceWorker.register("firebase-messaging-sw.js");
+    const token = await getToken(getMessaging(), {vapidKey: CFG.vapidKey, serviceWorkerRegistration: reg});
+    if(token && token !== S.me.pushToken) await DB.set("players/" + S.me.id, {pushToken: token});
+  }catch(e){ console.warn("pushtoken ophalen mislukt", e); }
+}
+
+/* Wat is er nieuw sinds we voor het laatst keken? Alleen dingen die voor
+   míj bedoeld zijn, en nooit mijn eigen berichten. */
+let meldingBasis = null;
+function checkMeldingen(){
+  if(!S.me || !meldingenAan()){ meldingBasis = null; return; }
+  const nu = {
+    chats: {},
+    verzoeken: S.verleidDoelen.filter(v => v.doelPid === S.me.id && v.status === "gevraagd").length
+             + S.takeovers.filter(t => t.targetPid === S.me.id && t.status === "open").length,
+    rol: S.hackerQs.filter(q => q.pid === S.me.id && q.answer).length,
+    deadlines: S.deadlines.filter(magDeadlineZien).length,
+  };
+  S.chats.filter(canSeeChat).forEach(c => {
+    // je eigen berichten hoef je niet gemeld te krijgen
+    nu.chats[c.id] = c.lastSid === S.me.id ? 0 : (c.lastAt || 0);
+  });
+
+  if(meldingBasis === null){ meldingBasis = nu; return; }   // eerste keer: alleen onthouden
+  const oud = meldingBasis;
+  meldingBasis = nu;
+  // staat de app op de voorgrond? dan zie je het zelf al
+  if(!document.hidden) return;
+
+  if(Object.keys(nu.chats).some(id => nu.chats[id] > (oud.chats[id] || 0))) toonMelding("bericht");
+  if(nu.verzoeken > oud.verzoeken) toonMelding("verzoek");
+  if(nu.rol > oud.rol) toonMelding("rol");
+  if(nu.deadlines > oud.deadlines) toonMelding("deadline");
+}
+
+/* ---------- nachtscherm: de chat gaat helemaal op slot ---------- */
+function nachtSchermHtml(){
+  return `
+    <div class="nacht-scherm">
+      <div class="ns-sterren">✦ · ✧ &nbsp; ✦ &nbsp; · ✧ · &nbsp; ✦</div>
+      <div class="ns-maan">🌙</div>
+      <h2>De nacht is van de infiltranten</h2>
+      <p class="ns-groet">Slaap lekker!</p>
+      <div class="ns-sub">Deze chat gaat weer open zodra de spelleider de ochtend inluidt.</div>
+    </div>`;
 }
 
 /* ---------- zoeken in de open chat ---------- */
@@ -2075,6 +2232,12 @@ function settingsModal(){
       </div>
     </div>
     <div class="set-card">
+      <h4>🔔 Meldingen</h4>
+      <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px" id="meldStatus">${meldingStatusTekst()}</p>
+      ${meldingenAan() ? `<button class="btn btn-ghost btn-block" id="meldTest">🔔 Testmelding sturen</button>`
+        : `<button class="btn btn-green btn-block" id="meldAan">🔔 Meldingen aanzetten</button>`}
+    </div>
+    <div class="set-card">
       <h4>👤 Account</h4>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Ingelogd als <b style="color:var(--text)">${esc(S.me.name)}</b>${isL ? " (spelleider)" : ""}</p>
       <button class="btn btn-ghost btn-block" id="pinBtn" style="margin-bottom:10px">🔒 Pincode wijzigen</button>
@@ -2109,6 +2272,15 @@ function settingsModal(){
       m.querySelectorAll("[data-theme]").forEach(x => x.classList.toggle("active", x === b));
       haptic(6);
     });
+    const ma = m.querySelector("#meldAan");
+    if(ma) ma.onclick = async () => {
+      ma.disabled = true;
+      const ok = await vraagMeldingen();
+      closeModal();
+      if(ok) setTimeout(() => settingsModal(), 260);
+    };
+    const mt = m.querySelector("#meldTest");
+    if(mt) mt.onclick = async () => { await toonMelding("bericht"); toast("Melding verstuurd"); };
     const pb = m.querySelector("#pinBtn");
     if(pb) pb.onclick = async () => {
       closeModal(true);
@@ -3545,14 +3717,16 @@ function renderChat(){
           <div class="cname">${esc(chatTitle(c))}</div>
           <div class="csub">${esc(chatMembersLabel(c))}${c.type === "dm" ? "" : " ›"}</div>
         </div>
-        <button class="icon-btn" id="chatZoekBtn" title="Zoeken in deze chat">🔍</button>
+        ${nacht ? "" : `<button class="icon-btn" id="chatZoekBtn" title="Zoeken in deze chat">🔍</button>`}
         ${isL && c.type === "group" ? `<button class="icon-btn" id="grpEdit" title="Leden">⚙️</button>` : ""}`;
   const zoekHtml = `
       <div class="chat-zoek">
         <input id="zoekInput" placeholder="Zoek in deze chat…" autocomplete="off" value="${esc(S.chatZoek || "")}">
         <button class="icon-btn" id="zoekSluit" title="Sluiten">✕</button>
       </div>`;
-  const lijstHtml = zoekAan
+  const lijstHtml = nacht
+    ? nachtSchermHtml()
+    : zoekAan
     ? zoekResultatenHtml(c)
     : S.msgs.length === 0
       ? (S.msgsLoaded
@@ -3568,8 +3742,7 @@ function renderChat(){
         </div>
         <button class="icon-btn" id="replyCancel" title="Annuleren">✕</button>
       </div>` : "";
-  const staartHtml = nacht ? `
-      <div class="muted-note nacht-note">🌙 Nachtstand — de chats zijn dicht tot de spelleider ze weer opent.</div>` : stil ? `
+  const staartHtml = nacht ? "" : stil ? `
       <div class="muted-note">👁️ Je bent ${S.me.status === "ontmaskerd" ? "ontmaskerd" : "verbannen"} — je kunt meelezen, maar niet meer chatten of stemmen.</div>` : `
       ${replyHtml}
       <div class="composer">
@@ -5442,23 +5615,34 @@ async function boot(){
     enterApp(saved);
   }
 
+  // meldingen: de service worker staat altijd klaar, meldingen alleen als je ze eerder aanzette
+  registreerServiceWorker().then(() => {
+    // gaf je eerder al toestemming (of deed je dat in een vorige sessie)?
+    // dan staan meldingen gewoon aan en hoeven we niets meer te vragen
+    if(meldingenAan()){
+      localStorage.setItem("gd_meldingen", "1");
+      koppelPushToken();
+    }
+  });
+
   // live data
   DB.listen("players", docs => { S.players = docs; if(S.syncMe) S.syncMe(); else maybeAutoLogin(); });
-  DB.listen("chats", docs => { S.chats = docs; if(S.me && !S.openChat) liveRender(); });
-  DB.listen("deadlines", docs => { S.deadlines = docs; if(S.me && !S.openChat && S.tab === "deadlines") liveRender(); });
+  DB.listen("chats", docs => { S.chats = docs; checkMeldingen(); if(S.me && !S.openChat) liveRender(); });
+  DB.listen("deadlines", docs => { S.deadlines = docs; checkMeldingen(); if(S.me && !S.openChat && S.tab === "deadlines") liveRender(); });
   DB.listen("missions", docs => { S.missions = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("missionPolls", docs => { S.polls = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("verleidingen", docs => { S.verleidingen = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("peilingen", docs => { S.peilingen = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("verleidDoelen", docs => {
     S.verleidDoelen = docs;
+    checkMeldingen();
     if(S.me){ if(S.openChat) renderChat(); else if(S.tab === "rol" || S.tab === "spelers") liveRender(); }
   });
   DB.listen("missionLib", docs => {
     S.missionLib = docs.sort((a,b) => (a.at||0)-(b.at||0));
     if(S.me && S.me.isLeader && !S.openChat && S.tab === "spelers") liveRender();
   });
-  DB.listen("hackerQuestions", docs => { S.hackerQs = docs; if(S.me && !S.openChat && (S.tab === "rol" || S.tab === "spelers")) liveRender(); });
+  DB.listen("hackerQuestions", docs => { S.hackerQs = docs; checkMeldingen(); if(S.me && !S.openChat && (S.tab === "rol" || S.tab === "spelers")) liveRender(); });
   DB.listen("reports", docs => {
     S.reports = docs;
     if(S.me){ if(S.openChat) renderChat(); else if(S.tab === "spelers") liveRender(); }
@@ -5476,6 +5660,7 @@ async function boot(){
   });
   DB.listen("takeovers", docs => {
     S.takeovers = docs;
+    checkMeldingen();
     if(S.me && !S.openChat && (S.tab === "spelers" || S.tab === "rol")) liveRender();
   });
   DB.listen("pinResets", docs => {

@@ -21,6 +21,11 @@ window.GD_CONFIG = {
     appId: "1:996478249104:web:205651eb2e539b0cdd5015"
   },
 
+  // Pushmeldingen terwijl de app dicht is (optioneel — zie README.md).
+  // Firebase Console → Project settings → Cloud Messaging → Web Push certificates.
+  // Laat leeg, dan werken meldingen alleen zolang de app nog draait.
+  vapidKey: "",
+
   // Pincode waarmee de spelleider inlogt (verander deze!)
   spelleiderPin: "1602",
 
