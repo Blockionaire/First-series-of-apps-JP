@@ -745,6 +745,8 @@
   }
   .lib-chip:active{transform:scale(.96)}
   .lib-chip.gekozen{border-color:var(--green); background:rgba(98,197,84,.14)}
+  .lib-chip.gebruikt{text-decoration:line-through; opacity:.45}
+  .ml-item.gebruikt span{text-decoration:line-through; opacity:.5}
 
   .hq-reden{
     font-size:12px; color:var(--gold); line-height:1.45; margin-top:5px;
@@ -2860,17 +2862,39 @@ function infCheckHtml(nInf){
 }
 
 /* ---------- opdrachtenlijst infiltranten (spelleider) ---------- */
+/* Een opdracht is "gebruikt" zodra hij als opdracht is verstuurd of als
+   winnaar uit een missiestemming kwam. Dat leiden we af, zodat het ook klopt
+   voor opdrachten van eerdere dagen. Met ↩︎ geef je er eentje weer vrij —
+   handig als de infiltranten hem niet gehaald hebben. */
+const opdrachtSleutel = t => (t || "").trim().replace(/\s+/g, " ").toLowerCase();
+function opdrachtGebruiktOp(tekst){
+  const k = opdrachtSleutel(tekst);
+  const tijden = [
+    ...(S.missions || []).filter(m => opdrachtSleutel(m.title) === k).map(m => m.at || 0),
+    ...(S.polls || []).filter(p => p.status === "besloten" && p.winner != null &&
+        opdrachtSleutel(p.options[p.winner]) === k).map(p => p.closedAt || p.at || 0),
+  ];
+  return tijden.length ? Math.max(...tijden) : 0;
+}
+const opdrachtGebruikt = o => {
+  const wanneer = opdrachtGebruiktOp(o.text);
+  return wanneer > 0 && wanneer > (o.vrijAt || 0);
+};
+
 function missionLibHtml(){
   const lijst = S.missionLib;
+  const nGebruikt = lijst.filter(opdrachtGebruikt).length;
   return `
     <div class="card">
       <details id="opdrachtenlijst" ${lijst.length ? "" : "open"}>
         <summary style="font-family:'Lilita One';font-size:17px;cursor:pointer">
-          📋 Opdrachtenlijst infiltranten <span class="pill pill-outline">${lijst.length}</span>
+          📋 Opdrachtenlijst infiltranten <span class="pill pill-outline">${lijst.length - nGebruikt}/${lijst.length}</span>
         </summary>
         <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:8px 0 10px">
           Zet hier de opdrachten klaar die je wilt gebruiken. Bij een missiestemming en bij de
           drie missies voor de veldwerker kies je er zo eentje uit de lijst.
+          Al gebruikte opdrachten worden doorgestreept en kun je niet nog eens kiezen —
+          met ↩︎ geef je er eentje weer vrij.
         </p>
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <input id="mlInput" placeholder="Bijv. Verstop de handdoek van de spelleider" maxlength="90">
@@ -2878,11 +2902,15 @@ function missionLibHtml(){
         </div>
         ${lijst.length === 0
           ? `<div style="font-size:12.5px;color:var(--muted);text-align:center;padding:6px 0">Nog geen opdrachten in de lijst.</div>`
-          : lijst.map(o => `
-            <div class="ml-item">
+          : lijst.map(o => {
+              const op = opdrachtGebruikt(o);
+              return `
+            <div class="ml-item ${op ? "gebruikt" : ""}">
               <span>${esc(o.text)}</span>
+              ${op ? `<button class="ml-del" data-ml-vrij="${o.id}" title="Weer vrijgeven">↩︎</button>` : ""}
               <button class="ml-del" data-ml-del="${o.id}" title="Verwijderen">✕</button>
-            </div>`).join("")}
+            </div>`;
+            }).join("")}
       </details>
     </div>`;
 }
@@ -2903,6 +2931,11 @@ function wireMissionLib(el){
   el.querySelectorAll("[data-ml-del]").forEach(b => b.onclick = async () => {
     await DB.del("missionLib/" + b.dataset.mlDel);
     haptic(6);
+  });
+  el.querySelectorAll("[data-ml-vrij]").forEach(b => b.onclick = async () => {
+    await DB.set("missionLib/" + b.dataset.mlVrij, {vrijAt: now()});
+    haptic(8);
+    toast("Weer beschikbaar");
   });
 }
 
@@ -4314,7 +4347,11 @@ function libKiezerHtml(label){
     <div class="field">
       <label>${esc(label)}</label>
       <div class="lib-kies">
-        ${S.missionLib.map(o => `<button type="button" class="lib-chip" data-lib="${esc(o.text)}">${esc(o.text)}</button>`).join("")}
+        ${S.missionLib.map(o => {
+          const op = opdrachtGebruikt(o);
+          return `<button type="button" class="lib-chip ${op ? "gebruikt" : ""}" ${op ? "disabled title=\"Al gebruikt\"" : ""}
+                  data-lib="${esc(o.text)}">${esc(o.text)}</button>`;
+        }).join("")}
       </div>
     </div>`;
 }
@@ -5818,8 +5855,14 @@ async function boot(){
   DB.listen("players", docs => { S.players = docs; if(S.syncMe) S.syncMe(); else maybeAutoLogin(); });
   DB.listen("chats", docs => { S.chats = docs; checkMeldingen(); if(S.me && !S.openChat) liveRender(); });
   DB.listen("deadlines", docs => { S.deadlines = docs; checkMeldingen(); if(S.me && !S.openChat && S.tab === "deadlines") liveRender(); });
-  DB.listen("missions", docs => { S.missions = docs; if(S.me && S.openChat) renderChat(); });
-  DB.listen("missionPolls", docs => { S.polls = docs; if(S.me && S.openChat) renderChat(); });
+  DB.listen("missions", docs => {
+    S.missions = docs;
+    if(S.me){ if(S.openChat) renderChat(); else if(S.tab === "spelers") liveRender(); }
+  });
+  DB.listen("missionPolls", docs => {
+    S.polls = docs;
+    if(S.me){ if(S.openChat) renderChat(); else if(S.tab === "spelers") liveRender(); }
+  });
   DB.listen("verleidingen", docs => { S.verleidingen = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("peilingen", docs => { S.peilingen = docs; if(S.me && S.openChat) renderChat(); });
   DB.listen("verleidDoelen", docs => {
