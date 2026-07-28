@@ -29,6 +29,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Loopt er een opdracht in een chat? Dan staat de **opdracht van vandaag** met status (en afteller) vast bovenaan die chat — hoe ver je ook terugscrolt. Eén tik erop opent de opdracht. Zodra de spelleider hem goedkeurt verdwijnt de balk
 - Bij elke stemming (missiestemming, peiling, verleiden) staat onder de kaart **“wie stemde wat?”** — je ziet per keuze wie erop gestemd heeft en wie er nog moet. Alleen bij een anonieme peiling blijft dat verborgen
 - Peilingen van de spelleider: tik je antwoord aan (soms mag je er meer kiezen), wijzig je stem zolang de peiling open staat en zie bij een niet-anonieme peiling wie wat stemde
+- 🔎 **Mijn verdenkingen** (eigen tabblad, alleen voor spelers): zet bij elke medespeler een oordeel — 🟢 vertrouw ik, 🟡 twijfel, 🟠 verdacht, 🔴 zeker weten — en schrijf erbij wat je opviel. De lijst zet je zwaarste verdenkingen bovenaan, zodat je met een scherp verhaal de avondbijeenkomst in gaat. **Alleen jij ziet dit**: de app haalt uitsluitend jouw eigen aantekeningen op en toont ze nergens anders, ook niet aan de spelleider
 - 🏁 **Eindkaart** na afloop: een poster met alle statistieken en alle rollen, om te bewaren of als opgemaakte tekst in WhatsApp te plakken
 - Donker of licht thema via ⚙️ rechtsboven
 

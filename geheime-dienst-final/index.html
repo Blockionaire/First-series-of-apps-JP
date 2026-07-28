@@ -753,6 +753,29 @@
     background:rgba(232,178,58,.10); border-radius:10px; padding:6px 9px;
   }
 
+  /* ---------- mijn verdenkingen ---------- */
+  .tabbar.smal button{font-size:10px; padding:10px 2px; gap:2px}
+  .tabbar.smal .ticon{font-size:19px}
+  .tabbar.smal .badge{right:calc(50% - 20px)}
+  .vk-samen{
+    display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; padding-top:12px;
+    border-top:1px solid var(--line); font-size:13px; color:var(--muted); font-weight:600;
+  }
+  .verdenkkaart{padding:13px}
+  .verdenkkaart.dood{opacity:.6}
+  .vk-top{display:flex; align-items:center; gap:11px; margin-bottom:11px}
+  .vk-niveaus{display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-bottom:9px}
+  .vk-niv{
+    display:flex; align-items:center; gap:6px; text-align:left; font-size:12.5px; font-weight:600;
+    background:var(--bg3); border:1.5px solid transparent; border-radius:12px;
+    padding:9px 10px; color:var(--muted);
+    transition:border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .vk-niv span{font-size:14px; line-height:1}
+  .vk-niv:active{transform:scale(.97)}
+  .vk-niv.aan{border-color:var(--nk); color:var(--text); background:color-mix(in srgb, var(--nk) 14%, var(--bg3))}
+  .vk-notitie{width:100%; font-size:13.5px; line-height:1.45; resize:vertical; min-height:52px}
+
   /* ---------- draaiboek avondbijeenkomst ---------- */
   .draaiboek summary{display:flex; align-items:center; gap:8px}
   .draaiboek summary .pill{margin-left:auto; flex:none}
@@ -1162,6 +1185,7 @@ const S = {
   missionLib: [],      // vaste lijst opdrachten om uit te kiezen
   verleidingen: [],    // keuze van de infiltranten: verleiden of gevangennemen
   peilingen: [],       // gewone polls van de spelleider in een chat
+  verdenkingen: {},    // jouw eigen aantekeningen per medespeler (alleen van jou)
   verleidDoelen: [],   // wie proberen de infiltranten over te halen?
   hunts: [],
   huntEntries: [],
@@ -2042,6 +2066,12 @@ function enterApp(myId){
   };
   sync();
   S.syncMe = sync;
+  // uitsluitend je eigen boekje: van andere spelers halen we niets op
+  if(S.unsubVerdenk) S.unsubVerdenk();
+  S.unsubVerdenk = DB.listenDoc("verdenkingen/" + myId, doc => {
+    S.verdenkingen = doc || {};
+    if(S.me && !S.openChat && S.tab === "verdenkingen") liveRender();
+  });
   // aftellers bijwerken, en het vragenluik van de hacker vanzelf open/dicht laten gaan
   if(!S.clockTimer) S.clockTimer = setInterval(() => {
     if(S.openChat){
@@ -2194,7 +2224,8 @@ function render(){
   const isL = S.me.isLeader;
   const tabs = isL
     ? [["spelers","👥","Spelers"],["chats","💬","Chats"],["deadlines","⏰","Deadlines"],["info","📖","Info"]]
-    : [["chats","💬","Chats"],["rol","🎭","Mijn rol"],["spelers","👥","Spelers"],["deadlines","⏰","Deadlines"],["info","📖","Info"]];
+    : [["chats","💬","Chats"],["rol","🎭","Mijn rol"],["verdenkingen","🔎","Verdenking"],
+       ["spelers","👥","Spelers"],["deadlines","⏰","Deadlines"],["info","📖","Info"]];
   if(!tabs.find(t => t[0] === S.tab)) S.tab = tabs[0][0];
 
   const totalUnread = S.chats.filter(chatInLijst).reduce((n,c) => n + unreadCount(c), 0);
@@ -2231,7 +2262,7 @@ function render(){
     </div>
     ${S.settings.gameOver ? `<div class="gameover-banner ${S.settings.winner === "infiltrant" ? "go-red" : "go-green"}">🏁 Spel afgelopen — team ${S.settings.winner === "infiltrant" ? "Infiltranten" : "Gelovigen"} heeft gewonnen!</div>` : ""}
     <div class="content ${anim}" id="content"></div>
-    <div class="tabbar">
+    <div class="tabbar${tabs.length > 5 ? " smal" : ""}">
       ${tabs.map(([id,icon,label]) => `
         <button data-tab="${id}" class="${S.tab === id ? "active" : ""}">
           <span class="ticon">${icon}</span>${label}
@@ -2248,7 +2279,8 @@ function render(){
   enableTabSwipe($("#content"), tabs.map(t => t[0]));
   $("#settingsBtn").onclick = settingsModal;
 
-  const view = {spelers:renderSpelers, chats:renderChats, rol:renderRol, deadlines:renderDeadlines, info:renderInfo}[S.tab];
+  const view = {spelers:renderSpelers, chats:renderChats, rol:renderRol,
+    verdenkingen:renderVerdenkingen, deadlines:renderDeadlines, info:renderInfo}[S.tab];
   const contentEl = $("#content");
   view(contentEl);
   if(openBlokken){
@@ -2388,7 +2420,7 @@ async function resetGame(wipePlayers){
     for(const ph of await DB.getAll(`missions/${mi.id}/photos`)) await DB.del(`missions/${mi.id}/photos/${ph.id}`);
     await DB.del("missions/" + mi.id);
   }
-  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","peilingen","verleidDoelen","hunts","huntEntries","images"]) await delAll(col);
+  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","peilingen","verleidDoelen","verdenkingen","hunts","huntEntries","images"]) await delAll(col);
   await DB.set("settings/main", {nacht:false, draaiboek:{dag:0, gedaan:[]}, rolesRevealed:false, gameOver:false, winner:null, dag:1, infCheck:false, hoogtepunt:""});
   if(wipePlayers){
     await delAll("missionLib");   // ook de opdrachtenlijst weg bij een volledige wis
@@ -5535,6 +5567,93 @@ function wireHackerSection(el){
   };
   btn.onclick = send;
   inp.onkeydown = e => { if(e.key === "Enter") send(); };
+}
+
+/* =====================================================================
+   VIEW: Mijn verdenkingen
+   =====================================================================
+   Je eigen bierviltje: per medespeler een niveau en een notitie. Alleen
+   jij ziet dit — de app haalt uitsluitend jouw eigen document op en toont
+   het nergens anders. */
+const VERDENK_NIVEAUS = [
+  {k:"vertrouwd", emoji:"🟢", naam:"Vertrouw ik", kleur:"var(--green)"},
+  {k:"twijfel",   emoji:"🟡", naam:"Twijfel",     kleur:"var(--gold)"},
+  {k:"verdacht",  emoji:"🟠", naam:"Verdacht",    kleur:"#e8853a"},
+  {k:"zeker",     emoji:"🔴", naam:"Zeker weten", kleur:"var(--red)"},
+];
+const verdenkVolgorde = k => { const i = VERDENK_NIVEAUS.findIndex(v => v.k === k); return i < 0 ? -1 : i; };
+const verdenkNiveau = pid => S.verdenkingen["v_" + pid] || "";
+const verdenkNotitie = pid => S.verdenkingen["n_" + pid] || "";
+async function zetVerdenking(pid, velden){
+  if(!S.me) return;
+  S.verdenkingen = {...S.verdenkingen, ...velden};       // meteen zichtbaar, ook offline
+  await DB.set("verdenkingen/" + S.me.id, velden);
+}
+
+function renderVerdenkingen(el){
+  const anderen = S.players.filter(p => !p.isLeader && p.id !== S.me.id);
+  const inSpel = anderen.filter(p => !isMuted(p))
+    .sort((a, b) => verdenkVolgorde(verdenkNiveau(b.id)) - verdenkVolgorde(verdenkNiveau(a.id))
+      || (a.name || "").localeCompare(b.name || ""));
+  const eruit = anderen.filter(isMuted).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  const tel = k => anderen.filter(p => verdenkNiveau(p.id) === k).length;
+  const metNotitie = anderen.filter(p => verdenkNotitie(p.id)).length;
+
+  const rij = (p, dood) => `
+    <div class="card verdenkkaart ${dood ? "dood" : ""}" data-vk="${p.id}">
+      <div class="vk-top">
+        <div class="avatar">${initial(p.name)}</div>
+        <div class="row-main">
+          <div class="row-title">${esc(p.name)}</div>
+          <div class="row-sub">${dood ? (p.status === "gevangen" ? "⛓️ Gevangen" : "Uit het spel")
+            : verdenkNiveau(p.id) ? VERDENK_NIVEAUS.find(v => v.k === verdenkNiveau(p.id)).naam : "Nog geen oordeel"}</div>
+        </div>
+      </div>
+      <div class="vk-niveaus">
+        ${VERDENK_NIVEAUS.map(v => `
+          <button class="vk-niv ${verdenkNiveau(p.id) === v.k ? "aan" : ""}"
+                  style="--nk:${v.kleur}" data-vniv="${p.id}|${v.k}">
+            <span>${v.emoji}</span>${v.naam}
+          </button>`).join("")}
+      </div>
+      <textarea class="vk-notitie" id="vnot_${p.id}" data-vnot="${p.id}" rows="2"
+        placeholder="Wat viel je op? Bijv. liep om 14:00 alleen bij de schuur…"
+        maxlength="400">${esc(verdenkNotitie(p.id))}</textarea>
+    </div>`;
+
+  el.innerHTML = `
+    <div class="card" style="border:1.5px solid var(--gold)">
+      <h3>🔎 Mijn verdenkingen</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.55">
+        Jouw eigen aantekeningen bij iedere medespeler. <b style="color:var(--text)">Alleen jij ziet dit</b> —
+        niemand anders krijgt het te zien, ook de spelleider niet. Handig om mee te nemen naar de avondbijeenkomst.
+      </p>
+      ${anderen.length ? `<div class="vk-samen">
+        ${VERDENK_NIVEAUS.map(v => `<span>${v.emoji} ${tel(v.k)}</span>`).join("")}
+        <span>📝 ${metNotitie}</span>
+      </div>` : ""}
+    </div>
+    ${anderen.length === 0 ? `<div class="empty" style="padding:26px"><div class="big">🔎</div>Er zijn nog geen medespelers.</div>` : ""}
+    ${inSpel.length ? `<div class="section-label">Nog in het spel</div>` : ""}
+    ${inSpel.map(p => rij(p, false)).join("")}
+    ${eruit.length ? `<div class="section-label">Niet meer actief</div>` : ""}
+    ${eruit.map(p => rij(p, true)).join("")}`;
+
+  el.querySelectorAll("[data-vniv]").forEach(b => b.onclick = async () => {
+    const [pid, k] = b.dataset.vniv.split("|");
+    haptic(6);
+    // nogmaals op hetzelfde niveau tikken haalt je oordeel weer weg
+    await zetVerdenking(pid, {["v_" + pid]: verdenkNiveau(pid) === k ? "" : k});
+    liveRender();
+  });
+  el.querySelectorAll("[data-vnot]").forEach(t => {
+    let timer = null;
+    t.oninput = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => zetVerdenking(t.dataset.vnot, {["n_" + t.dataset.vnot]: t.value}), 600);
+    };
+    t.onblur = () => { clearTimeout(timer); zetVerdenking(t.dataset.vnot, {["n_" + t.dataset.vnot]: t.value}); };
+  });
 }
 
 /* =====================================================================
