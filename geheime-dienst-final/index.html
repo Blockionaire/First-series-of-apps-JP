@@ -2109,6 +2109,20 @@ function markeerGelezen(chatId){
   // leesbevestiging voor de anderen
   if(S.me) DB.set("chats/" + chatId, {reads: {[S.me.id]: now()}});
 }
+/* Staat deze chat ook echt in je lijst? Een privéchat van een verwijderde
+   speler blijft anders meetellen voor het bolletje op de tab Chats, terwijl
+   je hem nergens kunt openen — dan blijft dat bolletje eeuwig staan. */
+function chatInLijst(c){
+  if(!canSeeChat(c)) return false;
+  if(c.type === "dm"){
+    const p = S.players.find(x => x.id === c.dmFor);
+    if(!p) return false;                          // die speler bestaat niet meer
+    if(S.me.isLeader) return !p.isLeader;         // de spelleider ziet alleen spelers
+    return c.dmFor === S.me.id;
+  }
+  return true;
+}
+
 // wie zitten er in deze chat (behalve jijzelf)
 function chatDeelnemers(c){
   const leider = S.players.find(p => p.isLeader);
@@ -2181,7 +2195,7 @@ function render(){
     : [["chats","💬","Chats"],["rol","🎭","Mijn rol"],["spelers","👥","Spelers"],["deadlines","⏰","Deadlines"],["info","📖","Info"]];
   if(!tabs.find(t => t[0] === S.tab)) S.tab = tabs[0][0];
 
-  const totalUnread = S.chats.filter(canSeeChat).reduce((n,c) => n + unreadCount(c), 0);
+  const totalUnread = S.chats.filter(chatInLijst).reduce((n,c) => n + unreadCount(c), 0);
   // openstaande verzoeken die op de spelleider wachten
   const leiderTaken = isL
     ? S.pinResets.filter(r => r.status === "open").length + S.roleRequests.filter(r => r.status === "open").length
@@ -2641,6 +2655,7 @@ function renderSpelers(el){
     if(!p) return;
     confirmModal(`Het spelleidersaccount <b>${esc(p.name)}</b> verwijderen? Berichten die vanaf dat account zijn gestuurd blijven staan.`, async () => {
       await DB.del("players/" + p.id);
+      await DB.del("chats/dm_" + p.id);
       toast("Account verwijderd");
     });
   });
@@ -2781,7 +2796,9 @@ function renderSpelers(el){
     row.querySelector(".act-del").onclick = () => {
       const p = S.players.find(x => x.id === pid);
       confirmModal(`Wil je <b>${esc(p.name)}</b> verwijderen uit het spel?`, async () => {
-        await DB.del("players/" + pid); toast("Speler verwijderd");
+        await DB.del("players/" + pid);
+        await DB.del("chats/dm_" + pid);          // anders blijft zijn privéchat spoken
+        toast("Speler verwijderd");
       });
     };
   });
@@ -3711,6 +3728,9 @@ function openChat(chatId){
   S.openChat = chatId;
   S.replyTo = null;
   S.chatZoek = null;
+  // Vlak na het openen blijven we onderaan plakken. De hoogte verandert dan
+  // nog: berichten komen binnen, kaarten en foto's worden pas daarna gemeten.
+  S.pinOnder = now() + 1500;
   S.chatJustOpened = true;
   S.closingChat = false;
   markeerGelezen(chatId);
@@ -3905,8 +3925,18 @@ function renderChat(){
 
   // slim scrollen: blijf onderaan plakken, maar trek de gebruiker niet omlaag als hij terugscrollt
   const lastMine = S.msgs.length && S.msgs[S.msgs.length-1].sid === S.me.id;
-  if(firstRender){
-    msgsEl.scrollTop = msgsEl.scrollHeight;
+  const netGeopend = now() < (S.pinOnder || 0);
+  const naarOnder = () => { if($("#msgs") === msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight; };
+  msgsEl.onscroll = () => {
+    // scrol je zelf omhoog? dan houden we meteen op met vastpinnen
+    if(msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight > 60) S.pinOnder = 0;
+  };
+  if(firstRender || netGeopend){
+    // meteen én nog een paar keer erna: kaarten en lettertypen komen later binnen
+    naarOnder();
+    requestAnimationFrame(naarOnder);
+    setTimeout(naarOnder, 120);
+    setTimeout(naarOnder, 350);
   } else if(wasNearBottom || lastMine){
     msgsEl.scrollTo({top: msgsEl.scrollHeight, behavior: grew ? "smooth" : "auto"});
   } else {
@@ -3915,7 +3945,7 @@ function renderChat(){
 
   msgsEl.querySelectorAll("img[data-img]").forEach(img => {
     loadImageInto(img.dataset.img, img, () => {
-      if(wasNearBottom || firstRender) msgsEl.scrollTop = msgsEl.scrollHeight;
+      if(wasNearBottom || firstRender || now() < (S.pinOnder || 0)) naarOnder();
     });
     img.onclick = () => { if(img.src) viewImage(img.src); };
   });
