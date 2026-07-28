@@ -27,13 +27,14 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - 🌙 Nachtstand: zet de spelleider die aan, dan krijg je in elke chat een groot nachtscherm — *De nacht is van de infiltranten, slaap lekker!* Alleen de infiltranten kunnen dan nog overleggen
 - 🔔 **Meldingen** (⚙️ → *Meldingen aanzetten*): een seintje bij een nieuw bericht, een verzoek of een antwoord van de spelleider. De melding is **altijd anoniem** — geen naam, geen inhoud, niet eens in welke chat het staat, dus meekijkers worden er niets wijzer van
 - Loopt er een opdracht in een chat? Dan staat de **opdracht van vandaag** met status (en afteller) vast bovenaan die chat — hoe ver je ook terugscrolt. Eén tik erop opent de opdracht. Zodra de spelleider hem goedkeurt verdwijnt de balk
+- Bij elke stemming (missiestemming, peiling, verleiden) staat onder de kaart **“wie stemde wat?”** — je ziet per keuze wie erop gestemd heeft en wie er nog moet. Alleen bij een anonieme peiling blijft dat verborgen
 - Peilingen van de spelleider: tik je antwoord aan (soms mag je er meer kiezen), wijzig je stem zolang de peiling open staat en zie bij een niet-anonieme peiling wie wat stemde
 - 🏁 **Eindkaart** na afloop: een poster met alle statistieken en alle rollen, om te bewaren of als opgemaakte tekst in WhatsApp te plakken
 - Donker of licht thema via ⚙️ rechtsboven
 
 **Rol-specifiek**
 - 🕵️ **Infiltranten** — stemmen samen op de missie van de dag, leveren foto's als bewijs en dienen de opdracht in. Stuurt de spelleider de nachtkeuze, dan stemmen ze ook over 🙈 verleiden of ⛓️ gevangennemen
-- 💻 **Hacker** — stelt maximaal 2 ja/nee-vragen per dag, alleen tussen 11:00 en 22:00; buiten dat tijdvak is het formulier op slot. De spelleider antwoordt met één tik
+- 💻 **Hacker** — stelt maximaal 2 ja/nee-vragen per dag, alleen tussen 11:00 en 22:00; buiten dat tijdvak is het formulier op slot. De spelleider antwoordt met één tik, of wijst de vraag af met een korte uitleg waarom — een afgewezen vraag telt niet mee, dus je krijgt hem terug
 - ⛓️ **Gevangenen** — krijgen een foto van het geheime voorwerp; wie als eerste een goedgekeurde selfie mét het voorwerp instuurt, ontsnapt en keert terug als gewone gelovige
 - 🛡️ **Iedereen** — raadsels om het schild: de eerste met het goede antwoord wint (1 poging per 5 minuten)
 - 🙋 Alleen infiltranten reageren op de voorvraag: de rol aannemen of om een andere vragen. Dat kan alleen vóór de onthulling — daarna liggen de rollen vast

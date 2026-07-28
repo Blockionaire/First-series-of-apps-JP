@@ -746,6 +746,11 @@
   .lib-chip:active{transform:scale(.96)}
   .lib-chip.gekozen{border-color:var(--green); background:rgba(98,197,84,.14)}
 
+  .hq-reden{
+    font-size:12px; color:var(--gold); line-height:1.45; margin-top:5px;
+    background:rgba(232,178,58,.10); border-radius:10px; padding:6px 9px;
+  }
+
   /* ---------- draaiboek avondbijeenkomst ---------- */
   .draaiboek summary{display:flex; align-items:center; gap:8px}
   .draaiboek summary .pill{margin-left:auto; flex:none}
@@ -2725,6 +2730,31 @@ function renderSpelers(el){
     haptic(14);
     toast("Dagrapport gepusht 📢");
   });
+  el.querySelectorAll("[data-hq-weiger]").forEach(b => b.onclick = () => {
+    const q = S.hackerQs.find(x => x.id === b.dataset.hqWeiger);
+    if(!q) return;
+    modal(`
+      <h3>🚫 Vraag afwijzen</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px">
+        Van <b style="color:var(--text)">${esc(q.pn)}</b>:<br>“${esc(q.q)}”</p>
+      <div class="field"><label>Waarom mag deze vraag niet?</label>
+        <textarea id="hqReden" rows="3" maxlength="200">Deze vraag valt buiten wat je als hacker mag vragen — probeer het met een andere vraag.</textarea></div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+        Deze vraag telt niet mee voor zijn twee vragen van vandaag.</p>
+      <button class="btn btn-red btn-block" id="hqWeigerOk">🚫 Afwijzen en toelichting sturen</button>
+    `, m => {
+      m.querySelector("#hqWeigerOk").onclick = async () => {
+        const reden = m.querySelector("#hqReden").value.trim() || "Deze vraag mag niet gesteld worden.";
+        m.querySelector("#hqWeigerOk").disabled = true;
+        await DB.set("hackerQuestions/" + q.id, {answer:"geweigerd", reden, answeredAt: now()});
+        await DB.set("chats/dm_" + q.pid, {type:"dm", dmFor:q.pid, at: now()});
+        await sendSystem("dm_" + q.pid, `💻 De spelleider heeft je vraag "${q.q}" afgewezen: ${reden}`);
+        haptic(10);
+        closeModal();
+        toast("Vraag afgewezen");
+      };
+    });
+  });
   el.querySelectorAll("[data-hq-answer]").forEach(b => b.onclick = async () => {
     const [qid, ans] = b.dataset.hqAnswer.split("|");
     const q = S.hackerQs.find(x => x.id === qid);
@@ -3009,6 +3039,12 @@ function takeoverHtml(){
 }
 
 /* ---------- hackervragen (spelleider) ---------- */
+/* Hoe een beantwoorde vraag eruitziet — hetzelfde bij speler en spelleider. */
+const hqChip = q => q.answer === "ja" ? `<span class="pill pill-green">Ja</span>`
+  : q.answer === "nee" ? `<span class="pill pill-red">Nee</span>`
+  : q.answer === "geweigerd" ? `<span class="pill pill-gold">🚫 Afgewezen</span>`
+  : `<span class="pill pill-outline">⏳ wacht</span>`;
+
 function leaderHackerHtml(){
   const hasHacker = S.players.some(p => p.role === "hacker");
   if(!hasHacker && S.hackerQs.length === 0) return "";
@@ -3018,18 +3054,23 @@ function leaderHackerHtml(){
     <div class="card" style="border:1.5px solid ${pending.length ? "var(--gold)" : "var(--line)"}">
       <h3>💻 Hackervragen ${pending.length ? `<span class="pill pill-gold">${pending.length} nieuw</span>` : ""}</h3>
       ${pending.length === 0 && answered.length === 0 ? `<div style="font-size:12.5px;color:var(--muted)">Geen openstaande vragen. De hacker mag 2 ja/nee-vragen per dag stellen, tussen ${HACKER_VAN}:00 en ${HACKER_TOT}:00.</div>` : ""}
+      ${pending.length ? `<p style="font-size:12px;color:var(--muted);margin-bottom:10px">Met 🚫 wijs je een vraag af — die telt dan niet mee voor zijn twee vragen van vandaag.</p>` : ""}
       ${pending.map(q => `
         <div class="hq-item">
           <div class="hq-q">${esc(q.q)}<div class="hq-who">van ${esc(q.pn)} · ${fmtTime(q.at)}</div></div>
           <div class="hq-answer">
             <button class="btn btn-sm btn-green" data-hq-answer="${q.id}|ja">Ja</button>
             <button class="btn btn-sm btn-red" data-hq-answer="${q.id}|nee">Nee</button>
+            <button class="btn btn-sm btn-ghost" data-hq-weiger="${q.id}" title="Deze vraag mag niet gesteld worden">🚫</button>
           </div>
         </div>`).join("")}
       ${answered.map(q => `
         <div class="hq-item" style="opacity:.65">
-          <div class="hq-q">${esc(q.q)}<div class="hq-who">van ${esc(q.pn)} · ${fmtTime(q.at)}</div></div>
-          <span class="pill ${q.answer === "ja" ? "pill-green" : "pill-red"}">${q.answer === "ja" ? "Ja" : "Nee"}</span>
+          <div class="hq-q">${esc(q.q)}
+            <div class="hq-who">van ${esc(q.pn)} · ${fmtTime(q.at)}</div>
+            ${q.answer === "geweigerd" && q.reden ? `<div class="hq-reden">🚫 ${esc(q.reden)}</div>` : ""}
+          </div>
+          ${hqChip(q)}
         </div>`).join("")}
     </div>`;
 }
@@ -3928,6 +3969,38 @@ function renderChat(){
     e.stopPropagation();
     peilingWieModal(b.dataset.peilWie);
   });
+  msgsEl.querySelectorAll("[data-poll-wie]").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const p = S.polls.find(x => x.id === b.dataset.pollWie);
+    if(!p) return;
+    const stemmen = pollVotes(p);
+    const kiezers = chatVoters(c);
+    stemmenWieModal("🗳️ " + p.title,
+      p.options.map((o, i) => ({label: o, ids: kiezers.filter(id => stemmen[id] === i)})),
+      kiezers.filter(id => stemmen[id] == null));
+  });
+  msgsEl.querySelectorAll("[data-verleid-wie]").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const v = S.verleidingen.find(x => x.id === b.dataset.verleidWie);
+    if(!v) return;
+    const stemmen = pollVotes(v);
+    const kiezers = verleidStemmers(c);
+    stemmenWieModal("🙈 Verleiden of gevangennemen?",
+      Object.entries(VERLEID_KEUZES).map(([k, o]) => ({
+        label: `${o.emoji} ${o.naam}`, ids: kiezers.filter(id => stemmen[id] === k),
+      })),
+      kiezers.filter(id => stemmen[id] == null));
+  });
+  msgsEl.querySelectorAll("[data-vdoel-wie]").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const v = S.verleidDoelen.find(x => x.id === b.dataset.vdoelWie);
+    if(!v) return;
+    const stemmen = pollVotes(v);
+    const kiezers = verleidStemmers(c);
+    stemmenWieModal("💘 Wie verleiden jullie?",
+      verleidDoelKandidaten().map(p => ({label: p.name, ids: kiezers.filter(id => stemmen[id] === p.id)})),
+      kiezers.filter(id => stemmen[id] == null));
+  });
   msgsEl.querySelectorAll("[data-peil-sluit]").forEach(b => b.onclick = () => {
     const pid = b.dataset.peilSluit;
     confirmModal("Peiling sluiten? Er kan daarna niet meer gestemd worden.", async () => {
@@ -4200,6 +4273,7 @@ function pollCardHtml(p, chat){
         ${closed
           ? `✔ De missie van vandaag is gekozen.`
           : `${votedCount}/${voters.length} gestemd${tie ? " · 🤝 Gelijkspel — de spelleider hakt de knoop door (👑)" : ""}${canVote && my == null ? " · Tik op een missie om te stemmen" : ""}${canVote && my != null ? " · Je kunt je stem nog wijzigen" : ""}`}
+        ${votedCount ? ` · <button class="link-inline" data-poll-wie="${p.id}">wie stemde wat?</button>` : ""}
       </div>
     </div>`;
 }
@@ -4327,25 +4401,35 @@ async function stemPeiling(pid, idx){
   haptic(6);
   await DB.set("peilingen/" + pid, {["v_" + S.me.id]: nieuw});
 }
+/* Eén venster voor álle stemmingen: per keuze wie erop gestemd heeft.
+   opties = [{label, ids:[spelerId]}] */
+const stemmerNaam = id => {
+  const sp = S.players.find(x => x.id === id);
+  return sp ? sp.name + (sp.isLeader ? " 🎩" : "") : "Onbekend";
+};
+function stemmenWieModal(titel, opties, nogNiet = []){
+  modal(`
+    <h3>${esc(titel)}</h3>
+    ${opties.map(o => `
+      <div class="set-card" style="margin-bottom:10px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:6px">${esc(o.label)} <span class="pill pill-outline">${o.ids.length}</span></div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5">${o.ids.length ? o.ids.map(id => esc(stemmerNaam(id))).join(", ") : "Nog niemand"}</div>
+      </div>`).join("")}
+    ${nogNiet.length ? `
+      <div class="set-card" style="margin-bottom:0;opacity:.7">
+        <div style="font-weight:700;font-size:14px;margin-bottom:6px">◦ Nog niet gestemd <span class="pill pill-outline">${nogNiet.length}</span></div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.5">${nogNiet.map(id => esc(stemmerNaam(id))).join(", ")}</div>
+      </div>` : ""}
+  `);
+}
 function peilingWieModal(pid){
   const p = S.peilingen.find(x => x.id === pid);
   if(!p) return;
   const stemmen = peilingStemmen(p);
-  const naam = id => {
-    const sp = S.players.find(x => x.id === id);
-    return sp ? sp.name + (sp.isLeader ? " 🎩" : "") : "Onbekend";
-  };
-  modal(`
-    <h3>📊 ${esc(p.vraag)}</h3>
-    ${p.opties.map((o, i) => {
-      const wie = Object.keys(stemmen).filter(id => (stemmen[id] || []).includes(i));
-      return `
-      <div class="set-card" style="margin-bottom:10px">
-        <div style="font-weight:700;font-size:14px;margin-bottom:6px">${esc(o)} <span class="pill pill-outline">${wie.length}</span></div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.5">${wie.length ? wie.map(id => esc(naam(id))).join(", ") : "Nog niemand"}</div>
-      </div>`;
-    }).join("")}
-  `);
+  stemmenWieModal("📊 " + p.vraag, p.opties.map((o, i) => ({
+    label: o,
+    ids: Object.keys(stemmen).filter(id => (stemmen[id] || []).includes(i)),
+  })));
 }
 function newPeilingModal(chatId){
   modal(`
@@ -4451,7 +4535,7 @@ function verleidKaartHtml(v){
         ${isL && gelijk ? `<button class="btn btn-sm btn-ghost" data-verleid-kies="${v.id}:${k}" style="margin:-4px 0 8px">👑 Kies "${o.naam}"</button>` : ""}`).join("")}
       <div class="mc-meta">${gesloten
         ? `${VERLEID_KEUZES[v.uitkomst] ? VERLEID_KEUZES[v.uitkomst].emoji : "🙈"} Besloten: vannacht wordt er <b>${v.uitkomst === "verleiden" ? "verleid" : "gevangengenomen"}</b>`
-        : `${gestemd}/${stemmers.length} gestemd${gelijk ? " · 🤝 Gelijkspel — de spelleider hakt de knoop door (👑)" : ""}${magStemmen && mijn == null ? " · Tik op een keuze" : ""}${magStemmen && mijn != null ? " · Je kunt je stem nog wijzigen" : ""}`}</div>
+        : `${gestemd}/${stemmers.length} gestemd${gelijk ? " · 🤝 Gelijkspel — de spelleider hakt de knoop door (👑)" : ""}${magStemmen && mijn == null ? " · Tik op een keuze" : ""}${magStemmen && mijn != null ? " · Je kunt je stem nog wijzigen" : ""}`}${gestemd ? ` · <button class="link-inline" data-verleid-wie="${v.id}">wie stemde wat?</button>` : ""}</div>
     </div>`;
 }
 async function stemVerleid(vid, keuze){
@@ -4562,7 +4646,7 @@ function verleidDoelKaartHtml(v){
         ${isL && n > 0 ? `<button class="btn btn-sm btn-ghost" data-vdoel-kies="${v.id}:${p.id}" style="margin:-3px 0 8px">👑 ${esc(p.name)} verleiden</button>` : ""}`;
       }).join("") : ""}
       ${stemfase && kandidaten.length === 0 ? `<div class="empty" style="padding:14px">Er is niemand meer om te verleiden.</div>` : ""}
-      <div class="mc-meta">${staart}</div>
+      <div class="mc-meta">${staart}${stemfase && gestemd ? ` · <button class="link-inline" data-vdoel-wie="${v.id}">wie stemde wat?</button>` : ""}</div>
     </div>`;
 }
 async function stemVerleidDoel(vdid, targetId){
@@ -5332,11 +5416,9 @@ function renderUitslag(el){
 /* ---------- hackervragen (speler) ---------- */
 function hackerSectionHtml(){
   const myQs = S.hackerQs.filter(q => q.pid === S.me.id).sort((a,b) => (b.at||0)-(a.at||0));
-  const todays = myQs.filter(q => q.day === todayKey());
+  // een afgewezen vraag telt niet mee: die is immers nooit beantwoord
+  const todays = myQs.filter(q => q.day === todayKey() && q.answer !== "geweigerd");
   const left = Math.max(0, 2 - todays.length);
-  const chip = q => q.answer === "ja" ? `<span class="pill pill-green">Ja</span>`
-              : q.answer === "nee" ? `<span class="pill pill-red">Nee</span>`
-              : `<span class="pill pill-outline">⏳ wacht</span>`;
   const open = hackerVensterOpen();
   const dicht = !open || left === 0;
   return `
@@ -5354,8 +5436,11 @@ function hackerSectionHtml(){
       ${myQs.length === 0 ? `<div style="font-size:12.5px;color:var(--muted);text-align:center">Nog geen vragen gesteld.</div>` : ""}
       ${myQs.slice(0, 8).map(q => `
         <div class="hq-item">
-          <div class="hq-q">${esc(q.q)}<div class="hq-who">${fmtDT(q.at)}</div></div>
-          ${chip(q)}
+          <div class="hq-q">${esc(q.q)}
+            <div class="hq-who">${fmtDT(q.at)}</div>
+            ${q.answer === "geweigerd" && q.reden ? `<div class="hq-reden">🚫 ${esc(q.reden)}</div>` : ""}
+          </div>
+          ${hqChip(q)}
         </div>`).join("")}
     </div>`;
 }
@@ -5371,7 +5456,7 @@ function wireHackerSection(el){
       render();
       return;
     }
-    const todays = S.hackerQs.filter(x => x.pid === S.me.id && x.day === todayKey());
+    const todays = S.hackerQs.filter(x => x.pid === S.me.id && x.day === todayKey() && x.answer !== "geweigerd");
     if(todays.length >= 2){ toast("Je hebt je 2 vragen voor vandaag al gesteld"); return; }
     btn.disabled = true;
     inp.value = "";   // leeg, anders zet de herstelregel je vraag zo weer terug
