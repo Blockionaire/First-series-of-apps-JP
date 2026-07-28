@@ -1052,6 +1052,10 @@ function makeDemoDB(){
   try{ store = JSON.parse(localStorage.getItem(KEY) || "{}"); }catch(e){ store = {}; }
   const listeners = []; // {path, isDoc, cb}
   const save = () => { try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){ toast("Opslag vol — verwijder wat foto's (demo-modus)"); } };
+  // Vóór elke schrijf- of ophaalactie opnieuw uit de opslag lezen. Wat we in
+  // het geheugen hebben kan achterlopen als er in een ander tabblad iets is
+  // gebeurd, en dan zouden we dat overschrijven of iets dubbel aanmaken.
+  const herlaad = () => { try{ store = JSON.parse(localStorage.getItem(KEY) || "{}"); }catch(e){ /* houd wat we hebben */ } };
   const colOf = p => { const seg = p.split("/"); return seg.slice(0, seg.length-1).join("/"); };
   const notify = colPath => {
     listeners.forEach(l => {
@@ -1083,8 +1087,8 @@ function makeDemoDB(){
       cb(store[col] && store[col][id] ? {id, ...store[col][id]} : null);
       return () => listeners.splice(listeners.indexOf(l),1);
     },
-    async add(colPath, data){ const id = newId(); (store[colPath] ||= {})[id] = data; save(); notify(colPath); return id; },
-    async set(docPath, data){ const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
+    async add(colPath, data){ herlaad(); const id = newId(); (store[colPath] ||= {})[id] = data; save(); notify(colPath); return id; },
+    async set(docPath, data){ herlaad(); const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
       const oud = (store[col] ||= {})[id] || {};
       const nieuw = {...oud};
       for(const [k, v] of Object.entries(data)){
@@ -1092,14 +1096,14 @@ function makeDemoDB(){
           ? {...oud[k], ...v} : v;
       }
       store[col][id] = nieuw; save(); notify(col); },
-    async inc(docPath, veld, delta){ const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
+    async inc(docPath, veld, delta){ herlaad(); const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
       const oud = (store[col] ||= {})[id] || {};
       store[col][id] = {...oud, [veld]: (Number(oud[veld]) || 0) + delta}; save(); notify(col); },
-    async del(docPath){ const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
+    async del(docPath){ herlaad(); const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
       if(store[col]){ delete store[col][id]; save(); notify(col); } },
-    async getDoc(docPath){ const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
+    async getDoc(docPath){ herlaad(); const seg = docPath.split("/"); const id = seg.pop(); const col = seg.join("/");
       return store[col] && store[col][id] ? {id, ...store[col][id]} : null; },
-    async getAll(colPath){ return Object.entries(store[colPath]||{}).map(([id,d]) => ({id, ...d})); }
+    async getAll(colPath){ herlaad(); return Object.entries(store[colPath]||{}).map(([id,d]) => ({id, ...d})); }
   };
 }
 
@@ -1930,8 +1934,26 @@ function renderJoin(err = "", leaderMode = false){
     if(leaderMode && $("#joinPin").value !== PIN){ $("#joinErr").textContent = "Pincode onjuist."; return; }
     submitBtn.disabled = true;
     try{
+      // Eerst vers ophalen wie er al meedoen. De lijst in het geheugen kan nog
+      // leeg zijn als de verbinding traag is, en dan zouden we een tweede
+      // account met dezelfde naam aanmaken. Lukt ophalen niet? Dan maken we
+      // liever niets aan dan een dubbel account.
+      let alle;
+      try{ alle = await DB.getAll("players"); S.players = alle; }
+      catch(err){
+        console.warn("spelers ophalen mislukt", err);
+        $("#joinErr").textContent = "Geen verbinding met de server. Probeer het zo nog eens.";
+        return;
+      }
+      const sleutel = t => (t || "").trim().replace(/\s+/g, " ").toLowerCase();
       // bestaat deze naam al? -> alleen het eigen apparaat mag het account terugpakken
-      const existing = S.players.find(p => p.name.toLowerCase() === name.toLowerCase());
+      const existing = alle.find(p => sleutel(p.name) === sleutel(name));
+      // er kan er maar één spelleider zijn; anders krijg je per ongeluk een tweede
+      const andereLeider = leaderMode && !existing && alle.find(p => p.isLeader);
+      if(andereLeider){
+        $("#joinErr").textContent = `Er is al een spelleider: ${andereLeider.name}. Log met díé naam in.`;
+        return;
+      }
       let id;
       if(existing){
         if(!!existing.isLeader !== leaderMode){
@@ -1989,11 +2011,21 @@ async function ensureBaseChats(){
    APP-START
    ===================================================================== */
 function enterApp(myId){
+  let nagevraagd = false;
   const sync = () => {
     const p = S.players.find(x => x.id === myId);
     if(!p){
-      // speler verwijderd door spelleider
-      if(S.me){ localStorage.removeItem("gd_player_id"); S.me = null; renderJoin("Je bent uit het spel verwijderd."); }
+      if(!S.me || nagevraagd) return;
+      // Een korte storing of een momentopname uit de cache mag je niet
+      // uitloggen. Alleen als de speler er bij navraag echt niet meer is.
+      nagevraagd = true;
+      DB.getDoc("players/" + myId).then(echt => {
+        nagevraagd = false;
+        if(echt || !S.me) return;
+        localStorage.removeItem("gd_player_id");
+        S.me = null;
+        renderJoin("Je bent uit het spel verwijderd.");
+      }).catch(() => { nagevraagd = false; });   // geen verbinding: gewoon laten staan
       return;
     }
     const first = !S.me;
@@ -2450,6 +2482,27 @@ function renderSpelersVoorSpeler(el){
     ${verbannenHtml()}`;
 }
 
+/* Twee spelleidersaccounts kan gebeuren door een oude versie van de app of
+   een haperende verbinding. Ze staan niet in de deelnemerslijst, dus zonder
+   deze kaart kun je ze ook niet opruimen. */
+function dubbeleLeidersHtml(){
+  const leiders = S.players.filter(p => p.isLeader);
+  if(leiders.length < 2) return "";
+  return `
+    <div class="card" style="border:1.5px solid var(--gold)">
+      <h3>⚠️ Meerdere spelleidersaccounts</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px">
+        Er zijn ${leiders.length} accounts met spelleidersrechten. Verwijder degene die je niet gebruikt,
+        dan weet iedereen zeker bij wie hij moet zijn.
+      </p>
+      ${leiders.map(p => `
+        <div class="ml-item">
+          <span>🎩 ${esc(p.name)}${p.id === S.me.id ? " — dit ben jij" : ""}</span>
+          ${p.id === S.me.id ? "" : `<button class="ml-del" data-leider-del="${p.id}" title="Verwijderen">✕</button>`}
+        </div>`).join("")}
+    </div>`;
+}
+
 /* ---------- draaiboek voor de avondbijeenkomst (alleen spelleider) ----------
    De volgorde uit de flyer als afvinklijst, zodat je met vijftien mensen om
    je heen niets overslaat. Per speeldag begint hij weer leeg. */
@@ -2522,6 +2575,7 @@ function renderSpelers(el){
     ${S.settings.gameOver ? `<button class="btn btn-green btn-block" id="eindkaartBtn" style="margin-bottom:12px">🏁 Eindkaart met alle statistieken</button>` : ""}
     ${nRole < n ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">🎭 ${nRole} van de ${n} spelers heeft een rol${nInf ? ` · ${nInf} infiltrant${nInf === 1 ? "" : "en"} toegewezen` : ""}</div>` : ""}
     ${adv ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">💡 Advies bij ${n} spelers: <b style="color:var(--red)">${adv[0]} infiltranten</b> en <b style="color:var(--green)">${adv[1]} gelovigen</b>${n >= 17 ? " (2x veldwerker)" : " (alle speciale rollen 1x)"}</div>` : ""}
+    ${dubbeleLeidersHtml()}
     ${infCheckHtml(nInf)}
     <div class="switch-row">
       <div style="flex:1">
@@ -2577,6 +2631,14 @@ function renderSpelers(el){
     ${verbannenHtml()}`;
 
   bindRecap(el);
+  el.querySelectorAll("[data-leider-del]").forEach(b => b.onclick = () => {
+    const p = S.players.find(x => x.id === b.dataset.leiderDel);
+    if(!p) return;
+    confirmModal(`Het spelleidersaccount <b>${esc(p.name)}</b> verwijderen? Berichten die vanaf dat account zijn gestuurd blijven staan.`, async () => {
+      await DB.del("players/" + p.id);
+      toast("Account verwijderd");
+    });
+  });
   wireMissionLib(el);
   const ekb = el.querySelector("#eindkaartBtn");
   if(ekb) ekb.onclick = () => eindkaartModal();
@@ -5598,8 +5660,20 @@ async function boot(){
     if(attempted) return;
     attempted = true;
     const saved = localStorage.getItem("gd_player_id");
-    const speler = saved && S.players.find(p => p.id === saved);
+    if(!saved){ renderJoin(); return; }
+    let speler = S.players.find(p => p.id === saved);
     if(!speler){
+      // De eerste momentopname van Firestore komt uit de cache en is op een
+      // vers apparaat leeg. Niet meteen uitloggen dus: eerst echt navragen.
+      try{ speler = await DB.getDoc("players/" + saved); }
+      catch(err){
+        console.warn("account nakijken mislukt", err);
+        attempted = false;                    // straks gewoon opnieuw proberen
+        renderJoin("Geen verbinding met de server. Probeer het zo nog eens.");
+        return;
+      }
+    }
+    if(!speler){                              // nu weten we het zeker
       localStorage.removeItem("gd_player_id");
       renderJoin();
       return;
