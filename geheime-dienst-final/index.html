@@ -28,6 +28,11 @@
     --red:#ff3b30; --red-dark:#c22a22;
     --gold:#e8b23a;
     --blue:#5a96ff;
+    /* Losse varianten voor gekleurde tékst. Op een donkere ondergrond mag dat
+       de felle kleur zijn; in het lichte thema worden ze donkerder gezet, want
+       fel goud of fel groen op wit is vrijwel onleesbaar. --zacht is de
+       standaard bijtekst binnen kaarten en vensters. */
+    --gold-t:#e8b23a; --green-t:#62c554; --red-t:#ff3b30; --zacht:#d6d6dc;
     --radius:20px;
     --ease:cubic-bezier(.32,.72,.33,1);
   }
@@ -151,7 +156,7 @@
   }
   /* staat de demo-balk bovenaan, dan hoeft de topbar zelf geen veilige zone meer */
   .demo-banner:not(.hidden) ~ .app .topbar{padding-top:14px}
-  .err{color:var(--red); font-size:13px; font-weight:600; min-height:18px}
+  .err{color:var(--red-t); font-size:13px; font-weight:600; min-height:18px}
 
   /* ---------- vergrendelscherm ---------- */
   .lock{
@@ -174,7 +179,7 @@
     transition:background .15s ease, transform .15s var(--ease), border-color .15s ease;
   }
   .lock-dots .dot.vol{background:var(--green); border-color:var(--green); transform:scale(1.14)}
-  .lock-fout{color:var(--red); font-size:13px; font-weight:600; min-height:20px; margin-bottom:6px}
+  .lock-fout{color:var(--red-t); font-size:13px; font-weight:600; min-height:20px; margin-bottom:6px}
   .lock.shake .lock-dots{animation:shake .4s ease}
   @keyframes shake{0%,100%{transform:none} 20%{transform:translateX(-9px)} 40%{transform:translateX(9px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)}}
   .keypad{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; width:100%; max-width:280px; margin-top:8px}
@@ -223,7 +228,7 @@
     border-radius:99px; transition:color .2s ease, background .25s var(--ease), transform .14s var(--ease);
   }
   .tabbar button:active{transform:scale(.94)}
-  .tabbar button.active{color:var(--green); background:rgba(98,197,84,.12)}
+  .tabbar button.active{color:var(--green-t); background:rgba(98,197,84,.12)}
   .tabbar .ticon{font-size:21px; line-height:1; transition:transform .25s var(--ease)}
   .tabbar button.active .ticon{transform:translateY(-1px) scale(1.12)}
   .badge{
@@ -273,7 +278,7 @@
   .list-row.unread .row-title{font-weight:700}
   .list-row.unread .row-sub{color:var(--text); font-weight:500}
   .list-row.unread .avatar{box-shadow:0 0 0 2.5px var(--green)}
-  .list-row.unread .row-side{color:var(--green); font-weight:700}
+  .list-row.unread .row-side{color:var(--green-t); font-weight:700}
   body.light .list-row.unread{background:linear-gradient(90deg, rgba(98,197,84,.16), var(--bg2) 42%)}
   .section-label{
     font-size:12px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase;
@@ -317,7 +322,7 @@
   .rd-dag.aan{color:var(--text); border-color:var(--green); background:rgba(98,197,84,.14)}
   .rd-dag.aan.finale{border-color:var(--gold); background:rgba(214,175,84,.16)}
   .rd-sub{font-size:12px; color:var(--muted); margin-top:9px}
-  .rd-sub b{color:var(--gold)}
+  .rd-sub b{color:var(--gold-t)}
 
   .stat-strip{display:flex; gap:8px; margin-bottom:14px}
   .stat{flex:1; background:var(--bg2); border:1px solid var(--line); border-radius:16px; padding:11px 8px; text-align:center}
@@ -400,7 +405,7 @@
     border-radius:9px; padding:5px 10px; margin-bottom:6px; cursor:pointer;
   }
   .msg.mine .msg-quote{background:rgba(0,0,0,.22); border-left-color:rgba(255,255,255,.7)}
-  .mq-name{font-size:11.5px; font-weight:700; color:var(--gold)}
+  .mq-name{font-size:11.5px; font-weight:700; color:var(--gold-t)}
   .msg.mine .mq-name{color:rgba(255,255,255,.92)}
   .mq-text{font-size:12.5px; color:#cfcfd6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .msg.mine .mq-text{color:rgba(255,255,255,.8)}
@@ -416,12 +421,12 @@
   body.light .reply-bar{background:rgba(250,249,245,.95)}
   .reply-bar .rb-line{width:3px; align-self:stretch; min-height:30px; background:var(--gold); border-radius:2px}
   .reply-bar .rb-body{flex:1; min-width:0}
-  .reply-bar .rb-name{font-size:12px; font-weight:700; color:var(--gold)}
+  .reply-bar .rb-name{font-size:12px; font-weight:700; color:var(--gold-t)}
   .reply-bar .rb-text{font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .reply-bar .icon-btn{width:34px; height:34px; font-size:14px}
   .msg.mine{background:linear-gradient(145deg,#478f39,#39762d); border:none; align-self:flex-end}
   .msg.new{animation:msgIn .28s var(--ease)}
-  .msg .sender{font-size:11.5px; font-weight:700; color:var(--gold); margin-bottom:2px}
+  .msg .sender{font-size:11.5px; font-weight:700; color:var(--gold-t); margin-bottom:2px}
   .msg.mine .sender{display:none}
   .msg .mtime{font-size:10px; color:rgba(255,255,255,.45); text-align:right; margin-top:3px}
   .read-badge{
@@ -492,7 +497,7 @@
   }
   .report-card .rc-head{
     font-family:'Playfair Display',Georgia,serif; font-weight:800; font-size:18px; letter-spacing:1.5px;
-    text-transform:uppercase; color:var(--gold); margin-bottom:12px; text-align:center;
+    text-transform:uppercase; color:var(--gold-t); margin-bottom:12px; text-align:center;
   }
   .report-row{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-top:1px solid rgba(255,255,255,.07); font-size:13.5px}
   .report-row .ri{flex:none; font-size:17px; width:24px; text-align:center}
@@ -525,7 +530,7 @@
   .rolecard h2{font-size:34px; text-transform:uppercase; margin-bottom:8px}
   .rolecard .rteam{margin-bottom:16px}
   .roleblock{text-align:left; background:rgba(0,0,0,.25); border-radius:16px; padding:13px 15px; margin-top:10px}
-  .roleblock b{display:block; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--gold); margin-bottom:4px}
+  .roleblock b{display:block; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--gold-t); margin-bottom:4px}
   .roleblock div{font-size:13.5px; color:#e4e4ea; line-height:1.5}
   .mystery{text-align:center; padding:48px 20px}
   .mystery .q{font-size:64px}
@@ -560,7 +565,7 @@
   details summary::-webkit-details-marker{display:none}
   details summary:after{content:"▾"; color:var(--muted); transition:transform .25s var(--ease)}
   details[open] summary:after{transform:rotate(180deg)}
-  details .dbody{padding:0 16px 16px; font-size:13.5px; color:#d6d6dc; line-height:1.55; animation:viewIn .25s var(--ease)}
+  details .dbody{padding:0 16px 16px; font-size:13.5px; color:var(--zacht); line-height:1.55; animation:viewIn .25s var(--ease)}
   details .dbody ol,details .dbody ul{padding-left:18px; display:flex; flex-direction:column; gap:6px}
   details table{width:100%; border-collapse:collapse; font-size:13px}
   details td,details th{padding:6px 4px; border-bottom:1px solid #333338; text-align:center}
@@ -655,7 +660,7 @@
   .cardback .cb-logo{width:74%; opacity:.9}
   .cardback .cb-q{
     font-family:'Playfair Display',serif; font-weight:800; font-size:76px; line-height:1;
-    color:var(--gold); animation:pulse 2.6s ease infinite;
+    color:var(--gold-t); animation:pulse 2.6s ease infinite;
   }
   .cardback .cb-sub{font-size:12.5px; color:var(--muted); text-align:center; line-height:1.55}
 
@@ -718,9 +723,9 @@
 
   /* ---------- voorvraag aan de infiltranten ---------- */
   .voorvraag{border:1.5px solid var(--red); background:linear-gradient(160deg, rgba(255,59,48,.10), var(--bg2) 60%)}
-  .voorvraag h3{color:var(--red)}
+  .voorvraag h3{color:var(--red-t)}
   .vv-wacht{text-align:center; font-size:13px; color:var(--muted); padding:10px; background:var(--bg3); border-radius:14px}
-  .vv-ok{color:var(--green); font-weight:600}
+  .vv-ok{color:var(--green-t); font-weight:600}
   .vv-keuze{display:flex; gap:8px}
   .vv-keuze .btn{flex:1; font-size:13.5px; padding:13px 8px}
   .vv-tel{font-size:12px; color:var(--muted); margin-bottom:9px}
@@ -749,7 +754,7 @@
   .ml-item.gebruikt span{text-decoration:line-through; opacity:.5}
 
   .hq-reden{
-    font-size:12px; color:var(--gold); line-height:1.45; margin-top:5px;
+    font-size:12px; color:var(--gold-t); line-height:1.45; margin-top:5px;
     background:rgba(232,178,58,.10); border-radius:10px; padding:6px 9px;
   }
 
@@ -793,7 +798,7 @@
 
   /* ---------- nachtstand ---------- */
   .switch-row.nacht-aan{border-color:var(--gold); background:rgba(232,178,58,.10)}
-  .nacht-note{color:var(--gold)}
+  .nacht-note{color:var(--gold-t)}
   .nacht-scherm{
     flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
     text-align:center; padding:30px 26px; margin:-14px -14px -8px; gap:2px;
@@ -805,7 +810,7 @@
   .ns-maan{font-size:74px; line-height:1; margin-bottom:16px; animation:nsZweef 5s ease-in-out infinite}
   @keyframes nsZweef{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
   .nacht-scherm h2{
-    font-family:'Lilita One'; font-size:25px; line-height:1.2; color:var(--gold);
+    font-family:'Lilita One'; font-size:25px; line-height:1.2; color:var(--gold-t);
     letter-spacing:.4px; max-width:16ch;
   }
   .ns-groet{font-size:16px; color:#e6e4dd; margin-top:8px; font-weight:600}
@@ -887,7 +892,7 @@
   .verleiddoelcard.done{border-color:var(--green) !important}
   .verleiddoelcard.afgewezen{border-color:var(--line) !important; box-shadow:none !important; opacity:.9}
   .verleidvraag{border:1.5px solid var(--red); background:linear-gradient(160deg, rgba(255,59,48,.12), var(--bg2) 60%)}
-  .verleidvraag h3{color:var(--red)}
+  .verleidvraag h3{color:var(--red-t)}
 
   /* ---------- verleiden of gevangennemen ---------- */
   .verleidcard{border-color:var(--gold) !important}
@@ -942,13 +947,14 @@
   .attempt-row{display:flex; align-items:center; gap:10px; background:var(--bg3); border:1px solid var(--line); border-radius:14px; padding:10px 12px; margin-bottom:8px; font-size:13.5px}
   .attempt-row .aa{flex:1; min-width:0}
   .attempt-row .aa .who{font-size:11px; color:var(--muted)}
-  .lock-note{text-align:center; font-size:12.5px; color:var(--gold); margin-top:8px; font-weight:600}
+  .lock-note{text-align:center; font-size:12.5px; color:var(--gold-t); margin-top:8px; font-weight:600}
 
   /* ---------- licht thema ---------- */
   body.light{
     --bg:#f2f0ea; --bg2:#ffffff; --bg3:#edeae2; --bg4:#dfdbd1;
     --line:rgba(0,0,0,.09); --text:#1d1c19; --muted:#6d6c66;
     --blue:#2f6fe0;
+    --gold-t:#8a6510; --green-t:#2e7d22; --red-t:#c62016; --zacht:#45443f;
     background:
       radial-gradient(800px 440px at 92% -8%, rgba(255,59,48,.06), transparent 62%),
       radial-gradient(800px 440px at -5% 108%, rgba(98,197,84,.07), transparent 62%),
@@ -958,7 +964,7 @@
   body.light .topbar{background:rgba(242,240,234,.85)}
   body.light .tabbar{background:#ffffff; border-color:rgba(44,44,46,.10);
     box-shadow:0 4px 24px rgba(0,0,0,.10), 0 1px 4px rgba(0,0,0,.06)}
-  body.light .tabbar button{color:#8b8a83}
+  body.light .tabbar button{color:#6f6e67}
   body.light .chat-screen{background:var(--bg)}
   body.light .chat-head,body.light .composer{background:rgba(250,249,245,.92)}
   body.light input,body.light textarea,body.light select{border-color:#d3cfc5}
@@ -968,7 +974,7 @@
   body.light .msg{background:var(--bg2); color:var(--text)}
   body.light .msg.mine{background:linear-gradient(145deg,#478f39,#39762d); color:#fff; border:none}
   body.light .msg.sys{background:transparent; color:var(--muted)}
-  body.light .msg .mtime{color:rgba(0,0,0,.35)}
+  body.light .msg .mtime{color:rgba(0,0,0,.55)}
   body.light .msg.mine .mtime{color:rgba(255,255,255,.65)}
   body.light .mission-card p{color:#45443f}
   body.light details .dbody{color:#3d3c37}
@@ -988,6 +994,19 @@
   }
   body.light .riddle-q{color:#3a3325}
   body.light .win-msg{color:#e8e8ee}
+  /* Deze kaarten blijven ook in het lichte thema donker (dat hoort bij de
+     sfeer), dus moet de tekst erop juist licht blijven — anders lees je op een
+     licht toestel zwart op zwart. */
+  body.light .rolecard,
+  body.light .report-card{color:#f4f4f5}
+  body.light .rolecard .roleblock{background:rgba(0,0,0,.25)}
+  body.light .rolecard .roleblock div{color:#e4e4ea}
+  body.light .rolecard .roleblock b,
+  body.light .report-card .rc-head,
+  body.light .nacht-scherm h2{color:var(--gold)}
+  body.light .report-card .rc-foot,
+  body.light .report-row .rl{color:#a8a69e}
+  body.light .msg.mine .reactie{color:#fff}
 
   /* ---------- zoekopdracht (gevangenen) ---------- */
   .huntcard{border-color:#7fa6ff !important; box-shadow:0 8px 24px -12px rgba(127,166,255,.4) !important}
@@ -2257,7 +2276,7 @@ function render(){
       <img class="topbar-logo" src="kaarten/logo.png" alt="${esc(CFG.spelNaam || "Geheime Dienst")}"
            onerror="this.outerHTML='&lt;h2 class=&quot;title-font&quot; style=&quot;font-size:19px&quot;&gt;${esc(CFG.spelNaam || "GEHEIME DIENST")}&lt;/h2&gt;'">
       <div style="flex:1"></div>
-      <div class="me-chip">${esc(S.me.name)}<br><span style="color:${isL ? "var(--gold)" : "var(--green)"}">${isL ? "🎩 Spelleider" : "Speler"}</span></div>
+      <div class="me-chip">${esc(S.me.name)}<br><span style="color:${isL ? "var(--gold-t)" : "var(--green-t)"}">${isL ? "🎩 Spelleider" : "Speler"}</span></div>
       <button class="icon-btn" id="settingsBtn" title="Instellingen">⚙️</button>
     </div>
     ${S.settings.gameOver ? `<div class="gameover-banner ${S.settings.winner === "infiltrant" ? "go-red" : "go-green"}">🏁 Spel afgelopen — team ${S.settings.winner === "infiltrant" ? "Infiltranten" : "Gelovigen"} heeft gewonnen!</div>` : ""}
@@ -2487,7 +2506,7 @@ function verbannenSpelers(){
 // team er alleen bij zetten als de rolnaam dat niet al zegt
 function rolMetTeam(r, inf){
   const team = inf ? "Infiltrant" : "Gelovige";
-  const kleur = inf ? "var(--red)" : "var(--green)";
+  const kleur = inf ? "var(--red-t)" : "var(--green-t)";
   return `${r.emoji} <b style="color:${kleur}">${r.naam}</b>${r.naam === team ? "" : ` · team ${inf ? "Infiltranten" : "Gelovigen"}`}`;
 }
 function verbannenHtml(){
@@ -2627,7 +2646,7 @@ function renderSpelers(el){
     )}
     ${S.settings.gameOver ? `<button class="btn btn-green btn-block" id="eindkaartBtn" style="margin-bottom:12px">🏁 Eindkaart met alle statistieken</button>` : ""}
     ${nRole < n ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">🎭 ${nRole} van de ${n} spelers heeft een rol${nInf ? ` · ${nInf} infiltrant${nInf === 1 ? "" : "en"} toegewezen` : ""}</div>` : ""}
-    ${adv ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">💡 Advies bij ${n} spelers: <b style="color:var(--red)">${adv[0]} infiltranten</b> en <b style="color:var(--green)">${adv[1]} gelovigen</b>${n >= 17 ? " (2x veldwerker)" : " (alle speciale rollen 1x)"}</div>` : ""}
+    ${adv ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">💡 Advies bij ${n} spelers: <b style="color:var(--red-t)">${adv[0]} infiltranten</b> en <b style="color:var(--green-t)">${adv[1]} gelovigen</b>${n >= 17 ? " (2x veldwerker)" : " (alle speciale rollen 1x)"}</div>` : ""}
     ${dubbeleLeidersHtml()}
     ${infCheckHtml(nInf)}
     <div class="switch-row">
@@ -3008,7 +3027,7 @@ function leaderRequestsHtml(){
           <div style="font-size:13.5px;margin-bottom:8px"><b>${esc(r.pn)}</b> wil een andere rol
             <div style="font-size:12px;color:var(--muted)">nu: ${huidige}${r.text ? ` · "${esc(r.text)}"` : ""} · ${fmtTime(r.at)}</div>
           </div>
-          ${pending.length ? `<div style="font-size:12px;color:var(--gold);margin-bottom:8px">⏳ Gevraagd aan ${esc(pending.map(t => t.targetPn).join(", "))} — wacht op antwoord</div>` : ""}
+          ${pending.length ? `<div style="font-size:12px;color:var(--gold-t);margin-bottom:8px">⏳ Gevraagd aan ${esc(pending.map(t => t.targetPn).join(", "))} — wacht op antwoord</div>` : ""}
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-sm btn-green" data-req-ok="${r.id}">✅ Goedkeuren</button>
             <button class="btn btn-sm btn-ghost" data-req-ask="${r.id}">🔄 Spelers vragen</button>
@@ -3053,7 +3072,7 @@ function askTakeoverModal(reqId){
   const anderen = S.players.filter(x => !x.isLeader && x.id !== r.pid && x.status !== "uit");
   modal(`
     <h3>🔄 Wie wil deze rol overnemen?</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">De geselecteerde spelers krijgen de vraag of ze de rol ${rol ? `<b style="color:var(--text)">${rol.emoji} ${rol.naam}</b>` : "van deze speler"} willen overnemen. Wie als eerste ja zegt, ruilt van rol met <b style="color:var(--text)">${esc(r.pn)}</b> en het verzoek wordt automatisch goedgekeurd.<br><span style="color:var(--gold)">De naam van ${esc(r.pn)} wordt niet getoond.</span></p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">De geselecteerde spelers krijgen de vraag of ze de rol ${rol ? `<b style="color:var(--text)">${rol.emoji} ${rol.naam}</b>` : "van deze speler"} willen overnemen. Wie als eerste ja zegt, ruilt van rol met <b style="color:var(--text)">${esc(r.pn)}</b> en het verzoek wordt automatisch goedgekeurd.<br><span style="color:var(--gold-t)">De naam van ${esc(r.pn)} wordt niet getoond.</span></p>
     <div class="check-list">
       ${anderen.map(x => `<label><input type="checkbox" value="${x.id}"> ${esc(x.name)} <span style="color:var(--muted);font-size:12px;margin-left:auto">${x.role ? ROLES[x.role].naam : "geen rol"}</span></label>`).join("")}
     </div>
@@ -3111,7 +3130,7 @@ function takeoverHtml(){
     return `
     <div class="card" style="border:1.5px solid var(--gold)">
       <h3>🔄 Rol overnemen?</h3>
-      <p style="font-size:13.5px;color:#d6d6dc;line-height:1.55;margin-bottom:12px">De spelleider vraagt of jij de rol <b style="color:var(--gold)">${r.emoji} ${r.naam}</b> wilt overnemen. Zeg je ja, dan ruil je van rol met een medespeler — je huidige rol gaat naar die speler.</p>
+      <p style="font-size:13.5px;color:var(--zacht);line-height:1.55;margin-bottom:12px">De spelleider vraagt of jij de rol <b style="color:var(--gold-t)">${r.emoji} ${r.naam}</b> wilt overnemen. Zeg je ja, dan ruil je van rol met een medespeler — je huidige rol gaat naar die speler.</p>
       <div style="display:flex;gap:10px">
         <button class="btn btn-green" style="flex:1" data-take-yes="${t.id}">✅ Ja, ik neem hem over</button>
         <button class="btn btn-ghost" style="flex:1" data-take-no="${t.id}">Nee, bedankt</button>
@@ -3384,7 +3403,7 @@ function riddleModal(rid){
     modal(`
       <h3>🛡️ Inzendingen</h3>
       <div class="riddle-q" style="margin-bottom:6px">${esc(r.q)}</div>
-      <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Juiste antwoord: <b style="color:var(--gold)">${esc(r.answer)}</b>${won ? ` · 🏆 gewonnen door <b>${esc(r.winnerName)}</b>` : ""}</p>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Juiste antwoord: <b style="color:var(--gold-t)">${esc(r.answer)}</b>${won ? ` · 🏆 gewonnen door <b>${esc(r.winnerName)}</b>` : ""}</p>
       ${attempts.length === 0 ? `<div class="empty" style="padding:20px">Nog geen inzendingen.</div>` : ""}
       ${attempts.map(a => `
         <div class="attempt-row">
@@ -3543,7 +3562,7 @@ function huntModal(hid){
   if(isL){
     modal(`
       <h3>🔎 Inzendingen</h3>
-      ${won ? `<p style="font-size:13px;color:var(--green);margin-bottom:10px">🏆 Gevonden door <b>${esc(h.winnerName)}</b> — teruggekeerd als gelovige.</p>` : `<p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Keur een selfie goed: die speler ontsnapt, wordt weer een gewone gelovige en de opdracht sluit voor de rest.</p>`}
+      ${won ? `<p style="font-size:13px;color:var(--green-t);margin-bottom:10px">🏆 Gevonden door <b>${esc(h.winnerName)}</b> — teruggekeerd als gelovige.</p>` : `<p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Keur een selfie goed: die speler ontsnapt, wordt weer een gewone gelovige en de opdracht sluit voor de rest.</p>`}
       <div id="huEntries"><div class="empty" style="padding:20px">Nog geen inzendingen.</div></div>
     `, m => {
       const renderEntries = () => {
@@ -3594,7 +3613,7 @@ function huntModal(hid){
   modal(`
     <h3>🤳 Selfie met het voorwerp</h3>
     <img class="hunt-obj" data-img="${h.imgId}" alt="geheim voorwerp">
-    ${h.desc ? `<p style="font-size:13.5px;color:#d6d6dc;margin-bottom:10px">${esc(h.desc)}</p>` : ""}
+    ${h.desc ? `<p style="font-size:13.5px;color:var(--zacht);margin-bottom:10px">${esc(h.desc)}</p>` : ""}
     ${h.deadline ? `<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">⏰ Deadline: ${fmtDT(h.deadline)}</div>` : ""}
     ${isMuted(S.me) ? `<div style="text-align:center;color:var(--muted);font-size:13px;padding:8px">👁️ Je kunt niet meer meedoen.</div>` : `
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Vind je het voorwerp? Maak een selfie mét het voorwerp erbij en stuur die in. De spelleider beoordeelt je inzending.</p>
@@ -4829,8 +4848,8 @@ function verleidVerzoekHtml(){
   return `
     <div class="card verleidvraag">
       <h3>💘 Je bent verleid</h3>
-      <p style="font-size:13.5px;color:#d6d6dc;line-height:1.55;margin-bottom:12px">
-        De infiltranten hebben jou uitgekozen. Loop je over? Dan word je vanaf nu <b style="color:var(--red)">🕵️ Infiltrant</b>
+      <p style="font-size:13.5px;color:var(--zacht);line-height:1.55;margin-bottom:12px">
+        De infiltranten hebben jou uitgekozen. Loop je over? Dan word je vanaf nu <b style="color:var(--red-t)">🕵️ Infiltrant</b>
         en kom je in hun groepschat, inclusief alles wat daar al besproken is. Weiger je, dan verandert er
         niets en blijft je rol geheim.
       </p>
@@ -4949,7 +4968,7 @@ function missionModal(missionId){
     <h3 style="display:flex;justify-content:space-between;align-items:center;gap:10px">
       <span>📋 ${esc(mi.title)}</span><span class="pill ${st.pill}">${st.label}</span>
     </h3>
-    ${mi.desc ? `<p style="font-size:14px;color:#d6d6dc;white-space:pre-wrap;margin-bottom:8px">${esc(mi.desc)}</p>` : ""}
+    ${mi.desc ? `<p style="font-size:14px;color:var(--zacht);white-space:pre-wrap;margin-bottom:8px">${esc(mi.desc)}</p>` : ""}
     ${mi.deadline ? `<div style="font-size:13px;color:var(--muted);margin-bottom:8px">⏰ Deadline: ${fmtDT(mi.deadline)}</div>` : ""}
     <div class="section-label" style="margin-top:14px">Bewijsfoto's</div>
     <div class="photo-grid" id="miPhotos"><div class="empty" style="grid-column:1/-1;padding:16px">Nog geen foto's.</div></div>
@@ -5076,11 +5095,11 @@ function renderRol(el){
        </div>
        <div class="card" style="border:1.5px solid var(--gold)">
          <h3>⛓️ Je bent gevangengenomen</h3>
-         <p style="font-size:13.5px;color:#d6d6dc;line-height:1.5">Vind het geheime voorwerp dat ergens op de camping is verstopt en lever het in bij de spelleider om te ontsnappen. Zoeken mag tussen 11:00 en 22:00. Wees andere gevangenen te slim af!</p>
+         <p style="font-size:13.5px;color:var(--zacht);line-height:1.5">Vind het geheime voorwerp dat ergens op de camping is verstopt en lever het in bij de spelleider om te ontsnappen. Zoeken mag tussen 11:00 en 22:00. Wees andere gevangenen te slim af!</p>
        </div>
        <div class="card" style="text-align:center">
          <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1.1px;font-weight:700;margin-bottom:6px">Je oorspronkelijke rol</div>
-         <div style="font-size:17px;font-weight:600">${r.emoji} <b style="color:${isInf ? "var(--red)" : "var(--green)"}">${r.naam}</b></div>
+         <div style="font-size:17px;font-weight:600">${r.emoji} <b style="color:${isInf ? "var(--red-t)" : "var(--green-t)"}">${r.naam}</b></div>
          <div style="font-size:12.5px;color:var(--muted);margin-top:3px">Team ${isInf ? "Infiltranten" : "Gelovigen"} · ontsnap je, dan keer je terug als gewone gelovige</div>
        </div>
        <details class="role-details" id="rolbeschrijving">
@@ -5833,7 +5852,7 @@ function renderInfo(el){
       <div class="dbody">
         ${ROLE_ORDER.map(k => { const r = ROLES[k]; return `
           <div style="margin-bottom:12px">
-            <b style="color:${r.team === "infiltrant" ? "var(--red)" : "var(--green)"}">${r.emoji} ${r.naam}</b>
+            <b style="color:${r.team === "infiltrant" ? "var(--red-t)" : "var(--green-t)"}">${r.emoji} ${r.naam}</b>
             <div style="font-size:13px;margin-top:2px">${r.missie}</div>
           </div>`; }).join("")}
       </div>
@@ -5843,7 +5862,7 @@ function renderInfo(el){
       <div class="dbody">
         <table>
           <tr><th>Spelers</th><th>Infiltranten</th><th>Gelovigen</th><th>Speciaal</th></tr>
-          ${Object.entries(VERHOUDING).map(([n,[i,g]]) => `<tr><td>${n}</td><td style="color:var(--red)">${i}</td><td style="color:var(--green)">${g}</td><td>${n >= 17 ? "2x veldwerker" : "alles 1x"}</td></tr>`).join("")}
+          ${Object.entries(VERHOUDING).map(([n,[i,g]]) => `<tr><td>${n}</td><td style="color:var(--red-t)">${i}</td><td style="color:var(--green-t)">${g}</td><td>${n >= 17 ? "2x veldwerker" : "alles 1x"}</td></tr>`).join("")}
         </table>
       </div>
     </details>
@@ -5878,7 +5897,7 @@ function closeModal(instant){
 function confirmModal(html, onYes){
   modal(`
     <h3>Weet je het zeker?</h3>
-    <p style="font-size:14px;color:#d6d6dc;margin-bottom:16px">${html}</p>
+    <p style="font-size:14px;color:var(--zacht);margin-bottom:16px">${html}</p>
     <div style="display:flex;gap:10px">
       <button class="btn btn-ghost" style="flex:1" id="cNo">Annuleren</button>
       <button class="btn btn-red" style="flex:1" id="cYes">Ja</button>

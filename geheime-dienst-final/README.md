@@ -31,7 +31,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Peilingen van de spelleider: tik je antwoord aan (soms mag je er meer kiezen), wijzig je stem zolang de peiling open staat en zie bij een niet-anonieme peiling wie wat stemde
 - 🔎 **Mijn verdenkingen** (eigen tabblad, alleen voor spelers): zet bij elke medespeler een oordeel — 🟢 vertrouw ik, 🟡 twijfel, 🟠 verdacht, 🔴 zeker weten — en schrijf erbij wat je opviel. De lijst zet je zwaarste verdenkingen bovenaan, zodat je met een scherp verhaal de avondbijeenkomst in gaat. **Alleen jij ziet dit**: de app haalt uitsluitend jouw eigen aantekeningen op en toont ze nergens anders, ook niet aan de spelleider
 - 🏁 **Eindkaart** na afloop: een poster met alle statistieken en alle rollen, om te bewaren of als opgemaakte tekst in WhatsApp te plakken
-- Donker of licht thema via ⚙️ rechtsboven
+- Donker of licht thema via ⚙️ rechtsboven. Beide thema's zijn nagemeten: alle tekst haalt minstens 3:1 contrast, de meeste ruim 4,5:1. Gekleurde tekst (goud, groen, rood) wordt in het lichte thema automatisch donkerder gezet, en de kaarten die bewust donker blijven — rolkaart, dagrapport, nachtscherm — houden daar juist lichte letters
 
 **Rol-specifiek**
 - 🕵️ **Infiltranten** — stemmen samen op de missie van de dag, leveren foto's als bewijs en dienen de opdracht in. Stuurt de spelleider de nachtkeuze, dan stemmen ze ook over 🙈 verleiden of ⛓️ gevangennemen
