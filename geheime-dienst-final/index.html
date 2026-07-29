@@ -1750,7 +1750,10 @@ async function loadImageInto(imgId, el, onload){
 const VIDEO_MAX_SEC = 30;     // langere filmpjes worden afgekapt
 const VIDEO_MAX_DIM = 640;
 const VIDEO_FPS = 24;
-const VIDEO_STUK = 700000;    // base64-tekens per document (limiet is 1 MB)
+// base64-tekens per document (een document mag 1 MB zijn). Moet een veelvoud
+// van 4 blijven, anders is een los stuk geen geldige base64 meer en kan het
+// niet apart gedecodeerd worden.
+const VIDEO_STUK = 700000;
 // in demo-modus past alles in localStorage, dus daar houden we het klein
 const videoDoelBytes = () => (DB && DB.demo) ? 700e3 : 4e6;
 // Hieronder gaat een filmpje ongewijzigd de database in: sneller, scherper en
@@ -1771,19 +1774,23 @@ function videoOpnameType(){
 }
 const isVideoBestand = f => !!f && (/^video\//.test(f.type || "") || /\.(mp4|mov|m4v|webm|3gp|avi|mkv)$/i.test(f.name || ""));
 
-function blobNaarBase64(blob){
-  return new Promise((ok, fout) => {
-    const fr = new FileReader();
-    fr.onload = () => ok(String(fr.result).split(",")[1] || "");
-    fr.onerror = fout;
-    fr.readAsDataURL(blob);
-  });
+/* Rechtstreeks uit de bytes, niet via een data-URL. Een data-URL uitpakken op
+   de eerste komma gaat namelijk mis zodra het mediatype er zelf één bevat —
+   en dat doet het op een iPhone: video/mp4;codecs="avc1.42E01E,mp4a.40.2". */
+async function blobNaarBase64(blob){
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let tekens = "";
+  const stap = 0x8000;   // in porties, anders loopt de aanroepstapel over
+  for(let i = 0; i < bytes.length; i += stap){
+    tekens += String.fromCharCode.apply(null, bytes.subarray(i, i + stap));
+  }
+  return btoa(tekens);
 }
-function base64NaarBlob(b64, mime){
+function base64NaarBytes(b64){
   const ruw = atob(b64);
   const arr = new Uint8Array(ruw.length);
   for(let i = 0; i < ruw.length; i++) arr[i] = ruw.charCodeAt(i);
-  return new Blob([arr], {type: mime || "video/mp4"});
+  return arr;
 }
 
 /* iOS speelt geen video af die niet in de pagina staat, en zonder muted mag
@@ -1983,17 +1990,24 @@ async function uploadVideo(file, onVoortgang){
   return {vidId, posterId, dur, afgekapt};
 }
 
-async function loadVideoUrl(vidId){
+async function loadVideoUrl(vidId, onVoortgang){
   if(S.vidCache[vidId]) return S.vidCache[vidId];
   const meta = await DB.getDoc("videos/" + vidId);
   if(!meta || !meta.klaar) return null;
-  let b64 = "";
-  for(let i = 0; i < meta.stukken; i++){
+  const n = Number(meta.stukken) || 0;
+  if(!n) throw new Error("er zitten geen gegevens in dit filmpje");
+  // Elk stuk apart decoderen. VIDEO_STUK is een veelvoud van 4, dus elk stuk
+  // is op zichzelf geldige base64 — en zo hoeven we nooit het hele filmpje
+  // als één reuzentekst in het geheugen te hebben.
+  const delen = [];
+  for(let i = 0; i < n; i++){
+    if(onVoortgang) onVoortgang(i, n);
     const s = await DB.getDoc(`videos/${vidId}/stukken/s${i}`);
-    if(!s || typeof s.d !== "string") return null;
-    b64 += s.d;
+    if(!s || typeof s.d !== "string") return null;   // nog niet compleet
+    try{ delen.push(base64NaarBytes(s.d)); }
+    catch(e){ throw new Error(`deel ${i + 1} van ${n} is beschadigd`); }
   }
-  const url = URL.createObjectURL(base64NaarBlob(b64, meta.mime));
+  const url = URL.createObjectURL(new Blob(delen, {type: meta.mime || "video/mp4"}));
   S.vidCache[vidId] = url;
   return url;
 }
@@ -2024,18 +2038,30 @@ function viewVideo(vidId){
   const sluit = () => { w.classList.add("closing"); setTimeout(() => w.remove(), 180); };
   w.querySelector("#ivClose").onclick = sluit;
   w.onclick = e => { if(e.target === w) sluit(); };
-  loadVideoUrl(vidId).then(url => {
+  const stand = (i, n) => {
+    const laden = w.querySelector(".vid-laden");
+    if(laden && n > 1) laden.textContent = `Filmpje ophalen… deel ${i + 1} van ${n}`;
+  };
+  loadVideoUrl(vidId, stand).then(url => {
     if(!w.isConnected) return;
     const laden = w.querySelector(".vid-laden");
     if(!url){ if(laden) laden.textContent = "Dit filmpje is nog niet compleet — probeer het zo nog eens."; return; }
     if(laden) laden.remove();
     const v = document.createElement("video");
     v.src = url; v.controls = true; v.autoplay = true; v.playsInline = true;
+    v.onerror = () => { if(!w.querySelector(".vid-laden")){
+      const p = document.createElement("div");
+      p.className = "vid-laden";
+      p.textContent = "Dit filmpje kan op dit toestel niet worden afgespeeld.";
+      w.insertBefore(p, w.querySelector(".iv-bar"));
+      v.remove();
+    }};
     w.insertBefore(v, w.querySelector(".iv-bar"));
   }).catch(e => {
     console.error(e);
     const laden = w.querySelector(".vid-laden");
-    if(laden) laden.textContent = "Het filmpje kon niet worden geladen.";
+    // de echte reden erbij: anders is er bij een melding niets te onderzoeken
+    if(laden) laden.textContent = "Het filmpje kon niet worden geladen" + (e && e.message ? ` (${e.message})` : "") + ".";
   });
 }
 

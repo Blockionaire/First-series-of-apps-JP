@@ -91,6 +91,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - **Filmpjes** gaan dezelfde weg, maar een document mag maar 1 MB zijn. Daarom wordt elk filmpje in stukken over meerdere documenten verdeeld, die bij het afspelen weer aan elkaar worden geplakt. Pas als het laatste stuk binnen is wordt het filmpje op *klaar* gezet, dus een halve upload levert nooit een kapot filmpje op
 - Tot ongeveer 6 MB gaat het bestand er ongewijzigd in. Alleen wat daarboven zit wordt verkleind naar 640px en maximaal 30 seconden, door het op een canvas af te spelen en opnieuw op te nemen — dat duurt zo lang als het filmpje zelf en levert beeld zonder geluid op. Er zit een waakhond op: gaat de speelkop 8 seconden niet vooruit, dan stopt het met een melding in plaats van te blijven hangen
 - Van een beeldje uit het begin wordt een gewone foto gemaakt: die miniatuur laadt in de chat, het filmpje zelf pas als iemand erop tikt
+- De gegevens gaan rechtstreeks vanuit de bytes de database in, niet via een data-URL. Dat laatste gaat namelijk mis zodra het mediatype zelf een komma bevat — en precies dat doet de codec die een iPhone kiest: `video/mp4;codecs="avc1.42E01E,mp4a.40.2"`
 - Wil je langere filmpjes in hogere kwaliteit, dan is **Cloud Storage** in Firebase de nette oplossing (en daarvoor is het Blaze-abonnement nodig). Nu staat dat uit; de app werkt volledig zonder
 - Zonder Firebase-configuratie draait de app automatisch in **demo-modus**: alles werkt, maar alleen op één apparaat
 
