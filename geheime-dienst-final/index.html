@@ -362,6 +362,20 @@
   .chat-head .info{flex:1; min-width:0}
   .chat-head .cname{font-weight:700; font-size:16px}
   .chat-head .csub{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  /* currentColor voor de puntjes, zodat ze in beide thema's meekleuren */
+  .chat-head .csub .typt{color:var(--green-t); font-weight:600; display:inline-flex; align-items:center; gap:5px}
+  .typt-dots{display:inline-flex; gap:3px; flex:none}
+  .typt-dots i{
+    width:4px; height:4px; border-radius:50%; background:currentColor;
+    animation:typtStuiter 1.25s infinite ease-in-out;
+  }
+  .typt-dots i:nth-child(2){animation-delay:.16s}
+  .typt-dots i:nth-child(3){animation-delay:.32s}
+  @keyframes typtStuiter{
+    0%,60%,100%{opacity:.35; transform:translateY(0)}
+    30%{opacity:1; transform:translateY(-3px)}
+  }
+  @media (prefers-reduced-motion:reduce){ .typt-dots i{animation:none; opacity:.75} }
   /* vaste opdrachtbalk: blijft staan hoe ver je ook terugscrolt */
   .opdrachtbalk{
     flex:none; display:flex; align-items:center; gap:11px; width:100%; text-align:left;
@@ -1222,6 +1236,10 @@ const S = {
   msgsLoaded: false,
   replyTo: null,
   unsubMsgs: null,
+  typing: {},          // t_<spelerId> = tijdstip, alleen van de chat die open staat
+  unsubTyping: null,
+  typingTimer: null,   // laat een oude "aan het typen" vanzelf verlopen
+  typingLaatst: 0,     // wanneer we zelf voor het laatst hebben doorgegeven dat we typen
   imgCache: {},
   clockTimer: null
 };
@@ -2138,6 +2156,80 @@ function chatMembersLabel(c){
   const names = (c.members||[]).map(id => (S.players.find(p => p.id === id)||{}).name).filter(Boolean);
   return names.join(", ") || "Geen leden";
 }
+
+/* =====================================================================
+   AAN HET TYPEN (zoals in WhatsApp)
+   ---------------------------------------------------------------------
+   Eén document per chat met per speler een tijdstip: typing/<chatId> met
+   velden t_<spelerId>. Losse velden, zodat twee mensen die tegelijk typen
+   elkaars stand niet overschrijven.
+
+   We schrijven hoogstens eens per TYP_INTERVAL — niet bij elke toetsaanslag,
+   dat zou de database onnodig belasten. Wie zijn app wegklikt schrijft geen
+   stopsein meer, dus loopt een melding na TYP_TTL vanzelf af; een tikker in
+   het chatscherm haalt hem dan weg.
+   ===================================================================== */
+const TYP_TTL = 6000;
+const TYP_INTERVAL = 2500;
+
+function typendeSpelers(){
+  const grens = now() - TYP_TTL;
+  return Object.entries(S.typing || {})
+    .filter(([k, t]) => k.startsWith("t_") && typeof t === "number" && t > grens && k.slice(2) !== S.me.id)
+    .map(([k]) => S.players.find(p => p.id === k.slice(2)))
+    .filter(Boolean);
+}
+function typLabel(c){
+  // in een privéchat blijft de spelleider "de spelleider", net als in de titel
+  const naam = p => (c.type === "dm" && p.isLeader) ? "De spelleider" : p.name;
+  const n = typendeSpelers().map(naam).sort((a, b) => a.localeCompare(b, "nl"));
+  if(n.length === 0) return "";
+  if(n.length === 1) return `${n[0]} is aan het typen`;
+  if(n.length === 2) return `${n[0]} en ${n[1]} zijn aan het typen`;
+  return `${n.length} mensen zijn aan het typen`;
+}
+function chatSubHtml(c){
+  const t = typLabel(c);
+  if(t) return `<span class="typt">${esc(t)}<span class="typt-dots"><i></i><i></i><i></i></span></span>`;
+  return `${esc(chatMembersLabel(c))}${c.type === "dm" ? "" : " ›"}`;
+}
+// Alleen dit ene regeltje bijwerken. Een volledige render zou het toetsenbord
+// dichtklappen en je half getypte bericht weggooien.
+function toonTypen(){
+  if(!S.me || !S.openChat) return;
+  const el = document.querySelector(".chat-screen .csub");
+  const c = S.chats.find(x => x.id === S.openChat);
+  if(!el || !c) return;
+  const nieuw = chatSubHtml(c);
+  if(el.innerHTML !== nieuw) el.innerHTML = nieuw;
+}
+async function meldTypen(chatId, bezig){
+  if(!S.me || !chatId) return;
+  const veld = "t_" + S.me.id;
+  if(!bezig){
+    if(!S.typingLaatst) return;   // stond al uit, niets te melden
+    S.typingLaatst = 0;
+    try{ await DB.set("typing/" + chatId, {[veld]: 0}); }catch(e){}
+    return;
+  }
+  if(now() - S.typingLaatst < TYP_INTERVAL) return;
+  S.typingLaatst = now();
+  try{ await DB.set("typing/" + chatId, {[veld]: now()}); }catch(e){}
+}
+function startTypen(chatId){
+  stopTypen();
+  S.unsubTyping = DB.listenDoc("typing/" + chatId, doc => {
+    if(S.openChat !== chatId) return;
+    S.typing = doc || {};
+    toonTypen();
+  });
+  S.typingTimer = setInterval(toonTypen, 1000);
+}
+function stopTypen(){
+  if(S.unsubTyping){ S.unsubTyping(); S.unsubTyping = null; }
+  if(S.typingTimer){ clearInterval(S.typingTimer); S.typingTimer = null; }
+  S.typing = {};
+}
 async function openDM(playerId){
   const id = "dm_" + playerId;
   if(!S.chats.find(c => c.id === id)){
@@ -2439,7 +2531,7 @@ async function resetGame(wipePlayers){
     for(const ph of await DB.getAll(`missions/${mi.id}/photos`)) await DB.del(`missions/${mi.id}/photos/${ph.id}`);
     await DB.del("missions/" + mi.id);
   }
-  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","peilingen","verleidDoelen","verdenkingen","hunts","huntEntries","images"]) await delAll(col);
+  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","peilingen","verleidDoelen","verdenkingen","hunts","huntEntries","typing","images"]) await delAll(col);
   await DB.set("settings/main", {nacht:false, draaiboek:{dag:0, gedaan:[]}, rolesRevealed:false, gameOver:false, winner:null, dag:1, infCheck:false, hoogtepunt:""});
   if(wipePlayers){
     await delAll("missionLib");   // ook de opdrachtenlijst weg bij een volledige wis
@@ -3818,6 +3910,8 @@ function openChat(chatId){
   S.chatJustOpened = true;
   S.closingChat = false;
   markeerGelezen(chatId);
+  S.typingLaatst = 0;
+  startTypen(chatId);
   if(S.unsubMsgs) S.unsubMsgs();
   // eerder opgehaalde berichten meteen tonen, zodat je je geschiedenis direct ziet
   S.msgs = S.msgCache[chatId] || [];
@@ -3832,8 +3926,11 @@ function openChat(chatId){
   renderChat();
 }
 function closeChat(skipAnim){
+  const verlaten = S.openChat;
+  meldTypen(verlaten, false);   // meteen afmelden, niet wachten tot het verloopt
   const done = () => {
     if(S.unsubMsgs){ S.unsubMsgs(); S.unsubMsgs = null; }
+    stopTypen();
     S.openChat = null; S.renderedChat = null; S.closingChat = false; S.replyTo = null; S.chatZoek = null;
     render();
   };
@@ -3922,7 +4019,7 @@ function renderChat(){
         <button class="back" id="chatBack">‹</button>
         <div class="info ${c.type === "dm" ? "" : "tikbaar"}" ${c.type === "dm" ? "" : 'id="chatInfo"'}>
           <div class="cname">${esc(chatTitle(c))}</div>
-          <div class="csub">${esc(chatMembersLabel(c))}${c.type === "dm" ? "" : " ›"}</div>
+          <div class="csub">${chatSubHtml(c)}</div>
         </div>
         ${nacht ? "" : `<button class="icon-btn" id="chatZoekBtn" title="Zoeken in deze chat">🔍</button>`}
         ${isL && c.type === "group" ? `<button class="icon-btn" id="grpEdit" title="Leden">⚙️</button>` : ""}`;
@@ -4159,10 +4256,14 @@ function renderChat(){
       ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 110) + "px";
       if(hadFocus){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
     }
-    ta.oninput = () => { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 110) + "px"; };
+    ta.oninput = () => {
+      ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 110) + "px";
+      meldTypen(c.id, ta.value.trim().length > 0);
+    };
     const doSend = async () => {
       const t = ta.value.trim(); if(!t) return;
       ta.value = ""; ta.style.height = "auto";
+      meldTypen(c.id, false);
       const re = S.replyTo; S.replyTo = null;
       haptic(6);
       await sendMessage(c.id, {type:"text", t, ...(re ? {re} : {})});
