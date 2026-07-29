@@ -26,6 +26,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - 🔍 Zoeken in een chat: tik het vergrootglas bovenin aan, typ waar je naar zoekt en spring met één tik naar dat bericht
 - 🌙 Nachtstand: zet de spelleider die aan, dan krijg je in elke chat een groot nachtscherm — *De nacht is van de infiltranten, slaap lekker!* Alleen de infiltranten kunnen dan nog overleggen
 - 🔔 **Meldingen** (⚙️ → *Meldingen aanzetten*): een seintje bij een nieuw bericht, een verzoek of een antwoord van de spelleider. De melding is **altijd anoniem** — geen naam, geen inhoud, niet eens in welke chat het staat, dus meekijkers worden er niets wijzer van
+- 🎬 **Filmpjes** kunnen overal waar een foto kan: in de chat, als bewijs bij een opdracht en als inzending bij een zoekopdracht. Ze worden automatisch verkleind (max 30 seconden) zodat ze door de camping-wifi passen. In een lijst zie je alleen een miniatuur met een afspeelknop — het filmpje zelf wordt pas opgehaald als je erop tikt
 - ✍️ **"… is aan het typen"** in de chatkop, net als in WhatsApp. Bij twee mensen staat er "Sanne en Tim zijn aan het typen", vanaf drie wordt het geteld. De melding verdwijnt vanzelf zodra iemand stopt of zijn app wegklikt. In een privéchat blijft de spelleider "de spelleider". Let op: in een spel als dit is dit een echte tell — je ziet iemand beginnen te typen en weer stoppen
 - Loopt er een opdracht in een chat? Dan staat de **opdracht van vandaag** met status (en afteller) vast bovenaan die chat — hoe ver je ook terugscrolt. Eén tik erop opent de opdracht. Zodra de spelleider hem goedkeurt verdwijnt de balk
 - Bij elke stemming (missiestemming, peiling, verleiden) staat onder de kaart **“wie stemde wat?”** — je ziet per keuze wie erop gestemd heeft en wie er nog moet. Alleen bij een anonieme peiling blijft dat verborgen
@@ -35,7 +36,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Donker of licht thema via ⚙️ rechtsboven. Beide thema's zijn nagemeten: alle tekst haalt minstens 3:1 contrast, de meeste ruim 4,5:1. Gekleurde tekst (goud, groen, rood) wordt in het lichte thema automatisch donkerder gezet, en de kaarten die bewust donker blijven — rolkaart, dagrapport, nachtscherm — houden daar juist lichte letters
 
 **Rol-specifiek**
-- 🕵️ **Infiltranten** — stemmen samen op de missie van de dag, leveren foto's als bewijs en dienen de opdracht in. Stuurt de spelleider de nachtkeuze, dan stemmen ze ook over 🙈 verleiden of ⛓️ gevangennemen
+- 🕵️ **Infiltranten** — stemmen samen op de missie van de dag, leveren foto's of filmpjes als bewijs en dienen de opdracht in. Stuurt de spelleider de nachtkeuze, dan stemmen ze ook over 🙈 verleiden of ⛓️ gevangennemen
 - 💻 **Hacker** — stelt maximaal 2 ja/nee-vragen per dag, alleen tussen 11:00 en 22:00; buiten dat tijdvak is het formulier op slot. De spelleider antwoordt met één tik, of wijst de vraag af met een korte uitleg waarom — een afgewezen vraag telt niet mee, dus je krijgt hem terug
 - ⛓️ **Gevangenen** — krijgen een foto van het geheime voorwerp; wie als eerste een goedgekeurde selfie mét het voorwerp instuurt, ontsnapt en keert terug als gewone gelovige
 - 🛡️ **Iedereen** — raadsels om het schild: de eerste met het goede antwoord wint (1 poging per 5 minuten)
@@ -87,6 +88,8 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - **Hosting:** GitHub Pages, direct vanuit deze repository — elke wijziging die naar de branch wordt gepusht staat binnen een minuut live
 - **Database:** Firebase Firestore (gratis Spark-plan), geconfigureerd in `firebase-config.js`
 - Foto's worden in de browser verkleind (max ~1280px) en in de database opgeslagen, dus aparte foto-opslag is niet nodig
+- **Filmpjes** gaan dezelfde weg, maar een document mag maar 1 MB zijn. Daarom wordt een filmpje eerst verkleind naar 640px en maximaal 30 seconden, en daarna in stukken over meerdere documenten verdeeld die bij het afspelen weer aan elkaar worden geplakt. Het verkleinen gebeurt door het filmpje op een canvas af te spelen en opnieuw op te nemen, dus het duurt ongeveer zo lang als het filmpje zelf — vandaar de voortgangsbalk. Van het laatste beeldje wordt een gewone foto gemaakt: die miniatuur laadt in de chat, het filmpje zelf pas als iemand erop tikt
+- Wil je langere filmpjes in hogere kwaliteit, dan is **Cloud Storage** in Firebase de nette oplossing (en daarvoor is het Blaze-abonnement nodig). Nu staat dat uit; de app werkt volledig zonder
 - Zonder Firebase-configuratie draait de app automatisch in **demo-modus**: alles werkt, maar alleen op één apparaat
 
 ### Instellingen aanpassen

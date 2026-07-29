@@ -629,6 +629,34 @@
     display:flex; align-items:center; justify-content:center; animation:fadeBg .2s ease;
   }
   .img-viewer img{max-width:96%; max-height:80%; border-radius:12px; animation:popIn .25s var(--ease)}
+  .img-viewer video{max-width:96%; max-height:80%; border-radius:12px; background:#000; animation:popIn .25s var(--ease)}
+  .vid-laden{color:#f4f4f5; font-size:14px; text-align:center; padding:0 24px}
+
+  /* ---------- video ---------- */
+  .vid-tegel{position:relative; display:block; cursor:pointer; line-height:0}
+  .vid-tegel img{display:block; width:100%; border-radius:14px}
+  .vid-leeg{display:block; width:100%; aspect-ratio:16/9; border-radius:14px; background:var(--bg3)}
+  .vid-play{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:46px; height:46px; border-radius:50%; background:rgba(0,0,0,.55);
+    color:#fff; font-size:17px; line-height:46px; text-align:center;
+    backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+    border:1.5px solid rgba(255,255,255,.75); padding-left:3px; pointer-events:none;
+  }
+  .vid-blok{margin-bottom:10px}
+  .photo-grid .vid-tegel{width:100%; height:100%}
+  .photo-grid .vid-tegel img{height:100%; object-fit:cover; border-radius:0}
+  .photo-grid .vid-play{width:34px; height:34px; line-height:34px; font-size:13px}
+  .vid-bezig{
+    position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom)); transform:translateX(-50%);
+    width:min(340px, calc(100% - 32px)); z-index:80; text-align:center;
+    background:var(--bg3); border:1px solid var(--line); border-radius:16px; padding:13px 16px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4); animation:viewIn .2s var(--ease);
+  }
+  .vb-kop{font-size:13.5px; font-weight:700; margin-bottom:9px}
+  .vb-baan{height:6px; border-radius:99px; background:var(--bg4); overflow:hidden}
+  .vb-baan i{display:block; height:100%; width:0; border-radius:99px; background:var(--green); transition:width .2s linear}
+  .vb-sub{font-size:11.5px; color:var(--muted); margin-top:8px}
   .img-viewer.closing{animation:fadeOutBg .18s ease forwards}
   .iv-bar{
     position:absolute; left:0; right:0; bottom:calc(22px + env(safe-area-inset-bottom));
@@ -1241,6 +1269,7 @@ const S = {
   typingTimer: null,   // laat een oude "aan het typen" vanzelf verlopen
   typingLaatst: 0,     // wanneer we zelf voor het laatst hebben doorgegeven dat we typen
   imgCache: {},
+  vidCache: {},        // vidId -> blob-url, zodat je een filmpje maar één keer ophaalt
   clockTimer: null
 };
 const $ = sel => document.querySelector(sel);
@@ -1543,7 +1572,7 @@ function zoekResultatenHtml(c){
     ${treffers.map(m => `
       <button class="zoek-rij" data-zoekhit="${m.id}">
         <div class="zr-top"><b>${esc(m.sn || (m.type === "sys" ? "Spelleider" : "Onbekend"))}</b><span>${fmtDT(m.at)}</span></div>
-        <div class="zr-tekst">${m.type === "img" ? "📷 Foto" : markeer(m.t || "")}</div>
+        <div class="zr-tekst">${m.type === "img" ? "📷 Foto" : m.type === "video" ? "🎬 Filmpje" : markeer(m.t || "")}</div>
       </button>`).join("")}`;
 }
 function springNaarBericht(mid){
@@ -1592,6 +1621,7 @@ function leesModal(mid){
 }
 function berichtPreview(m){
   if(m.type === "img") return "📷 Foto";
+  if(m.type === "video") return "🎬 Filmpje";
   if(m.type === "veld") return "🕵️ Drie missies";
   if(m.type === "verleid") return "🙈 Verleiden of gevangennemen?";
   if(m.type === "verleidDoel") return "💘 Wie verleiden jullie?";
@@ -1645,10 +1675,10 @@ function enableSheetDrag(wrap, m){
 /* Het invoerveld moet echt in de pagina staan en daarna weer weg: een los
    veld dat blijft hangen zorgt op de telefoon dat een tweede foto kiezen
    niets meer doet. Annuleren lost de belofte nu ook op. */
-function pickImage(){
+function pickImage(accept = "image/*"){
   return new Promise(resolve => {
     const inp = document.createElement("input");
-    inp.type = "file"; inp.accept = "image/*";
+    inp.type = "file"; inp.accept = accept;
     inp.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0;width:1px;height:1px";
     let klaar = false;
     const af = bestand => {
@@ -1701,6 +1731,261 @@ async function loadImageInto(imgId, el, onload){
   if(S.imgCache[imgId]){ el.src = S.imgCache[imgId]; if(onload) onload(); return; }
   const doc = await DB.getDoc("images/" + imgId);
   if(doc && doc.data){ S.imgCache[imgId] = doc.data; el.src = doc.data; if(onload) onload(); }
+}
+
+/* =====================================================================
+   VIDEO
+   ---------------------------------------------------------------------
+   Er is geen aparte bestandsopslag: net als foto's gaat een filmpje de
+   database in. Een document mag daar maximaal 1 MB zijn, dus wordt de video
+   eerst flink verkleind en daarna in stukken geknipt over meerdere
+   documenten. Bij het openen worden die weer aan elkaar geplakt.
+
+   Verkleinen gebeurt door het filmpje af te spelen op een canvas en dat
+   opnieuw op te nemen. Dat kost net zoveel tijd als de video duurt — vandaar
+   de voortgangsbalk. Van het eerste beeldje maken we een gewone foto, zodat
+   een lijst of chat alleen dat kleine plaatje hoeft te laden en het filmpje
+   zelf pas binnenkomt als iemand er echt op tikt.
+   ===================================================================== */
+const VIDEO_MAX_SEC = 30;     // langere filmpjes worden afgekapt
+const VIDEO_MAX_DIM = 640;
+const VIDEO_FPS = 24;
+const VIDEO_STUK = 700000;    // base64-tekens per document (limiet is 1 MB)
+// in demo-modus past alles in localStorage, dus daar houden we het klein
+const videoDoelBytes = () => (DB && DB.demo) ? 700e3 : 4e6;
+
+const VIDEO_TYPES = [
+  'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',   // speelt overal, ook op iPhone
+  "video/mp4;codecs=avc1",
+  "video/mp4",
+  "video/webm;codecs=vp9",
+  "video/webm;codecs=vp8",
+  "video/webm",
+];
+function videoOpnameType(){
+  if(typeof MediaRecorder === "undefined") return null;
+  return VIDEO_TYPES.find(t => { try{ return MediaRecorder.isTypeSupported(t); }catch(e){ return false; } }) || null;
+}
+const isVideoBestand = f => !!f && (/^video\//.test(f.type || "") || /\.(mp4|mov|m4v|webm|3gp|avi|mkv)$/i.test(f.name || ""));
+
+function blobNaarBase64(blob){
+  return new Promise((ok, fout) => {
+    const fr = new FileReader();
+    fr.onload = () => ok(String(fr.result).split(",")[1] || "");
+    fr.onerror = fout;
+    fr.readAsDataURL(blob);
+  });
+}
+function base64NaarBlob(b64, mime){
+  const ruw = atob(b64);
+  const arr = new Uint8Array(ruw.length);
+  for(let i = 0; i < ruw.length; i++) arr[i] = ruw.charCodeAt(i);
+  return new Blob([arr], {type: mime || "video/mp4"});
+}
+
+async function compressVideo(file, onVoortgang){
+  const type = videoOpnameType();
+  if(!type) throw new Error("Deze telefoon kan geen video verkleinen");
+  const url = URL.createObjectURL(file);
+  const v = document.createElement("video");
+  v.src = url; v.playsInline = true; v.preload = "auto";
+  try{
+    await new Promise((ok, fout) => {
+      v.onloadedmetadata = () => ok();
+      v.onerror = () => fout(new Error("video onleesbaar"));
+      setTimeout(() => fout(new Error("video laadt niet")), 20000);
+    });
+    // Opnames van een telefoon melden vaak duration = Infinity tot je één keer
+    // helemaal naar het eind springt. Zonder die truc weten we de lengte niet
+    // en kappen we niets af.
+    if(!(isFinite(v.duration) && v.duration > 0)){
+      await new Promise(ok => {
+        let af = false;
+        const klaar = () => { if(!af){ af = true; v.onseeked = null; ok(); } };
+        v.onseeked = klaar;
+        setTimeout(klaar, 3000);
+        try{ v.currentTime = 1e6; }catch(e){ klaar(); }
+      });
+      try{ v.currentTime = 0; }catch(e){}
+    }
+    const heleDuur = (isFinite(v.duration) && v.duration > 0) ? v.duration : VIDEO_MAX_SEC;
+    const duur = Math.min(heleDuur, VIDEO_MAX_SEC);
+    const bron = { w: v.videoWidth || 640, h: v.videoHeight || 360 };
+    const schaal = Math.min(1, VIDEO_MAX_DIM / Math.max(bron.w, bron.h));
+    // even afmetingen: sommige encoders weigeren oneven waarden
+    const w = Math.max(2, Math.round(bron.w * schaal / 2) * 2);
+    const h = Math.max(2, Math.round(bron.h * schaal / 2) * 2);
+
+    const cv = document.createElement("canvas");
+    cv.width = w; cv.height = h;
+    const ctx = cv.getContext("2d");
+    const stream = cv.captureStream(VIDEO_FPS);
+
+    // Geluid loopt via een audiograaf die níet op de speakers is aangesloten:
+    // zo neem je het wel op, maar hoort de speler niets tijdens het verwerken.
+    let ac = null;
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(AC){
+        ac = new AC();
+        // een net aangemaakte AudioContext staat soms stil; zonder dit blijft
+        // het geluid weg in de opname
+        if(ac.state === "suspended"){ try{ await ac.resume(); }catch(e){} }
+        const dest = ac.createMediaStreamDestination();
+        ac.createMediaElementSource(v).connect(dest);
+        dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+      }
+    }catch(e){ /* geen geluid is niet erg, beeld is wat telt */ }
+
+    const bits = Math.round(Math.min(1500e3, Math.max(300e3, videoDoelBytes() * 8 / Math.max(1, duur))));
+    const rec = new MediaRecorder(stream, {mimeType: type, videoBitsPerSecond: bits, audioBitsPerSecond: 64000});
+    const brokken = [];
+    rec.ondataavailable = e => { if(e.data && e.data.size) brokken.push(e.data); };
+    const klaar = new Promise(ok => { rec.onstop = ok; });
+
+    let gefilmd = 0;
+    rec.start(250);
+    v.currentTime = 0;
+    await v.play();
+    await new Promise(ok => {
+      const teken = () => {
+        if(v.ended || v.currentTime >= duur){ ok(); return; }
+        gefilmd = Math.max(gefilmd, v.currentTime);
+        ctx.drawImage(v, 0, 0, w, h);
+        if(onVoortgang) onVoortgang(Math.min(1, v.currentTime / duur));
+        requestAnimationFrame(teken);
+      };
+      requestAnimationFrame(teken);
+    });
+    ctx.drawImage(v, 0, 0, w, h);
+    try{ v.pause(); }catch(e){}
+    rec.stop();
+    await klaar;
+    if(ac){ try{ await ac.close(); }catch(e){} }
+
+    const blob = new Blob(brokken, {type});
+    // laatste beeldje als miniatuur — klein genoeg om overal te tonen
+    const pv = document.createElement("canvas");
+    const ps = Math.min(1, 480 / Math.max(w, h));
+    pv.width = Math.max(2, Math.round(w * ps)); pv.height = Math.max(2, Math.round(h * ps));
+    pv.getContext("2d").drawImage(cv, 0, 0, pv.width, pv.height);
+    let poster = "";
+    try{ poster = pv.toDataURL("image/jpeg", 0.6); }catch(e){}
+
+    // wat er daadwerkelijk in beeld is geweest, niet wat vooraf geschat werd
+    const echteDuur = Math.max(gefilmd, v.currentTime || 0) || duur;
+    return {blob, poster, dur: Math.round(echteDuur), w, h, mime: type,
+            afgekapt: heleDuur > echteDuur + 0.5};
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function uploadVideo(file, onVoortgang){
+  const r = await compressVideo(file, onVoortgang);
+  const b64 = await blobNaarBase64(r.blob);
+  if(!b64) throw new Error("verkleinen leverde niets op");
+  const stukken = Math.ceil(b64.length / VIDEO_STUK);
+  const posterId = r.poster ? await DB.add("images", {data: r.poster, at: now()}) : null;
+  const vidId = await DB.add("videos", {mime: r.mime, dur: r.dur, w: r.w, h: r.h, stukken, posterId, klaar: false, at: now()});
+  for(let i = 0; i < stukken; i++){
+    await DB.set(`videos/${vidId}/stukken/s${i}`, {d: b64.slice(i * VIDEO_STUK, (i + 1) * VIDEO_STUK)});
+  }
+  // pas als álle stukken binnen zijn is het filmpje afspeelbaar
+  await DB.set("videos/" + vidId, {klaar: true});
+  return {vidId, posterId, dur: r.dur, afgekapt: r.afgekapt};
+}
+
+async function loadVideoUrl(vidId){
+  if(S.vidCache[vidId]) return S.vidCache[vidId];
+  const meta = await DB.getDoc("videos/" + vidId);
+  if(!meta || !meta.klaar) return null;
+  let b64 = "";
+  for(let i = 0; i < meta.stukken; i++){
+    const s = await DB.getDoc(`videos/${vidId}/stukken/s${i}`);
+    if(!s || typeof s.d !== "string") return null;
+    b64 += s.d;
+  }
+  const url = URL.createObjectURL(base64NaarBlob(b64, meta.mime));
+  S.vidCache[vidId] = url;
+  return url;
+}
+
+// miniatuur met een afspeelknop erop; het filmpje zelf laadt pas bij een tik
+function videoTegelHtml(vidId, posterId, extraClass = ""){
+  return `<span class="vid-tegel ${extraClass}" data-vid="${esc(vidId)}">
+    ${posterId ? `<img data-img="${esc(posterId)}" alt="video">` : `<span class="vid-leeg"></span>`}
+    <span class="vid-play">▶</span>
+  </span>`;
+}
+function wireVideoTegels(root){
+  if(!root) return;
+  root.querySelectorAll(".vid-tegel").forEach(t => {
+    const img = t.querySelector("img[data-img]");
+    if(img && !img.dataset.geladen){ img.dataset.geladen = "1"; loadImageInto(img.dataset.img, img); }
+    t.onclick = e => { e.stopPropagation(); viewVideo(t.dataset.vid); };
+  });
+}
+
+function viewVideo(vidId){
+  const w = document.createElement("div");
+  w.className = "img-viewer";
+  w.innerHTML = `
+    <div class="vid-laden">Filmpje ophalen…</div>
+    <div class="iv-bar"><button class="btn btn-sm btn-ghost" id="ivClose">Sluiten</button></div>`;
+  document.body.appendChild(w);
+  const sluit = () => { w.classList.add("closing"); setTimeout(() => w.remove(), 180); };
+  w.querySelector("#ivClose").onclick = sluit;
+  w.onclick = e => { if(e.target === w) sluit(); };
+  loadVideoUrl(vidId).then(url => {
+    if(!w.isConnected) return;
+    const laden = w.querySelector(".vid-laden");
+    if(!url){ if(laden) laden.textContent = "Dit filmpje is nog niet compleet — probeer het zo nog eens."; return; }
+    if(laden) laden.remove();
+    const v = document.createElement("video");
+    v.src = url; v.controls = true; v.autoplay = true; v.playsInline = true;
+    w.insertBefore(v, w.querySelector(".iv-bar"));
+  }).catch(e => {
+    console.error(e);
+    const laden = w.querySelector(".vid-laden");
+    if(laden) laden.textContent = "Het filmpje kon niet worden geladen.";
+  });
+}
+
+/* Kiest een foto óf een filmpje en zet het klaar in de database.
+   Geeft {kind:"img", imgId} of {kind:"video", vidId, posterId} terug. */
+async function kiesEnUploadMedia(){
+  const f = await pickImage("image/*,video/*");
+  if(!f) return null;
+  if(!isVideoBestand(f)){
+    toast("Foto uploaden…");
+    return {kind: "img", imgId: await uploadImage(f)};
+  }
+  if(!videoOpnameType()){ toast("Video's versturen lukt niet op deze telefoon"); return null; }
+  const balk = videoVoortgang();
+  try{
+    const r = await uploadVideo(f, p => balk.zet(p));
+    balk.weg();
+    if(r.afgekapt) toast(`Alleen de eerste ${VIDEO_MAX_SEC} seconden zijn verstuurd`);
+    return {kind: "video", vidId: r.vidId, posterId: r.posterId};
+  }catch(e){
+    balk.weg();
+    console.error(e);
+    toast("Video verwerken mislukt");
+    return null;
+  }
+}
+function videoVoortgang(){
+  const el = document.createElement("div");
+  el.className = "vid-bezig";
+  el.innerHTML = `<div class="vb-kop">🎬 Filmpje verkleinen…</div>
+    <div class="vb-baan"><i></i></div>
+    <div class="vb-sub">Dit duurt ongeveer zo lang als het filmpje zelf.</div>`;
+  document.body.appendChild(el);
+  return {
+    zet(p){ const i = el.querySelector("i"); if(i) i.style.width = Math.round(p * 100) + "%"; },
+    weg(){ el.remove(); }
+  };
 }
 function viewImage(src){
   const w = document.createElement("div");
@@ -2281,7 +2566,8 @@ async function sendMessage(chatId, data){
   await DB.add(`chats/${chatId}/messages`, base);
   await DB.set("chats/" + chatId, {
     lastAt: base.at, lastSid: base.sid,
-    lastText: data.type === "img" ? "📷 Foto" : data.type === "mission" ? "📋 Opdracht" : (data.t || "")
+    lastText: data.type === "img" ? "📷 Foto" : data.type === "video" ? "🎬 Filmpje"
+      : data.type === "mission" ? "📋 Opdracht" : (data.t || "")
   });
   await DB.inc("chats/" + chatId, "msgCount", 1);
   const c = S.chats.find(x => x.id === chatId);
@@ -2532,6 +2818,10 @@ async function resetGame(wipePlayers){
     await DB.del("missions/" + mi.id);
   }
   for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","peilingen","verleidDoelen","verdenkingen","hunts","huntEntries","typing","images"]) await delAll(col);
+  for(const v of await DB.getAll("videos")){
+    for(const st of await DB.getAll(`videos/${v.id}/stukken`)) await DB.del(`videos/${v.id}/stukken/${st.id}`);
+    await DB.del("videos/" + v.id);
+  }
   await DB.set("settings/main", {nacht:false, draaiboek:{dag:0, gedaan:[]}, rolesRevealed:false, gameOver:false, winner:null, dag:1, infCheck:false, hoogtepunt:""});
   if(wipePlayers){
     await delAll("missionLib");   // ook de opdrachtenlijst weg bij een volledige wis
@@ -2542,7 +2832,7 @@ async function resetGame(wipePlayers){
   }
   for(const p of S.players.filter(x => !x.isLeader)) await DB.set("players/" + p.id, {role:null, status:"actief", infAkkoord:false});
   await DB.set("chats/all", {name:"Iedereen", type:"all", at: now(), lastAt:null, lastText:null, lastSid:null});
-  S.imgCache = {}; S.msgCache = {};
+  S.imgCache = {}; S.vidCache = {}; S.msgCache = {};
   closeModal();
   toast("Spel gereset ✔ Klaar voor een nieuwe ronde!");
 }
@@ -3592,12 +3882,12 @@ function riddleModal(rid){
    ZOEKOPDRACHT GEHEIM VOORWERP (gevangenen)
    ===================================================================== */
 function newHuntModal(chatId){
-  let pickedImg = null;
+  let pickedImg = null, pickedVid = null;
   modal(`
     <h3>🔎 Zoekopdracht geheim voorwerp</h3>
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Stuur een foto van het verstopte voorwerp. De eerste gevangene die een selfie mét het voorwerp instuurt en door jou wordt goedgekeurd, ontsnapt en keert terug als gewone gelovige. Daarna sluit de opdracht voor de rest.</p>
     <div class="field"><label>Foto van het voorwerp</label>
-      <button class="btn btn-ghost btn-block" id="huPick">📷 Foto kiezen</button>
+      <button class="btn btn-ghost btn-block" id="huPick">📷 Foto of filmpje kiezen</button>
       <img id="huPreview" class="hidden" style="width:100%;border-radius:14px;margin-top:10px">
     </div>
     <div class="field"><label>Omschrijving / hint (optioneel)</label><input id="huDesc" placeholder="Bijv. ergens tussen de tennisbaan en het zwembad" maxlength="90"></div>
@@ -3605,21 +3895,27 @@ function newHuntModal(chatId){
     <button class="btn btn-green btn-block" id="huCreate">🔎 Zoekopdracht versturen</button>
   `, m => {
     m.querySelector("#huPick").onclick = async () => {
-      const f = await pickImage(); if(!f) return;
-      toast("Foto verwerken…");
+      const knop = m.querySelector("#huPick");
+      if(knop.dataset.bezig) return;
+      knop.dataset.bezig = "1";
       try{
-        pickedImg = await uploadImage(f);
-        const doc = await DB.getDoc("images/" + pickedImg);
+        const media = await kiesEnUploadMedia();
+        if(!media) return;
+        pickedImg = media.kind === "video" ? null : media.imgId;
+        pickedVid = media.kind === "video" ? media : null;
         const prev = m.querySelector("#huPreview");
-        prev.src = doc.data; prev.classList.remove("hidden");
-        m.querySelector("#huPick").textContent = "📷 Andere foto kiezen";
+        const doc = await DB.getDoc("images/" + (media.kind === "video" ? media.posterId : media.imgId));
+        if(doc && doc.data){ prev.src = doc.data; prev.classList.remove("hidden"); }
+        knop.textContent = media.kind === "video" ? "🎬 Ander bewijs kiezen" : "📷 Iets anders kiezen";
       }catch(e){ console.error(e); toast("Uploaden mislukt"); }
+      finally{ delete knop.dataset.bezig; }
     };
     m.querySelector("#huCreate").onclick = async () => {
-      if(!pickedImg){ toast("Kies eerst een foto van het voorwerp"); return; }
+      if(!pickedImg && !pickedVid){ toast("Kies eerst een foto of filmpje van het voorwerp"); return; }
       const when = m.querySelector("#huWhen").value;
       const hid = await DB.add("hunts", {
-        chatId, imgId: pickedImg, desc: m.querySelector("#huDesc").value.trim(),
+        chatId, ...(pickedVid ? {vidId: pickedVid.vidId, posterId: pickedVid.posterId} : {imgId: pickedImg}),
+        desc: m.querySelector("#huDesc").value.trim(),
         deadline: when ? new Date(when).getTime() : null, status:"open", at: now()
       });
       await DB.add(`chats/${chatId}/messages`, {type:"hunt", hid, at: now()});
@@ -3635,7 +3931,8 @@ function huntCardHtml(h){
   return `
     <div class="mission-card huntcard ${won ? "done" : ""}">
       <div class="mc-top"><h4>🔎 Vind het geheime voorwerp</h4><span class="pill ${won ? "pill-green" : verlopen ? "pill-gray" : "pill-outline"}">${won ? "Gevonden" : verlopen ? "Verlopen" : "Open"}</span></div>
-      <img class="hunt-obj" data-img="${h.imgId}" alt="geheim voorwerp">
+      ${h.vidId ? videoTegelHtml(h.vidId, h.posterId, "vid-blok")
+      : `<img class="hunt-obj" data-img="${h.imgId}" alt="geheim voorwerp">`}
       ${h.desc ? `<p>${esc(h.desc)}</p>` : ""}
       <div class="mc-meta">
         ${won ? `🏆 <b>${esc(h.winnerName)}</b> heeft het voorwerp gevonden en is ontsnapt!`
@@ -3664,16 +3961,18 @@ function huntModal(hid){
         if(!docs.length) return;
         box.innerHTML = docs.map(e => `
           <div style="margin-bottom:12px">
-            <img data-img="${e.imgId}" style="width:100%;border-radius:14px;cursor:pointer">
+            ${e.vidId ? videoTegelHtml(e.vidId, e.posterId)
+              : `<img data-img="${e.imgId}" style="width:100%;border-radius:14px;cursor:pointer">`}
             <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
               <div style="flex:1;font-size:13px"><b>${esc(e.pn)}</b> <span style="color:var(--muted)">· ${fmtTime(e.at)}</span>${e.status === "goedgekeurd" ? ` <span class="pill pill-green">Goedgekeurd</span>` : ""}</div>
               ${!won ? `<button class="btn btn-sm btn-green" data-approve-entry="${e.id}|${e.pid}|${esc(e.pn)}">✅ Goedkeuren</button>` : ""}
             </div>
           </div>`).join("");
-        box.querySelectorAll("img[data-img]").forEach(img => {
+        [...box.querySelectorAll("img[data-img]")].filter(img => !img.closest(".vid-tegel")).forEach(img => {
           loadImageInto(img.dataset.img, img);
           img.onclick = () => { if(img.src) viewImage(img.src); };
         });
+        wireVideoTegels(box);
         box.querySelectorAll("[data-approve-entry]").forEach(b => b.onclick = () => {
           const [eid, pid, pn] = b.dataset.approveEntry.split("|");
           confirmModal(`Selfie van <b>${esc(pn)}</b> goedkeuren?<br><span style="font-size:12.5px;color:var(--muted)">${esc(pn)} ontsnapt, wordt weer een gewone gelovige en de opdracht sluit voor de andere gevangenen.</span>`, async () => {
@@ -3704,31 +4003,38 @@ function huntModal(hid){
   const mijn = S.huntEntries.filter(e => e.hid === hid && e.pid === S.me.id);
   modal(`
     <h3>🤳 Selfie met het voorwerp</h3>
-    <img class="hunt-obj" data-img="${h.imgId}" alt="geheim voorwerp">
+    ${h.vidId ? videoTegelHtml(h.vidId, h.posterId, "vid-blok")
+      : `<img class="hunt-obj" data-img="${h.imgId}" alt="geheim voorwerp">`}
     ${h.desc ? `<p style="font-size:13.5px;color:var(--zacht);margin-bottom:10px">${esc(h.desc)}</p>` : ""}
     ${h.deadline ? `<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">⏰ Deadline: ${fmtDT(h.deadline)}</div>` : ""}
     ${isMuted(S.me) ? `<div style="text-align:center;color:var(--muted);font-size:13px;padding:8px">👁️ Je kunt niet meer meedoen.</div>` : `
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Vind je het voorwerp? Maak een selfie mét het voorwerp erbij en stuur die in. De spelleider beoordeelt je inzending.</p>
-    <button class="btn btn-green btn-block" id="huSend">🤳 Selfie insturen</button>
+    <button class="btn btn-green btn-block" id="huSend">🤳 Bewijs insturen (foto of filmpje)</button>
     ${mijn.length ? `<div class="lock-note" style="color:var(--muted)">Je hebt ${mijn.length} selfie${mijn.length === 1 ? "" : "s"} ingestuurd — wacht op beoordeling.</div>` : ""}`}
   `, m => {
-    m.querySelectorAll("img[data-img]").forEach(img => loadImageInto(img.dataset.img, img));
+    [...m.querySelectorAll("img[data-img]")].filter(i => !i.closest(".vid-tegel"))
+      .forEach(img => loadImageInto(img.dataset.img, img));
+    wireVideoTegels(m);
     const btn = m.querySelector("#huSend");
     if(btn) btn.onclick = async () => {
-      const f = await pickImage(); if(!f) return;
-      btn.disabled = true;
-      toast("Selfie uploaden…");
+      if(btn.dataset.bezig) return;
+      btn.dataset.bezig = "1";
       try{
+        const media = await kiesEnUploadMedia();
+        if(!media){ delete btn.dataset.bezig; return; }
+        btn.disabled = true;
         const fresh = await DB.getDoc("hunts/" + hid);
         if(!fresh || fresh.status !== "open"){ toast("De opdracht is al gesloten"); closeModal(); return; }
-        const imgId = await uploadImage(f);
-        await DB.add("huntEntries", {hid, imgId, pid:S.me.id, pn:S.me.name, status:"ingediend", at: now()});
+        await DB.add("huntEntries", {hid, ...(media.kind === "video"
+          ? {vidId: media.vidId, posterId: media.posterId} : {imgId: media.imgId}),
+          pid:S.me.id, pn:S.me.name, status:"ingediend", at: now()});
         await DB.add(`chats/${h.chatId}/messages`, {type:"sys", t:`🤳 ${S.me.name} heeft een selfie ingestuurd voor de zoekopdracht.`, at: now()});
         await DB.set("chats/" + h.chatId, {lastAt: now(), lastSid:"sys", lastText:`🤳 ${S.me.name} stuurde een selfie in`});
         haptic(12);
         toast("Selfie ingestuurd! De spelleider beoordeelt hem.");
         closeModal();
       }catch(e){ console.error(e); toast("Uploaden mislukt"); btn.disabled = false; }
+      finally{ delete btn.dataset.bezig; }
     };
   });
 }
@@ -4006,6 +4312,7 @@ function renderChat(){
           <div class="mq-text">${esc(m.re.t)}</div>
         </div>` : ""}
         ${m.type === "img" ? `<img data-img="${m.imgId}" alt="foto">` : ""}
+        ${m.type === "video" ? videoTegelHtml(m.vidId, m.posterId) : ""}
         ${m.t ? `<div>${esc(m.t)}</div>` : ""}
         <div class="mtime">${fmtTime(m.at)}${mine ? leesBadge(m, c) : ""}</div>
         ${reactieBalkHtml(m)}
@@ -4051,7 +4358,7 @@ function renderChat(){
       ${replyHtml}
       <div class="composer">
         ${isL ? `<button class="icon-btn" id="btnPlus" title="Meer acties">＋</button>` : ""}
-        <button class="icon-btn" id="btnPhoto" title="Foto sturen">📷</button>
+        <button class="icon-btn" id="btnPhoto" title="Foto of filmpje sturen">📷</button>
         <textarea id="composerText" rows="1" placeholder="Bericht…"></textarea>
         <button class="icon-btn send" id="btnSend">➤</button>
       </div>`;
@@ -4124,12 +4431,14 @@ function renderChat(){
     msgsEl.scrollTop = oldScrollTop;
   }
 
-  msgsEl.querySelectorAll("img[data-img]").forEach(img => {
+  // de miniatuur ván een filmpje hoort niet als losse foto te openen
+  [...msgsEl.querySelectorAll("img[data-img]")].filter(img => !img.closest(".vid-tegel")).forEach(img => {
     loadImageInto(img.dataset.img, img, () => {
       if(wasNearBottom || firstRender || now() < (S.pinOnder || 0)) naarOnder();
     });
     img.onclick = () => { if(img.src) viewImage(img.src); };
   });
+  wireVideoTegels(msgsEl);
   // reageren: naar rechts vegen (mobiel) of dubbelklikken (desktop)
   msgsEl.querySelectorAll(".msg[data-mid]").forEach(el => {
     const m = S.msgs.find(x => x.id === el.dataset.mid);
@@ -4276,12 +4585,12 @@ function renderChat(){
       if(fotoBtn.dataset.bezig) return;
       fotoBtn.dataset.bezig = "1";
       try{
-        const f = await pickImage();
-        if(!f) return;
-        toast("Foto uploaden…");
-        const imgId = await uploadImage(f);
+        const media = await kiesEnUploadMedia();
+        if(!media) return;
         const re = S.replyTo; S.replyTo = null;
-        await sendMessage(c.id, {type:"img", imgId, ...(re ? {re} : {})});
+        await sendMessage(c.id, media.kind === "video"
+          ? {type:"video", vidId: media.vidId, posterId: media.posterId, ...(re ? {re} : {})}
+          : {type:"img", imgId: media.imgId, ...(re ? {re} : {})});
         haptic(10);
       }catch(e){ console.error(e); toast("Uploaden mislukt"); }
       finally{ delete fotoBtn.dataset.bezig; }
@@ -4420,7 +4729,7 @@ function missionCardHtml(mi){
       ${mi.desc ? `<p>${esc(mi.desc)}</p>` : ""}
       <div class="mc-meta">
         ${mi.deadline ? `⏰ Deadline: ${fmtDT(mi.deadline)}` : ""}
-        ${nPhotos ? ` · 📷 ${nPhotos} foto${nPhotos === 1 ? "" : "'s"}` : ""}
+        ${nPhotos ? ` · 📎 ${nPhotos} ${nPhotos === 1 ? "bewijsstuk" : "bewijsstukken"}` : ""}
       </div>
       <button class="btn btn-sm btn-ghost" data-mission="${mi.id}">Opdracht openen</button>
     </div>`;
@@ -5071,10 +5380,10 @@ function missionModal(missionId){
     </h3>
     ${mi.desc ? `<p style="font-size:14px;color:var(--zacht);white-space:pre-wrap;margin-bottom:8px">${esc(mi.desc)}</p>` : ""}
     ${mi.deadline ? `<div style="font-size:13px;color:var(--muted);margin-bottom:8px">⏰ Deadline: ${fmtDT(mi.deadline)}</div>` : ""}
-    <div class="section-label" style="margin-top:14px">Bewijsfoto's</div>
-    <div class="photo-grid" id="miPhotos"><div class="empty" style="grid-column:1/-1;padding:16px">Nog geen foto's.</div></div>
+    <div class="section-label" style="margin-top:14px">Bewijs</div>
+    <div class="photo-grid" id="miPhotos"><div class="empty" style="grid-column:1/-1;padding:16px">Nog geen bewijs.</div></div>
     ${!isL && !isMuted(S.me) && mi.status !== "goedgekeurd" ? `
-      <button class="btn btn-ghost btn-block" id="miAddPhoto" style="margin-bottom:10px">📷 Bewijsfoto toevoegen</button>
+      <button class="btn btn-ghost btn-block" id="miAddPhoto" style="margin-bottom:10px">📷 Bewijs toevoegen (foto of filmpje)</button>
       ${mi.status === "open" ? `<button class="btn btn-green btn-block" id="miSubmit">✅ Opdracht indienen als voltooid</button>` : ""}
       ${mi.status === "ingediend" ? `<div style="text-align:center;color:var(--muted);font-size:13px">Wacht op beoordeling door de spelleider…</div>` : ""}` : ""}
     ${isL ? `
@@ -5092,24 +5401,33 @@ function missionModal(missionId){
       docs.sort((a,b) => (a.at||0)-(b.at||0));
       if(docs.length === 0) return;
       grid.innerHTML = docs.map(ph => `
-        <div class="ph"><img data-img="${ph.imgId}" alt="bewijs"><div class="who">${esc(ph.sn)} · ${fmtTime(ph.at)}</div></div>`).join("");
-      grid.querySelectorAll("img[data-img]").forEach(img => {
+        <div class="ph">${ph.vidId
+          ? videoTegelHtml(ph.vidId, ph.posterId)
+          : `<img data-img="${ph.imgId}" alt="bewijs">`}<div class="who">${esc(ph.sn)} · ${fmtTime(ph.at)}</div></div>`).join("");
+      [...grid.querySelectorAll("img[data-img]")].filter(img => !img.closest(".vid-tegel")).forEach(img => {
         loadImageInto(img.dataset.img, img);
         img.onclick = () => { if(img.src) viewImage(img.src); };
       });
+      wireVideoTegels(grid);
     });
 
     const addBtn = m.querySelector("#miAddPhoto");
     if(addBtn) addBtn.onclick = async () => {
-      const f = await pickImage(); if(!f) return;
-      toast("Foto uploaden…");
+      if(addBtn.dataset.bezig) return;
+      addBtn.dataset.bezig = "1";
       try{
-        const imgId = await uploadImage(f);
-        await DB.add(`missions/${missionId}/photos`, {imgId, sid:S.me.id, sn:S.me.name, at: now()});
-        await DB.set("missions/" + missionId, {photoCount: (mi.photoCount||0) + 1});
+        const media = await kiesEnUploadMedia();
+        if(!media) return;
+        await DB.add(`missions/${missionId}/photos`, media.kind === "video"
+          ? {vidId: media.vidId, posterId: media.posterId, sid:S.me.id, sn:S.me.name, at: now()}
+          : {imgId: media.imgId, sid:S.me.id, sn:S.me.name, at: now()});
+        // ophogen via de database zelf: "mi" is een momentopname en loopt achter
+        // zodra er al een tweede bewijsstuk bij is gekomen
+        await DB.inc("missions/" + missionId, "photoCount", 1);
         haptic(10);
-        toast("Foto toegevoegd ✔");
+        toast(media.kind === "video" ? "Filmpje toegevoegd ✔" : "Foto toegevoegd ✔");
       }catch(e){ console.error(e); toast("Uploaden mislukt"); }
+      finally{ delete addBtn.dataset.bezig; }
     };
     const subBtn = m.querySelector("#miSubmit");
     if(subBtn) subBtn.onclick = async () => {
@@ -5320,7 +5638,7 @@ async function verzamelStats(){
   const gevangen = spelers.filter(p => p.status === "gevangen").length + ontsnapt.length;
 
   // berichten tellen over alle chats waar de app van weet
-  let berichten = 0, fotos = 0;
+  let berichten = 0, fotos = 0, filmpjes = 0;
   const perSpeler = {};
   for(const c of S.chats){
     let msgs = [];
@@ -5329,6 +5647,7 @@ async function verzamelStats(){
       if(m.type === "sys" || m.type === "poll" || m.type === "mission" || m.type === "veld" || m.type === "verleid" || m.type === "peiling" || m.type === "verleidDoel") continue;
       berichten++;
       if(m.type === "img") fotos++;
+      if(m.type === "video") filmpjes++;
       if(m.sid) perSpeler[m.sid] = (perSpeler[m.sid] || 0) + 1;
     }
   }
@@ -5350,7 +5669,7 @@ async function verzamelStats(){
     nRaadsels: raadsels.length, schilden,
     nVragen: vragen.length, nBeantwoord: vragen.filter(q => q.answer).length,
     gevangen, nOntsnapt: ontsnapt.length,
-    berichten, fotos, drukste,
+    berichten, fotos, filmpjes, drukste,
     eersteEruit: eruit[0] || null, overlevers,
     hoogtepunt: (S.settings.hoogtepunt || "").trim(),
   };
@@ -5372,7 +5691,7 @@ function statsTekst(s){
     `🛡️ ${s.nRaadsels} raadsels${s.schilden.length ? ` · schild voor ${s.schilden.map(r => r.winnerName).join(", ")}` : ""}`,
     `💻 ${s.nVragen} hackervragen gesteld`,
     `⛓️ ${s.gevangen} gevangen · ${s.nOntsnapt} ontsnapt`,
-    `💬 ${s.berichten} berichten en ${s.fotos} ${s.fotos === 1 ? "foto" : "foto's"}`,
+    `💬 ${s.berichten} berichten, ${s.fotos} ${s.fotos === 1 ? "foto" : "foto's"}${s.filmpjes ? ` en ${s.filmpjes} ${s.filmpjes === 1 ? "filmpje" : "filmpjes"}` : ""}`,
   ];
   if(s.drukste) regels.push(`🗣️ Meeste berichten: ${s.drukste.p.name} (${s.drukste.n})`);
   if(s.eersteEruit) regels.push(`💀 Als eerste eruit: ${s.eersteEruit.name}`);
@@ -5451,7 +5770,7 @@ async function tekenEindkaart(s){
   y += Math.ceil(tegels.length/2) * (th + 20) + 26;
 
   const regel = (t, py) => { x.textAlign = "center"; x.font = `500 27px ${tekst}`; x.fillStyle = "#c9c9d1"; x.fillText(t, B/2, py); };
-  if(s.fotos) { regel(`📷 ${s.fotos} ${s.fotos === 1 ? "foto" : "foto's"} gedeeld`, y); y += 44; }
+  if(s.fotos || s.filmpjes) { regel(`📷 ${s.fotos} ${s.fotos === 1 ? "foto" : "foto's"}${s.filmpjes ? ` · 🎬 ${s.filmpjes} ${s.filmpjes === 1 ? "filmpje" : "filmpjes"}` : ""} gedeeld`, y); y += 44; }
   if(s.drukste) { regel(`🗣️ Meeste berichten: ${s.drukste.p.name} (${s.drukste.n})`, y); y += 44; }
   if(s.schilden.length) { regel(`🛡️ Schild: ${s.schilden.map(r => r.winnerName).join(", ")}`, y); y += 44; }
   if(s.eersteEruit) { regel(`💀 Als eerste eruit: ${s.eersteEruit.name}`, y); y += 44; }
