@@ -9,6 +9,7 @@ import { fmtDate } from "@/lib/format";
 import { PlusBadge } from "@/components/Logo";
 import LogoutButton from "@/components/account/LogoutButton";
 import CancelSubscription from "@/components/account/CancelSubscription";
+import DeleteAccount from "@/components/account/DeleteAccount";
 
 export const dynamic = "force-dynamic";
 
@@ -187,6 +188,20 @@ export default async function AccountPage({
               ))}
             </ul>
           )}
+        </div>
+      </section>
+
+      {/* Data rights — the erasure our privacy notice commits to. */}
+      <section className="mt-14 border-t pt-6 rule">
+        <h2 className="f-label" style={{ color: "var(--ink-faint)" }}>
+          Your data
+        </h2>
+        <p className="mt-2 max-w-lg text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+          Everything we hold about you lives on this page. You can remove all of it at any time — no
+          email, no waiting period.
+        </p>
+        <div className="mt-4">
+          <DeleteAccount />
         </div>
       </section>
     </div>

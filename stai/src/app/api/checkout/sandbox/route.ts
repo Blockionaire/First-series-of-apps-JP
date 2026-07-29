@@ -3,8 +3,12 @@ import { currentUser } from "@/lib/auth";
 import { activateSubscription, foundingAvailable, PLANS, type PlanId } from "@/lib/billing";
 import { stripeClient } from "@/lib/billing";
 import { sendMail } from "@/lib/mail";
+import { guard, WINDOW } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
+  const blocked = guard(req, "checkout-sandbox", 20, WINDOW.hour);
+  if (blocked) return blocked;
+
   // Sandbox completion only exists when Stripe is NOT configured — it can
   // never bypass real billing in a keyed environment.
   if (stripeClient()) return NextResponse.json({ error: "Sandbox disabled" }, { status: 403 });

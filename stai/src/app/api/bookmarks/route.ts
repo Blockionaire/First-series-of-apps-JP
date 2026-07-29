@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { guard, WINDOW } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
+  const blocked = guard(req, "bookmarks", 120, WINDOW.tenMinutes);
+  if (blocked) return blocked;
+
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
   const { kind, refId } = await req.json().catch(() => ({}));

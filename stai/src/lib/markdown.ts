@@ -1,4 +1,39 @@
 import { Marked } from "marked";
+import sanitizeHtml from "sanitize-html";
+
+/**
+ * Markdown is authored by admins, but "admin-authored" is not the same as
+ * "safe": a compromised editor account would otherwise become stored XSS on
+ * every reader. Sanitising at render turns that incident into a non-event.
+ */
+const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: [
+    "h2", "h3", "h4", "p", "a", "ul", "ol", "li", "blockquote", "strong", "em",
+    "code", "pre", "hr", "br", "table", "thead", "tbody", "tr", "th", "td", "sup", "sub",
+  ],
+  allowedAttributes: {
+    a: ["href", "title", "rel", "target"],
+    h2: ["id"],
+    h3: ["id"],
+    h4: ["id"],
+    th: ["colspan", "rowspan"],
+    td: ["colspan", "rowspan"],
+  },
+  // No javascript:/data: URLs.
+  allowedSchemes: ["http", "https", "mailto"],
+  allowProtocolRelative: false,
+  transformTags: {
+    // External links never get to reach back into our window.
+    a: (tagName, attribs) => {
+      const href = attribs.href ?? "";
+      const external = /^https?:\/\//i.test(href) && !href.includes("stai.ai");
+      return {
+        tagName,
+        attribs: external ? { ...attribs, rel: "noopener noreferrer nofollow", target: "_blank" } : attribs,
+      };
+    },
+  },
+};
 
 export function slugifyHeading(text: string): string {
   return text
@@ -23,7 +58,7 @@ export function renderMarkdown(md: string): { html: string; toc: { id: string; t
       },
     },
   });
-  const html = marked.parse(md) as string;
+  const html = sanitizeHtml(marked.parse(md) as string, SANITIZE_OPTIONS);
   return { html, toc };
 }
 

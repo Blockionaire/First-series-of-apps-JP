@@ -113,8 +113,66 @@ Gold (`--color-gold-*`, `.btn-plus`, `PlusBadge`, `SPlusMark`) appears **only**
 on paid/premium elements. Cream is the everyday accent. If a diff adds gold to a
 free surface, reject it.
 
+## Security posture
+
+Built to survive a procurement review by the kind of firm that reads our own
+"twelve questions" piece.
+
+- **No default credentials, ever.** The seed creates an admin account only when
+  `STAI_ADMIN_EMAIL` and `STAI_ADMIN_PASSWORD` (12+ chars) are both set. In
+  development it generates a random password per database and prints it once.
+  In production without them, no admin exists at all.
+- **Strict CSP with a per-request nonce** (`src/middleware.ts`) plus HSTS,
+  `X-Frame-Options: DENY`, `nosniff`, a restrictive `Permissions-Policy` and
+  same-origin COOP/CORP. We can afford `default-src 'self'` because nothing
+  is loaded from a third party at runtime. `style-src` keeps `'unsafe-inline'`
+  because the design system sets custom properties via React style attributes.
+- **Rate limiting on every mutating route** (`src/lib/ratelimit.ts`). These are
+  *burst* limits, never per-IP entitlements — a whole firm can share one egress
+  IP, so product quotas are metered per account/cookie instead.
+- **Ask STAI has a hard monthly spend ceiling.** Past it, the assistant degrades
+  to retrieval-only rather than billing onward. Anonymous quota is a product
+  gate; the ceiling is the cost stop.
+- **Markdown is sanitised at render** with a tag/attribute allowlist, so a
+  compromised editor account cannot become stored XSS on readers. External
+  links get `noopener noreferrer nofollow`.
+- **Billing activation is idempotent and race-safe.** Repeat Stripe webhook
+  deliveries can't double-charge a founding seat; the seat check happens inside
+  the transaction.
+- **Sessions** are 32-byte random tokens, httpOnly + SameSite=Lax + Secure in
+  production, with expired rows purged opportunistically.
+- **GDPR Art. 17 erasure** is implemented at `/account` — password-confirmed,
+  cancels billing, and removes every row including the newsletter subscription.
+
 ## Deploy
 
 `npm run build && npm start` behind any Node host. The SQLite file lives in
 `data/` — mount it persistently. For serverless (Vercel), move `src/lib/db.ts`
 to Postgres/Turso first; everything above it is storage-agnostic.
+
+Recommended: a single **EU VPS** (Hetzner/Scaleway) behind Caddy for automatic
+TLS. That keeps the data-residency claim literally true, which matters more to
+this audience than horizontal scale they don't need yet.
+
+**Backups.** `node scripts/backup.mjs [dir]` takes a verified point-in-time
+snapshot via SQLite's online backup API — safe against a live database. Run it
+hourly from cron. For production, also run **Litestream** against
+`data/stai.db` for continuous replication to EU object storage; the script is
+the floor, not the goal.
+
+### Before the domain resolves
+
+- [ ] Set `STAI_ADMIN_EMAIL` / `STAI_ADMIN_PASSWORD`, then verify `/admin`.
+- [ ] Confirm the founding counter reads 0 claimed on `/plus`.
+- [ ] SPF, DKIM and DMARC on the sending domain; send a test to a Gmail and an
+      Outlook address before the first Brief.
+- [ ] Stripe: live keys, webhook endpoint + secret, **Stripe Tax enabled** for
+      EU VAT, and a 14-day withdrawal-right waiver at checkout for consumers.
+- [ ] Replace the author biographies in `src/lib/authors.ts` with real people,
+      or collapse to a single editorial byline. They are currently written
+      placeholders and must not go live as fact.
+- [ ] Complete the GDPR notice: lawful bases, retention periods, and the
+      sub-processor list (Anthropic, Stripe, mail provider, host).
+- [ ] Add the company imprint (registration + VAT number) — a legal requirement
+      in several of our largest markets.
+- [ ] Backups running and a restore rehearsed at least once.

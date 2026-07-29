@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { articles1 } from "./articles-1";
 import { articles2 } from "./articles-2";
@@ -53,21 +54,47 @@ export function runSeed(d: Database.Database, seedVersion: string) {
     `);
     for (const s of signals) insSig.run(s);
 
-    // Founding member scarcity — a real counter, incremented by real subscriptions.
+    // Founding member scarcity.
+    //
+    // This counter MUST start at zero. It is incremented only by real
+    // subscriptions (see activateSubscription). Seeding it with a flattering
+    // number would be fabricated scarcity — a prohibited practice under the
+    // EU Unfair Commercial Practices Directive, and precisely the kind of
+    // thing our own readers audit other companies for. Do not "prime" it.
     const set = d.prepare(
       "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value"
     );
     const getS = d.prepare("SELECT value FROM settings WHERE key=?");
-    set.run("founding_total", "200");
-    if (!getS.get("founding_claimed")) set.run("founding_claimed", "137");
+    set.run("founding_total", process.env.STAI_FOUNDING_TOTAL ?? "200");
+    if (!getS.get("founding_claimed")) set.run("founding_claimed", "0");
 
-    // Editorial admin account (content desk). Credentials via env in production;
-    // dev default documented in the README.
-    const adminEmail = process.env.STAI_ADMIN_EMAIL ?? "desk@stai.ai";
-    const adminPass = process.env.STAI_ADMIN_PASSWORD ?? "stai-desk-2026";
-    d.prepare(
-      "INSERT INTO users (email, password_hash, name, firm, role, plan) VALUES (?, ?, 'The Desk', 'STAI', 'admin', 'plus') ON CONFLICT(email) DO NOTHING"
-    ).run(adminEmail, bcrypt.hashSync(adminPass, 10));
+    // Editorial admin account.
+    //
+    // Never ship a default password. Without explicit credentials we create
+    // no admin at all: a live site with a documented fallback login is a
+    // handed-over CMS. Bootstrap production by setting both env vars once.
+    const adminEmail = process.env.STAI_ADMIN_EMAIL;
+    const adminPass = process.env.STAI_ADMIN_PASSWORD;
+    if (adminEmail && adminPass && adminPass.length >= 12) {
+      d.prepare(
+        "INSERT INTO users (email, password_hash, name, firm, role, plan) VALUES (?, ?, 'The Desk', 'STAI', 'admin', 'plus') ON CONFLICT(email) DO NOTHING"
+      ).run(adminEmail.toLowerCase().trim(), bcrypt.hashSync(adminPass, 10));
+    } else if (process.env.NODE_ENV !== "production") {
+      // Development convenience only, and loudly announced. The password is
+      // random per database, so nothing guessable ever reaches a deployment.
+      const devPass = crypto.randomBytes(9).toString("base64url");
+      d.prepare(
+        "INSERT INTO users (email, password_hash, name, firm, role, plan) VALUES (?, ?, 'The Desk', 'STAI', 'admin', 'plus') ON CONFLICT(email) DO NOTHING"
+      ).run("desk@stai.ai", bcrypt.hashSync(devPass, 10));
+      console.warn(
+        `\n[STAI] Dev admin created: desk@stai.ai / ${devPass}\n` +
+          `[STAI] Set STAI_ADMIN_EMAIL and STAI_ADMIN_PASSWORD (12+ chars) for a real deployment.\n`
+      );
+    } else {
+      console.warn(
+        "[STAI] No admin account created: set STAI_ADMIN_EMAIL and STAI_ADMIN_PASSWORD (12+ chars) to bootstrap the content desk."
+      );
+    }
 
     set.run("seed_version", seedVersion);
   });

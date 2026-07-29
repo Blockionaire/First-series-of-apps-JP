@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { promptBySlug, bumpPromptUses } from "@/lib/content";
 import { anthropicClient, buildAdaptSystemPrompt, fallbackAdapt, MODEL } from "@/lib/ai";
+import { guard, WINDOW } from "@/lib/ratelimit";
 
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  const blocked = guard(req, "adapt", 30, WINDOW.hour);
+  if (blocked) return blocked;
+
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
   if (user.plan !== "plus") {

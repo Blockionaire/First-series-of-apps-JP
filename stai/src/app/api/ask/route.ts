@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { currentUser, anonId, bumpUsage, getUsage } from "@/lib/auth";
 import { retrieve, anthropicClient, buildAskSystemPrompt, numberHits, MODEL } from "@/lib/ai";
+import { guard, WINDOW } from "@/lib/ratelimit";
 
 export const maxDuration = 60;
 
@@ -8,10 +9,24 @@ const FREE_QUOTA = 5;
 const ANON_QUOTA = 2;
 
 /**
+ * Hard ceiling on model calls per calendar month across the whole platform.
+ * The per-actor quotas above are the product gate; this is the cost stop.
+ * On breach we degrade to retrieval-only rather than erroring — readers keep
+ * getting cited answers, the bill stops growing.
+ */
+const GLOBAL_MONTHLY_CALLS = parseInt(process.env.ASK_MONTHLY_CALL_CEILING ?? "5000", 10);
+
+/**
  * Streaming protocol: the first frame is a JSON envelope (sources + quota),
  * terminated by \x1e (record separator); everything after is answer text.
  */
 export async function POST(req: NextRequest) {
+  // Burst protection only — NOT a per-IP entitlement. A whole audit firm can
+  // share one egress IP, so this must sit well above honest human use while
+  // still stopping a script from looping the endpoint.
+  const blocked = guard(req, "ask", 15, WINDOW.tenMinutes);
+  if (blocked) return blocked;
+
   const body = await req.json().catch(() => ({}));
   const question = String(body.question ?? "").trim().slice(0, 500);
   const history = Array.isArray(body.history) ? body.history.slice(-6) : [];
@@ -46,7 +61,12 @@ export async function POST(req: NextRequest) {
 
   const envelope = JSON.stringify({ sources, quota }) + "\x1e";
   const encoder = new TextEncoder();
-  const client = anthropicClient();
+
+  // Cost stop: once the platform-wide monthly ceiling is reached we stop
+  // calling the model entirely and serve cited passages instead.
+  const globalCalls = getUsage("global", "ask-model");
+  const withinBudget = globalCalls < GLOBAL_MONTHLY_CALLS;
+  const client = withinBudget ? anthropicClient() : null;
 
   if (!client || hits.length === 0) {
     // Retrieval-only mode: cited passages, honestly labelled. Never a dead feature.
@@ -78,6 +98,7 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       controller.enqueue(encoder.encode(envelope));
+      bumpUsage("global", "ask-model");
       try {
         const msgStream = client.messages.stream({
           model: MODEL,

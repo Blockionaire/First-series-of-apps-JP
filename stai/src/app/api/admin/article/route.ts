@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { invalidateSearchIndex } from "@/lib/search";
+import { guard, WINDOW } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
+  const blocked = guard(req, "admin-article", 60, WINDOW.hour);
+  if (blocked) return blocked;
+
   const user = await currentUser();
   if (!user || user.role !== "admin") {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });

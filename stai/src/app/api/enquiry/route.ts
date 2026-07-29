@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendMail } from "@/lib/mail";
+import { guard, WINDOW } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
+  const blocked = guard(req, "enquiry", 5, WINDOW.hour);
+  if (blocked) return blocked;
+
   const b = await req.json().catch(() => ({}));
   const name = String(b.name ?? "").trim().slice(0, 120);
   const email = String(b.email ?? "").trim().slice(0, 200);

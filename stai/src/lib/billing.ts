@@ -28,26 +28,66 @@ export function foundingAvailable(): boolean {
   return claimed < total;
 }
 
+/**
+ * Activate a membership. Idempotent and race-safe:
+ *
+ * - Stripe retries webhook deliveries, so a repeat of the same subscription
+ *   id must not create a second row or double-count a founding seat.
+ * - The founding-seat check happens INSIDE the transaction, so two
+ *   simultaneous claims can never both take seat 200.
+ *
+ * Returns false when the activation was a no-op (already active, or the
+ * founding window closed between checkout and callback).
+ */
 export function activateSubscription(
   userId: number,
   plan: PlanId,
   provider: "stripe" | "sandbox",
   stripeIds?: { customer?: string; subscription?: string }
-) {
+): boolean {
   const d = db();
   const renews = new Date(Date.now() + (plan === "annual" ? 365 : 30) * 864e5).toISOString();
-  const tx = d.transaction(() => {
+
+  const tx = d.transaction((): boolean => {
+    // Idempotency: same Stripe subscription already recorded → nothing to do.
+    if (stripeIds?.subscription) {
+      const seen = d
+        .prepare("SELECT 1 FROM subscriptions WHERE stripe_subscription=?")
+        .get(stripeIds.subscription);
+      if (seen) return false;
+    }
+    // Idempotency: user already has an active subscription → nothing to do.
+    const active = d
+      .prepare("SELECT 1 FROM subscriptions WHERE user_id=? AND status='active'")
+      .get(userId);
+    if (active) return false;
+
+    let effectivePlan: PlanId = plan;
+    if (plan === "founding") {
+      const total = parseInt(getSetting("founding_total") ?? "200", 10);
+      const claimed = parseInt(getSetting("founding_claimed") ?? "0", 10);
+      if (claimed >= total) {
+        // Window closed while this checkout was in flight. Honour the payment
+        // at the standard monthly rate rather than silently granting a seat
+        // that no longer exists; support can refund the difference.
+        effectivePlan = "monthly";
+      } else {
+        setSetting("founding_claimed", String(claimed + 1));
+      }
+    }
+
     d.prepare(
       `INSERT INTO subscriptions (user_id, plan, status, provider, stripe_customer, stripe_subscription, renews_at)
        VALUES (?, ?, 'active', ?, ?, ?, ?)`
-    ).run(userId, plan, provider, stripeIds?.customer ?? null, stripeIds?.subscription ?? null, renews);
-    d.prepare("UPDATE users SET plan='plus', founding=? WHERE id=?").run(plan === "founding" ? 1 : 0, userId);
-    if (plan === "founding") {
-      const claimed = parseInt(getSetting("founding_claimed") ?? "0", 10);
-      setSetting("founding_claimed", String(claimed + 1));
-    }
+    ).run(userId, effectivePlan, provider, stripeIds?.customer ?? null, stripeIds?.subscription ?? null, renews);
+    d.prepare("UPDATE users SET plan='plus', founding=? WHERE id=?").run(
+      effectivePlan === "founding" ? 1 : 0,
+      userId
+    );
+    return true;
   });
-  tx();
+
+  return tx();
 }
 
 export function cancelSubscription(userId: number) {

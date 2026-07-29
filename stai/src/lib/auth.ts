@@ -36,6 +36,8 @@ export async function verifyUser(email: string, password: string): Promise<numbe
 export async function startSession(userId: number) {
   const token = crypto.randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + SESSION_DAYS * 864e5);
+  // Opportunistic purge: expired rows would otherwise accumulate forever.
+  db().prepare("DELETE FROM sessions WHERE expires_at <= datetime('now')").run();
   db()
     .prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)")
     .run(token, userId, expires.toISOString());

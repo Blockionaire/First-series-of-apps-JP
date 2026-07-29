@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createUser, startSession } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
+import { guard, WINDOW } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
+  const blocked = guard(req, "signup", 5, WINDOW.hour);
+  if (blocked) return blocked;
+
   const b = await req.json().catch(() => ({}));
   const email = String(b.email ?? "").trim().toLowerCase();
   const password = String(b.password ?? "");

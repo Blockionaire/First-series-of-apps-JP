@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { stripeClient, foundingAvailable, PLANS, type PlanId } from "@/lib/billing";
+import { guard, WINDOW } from "@/lib/ratelimit";
 
 const PRICE_CENTS: Record<PlanId, { amount: number; interval: "month" | "year" }> = {
   monthly: { amount: 1900, interval: "month" },
@@ -9,6 +10,9 @@ const PRICE_CENTS: Record<PlanId, { amount: number; interval: "month" | "year" }
 };
 
 export async function POST(req: NextRequest) {
+  const blocked = guard(req, "checkout", 20, WINDOW.hour);
+  if (blocked) return blocked;
+
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "auth", next: "/signup?next=/plus" }, { status: 401 });
   if (user.plan === "plus") return NextResponse.json({ error: "Already a member" }, { status: 400 });
