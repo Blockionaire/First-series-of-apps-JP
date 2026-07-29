@@ -1753,6 +1753,9 @@ const VIDEO_FPS = 24;
 const VIDEO_STUK = 700000;    // base64-tekens per document (limiet is 1 MB)
 // in demo-modus past alles in localStorage, dus daar houden we het klein
 const videoDoelBytes = () => (DB && DB.demo) ? 700e3 : 4e6;
+// Hieronder gaat een filmpje ongewijzigd de database in: sneller, scherper en
+// mét geluid. Alleen wat daarboven zit wordt verkleind.
+const videoDirectMax = () => (DB && DB.demo) ? 700e3 : 6e6;
 
 const VIDEO_TYPES = [
   'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',   // speelt overal, ook op iPhone
@@ -1783,34 +1786,109 @@ function base64NaarBlob(b64, mime){
   return new Blob([arr], {type: mime || "video/mp4"});
 }
 
+/* iOS speelt geen video af die niet in de pagina staat, en zonder muted mag
+   het al helemaal niet zonder verse tik van de gebruiker. Vandaar dit
+   piepkleine element in beeld in plaats van een los object in het geheugen. */
+function videoElement(src){
+  const v = document.createElement("video");
+  v.muted = true; v.defaultMuted = true; v.volume = 0;
+  v.playsInline = true;
+  v.setAttribute("playsinline", "");
+  v.setAttribute("webkit-playsinline", "");
+  v.setAttribute("muted", "");
+  v.preload = "auto";
+  v.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1";
+  document.body.appendChild(v);
+  v.src = src;
+  return v;
+}
+function wachtOp(v, gebeurtenis, ms, wat){
+  return new Promise((ok, fout) => {
+    let af = false;
+    const klaar = () => { if(af) return; af = true; opruimen(); ok(); };
+    const mis = () => { if(af) return; af = true; opruimen(); fout(new Error(wat || gebeurtenis)); };
+    const opruimen = () => {
+      v.removeEventListener(gebeurtenis, klaar);
+      v.removeEventListener("error", mis);
+      clearTimeout(t);
+    };
+    const t = setTimeout(mis, ms);
+    v.addEventListener(gebeurtenis, klaar, {once: true});
+    v.addEventListener("error", mis, {once: true});
+  });
+}
+// De afmetingen zijn bij "loadedmetadata" nog niet altijd bekend; bij sommige
+// bestanden komen ze pas met het eerste gedecodeerde beeldje mee.
+async function wachtOpAfmetingen(v, ms = 4000){
+  const eind = now() + ms;
+  while(!v.videoWidth && now() < eind) await new Promise(r => setTimeout(r, 80));
+  return {w: v.videoWidth || 0, h: v.videoHeight || 0};
+}
+async function zoekNaar(v, t){
+  try{
+    const p = wachtOp(v, "seeked", 6000, "zoeken duurde te lang");
+    v.currentTime = t;
+    await p;
+  }catch(e){ /* geen ramp: dan pakken we het beeldje dat er nu staat */ }
+}
+function beeldjeUit(v, maxDim = 480){
+  const w = v.videoWidth || 0, h = v.videoHeight || 0;
+  if(!w || !h) return "";
+  const sch = Math.min(1, maxDim / Math.max(w, h));
+  const cv = document.createElement("canvas");
+  cv.width = Math.max(2, Math.round(w * sch));
+  cv.height = Math.max(2, Math.round(h * sch));
+  try{
+    cv.getContext("2d").drawImage(v, 0, 0, cv.width, cv.height);
+    return cv.toDataURL("image/jpeg", 0.6);
+  }catch(e){ return ""; }
+}
+
+/* Leest lengte, afmetingen en een miniatuur uit een bestand zonder het te
+   hercoderen. Voor een filmpje dat al klein genoeg is, is dit alles wat we
+   nodig hebben — kwaliteit en geluid blijven dan gewoon intact. */
+async function videoInfo(file){
+  const url = URL.createObjectURL(file);
+  const v = videoElement(url);
+  try{
+    await wachtOp(v, "loadedmetadata", 20000, "video onleesbaar");
+    // Afmetingen en miniatuur eerst. De sprong naar het eind hieronder kan een
+    // bestand zonder lengte in de war schoppen, en dan zijn we die kwijt.
+    await wachtOpAfmetingen(v);
+    await zoekNaar(v, 0.5);   // niet het allereerste beeldje: dat is vaak zwart
+    const {w, h} = await wachtOpAfmetingen(v);
+    const poster = beeldjeUit(v);
+    // sommige opnames melden pas een lengte nadat je één keer naar het eind springt
+    let dur = (isFinite(v.duration) && v.duration > 0) ? v.duration : 0;
+    if(!dur){
+      await zoekNaar(v, 1e6);
+      if(isFinite(v.duration) && v.duration > 0) dur = v.duration;
+      else if(v.currentTime > 0) dur = v.currentTime;
+    }
+    return {poster, dur: Math.round(dur), w, h};
+  } finally {
+    v.remove(); URL.revokeObjectURL(url);
+  }
+}
+
 async function compressVideo(file, onVoortgang){
   const type = videoOpnameType();
   if(!type) throw new Error("Deze telefoon kan geen video verkleinen");
   const url = URL.createObjectURL(file);
-  const v = document.createElement("video");
-  v.src = url; v.playsInline = true; v.preload = "auto";
+  const v = videoElement(url);
   try{
-    await new Promise((ok, fout) => {
-      v.onloadedmetadata = () => ok();
-      v.onerror = () => fout(new Error("video onleesbaar"));
-      setTimeout(() => fout(new Error("video laadt niet")), 20000);
-    });
+    await wachtOp(v, "loadedmetadata", 20000, "video onleesbaar");
     // Opnames van een telefoon melden vaak duration = Infinity tot je één keer
     // helemaal naar het eind springt. Zonder die truc weten we de lengte niet
     // en kappen we niets af.
+    const gemeten = await wachtOpAfmetingen(v);
+    const bron = { w: gemeten.w || 640, h: gemeten.h || 360 };
     if(!(isFinite(v.duration) && v.duration > 0)){
-      await new Promise(ok => {
-        let af = false;
-        const klaar = () => { if(!af){ af = true; v.onseeked = null; ok(); } };
-        v.onseeked = klaar;
-        setTimeout(klaar, 3000);
-        try{ v.currentTime = 1e6; }catch(e){ klaar(); }
-      });
-      try{ v.currentTime = 0; }catch(e){}
+      await zoekNaar(v, 1e6);
+      await zoekNaar(v, 0);
     }
     const heleDuur = (isFinite(v.duration) && v.duration > 0) ? v.duration : VIDEO_MAX_SEC;
     const duur = Math.min(heleDuur, VIDEO_MAX_SEC);
-    const bron = { w: v.videoWidth || 640, h: v.videoHeight || 360 };
     const schaal = Math.min(1, VIDEO_MAX_DIM / Math.max(bron.w, bron.h));
     // even afmetingen: sommige encoders weigeren oneven waarden
     const w = Math.max(2, Math.round(bron.w * schaal / 2) * 2);
@@ -1819,40 +1897,33 @@ async function compressVideo(file, onVoortgang){
     const cv = document.createElement("canvas");
     cv.width = w; cv.height = h;
     const ctx = cv.getContext("2d");
+    if(typeof cv.captureStream !== "function") throw new Error("dit toestel kan geen video opnemen");
     const stream = cv.captureStream(VIDEO_FPS);
 
-    // Geluid loopt via een audiograaf die níet op de speakers is aangesloten:
-    // zo neem je het wel op, maar hoort de speler niets tijdens het verwerken.
-    let ac = null;
-    try{
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if(AC){
-        ac = new AC();
-        // een net aangemaakte AudioContext staat soms stil; zonder dit blijft
-        // het geluid weg in de opname
-        if(ac.state === "suspended"){ try{ await ac.resume(); }catch(e){} }
-        const dest = ac.createMediaStreamDestination();
-        ac.createMediaElementSource(v).connect(dest);
-        dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
-      }
-    }catch(e){ /* geen geluid is niet erg, beeld is wat telt */ }
-
     const bits = Math.round(Math.min(1500e3, Math.max(300e3, videoDoelBytes() * 8 / Math.max(1, duur))));
-    const rec = new MediaRecorder(stream, {mimeType: type, videoBitsPerSecond: bits, audioBitsPerSecond: 64000});
+    const rec = new MediaRecorder(stream, {mimeType: type, videoBitsPerSecond: bits});
     const brokken = [];
     rec.ondataavailable = e => { if(e.data && e.data.size) brokken.push(e.data); };
     const klaar = new Promise(ok => { rec.onstop = ok; });
 
-    let gefilmd = 0;
+    await zoekNaar(v, 0);
     rec.start(250);
-    v.currentTime = 0;
-    await v.play();
-    await new Promise(ok => {
+    try{ await v.play(); }
+    catch(e){ throw new Error("de telefoon wilde het filmpje niet afspelen"); }
+
+    let gefilmd = 0;
+    await new Promise((ok, fout) => {
+      // Waakhond: komt de speelkop 8 seconden lang niet vooruit, dan stoppen we
+      // met een duidelijke melding in plaats van eeuwig te blijven draaien.
+      let laatsteTijd = -1, laatsteStap = now();
       const teken = () => {
-        if(v.ended || v.currentTime >= duur){ ok(); return; }
-        gefilmd = Math.max(gefilmd, v.currentTime);
+        const t = v.currentTime || 0;
+        if(t > laatsteTijd + 0.01){ laatsteTijd = t; laatsteStap = now(); }
+        else if(now() - laatsteStap > 8000){ fout(new Error("het verkleinen liep vast")); return; }
+        if(v.ended || t >= duur){ ok(); return; }
+        gefilmd = Math.max(gefilmd, t);
         ctx.drawImage(v, 0, 0, w, h);
-        if(onVoortgang) onVoortgang(Math.min(1, v.currentTime / duur));
+        if(onVoortgang) onVoortgang(Math.min(1, t / duur));
         requestAnimationFrame(teken);
       };
       requestAnimationFrame(teken);
@@ -1861,39 +1932,55 @@ async function compressVideo(file, onVoortgang){
     try{ v.pause(); }catch(e){}
     rec.stop();
     await klaar;
-    if(ac){ try{ await ac.close(); }catch(e){} }
 
     const blob = new Blob(brokken, {type});
+    if(!blob.size) throw new Error("het verkleinen leverde niets op");
     // laatste beeldje als miniatuur — klein genoeg om overal te tonen
     const pv = document.createElement("canvas");
     const ps = Math.min(1, 480 / Math.max(w, h));
     pv.width = Math.max(2, Math.round(w * ps)); pv.height = Math.max(2, Math.round(h * ps));
-    pv.getContext("2d").drawImage(cv, 0, 0, pv.width, pv.height);
     let poster = "";
-    try{ poster = pv.toDataURL("image/jpeg", 0.6); }catch(e){}
+    try{
+      pv.getContext("2d").drawImage(cv, 0, 0, pv.width, pv.height);
+      poster = pv.toDataURL("image/jpeg", 0.6);
+    }catch(e){}
 
     // wat er daadwerkelijk in beeld is geweest, niet wat vooraf geschat werd
     const echteDuur = Math.max(gefilmd, v.currentTime || 0) || duur;
     return {blob, poster, dur: Math.round(echteDuur), w, h, mime: type,
             afgekapt: heleDuur > echteDuur + 0.5};
   } finally {
-    URL.revokeObjectURL(url);
+    v.remove(); URL.revokeObjectURL(url);
   }
 }
 
 async function uploadVideo(file, onVoortgang){
-  const r = await compressVideo(file, onVoortgang);
-  const b64 = await blobNaarBase64(r.blob);
-  if(!b64) throw new Error("verkleinen leverde niets op");
+  let blob, poster = "", dur = 0, w = 0, h = 0, mime, afgekapt = false;
+  if(file.size <= videoDirectMax()){
+    // Klein genoeg om ongemoeid te laten. Dat is niet alleen sneller, het
+    // scheelt ook kwaliteit én het geluid blijft behouden.
+    blob = file;
+    mime = file.type || "video/mp4";
+    let info = {poster: "", dur: 0, w: 0, h: 0};
+    try{ info = await videoInfo(file); }catch(e){ console.warn("geen miniatuur", e); }
+    poster = info.poster; dur = info.dur; w = info.w; h = info.h;
+    if(onVoortgang) onVoortgang(1);
+  } else {
+    const r = await compressVideo(file, onVoortgang);
+    blob = r.blob; poster = r.poster; dur = r.dur; w = r.w; h = r.h;
+    mime = r.mime; afgekapt = r.afgekapt;
+  }
+  const b64 = await blobNaarBase64(blob);
+  if(!b64) throw new Error("het filmpje kon niet worden gelezen");
   const stukken = Math.ceil(b64.length / VIDEO_STUK);
-  const posterId = r.poster ? await DB.add("images", {data: r.poster, at: now()}) : null;
-  const vidId = await DB.add("videos", {mime: r.mime, dur: r.dur, w: r.w, h: r.h, stukken, posterId, klaar: false, at: now()});
+  const posterId = poster ? await DB.add("images", {data: poster, at: now()}) : null;
+  const vidId = await DB.add("videos", {mime, dur, w, h, stukken, posterId, klaar: false, at: now()});
   for(let i = 0; i < stukken; i++){
     await DB.set(`videos/${vidId}/stukken/s${i}`, {d: b64.slice(i * VIDEO_STUK, (i + 1) * VIDEO_STUK)});
   }
   // pas als álle stukken binnen zijn is het filmpje afspeelbaar
   await DB.set("videos/" + vidId, {klaar: true});
-  return {vidId, posterId, dur: r.dur, afgekapt: r.afgekapt};
+  return {vidId, posterId, dur, afgekapt};
 }
 
 async function loadVideoUrl(vidId){
@@ -1961,26 +2048,32 @@ async function kiesEnUploadMedia(){
     toast("Foto uploaden…");
     return {kind: "img", imgId: await uploadImage(f)};
   }
-  if(!videoOpnameType()){ toast("Video's versturen lukt niet op deze telefoon"); return null; }
-  const balk = videoVoortgang();
+  const verkleinen = f.size > videoDirectMax();
+  if(verkleinen && !videoOpnameType()){
+    toast("Dit filmpje is te groot en verkleinen lukt niet op deze telefoon");
+    return null;
+  }
+  const balk = videoVoortgang(verkleinen);
   try{
     const r = await uploadVideo(f, p => balk.zet(p));
-    balk.weg();
     if(r.afgekapt) toast(`Alleen de eerste ${VIDEO_MAX_SEC} seconden zijn verstuurd`);
     return {kind: "video", vidId: r.vidId, posterId: r.posterId};
   }catch(e){
-    balk.weg();
     console.error(e);
-    toast("Video verwerken mislukt");
+    toast(e && e.message ? "Filmpje mislukt: " + e.message : "Video verwerken mislukt");
     return null;
+  }finally{
+    balk.weg();
   }
 }
-function videoVoortgang(){
+function videoVoortgang(verkleinen){
   const el = document.createElement("div");
   el.className = "vid-bezig";
-  el.innerHTML = `<div class="vb-kop">🎬 Filmpje verkleinen…</div>
+  el.innerHTML = `<div class="vb-kop">🎬 ${verkleinen ? "Filmpje verkleinen…" : "Filmpje klaarzetten…"}</div>
     <div class="vb-baan"><i></i></div>
-    <div class="vb-sub">Dit duurt ongeveer zo lang als het filmpje zelf.</div>`;
+    <div class="vb-sub">${verkleinen
+      ? "Het filmpje is groot, dus het wordt kleiner gemaakt. Dat duurt ongeveer zo lang als het filmpje zelf."
+      : "Een momentje…"}</div>`;
   document.body.appendChild(el);
   return {
     zet(p){ const i = el.querySelector("i"); if(i) i.style.width = Math.round(p * 100) + "%"; },
