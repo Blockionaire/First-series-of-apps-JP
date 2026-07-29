@@ -57,8 +57,9 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Desk panel */}
-          <div className="border bg-navy-950/80 p-5 backdrop-blur-[2px] rule-strong">
+          {/* Desk panel — self-start so it hugs its content instead of
+              stretching to the hero row and leaving a void beneath. */}
+          <div className="self-start border bg-navy-950/80 p-5 backdrop-blur-[2px] panel-lift rule-strong">
             <div className="flex items-center justify-between border-b pb-3 rule">
               <span className="f-label" style={{ color: "var(--ink-faint)" }}>
                 Desk status

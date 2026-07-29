@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
@@ -11,7 +12,12 @@ import CancelSubscription from "@/components/account/CancelSubscription";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Your desk" };
+export const metadata: Metadata = pageMeta({
+  title: "Your desk",
+  description: "Your saved briefings, prompts, answers and STAI+ membership.",
+  path: "/account",
+  noIndex: true,
+});
 
 export default async function AccountPage({
   searchParams,

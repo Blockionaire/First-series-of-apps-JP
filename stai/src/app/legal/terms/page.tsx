@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Terms" };
+export const metadata: Metadata = pageMeta({
+  title: "Terms of use",
+  description: "STAI terms: not professional advice, personal subscriptions, founding pricing honoured for life, cancel anytime.",
+  path: "/legal/terms",
+});
 
 export default function TermsPage() {
   return (

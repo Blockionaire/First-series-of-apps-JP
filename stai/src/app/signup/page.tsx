@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import { Suspense } from "react";
 import AuthForm from "@/components/auth/AuthForm";
 
-export const metadata: Metadata = { title: "Create your account" };
+export const metadata: Metadata = pageMeta({
+  title: "Create your account",
+  description: "Create a free STAI account: most briefings, the open prompt slice, the AI-readiness assessment and The STAI Brief.",
+  path: "/signup",
+});
 
 export default function SignupPage() {
   return (

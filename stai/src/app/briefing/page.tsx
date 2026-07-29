@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import { allArticles } from "@/lib/content";
 import BriefingExplorer from "@/components/briefing/BriefingExplorer";
 import Ticker from "@/components/chrome/Ticker";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "The Briefing",
-  description:
-    "Analysis, guides and news on how AI is reshaping audit, accountancy and finance across Europe — browsable on the Radar.",
-};
+export const metadata: Metadata = pageMeta({
+  title: "The Briefing — AI intelligence for European audit",
+  description: "Analysis, guides and news on how AI is reshaping audit, accountancy and finance across Europe. Browse the full desk on the Radar, categorised and searchable.",
+  path: "/briefing",
+});
 
 export default function BriefingPage() {
   const items = allArticles().map((a) => ({

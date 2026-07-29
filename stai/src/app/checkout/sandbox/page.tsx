@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { PLANS, stripeClient, type PlanId } from "@/lib/billing";
@@ -6,7 +7,12 @@ import SandboxCheckout from "@/components/plus/SandboxCheckout";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Checkout" };
+export const metadata: Metadata = pageMeta({
+  title: "Checkout",
+  description: "Complete your STAI+ membership.",
+  path: "/checkout/sandbox",
+  noIndex: true,
+});
 
 export default async function SandboxCheckoutPage({
   searchParams,

@@ -1,24 +1,62 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import { PROGRAMMES } from "@/lib/training";
 import { EARLY_BIRD_END_ISO } from "@/lib/content";
 import { daysUntil } from "@/lib/format";
 import EnquiryForm from "@/components/training/EnquiryForm";
+import JsonLd from "@/components/JsonLd";
+import { abs, breadcrumbSchema } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Training for firms",
-  description:
-    "Live AI training programmes for audit and accountancy firms — Copilot Beginners, Copilot Experienced, and the Full AI Package. 25% early-bird until 31 August 2026.",
-};
+export const metadata: Metadata = pageMeta({
+  title: "AI training for audit firms — Copilot programmes",
+  description: "Live AI training for audit and accountancy firms: Copilot Beginners (€1,195), Copilot Experienced (€2,245) and the Full AI Package (€5,625). 25% early-bird until 31 August 2026.",
+  path: "/training",
+});
 
 const eur = (n: number) => `€${n.toLocaleString("en-IE")}`;
 
 export default function TrainingPage() {
   const days = daysUntil(EARLY_BIRD_END_ISO);
 
+  // Course + Offer markup: these are purchasable programmes, and the
+  // early-bird price is a real, dated offer. Eligible for rich results.
+  const courseSchema = PROGRAMMES.map((p) => ({
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: p.name,
+    description: `${p.tagline}. ${p.audience}.`,
+    url: abs("/training"),
+    provider: { "@id": abs("/#organization") },
+    inLanguage: "en-GB",
+    teaches: p.outcomes,
+    offers: {
+      "@type": "Offer",
+      price: p.earlyBird,
+      priceCurrency: "EUR",
+      availability: "https://schema.org/InStock",
+      priceValidUntil: "2026-08-31",
+      url: abs("/training#enquire"),
+    },
+    hasCourseInstance: {
+      "@type": "CourseInstance",
+      courseMode: "onsite",
+      courseWorkload: p.format,
+    },
+  }));
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <JsonLd
+        data={[
+          ...courseSchema,
+          breadcrumbSchema([
+            { name: "STAI", path: "/" },
+            { name: "Training for firms", path: "/training" },
+          ]),
+        ]}
+      />
       <header className="mb-10 max-w-3xl">
         <p className="f-label" style={{ color: "var(--ink-faint)" }}>
           Practice / training

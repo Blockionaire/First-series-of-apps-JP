@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import AssessmentQuiz from "@/components/assessment/AssessmentQuiz";
 import EnforcementClock from "@/components/chrome/EnforcementClock";
 
-export const metadata: Metadata = {
-  title: "AI-readiness assessment",
-  description:
-    "Eight questions, scored against how European firms actually deploy AI. Your maturity band, the gaps inspectors would find first, and your next three moves.",
-};
+export const metadata: Metadata = pageMeta({
+  title: "AI-readiness assessment for audit firms",
+  description: "A free eight-question diagnostic scoring your firm’s AI maturity across governance, people, practice and evidence — with the gaps inspectors would find first and your next three moves.",
+  path: "/assessment",
+});
 
 export default function AssessmentPage() {
   return (

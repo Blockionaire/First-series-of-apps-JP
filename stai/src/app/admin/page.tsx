@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
@@ -7,7 +8,12 @@ import { foundingStatus } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "The desk — admin" };
+export const metadata: Metadata = pageMeta({
+  title: "The desk — admin",
+  description: "STAI back office.",
+  path: "/admin",
+  noIndex: true,
+});
 
 export default async function AdminPage() {
   const user = await currentUser();

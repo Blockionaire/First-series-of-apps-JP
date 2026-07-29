@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { allPrompts } from "@/lib/content";
 import { currentUser } from "@/lib/auth";
@@ -6,11 +7,11 @@ import PromptExplorer from "@/components/prompts/PromptExplorer";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "The Prompt Library",
-  description:
-    "Vetted, guardrailed AI prompts for real audit, tax and finance work — risk assessment, memos, CSRD, ISA research, analytics.",
-};
+export const metadata: Metadata = pageMeta({
+  title: "The Prompt Library — audit-grade AI prompts",
+  description: "Vetted, guardrailed AI prompts for real audit, tax and finance work: risk assessment, ISA 240 fraud brainstorming, CSRD extraction, technical memos, journal entry analytics.",
+  path: "/prompts",
+});
 
 export default async function PromptsPage() {
   const user = await currentUser();

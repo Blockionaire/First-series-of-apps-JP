@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 
-export const metadata: Metadata = { title: "About STAI" };
+export const metadata: Metadata = pageMeta({
+  title: "About STAI",
+  description: "Why STAI exists: independent AI intelligence for European audit, accountancy and finance professionals. Evidence first, practice over hype, no vendor money.",
+  path: "/about",
+});
 
 export default function AboutPage() {
   return (

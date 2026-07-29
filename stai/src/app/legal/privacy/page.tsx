@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Privacy" };
+export const metadata: Metadata = pageMeta({
+  title: "Privacy",
+  description: "How STAI handles your data: EU storage, no training on your inputs, no selling data, one-click deletion.",
+  path: "/legal/privacy",
+});
 
 export default function PrivacyPage() {
   return (

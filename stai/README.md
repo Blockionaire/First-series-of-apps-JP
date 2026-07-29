@@ -67,12 +67,45 @@ contrast is preserved by construction. The hand-drawn canvases (signal field,
 radar) read the theme per frame via `src/lib/theme.ts`. Gold remains
 premium-only in both themes; its text shade deepens on beige for contrast.
 
+## SEO
+
+Search surfaces are first-class, not bolted on:
+
+- `sitemap.xml` (every article, prompt, category and author, priced by
+  editorial priority), `robots.txt`, and an RSS feed at `/feed.xml`.
+- A single `pageMeta()` builder in `src/lib/seo.ts` gives every route a
+  canonical URL plus complete OpenGraph/Twitter cards. Private surfaces
+  (account, admin, checkout, login) are explicitly `noindex`.
+- **Share images are generated on our own server** via `next/og`
+  (`src/lib/og.tsx`) — navy card, hairline frame, gold only when the piece
+  is STAI+. Nothing is fetched at runtime, so the firewall guarantee holds.
+- **Structured data**: Organization + WebSite site-wide; `AnalysisNewsArticle`
+  with author `Person` and `BreadcrumbList` per briefing; `CollectionPage` +
+  `ItemList` on category pages; `ProfilePage`/`Person` on authors; `Course` +
+  `Offer` (with `priceValidUntil`) on training; `PodcastSeries`.
+- **Paywall markup**: premium briefings serve a truncated body with
+  `isAccessibleForFree: false` and a `hasPart` selector naming the gated
+  region. Serving cut content *without* this is what search engines treat as
+  cloaking; with it, the piece indexes honestly.
+- **Crawlable topic pages** at `/briefing/category/[category]` and author
+  pages at `/authors/[slug]` — the filter chips are a client-side lens, but
+  every beat and every byline also has a real, linkable, indexable URL.
+
 ## Accessibility & motion
 
 Keyboard paths everywhere (the Radar included: arrows cycle, Enter opens, with a
 live text readout). `prefers-reduced-motion` stills the ticker, the hero field,
 the sweep and reveals. Focus rings are cream; gold focus is reserved — like gold
 itself — for STAI+ controls only.
+
+Contrast is held to WCAG AA in **both** themes. The `--ink-faint` token is the
+one to watch: it carries every mono label, index number and timestamp on the
+site, so it is set at 0.58 (dark) / 0.64 (light), measuring 5.1–5.8:1. Earlier
+values around 0.38/0.46 measured ~3:1 and failed. Do not lower them.
+
+Article measure is capped at 40rem (≈68 characters) — the long-form comfort
+range. The headline shares the body column's left edge; the file rail runs
+beside the prose.
 
 ## Brand rule enforced in code
 

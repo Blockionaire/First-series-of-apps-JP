@@ -14,7 +14,7 @@ export function CategoryTag({ category }: { category: string }) {
 export function Byline({ a }: { a: Article }) {
   return (
     <p className="f-mono text-[0.65rem] tracking-[0.1em] uppercase" style={{ color: "var(--ink-faint)" }}>
-      {a.author} · {fmtDate(a.published_at)} · {a.reading_min} min
+      {a.author} · <time dateTime={a.published_at}>{fmtDate(a.published_at)}</time> · {a.reading_min} min
     </p>
   );
 }

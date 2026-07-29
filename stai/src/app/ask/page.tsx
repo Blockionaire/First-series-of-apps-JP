@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import { currentUser, peekAnonId, getUsage } from "@/lib/auth";
 import AskConsole from "@/components/ask/AskConsole";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Ask STAI",
-  description:
-    "An assistant that answers audit-AI questions from STAI's own research — every claim cited, every citation one click from its source.",
-};
+export const metadata: Metadata = pageMeta({
+  title: "Ask STAI — the grounded audit AI assistant",
+  description: "An AI assistant that answers audit and AI-governance questions from STAI’s own published research — every claim cited, every citation one click from its source.",
+  path: "/ask",
+});
 
 const FREE_QUOTA = 5;
 const ANON_QUOTA = 2;

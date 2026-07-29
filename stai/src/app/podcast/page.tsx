@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import { allPodcasts } from "@/lib/content";
 import { fmtDate } from "@/lib/format";
+import JsonLd from "@/components/JsonLd";
+import { abs } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: "The STAI Podcast",
-  description:
-    "Conversations with the regulators, researchers and practitioners shaping AI in the European audit profession.",
-};
+  description: "Conversations with the regulators, researchers and practitioners shaping AI in the European audit profession.",
+  path: "/podcast",
+});
 
 /** Deterministic decorative waveform per episode — no assets, no randomness across renders. */
 function bars(slug: string): number[] {
@@ -27,6 +30,27 @@ export default function PodcastPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "PodcastSeries",
+          name: "The STAI Podcast",
+          url: abs("/podcast"),
+          description:
+            "Conversations with the regulators, researchers and practitioners shaping AI in the European audit profession.",
+          publisher: { "@id": abs("/#organization") },
+          inLanguage: "en-GB",
+          hasPart: episodes.map((ep) => ({
+            "@type": "PodcastEpisode",
+            episodeNumber: ep.episode_no,
+            name: ep.title,
+            description: ep.description,
+            datePublished: ep.published_at,
+            timeRequired: `PT${ep.duration_min}M`,
+            url: abs(`/podcast#${ep.slug}`),
+          })),
+        }}
+      />
       <header className="mb-10">
         <p className="f-label" style={{ color: "var(--ink-faint)" }}>
           Intelligence desk / 04
@@ -43,7 +67,7 @@ export default function PodcastPage() {
 
       <ol className="space-y-0">
         {episodes.map((ep) => (
-          <li key={ep.id} className="border-t rule last:border-b">
+          <li key={ep.id} id={ep.slug} className="scroll-mt-28 border-t rule last:border-b">
             <details className="group">
               <summary className="grid cursor-pointer list-none gap-x-6 gap-y-2 py-6 sm:grid-cols-[5rem_1fr_auto] sm:items-center [&::-webkit-details-marker]:hidden">
                 <span className="f-mono text-2xl font-bold tabular-nums" style={{ color: "var(--ink-faint)" }}>

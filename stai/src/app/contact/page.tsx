@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import EnquiryForm from "@/components/training/EnquiryForm";
 
-export const metadata: Metadata = { title: "Contact" };
+export const metadata: Metadata = pageMeta({
+  title: "Contact the desk",
+  description: "Reach STAI for training, team membership, corrections or story tips — answered within one working day.",
+  path: "/contact",
+});
 
 export default function ContactPage() {
   return (

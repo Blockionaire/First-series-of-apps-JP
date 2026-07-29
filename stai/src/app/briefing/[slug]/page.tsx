@@ -10,6 +10,10 @@ import ReadingProgress from "@/components/briefing/ReadingProgress";
 import BookmarkButton from "@/components/BookmarkButton";
 import { IndexCard } from "@/components/ArticleCard";
 import { PlusBadge } from "@/components/Logo";
+import JsonLd from "@/components/JsonLd";
+import { pageMeta, abs, breadcrumbSchema } from "@/lib/seo";
+import { authorSlug } from "@/lib/authors";
+import { categorySlug } from "@/lib/categories";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +23,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const a = articleBySlug(slug);
   if (!a) return {};
-  return { title: a.title, description: a.dek };
+  return pageMeta({
+    title: a.title,
+    description: a.dek,
+    path: `/briefing/${a.slug}`,
+    type: "article",
+    publishedTime: a.published_at,
+    authors: [a.author],
+    section: a.category,
+    tags: a.tags,
+  });
 }
 
 export default async function ArticlePage({ params }: Props) {
@@ -32,24 +45,81 @@ export default async function ArticlePage({ params }: Props) {
   // Locked pieces are cut server-side — the full text never reaches the client.
   const source = locked ? markdownPreview(article.body_md, 3) : article.body_md;
   const { html, toc } = renderMarkdown(source);
-  const related = relatedArticles(article);
+  const related = relatedArticles(article, 4);
+  const [readNext, ...alsoOnDesk] = related;
   const bookmarked = user
     ? !!db()
         .prepare("SELECT 1 FROM bookmarks WHERE user_id=? AND kind='article' AND ref_id=?")
         .get(user.id, article.id)
     : false;
 
+  // Paywalled pieces declare the gate explicitly. Serving truncated HTML
+  // WITHOUT this markup is what Google treats as cloaking; with it, the
+  // article is indexed honestly and the locked section is disclosed.
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "AnalysisNewsArticle",
+    "@id": abs(`/briefing/${article.slug}#article`),
+    headline: article.title,
+    description: article.dek,
+    datePublished: article.published_at,
+    dateModified: article.published_at,
+    inLanguage: "en-GB",
+    articleSection: article.category,
+    keywords: article.tags.join(", "),
+    wordCount: article.body_md.split(/\s+/).length,
+    timeRequired: `PT${article.reading_min}M`,
+    url: abs(`/briefing/${article.slug}`),
+    mainEntityOfPage: { "@type": "WebPage", "@id": abs(`/briefing/${article.slug}`) },
+    author: {
+      "@type": "Person",
+      name: article.author,
+      jobTitle: article.author_role,
+      url: abs(`/authors/${authorSlug(article.author)}`),
+    },
+    publisher: { "@id": abs("/#organization") },
+    isAccessibleForFree: !article.premium,
+    ...(article.premium
+      ? {
+          hasPart: {
+            "@type": "WebPageElement",
+            isAccessibleForFree: false,
+            cssSelector: ".stai-paywalled",
+          },
+        }
+      : {}),
+  };
+
   return (
     <>
+      <JsonLd
+        data={[
+          articleSchema,
+          breadcrumbSchema([
+            { name: "STAI", path: "/" },
+            { name: "The Briefing", path: "/briefing" },
+            { name: article.category, path: `/briefing/category/${categorySlug(article.category)}` },
+            { name: article.title, path: `/briefing/${article.slug}` },
+          ]),
+        ]}
+      />
       <ReadingProgress />
       <article className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+        {/* Header and body share one grid so the headline sits on the same
+            left edge as the prose; the file rail runs beside the text.
+            Measure is capped at 40rem ≈ 68 characters — the comfortable
+            long-form range. */}
+        <div className="mx-auto grid max-w-2xl gap-x-14 lg:max-w-none lg:grid-cols-[13rem_minmax(0,40rem)] lg:justify-center">
         {/* head */}
-        <header className="mx-auto max-w-3xl">
+        <header className="lg:col-start-2 lg:row-start-1">
           <p className="f-mono text-[0.68rem] tracking-[0.14em] uppercase" style={{ color: "var(--ink-faint)" }}>
             <Link href="/briefing" className="hover:text-cream-100">
               The Briefing
             </Link>{" "}
-            / {article.category}
+            /{" "}
+            <Link href={`/briefing/category/${categorySlug(article.category)}`} className="hover:text-cream-100">
+              {article.category}
+            </Link>
             {article.premium && (
               <span className="ml-3 align-middle">
                 <PlusBadge />
@@ -62,9 +132,8 @@ export default async function ArticlePage({ params }: Props) {
           </p>
         </header>
 
-        <div className="mx-auto mt-10 grid max-w-3xl gap-10 lg:max-w-none lg:grid-cols-[15rem_minmax(0,46rem)] lg:justify-center lg:gap-16">
           {/* file rail */}
-          <aside className="lg:sticky lg:top-32 lg:self-start">
+          <aside className="mt-10 lg:sticky lg:top-32 lg:col-start-1 lg:row-start-2 lg:self-start">
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-y py-4 rule lg:grid-cols-1">
               <div>
                 <p className="f-label" style={{ color: "var(--ink-faint)" }}>
@@ -76,13 +145,23 @@ export default async function ArticlePage({ params }: Props) {
                 <p className="f-label" style={{ color: "var(--ink-faint)" }}>
                   Published
                 </p>
-                <p className="f-mono mt-1 text-[0.78rem] tabular-nums text-cream-200">{fmtDate(article.published_at)}</p>
+                <p className="f-mono mt-1 text-[0.78rem] tabular-nums text-cream-200">
+                  <time dateTime={article.published_at}>{fmtDate(article.published_at)}</time>
+                </p>
               </div>
               <div>
                 <p className="f-label" style={{ color: "var(--ink-faint)" }}>
                   Author
                 </p>
-                <p className="mt-1 text-[0.85rem] text-cream-200">{article.author}</p>
+                <p className="mt-1 text-[0.85rem]">
+                  <Link
+                    href={`/authors/${authorSlug(article.author)}`}
+                    rel="author"
+                    className="text-cream-200 underline-offset-4 hover:text-cream-100 hover:underline"
+                  >
+                    {article.author}
+                  </Link>
+                </p>
                 <p className="f-mono text-[0.62rem] tracking-[0.08em] uppercase" style={{ color: "var(--ink-faint)" }}>
                   {article.author_role}
                 </p>
@@ -127,8 +206,8 @@ export default async function ArticlePage({ params }: Props) {
           </aside>
 
           {/* body */}
-          <div>
-            <div className={locked ? "veil" : undefined}>
+          <div className="mt-10 lg:col-start-2 lg:row-start-2">
+            <div className={locked ? "veil stai-paywalled" : undefined}>
               <div className="prose-stai" dangerouslySetInnerHTML={{ __html: html }} />
             </div>
 
@@ -169,17 +248,43 @@ export default async function ArticlePage({ params }: Props) {
           </div>
         </div>
 
+        {/* Read next — one decisive continuation, not a menu of three.
+            A reader who finishes a piece wants the next piece, not a choice. */}
+        {readNext && (
+          <section className="mx-auto mt-16 max-w-4xl">
+            <Link
+              href={`/briefing/${readNext.slug}`}
+              className="group block border p-6 transition-colors rule hover:border-[var(--line-strong)] sm:p-8"
+            >
+              <p className="f-label" style={{ color: "var(--ink-faint)" }}>
+                Read next · {readNext.category} · {readNext.reading_min} min
+              </p>
+              <h2 className="f-display mt-3 text-2xl text-cream-100 transition-colors group-hover:text-white sm:text-4xl">
+                {readNext.title}
+              </h2>
+              <p className="mt-3 max-w-2xl leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+                {readNext.dek}
+              </p>
+              <p className="f-mono mt-4 text-[0.7rem] tracking-[0.14em] uppercase text-cream-400">
+                Continue <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
+              </p>
+            </Link>
+          </section>
+        )}
+
         {/* related */}
-        <section className="mx-auto mt-16 max-w-7xl">
-          <h2 className="f-label border-b pb-3 rule-strong" style={{ color: "var(--ink-faint)" }}>
-            Also on the desk
-          </h2>
-          <div className="mt-6 grid gap-8 md:grid-cols-3">
-            {related.map((r, i) => (
-              <IndexCard key={r.id} a={r} num={String(i + 1).padStart(2, "0")} />
-            ))}
-          </div>
-        </section>
+        {alsoOnDesk.length > 0 && (
+          <section className="mx-auto mt-14 max-w-7xl">
+            <h2 className="f-label border-b pb-3 rule-strong" style={{ color: "var(--ink-faint)" }}>
+              Also on the desk
+            </h2>
+            <div className="mt-6 grid gap-8 md:grid-cols-3">
+              {alsoOnDesk.map((r, i) => (
+                <IndexCard key={r.id} a={r} num={String(i + 1).padStart(2, "0")} />
+              ))}
+            </div>
+          </section>
+        )}
       </article>
     </>
   );

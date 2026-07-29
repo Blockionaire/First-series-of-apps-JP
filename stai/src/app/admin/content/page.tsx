@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
@@ -7,7 +8,12 @@ import { fmtDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Content editor — admin" };
+export const metadata: Metadata = pageMeta({
+  title: "Content editor — admin",
+  description: "STAI briefing editor.",
+  path: "/admin/content",
+  noIndex: true,
+});
 
 export default async function AdminContentPage() {
   const user = await currentUser();

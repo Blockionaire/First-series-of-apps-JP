@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { foundingStatus } from "@/lib/content";
 import { currentUser } from "@/lib/auth";
@@ -7,11 +8,11 @@ import CheckoutButton from "@/components/plus/CheckoutButton";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: "STAI+ membership",
-  description:
-    "The full prompt library with adapt-with-AI, unlimited Ask STAI, every briefing, saved content. €19/month, €149/year — or €12/month locked forever as a founding member.",
-};
+  description: "The full prompt library with adapt-with-AI, unlimited Ask STAI, every briefing and saved content. €19/month, €149/year, or €12/month locked forever as a founding member.",
+  path: "/plus",
+});
 
 const FEATURES: { label: string; free: string; plus: string }[] = [
   { label: "The Briefing", free: "Most pieces", plus: "Every piece, including member briefings" },

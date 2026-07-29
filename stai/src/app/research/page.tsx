@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import { allResearch } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "The Research Desk",
-  description:
-    "Peer-reviewed and working-paper research on AI in audit and assurance, curated and translated into practice consequences.",
-};
+export const metadata: Metadata = pageMeta({
+  title: "The Research Desk — evidence on AI in audit",
+  description: "Peer-reviewed and working-paper research on AI in audit and assurance, curated and translated into the practice consequences that matter.",
+  path: "/research",
+});
 
 export default function ResearchPage() {
   const papers = allResearch();

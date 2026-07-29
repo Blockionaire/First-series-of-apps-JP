@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
@@ -7,7 +8,12 @@ import ArticleEditor, { type EditorArticle } from "@/components/admin/ArticleEdi
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Edit briefing — admin" };
+export const metadata: Metadata = pageMeta({
+  title: "Edit briefing — admin",
+  description: "STAI briefing editor.",
+  path: "/admin/content",
+  noIndex: true,
+});
 
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();
