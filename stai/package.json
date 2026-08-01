@@ -1,0 +1,39 @@
+{
+  "name": "stai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
+    "@fontsource-variable/archivo": "^5.2.8",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.11.1",
+    "marked": "^18.0.5",
+    "next": "15.5.20",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "sanitize-html": "^2.17.6",
+    "stripe": "^22.3.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/sanitize-html": "^2.16.1",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.20",
+    "playwright": "^1.61.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
