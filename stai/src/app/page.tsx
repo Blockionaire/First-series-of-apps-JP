@@ -51,8 +51,8 @@ export default function Home() {
               <Link href="/briefing" className="btn btn-primary">
                 Read the Briefing
               </Link>
-              <Link href="/assessment" className="btn btn-ghost">
-                Run the AI-readiness assessment
+              <Link href="/ai-act" className="btn btn-ghost">
+                What changes on 2 August
               </Link>
             </div>
           </div>
@@ -77,7 +77,10 @@ export default function Home() {
                 <EnforcementClock compact />
               </p>
               <p className="f-mono mt-1 text-[0.65rem] tracking-[0.1em] uppercase" style={{ color: "var(--ink-faint)" }}>
-                02 AUG 2026 · Art. 113 · deployer duties apply
+                02 AUG 2026 · Art. 113 ·{" "}
+                <Link href="/ai-act" className="underline underline-offset-2 hover:text-cream-100">
+                  what changes
+                </Link>
               </p>
             </div>
             <div className="border-b py-4 rule">
@@ -102,8 +105,18 @@ export default function Home() {
             </div>
             <div className="pt-4">
               <p className="f-mono text-[0.68rem] leading-relaxed tracking-[0.02em]" style={{ color: "var(--ink-muted)" }}>
-                <span className="text-cream-100">{founding.remaining}</span> of 200 founding-member seats
-                remain · €12/mo locked forever ·{" "}
+                {founding.showProgress ? (
+                  <>
+                    <span className="text-cream-100">{founding.remaining}</span> of {founding.total}{" "}
+                    founding-member seats remain
+                  </>
+                ) : (
+                  <>
+                    Founding membership open — <span className="text-cream-100">{founding.total}</span> seats,
+                    then never again
+                  </>
+                )}{" "}
+                · €12/mo locked forever ·{" "}
                 <Link href="/plus" className="underline underline-offset-2 hover:text-cream-100">
                   claim yours
                 </Link>
@@ -340,7 +353,9 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-4 py-12 sm:px-6">
           <div className="max-w-2xl">
             <p className="f-mono text-[0.65rem] font-bold tracking-[0.18em] uppercase text-gold-300">
-              Founding membership — {founding.remaining} of {founding.total} seats left
+              {founding.showProgress
+                ? `Founding membership — ${founding.remaining} of ${founding.total} seats left`
+                : `Founding membership — ${founding.total} seats, then never again`}
             </p>
             <h2 className="f-display mt-2 text-3xl text-cream-100 sm:text-4xl">
               €12 a month. Locked forever.

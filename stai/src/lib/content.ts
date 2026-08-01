@@ -127,10 +127,31 @@ export function allSignals(): Signal[] {
   return db().prepare("SELECT * FROM signals ORDER BY published_at DESC").all() as Signal[];
 }
 
-export function foundingStatus(): { total: number; claimed: number; remaining: number } {
+/**
+ * Founding-seat state.
+ *
+ * `showProgress` gates the claimed-count display, not the count itself. At
+ * launch a truthful "0 claimed" with an empty bar reads as "nobody wants
+ * this" — so below the threshold we show the seat number on offer ("claim
+ * seat 1 of 200"), which is equally true and reads as early access. We never
+ * inflate the number; we choose which true thing to lead with.
+ */
+export const FOUNDING_PROGRESS_THRESHOLD = 10;
+
+export function foundingStatus(): {
+  total: number;
+  claimed: number;
+  remaining: number;
+  showProgress: boolean;
+} {
   const total = parseInt(getSetting("founding_total") ?? "200", 10);
   const claimed = parseInt(getSetting("founding_claimed") ?? "0", 10);
-  return { total, claimed, remaining: Math.max(0, total - claimed) };
+  return {
+    total,
+    claimed,
+    remaining: Math.max(0, total - claimed),
+    showProgress: claimed >= FOUNDING_PROGRESS_THRESHOLD,
+  };
 }
 
 /** EU AI Act enforcement moment — the deadline the whole platform orients around. */

@@ -27,8 +27,10 @@ integration degrades gracefully (see "Runs anywhere" below).
 | Training | `/training` | Three programmes (€1,195 / €2,245 / €5,625) with 25% early-bird to 31 Aug 2026; enquiries persist to DB + outbox, confirmation mail, `STAI-TRN-xxxx` refs |
 | Assessment | `/assessment` | 8-question maturity diagnostic across Governance/People/Practice/Evidence; four bands with tailored verdicts and next moves; results stored, emailable |
 | STAI+ | `/plus` | €19/mo, €149/yr, founding €12/mo locked forever — live seat counter driven by real subscriptions |
-| Account | `/account` | Bookmarks, saved answers, subscription management |
-| Admin | `/admin` | Stats, enquiries, mail outbox, and a no-redeploy content editor (search index refreshes on save) |
+| For firms | `/firms` | The B2B front door: what ships today vs what's in development, with an enquiry form whose interest picker is the demand signal that decides build order |
+| EU AI Act tracker | `/ai-act` | The launch asset — free, ungated reference on what changes 2 Aug 2026: applicability, Article 26 duties cited article-by-article, the six artefacts, penalties, timeline, FAQ schema |
+| Account | `/account` | Bookmarks, saved answers, subscription management, GDPR erasure |
+| Admin | `/admin` | Stats, **firm demand report**, firm + training enquiries, mail outbox, and a no-redeploy content editor (search index refreshes on save) |
 
 ## Stack & the reasoning
 
@@ -54,6 +56,33 @@ Server-side integrations degrade honestly:
 | `RESEND_API_KEY` (+ `MAIL_FROM`) | Mail stays queued in the outbox, visible in admin |
 | `STAI_ADMIN_EMAIL` / `STAI_ADMIN_PASSWORD` | Dev admin seeded as `desk@stai.ai` / `stai-desk-2026` — **set these in production** |
 | `TRAINING_INBOX` | Enquiry notifications default to `training@stai.ai` |
+
+## Commercial design decisions worth knowing
+
+These are deliberate and reversible, but don't change them by accident.
+
+**The prompt library is distribution, not the product.** 20 of 31 prompts are
+open; the 11 behind the gate are the deepest instruments (`src/lib/seed/gating.ts`).
+What STAI+ actually sells is the *tooling* — adapt-with-AI and unlimited Ask
+STAI — because an auditor who finds a good prompt forwards it to colleagues,
+and that loop is worth more than the marginal subscription. **Every category
+must keep at least one open prompt**: a fully locked category reads as an empty
+shelf to the specialist who filters to it.
+
+**The founding counter never lies, but chooses what to lead with.** Below
+`FOUNDING_PROGRESS_THRESHOLD` (10 claimed) the claimed count and progress bar
+are suppressed and the page leads with "claim seat 1 of 200" — equally true,
+and reads as early access rather than as an empty room. Never seed the count.
+
+**The benchmark stays silent until it's honest.** Peer comparisons need
+`MIN_SAMPLE` (25) responses before anything is shown, and the sample size is
+always displayed. A percentile from a handful of responses is noise wearing a
+statistic — exactly what this publication criticises elsewhere.
+
+**Seeding is additive.** `runSeed` inserts with `ON CONFLICT DO NOTHING`, so a
+seed-version bump can never destroy CMS-authored articles or editor changes to
+seeded ones. Deliberate changes to already-seeded rows go through
+`runDataMigrations` in `db.ts`, keyed in settings so they run exactly once.
 
 ## Theming
 

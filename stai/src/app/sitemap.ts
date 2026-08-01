@@ -13,6 +13,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes: { path: string; priority: number; freq: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [
     { path: "/", priority: 1, freq: "daily" },
     { path: "/briefing", priority: 0.9, freq: "daily" },
+    // The AI Act tracker is the platform's most linkable free asset.
+    { path: "/ai-act", priority: 1, freq: "weekly" },
+    { path: "/firms", priority: 0.9, freq: "monthly" },
     { path: "/prompts", priority: 0.9, freq: "weekly" },
     { path: "/ask", priority: 0.8, freq: "monthly" },
     { path: "/training", priority: 0.9, freq: "monthly" },

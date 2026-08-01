@@ -8,13 +8,14 @@ import { podcasts, research, signals } from "./media";
 
 export function runSeed(d: Database.Database, seedVersion: string) {
   const tx = d.transaction(() => {
-    d.exec(
-      "DELETE FROM articles; DELETE FROM prompts; DELETE FROM podcasts; DELETE FROM research; DELETE FROM signals;"
-    );
-
+    // Seeding is ADDITIVE. It must never destroy work done in the CMS: a
+    // seed-version bump used to wipe every editor-authored article. Rows are
+    // matched by slug and left alone if they already exist; deliberate changes
+    // to seeded rows go through runDataMigrations in db.ts instead.
     const insArticle = d.prepare(`
       INSERT INTO articles (slug, title, dek, category, tags, author, author_role, published_at, reading_min, featured, urgency, premium, body_md)
       VALUES (@slug, @title, @dek, @category, @tags, @author, @authorRole, @publishedAt, @readingMin, @featured, @urgency, @premium, @body)
+      ON CONFLICT(slug) DO NOTHING
     `);
     for (const a of [...articles1, ...articles2]) {
       insArticle.run({
@@ -27,6 +28,7 @@ export function runSeed(d: Database.Database, seedVersion: string) {
     const insPrompt = d.prepare(`
       INSERT INTO prompts (slug, title, category, description, body, variables, model_note, premium, uses)
       VALUES (@slug, @title, @category, @description, @body, @variables, @modelNote, @premium, @uses)
+      ON CONFLICT(slug) DO NOTHING
     `);
     for (const pr of prompts) {
       insPrompt.run({
@@ -39,20 +41,26 @@ export function runSeed(d: Database.Database, seedVersion: string) {
     const insPod = d.prepare(`
       INSERT INTO podcasts (slug, episode_no, title, guest, description, duration_min, published_at)
       VALUES (@slug, @episodeNo, @title, @guest, @description, @durationMin, @publishedAt)
+      ON CONFLICT(slug) DO NOTHING
     `);
     for (const ep of podcasts) insPod.run(ep);
 
     const insRes = d.prepare(`
       INSERT INTO research (slug, title, source, authors, year, topic, summary, takeaway)
       VALUES (@slug, @title, @source, @authors, @year, @topic, @summary, @takeaway)
+      ON CONFLICT(slug) DO NOTHING
     `);
     for (const r of research) insRes.run(r);
 
-    const insSig = d.prepare(`
-      INSERT INTO signals (label, detail, kind, published_at)
-      VALUES (@label, @detail, @kind, @publishedAt)
-    `);
-    for (const s of signals) insSig.run(s);
+    // Signals have no natural key; only seed them into an empty ticker.
+    const sigCount = (d.prepare("SELECT COUNT(*) n FROM signals").get() as { n: number }).n;
+    if (sigCount === 0) {
+      const insSig = d.prepare(`
+        INSERT INTO signals (label, detail, kind, published_at)
+        VALUES (@label, @detail, @kind, @publishedAt)
+      `);
+      for (const s of signals) insSig.run(s);
+    }
 
     // Founding member scarcity.
     //

@@ -16,8 +16,10 @@ const COLS: { head: string; links: { href: string; label: string }[] }[] = [
     head: "Practice",
     links: [
       { href: "/prompts", label: "Prompt library" },
-      { href: "/training", label: "Training for firms" },
+      { href: "/firms", label: "STAI for firms" },
+      { href: "/training", label: "Training programmes" },
       { href: "/assessment", label: "AI-readiness assessment" },
+      { href: "/ai-act", label: "EU AI Act tracker" },
       { href: "/plus", label: "STAI+ membership" },
     ],
   },

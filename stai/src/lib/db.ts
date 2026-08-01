@@ -188,11 +188,31 @@ function migrate(d: Database.Database) {
     sent_at TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS firm_enquiries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    firm TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT '',
+    firm_size TEXT NOT NULL DEFAULT '',
+    jurisdiction TEXT NOT NULL DEFAULT '',
+    interests TEXT NOT NULL DEFAULT '[]',
+    seats TEXT NOT NULL DEFAULT '',
+    message TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'new',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE INDEX IF NOT EXISTS idx_articles_pub ON articles(published_at DESC);
   CREATE INDEX IF NOT EXISTS idx_articles_cat ON articles(category);
   CREATE INDEX IF NOT EXISTS idx_prompts_cat ON prompts(category);
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
   `);
+
+  // Additive column migrations — safe to run on every boot.
+  addColumn(d, "assessments", "firm_size", "TEXT NOT NULL DEFAULT ''");
+  addColumn(d, "assessments", "jurisdiction", "TEXT NOT NULL DEFAULT ''");
+  addColumn(d, "assessments", "role", "TEXT NOT NULL DEFAULT ''");
 
   const seeded = d.prepare("SELECT value FROM settings WHERE key='seed_version'").get() as
     | { value: string }
@@ -202,6 +222,43 @@ function migrate(d: Database.Database) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { runSeed } = require("./seed/run") as typeof import("./seed/run");
     runSeed(d, SEED_VERSION);
+  }
+
+  runDataMigrations(d);
+}
+
+/** ALTER TABLE ADD COLUMN, but idempotent. */
+function addColumn(d: Database.Database, table: string, column: string, definition: string) {
+  const cols = d.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (cols.some((c) => c.name === column)) return;
+  d.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
+/**
+ * One-time data migrations, keyed in settings so they run exactly once.
+ * These exist because the seed is additive (it never overwrites editor work),
+ * so deliberate changes to already-seeded rows have to be stated explicitly.
+ */
+function runDataMigrations(d: Database.Database) {
+  const done = (key: string) => !!d.prepare("SELECT 1 FROM settings WHERE key=?").get(key);
+  const mark = (key: string) =>
+    d.prepare("INSERT INTO settings (key, value) VALUES (?, datetime('now'))").run(key);
+
+  // Launch gating strategy: the prompt TEXT is distribution — an auditor who
+  // finds a good prompt forwards it to colleagues. What we charge for is the
+  // tooling (adapt-with-AI, Ask STAI). So the library opens up and only the
+  // deepest, most specialised prompts stay behind the gate. Every category
+  // keeps at least one open prompt: a locked category reads as an empty shelf.
+  if (!done("mig_prompt_gating_v2")) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { PREMIUM_PROMPT_SLUGS } = require("./seed/gating") as typeof import("./seed/gating");
+    const tx = d.transaction(() => {
+      d.prepare("UPDATE prompts SET premium = 0").run();
+      const setPremium = d.prepare("UPDATE prompts SET premium = 1 WHERE slug = ?");
+      for (const slug of PREMIUM_PROMPT_SLUGS) setPremium.run(slug);
+      mark("mig_prompt_gating_v2");
+    });
+    tx();
   }
 }
 

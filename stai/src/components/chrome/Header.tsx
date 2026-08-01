@@ -12,7 +12,9 @@ export const NAV = [
   { href: "/podcast", label: "Podcast" },
   { href: "/research", label: "Research" },
   { href: "/training", label: "Training" },
-  { href: "/assessment", label: "Assessment" },
+  // The B2B front door. Assessment moved out of the nav — it converts best as
+  // a call to action inside pages, not as a browsing destination.
+  { href: "/firms", label: "For firms" },
 ];
 
 export default async function Header() {

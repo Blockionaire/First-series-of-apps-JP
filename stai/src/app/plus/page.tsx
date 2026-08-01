@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
-import { foundingStatus } from "@/lib/content";
+import { foundingStatus, allPrompts } from "@/lib/content";
 import { currentUser } from "@/lib/auth";
 import { SPlusMark } from "@/components/Logo";
 import CheckoutButton from "@/components/plus/CheckoutButton";
@@ -14,9 +14,16 @@ export const metadata: Metadata = pageMeta({
   path: "/plus",
 });
 
-const FEATURES: { label: string; free: string; plus: string }[] = [
+const features = (freeCount: number, total: number): { label: string; free: string; plus: string }[] => [
   { label: "The Briefing", free: "Most pieces", plus: "Every piece, including member briefings" },
-  { label: "Prompt library", free: "Open slice (8 prompts)", plus: "Full canon — every prompt, every category" },
+  {
+    label: "Prompt library",
+    // Counted from the database, never hardcoded: this audience checks numbers,
+    // and two pages quoting different figures is the cheapest possible way to
+    // lose them.
+    free: `${freeCount} of ${total} prompts, open`,
+    plus: "Full canon — every prompt, every category",
+  },
   { label: "Adapt with AI", free: "—", plus: "Any prompt rewritten for your exact engagement" },
   { label: "Ask STAI", free: "5 questions / month", plus: "Unlimited, with saved answers" },
   { label: "Working-paper export", free: "Ask STAI answers", plus: "Answers + adapted prompts" },
@@ -27,6 +34,8 @@ const FEATURES: { label: string; free: string; plus: string }[] = [
 
 export default async function PlusPage() {
   const founding = foundingStatus();
+  const prompts = allPrompts();
+  const FEATURES = features(prompts.filter((p) => !p.premium).length, prompts.length);
   const user = await currentUser();
   const isPlus = user?.plan === "plus";
   const pct = Math.round((founding.claimed / founding.total) * 100);
@@ -79,19 +88,31 @@ export default async function PlusPage() {
                   <p className="f-display mt-3 text-3xl text-cream-100 sm:text-4xl">
                     €12/month. Locked for the life of your subscription.
                   </p>
-                  <div className="mt-5 max-w-md">
-                    <div className="flex justify-between">
-                      <span className="f-mono text-[0.65rem] tracking-[0.1em] uppercase text-gold-300">
-                        {founding.claimed} claimed
-                      </span>
-                      <span className="f-mono text-[0.65rem] tracking-[0.1em] uppercase text-cream-400">
-                        {founding.remaining} remain
-                      </span>
+                  {founding.showProgress ? (
+                    <div className="mt-5 max-w-md">
+                      <div className="flex justify-between">
+                        <span className="f-mono text-[0.65rem] tracking-[0.1em] uppercase text-gold-300">
+                          {founding.claimed} claimed
+                        </span>
+                        <span className="f-mono text-[0.65rem] tracking-[0.1em] uppercase text-cream-400">
+                          {founding.remaining} remain
+                        </span>
+                      </div>
+                      <div
+                        className="mt-1.5 h-[8px] w-full border"
+                        style={{ borderColor: "var(--gold-line)" }}
+                        role="img"
+                        aria-label={`${founding.claimed} of ${founding.total} founding seats claimed`}
+                      >
+                        <div className="h-full bg-gold-500" style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
-                    <div className="mt-1.5 h-[8px] w-full border" style={{ borderColor: "var(--gold-line)" }} role="img" aria-label={`${founding.claimed} of ${founding.total} founding seats claimed`}>
-                      <div className="h-full bg-gold-500" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
+                  ) : (
+                    <p className="mt-5 max-w-md text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+                      The offer opens today and closes permanently at {founding.total} members. After that the
+                      rate is €19 and the founding tier never reopens.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <CheckoutButton plan="founding" label={`Claim seat ${founding.claimed + 1} of ${founding.total}`} />
