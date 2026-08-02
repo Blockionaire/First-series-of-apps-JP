@@ -117,6 +117,12 @@ Daarna sturen de functies in `functions/index.js` automatisch een melding bij ee
 
 Zonder die stappen blijft alles gewoon werken — je mist alleen de meldingen terwijl de app dicht is.
 
+### Opnieuw beginnen
+
+Onder ⚙️ staan twee knoppen. **Reset spel (spelers blijven)** wist alle chats, opdrachten, stemmingen, deadlines, raadsels, rapporten, verdenkingen, foto's en filmpjes, en zet alle rollen en statussen terug — maar iedereen blijft ingelogd met dezelfde pincode, en je opdrachtenlijst blijft bewaard. **Alles wissen** doet hetzelfde én verwijdert alle spelers en de opdrachtenlijst; daarna moet iedereen zich opnieuw aanmelden.
+
+Elke reset verhoogt een rondenummer dat meetelt in de "dit heb ik al gelezen"-tellers. Die staan namelijk per toestel in de telefoon zelf en zijn van buitenaf niet te wissen; door dat nummer begint iedereen na een reset vanzelf met een schone lei en blijft het bolletje bij nieuwe berichten kloppen. Loopt er onderweg iets mis, dan gaat de reset gewoon door met de rest en meldt hij achteraf hoeveel onderdelen zijn blijven staan — een half gewist spel is erger dan een melding.
+
 ### Beveiliging
 
 De Firestore-regels staan open tot en met 31 december 2026 — prima voor een besloten campingspel, maar deel de link alleen binnen je spelersgroep. De Firebase-sleutel in `firebase-config.js` hoort openbaar te zijn bij een web-app en is geen wachtwoord.

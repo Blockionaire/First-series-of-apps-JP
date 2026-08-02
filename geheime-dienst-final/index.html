@@ -2641,8 +2641,14 @@ async function openDM(playerId){
   }
   openChat(id);
 }
-function lastReadKey(chatId){ return "gd_read_" + (S.me ? S.me.id : "x") + "_" + chatId; }
-function seenKey(chatId){ return "gd_seen_" + (S.me ? S.me.id : "x") + "_" + chatId; }
+// Het rondenummer hoort in deze sleutels: na een reset begint het aantal
+// berichten weer bij nul, terwijl "al gelezen tot en met" op elk toestel apart
+// staat. Zonder dat nummer zou een nieuw bericht ten onrechte als gelezen
+// gelden totdat de teller weer boven de oude stand uitkomt.
+const leesRonde = () => Number(S.settings && S.settings.ronde) || 0;
+const leesSuffix = chatId => (S.me ? S.me.id : "x") + (leesRonde() ? "_r" + leesRonde() : "") + "_" + chatId;
+function lastReadKey(chatId){ return "gd_read_" + leesSuffix(chatId); }
+function seenKey(chatId){ return "gd_seen_" + leesSuffix(chatId); }
 // aantal ongelezen berichten = wat er in de chat staat min wat dit apparaat al zag
 function unreadCount(c){
   const totaal = Number(c.msgCount) || 0;
@@ -2927,21 +2933,41 @@ function settingsModal(){
 }
 async function resetGame(wipePlayers){
   toast("Bezig met resetten…");
-  const delAll = async col => { for(const d of await DB.getAll(col)) await DB.del(col + "/" + d.id); };
-  for(const c of await DB.getAll("chats")){
-    for(const msg of await DB.getAll(`chats/${c.id}/messages`)) await DB.del(`chats/${c.id}/messages/${msg.id}`);
-    await DB.del("chats/" + c.id);
+  // Eén hapering mag de rest niet tegenhouden. Een half gewist spel is namelijk
+  // erger dan een reset die eerlijk meldt dat er iets is blijven staan.
+  let mislukt = 0;
+  const weg = async pad => {
+    try{ await DB.del(pad); }
+    catch(e){ mislukt++; console.error("wissen mislukt:", pad, e); }
+  };
+  const haal = async col => {
+    try{ return await DB.getAll(col); }
+    catch(e){ mislukt++; console.error("ophalen mislukt:", col, e); return []; }
+  };
+  const delAll = async col => { for(const d of await haal(col)) await weg(col + "/" + d.id); };
+
+  for(const c of await haal("chats")){
+    for(const msg of await haal(`chats/${c.id}/messages`)) await weg(`chats/${c.id}/messages/${msg.id}`);
+    await weg("chats/" + c.id);
   }
-  for(const mi of await DB.getAll("missions")){
-    for(const ph of await DB.getAll(`missions/${mi.id}/photos`)) await DB.del(`missions/${mi.id}/photos/${ph.id}`);
-    await DB.del("missions/" + mi.id);
+  for(const mi of await haal("missions")){
+    for(const ph of await haal(`missions/${mi.id}/photos`)) await weg(`missions/${mi.id}/photos/${ph.id}`);
+    await weg("missions/" + mi.id);
   }
   for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","peilingen","verleidDoelen","verdenkingen","hunts","huntEntries","typing","images"]) await delAll(col);
-  for(const v of await DB.getAll("videos")){
-    for(const st of await DB.getAll(`videos/${v.id}/stukken`)) await DB.del(`videos/${v.id}/stukken/${st.id}`);
-    await DB.del("videos/" + v.id);
+  for(const v of await haal("videos")){
+    for(const st of await haal(`videos/${v.id}/stukken`)) await weg(`videos/${v.id}/stukken/${st.id}`);
+    await weg("videos/" + v.id);
   }
-  await DB.set("settings/main", {nacht:false, draaiboek:{dag:0, gedaan:[]}, rolesRevealed:false, gameOver:false, winner:null, dag:1, infCheck:false, hoogtepunt:""});
+  // Nieuw rondenummer: de tellers "wat heb ik al gelezen" staan per toestel in
+  // de telefoon zelf en kunnen we op andere toestellen niet wissen. Door het
+  // rondenummer in die sleutel te verwerken begint iedereen vanzelf opnieuw.
+  const ronde = (Number(S.settings && S.settings.ronde) || 0) + 1;
+  try{
+    await DB.set("settings/main", {nacht:false, draaiboek:{dag:0, gedaan:[]}, rolesRevealed:false,
+      gameOver:false, winner:null, dag:1, infCheck:false, hoogtepunt:"", ronde});
+  }catch(e){ mislukt++; console.error("instellingen terugzetten mislukt", e); }
+
   if(wipePlayers){
     await delAll("missionLib");   // ook de opdrachtenlijst weg bij een volledige wis
     await delAll("players");
@@ -2949,11 +2975,17 @@ async function resetGame(wipePlayers){
     location.reload();
     return;
   }
-  for(const p of S.players.filter(x => !x.isLeader)) await DB.set("players/" + p.id, {role:null, status:"actief", infAkkoord:false});
-  await DB.set("chats/all", {name:"Iedereen", type:"all", at: now(), lastAt:null, lastText:null, lastSid:null});
+  for(const p of (S.players || []).filter(x => !x.isLeader)){
+    try{ await DB.set("players/" + p.id, {role:null, status:"actief", infAkkoord:false}); }
+    catch(e){ mislukt++; console.error("speler terugzetten mislukt", p.id, e); }
+  }
+  try{ await DB.set("chats/all", {name:"Iedereen", type:"all", at: now(), lastAt:null, lastText:null, lastSid:null}); }
+  catch(e){ mislukt++; console.error("groepschat aanmaken mislukt", e); }
   S.imgCache = {}; S.vidCache = {}; S.msgCache = {};
   closeModal();
-  toast("Spel gereset ✔ Klaar voor een nieuwe ronde!");
+  toast(mislukt
+    ? `Gereset, maar ${mislukt} ${mislukt === 1 ? "onderdeel is" : "onderdelen zijn"} blijven staan — reset nog een keer`
+    : "Spel gereset ✔ Klaar voor een nieuwe ronde!");
 }
 
 /* =====================================================================
