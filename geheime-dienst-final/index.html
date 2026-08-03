@@ -632,6 +632,19 @@
   .img-viewer video{max-width:96%; max-height:80%; border-radius:12px; background:#000; animation:popIn .25s var(--ease)}
   .vid-laden{color:#f4f4f5; font-size:14px; text-align:center; padding:0 24px}
 
+  /* ---------- raadsel van de dag ---------- */
+  .raadselplan{border:1.5px solid var(--gold)}
+  .raadselplan.klaar{border-color:var(--line)}
+  .rp-uren{display:grid; grid-template-columns:repeat(4,1fr); gap:7px}
+  .rp-uur{
+    padding:11px 4px; border-radius:13px; font-size:14px; font-weight:700;
+    background:var(--bg3); border:1.5px solid var(--line);
+    transition:transform .12s var(--ease), border-color .15s ease, background .15s ease;
+  }
+  .rp-uur:active{transform:scale(.94)}
+  .rp-uur:hover{border-color:var(--gold)}
+  .rp-uur.aan{border-color:var(--gold); background:rgba(232,178,58,.16); color:var(--gold-t)}
+
   /* ---------- iemand noemen met @ ---------- */
   .mentie{
     background:rgba(90,150,255,.20); color:var(--blue); font-weight:700;
@@ -1285,6 +1298,8 @@ const S = {
   hackerQs: [],
   reports: [],
   riddles: [],
+  raadselplan: [],     // per dag: wel of geen raadsel, en in welk uur
+  raadselWijzig: false,
   riddleAttempts: [],
   roleRequests: [],
   takeovers: [],
@@ -1565,7 +1580,8 @@ function checkMeldingen(){
     chats: {},
     menties: {},
     verzoeken: S.verleidDoelen.filter(v => v.doelPid === S.me.id && v.status === "gevraagd").length
-             + S.takeovers.filter(t => t.targetPid === S.me.id && t.status === "open").length,
+             + S.takeovers.filter(t => t.targetPid === S.me.id && t.status === "open").length
+             + (raadselVraagOpen() ? 1 : 0),
     rol: S.hackerQs.filter(q => q.pid === S.me.id && q.answer).length,
     deadlines: S.deadlines.filter(magDeadlineZien).length,
   };
@@ -3115,7 +3131,7 @@ async function resetGame(wipePlayers){
     for(const ph of await haal(`missions/${mi.id}/photos`)) await weg(`missions/${mi.id}/photos/${ph.id}`);
     await weg("missions/" + mi.id);
   }
-  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","peilingen","verleidDoelen","verdenkingen","hunts","huntEntries","typing","images"]) await delAll(col);
+  for(const col of ["missionPolls","deadlines","hackerQuestions","reports","riddles","riddleAttempts","roleRequests","takeovers","pinResets","verleidingen","peilingen","verleidDoelen","verdenkingen","hunts","huntEntries","typing","raadselplan","images"]) await delAll(col);
   for(const v of await haal("videos")){
     for(const st of await haal(`videos/${v.id}/stukken`)) await weg(`videos/${v.id}/stukken/${st.id}`);
     await weg("videos/" + v.id);
@@ -3339,6 +3355,7 @@ function renderSpelers(el){
       tegel(inSpel.filter(p => p.status === "gevangen").length, "Gevangenen", "var(--gold)")
     )}
     ${S.settings.gameOver ? `<button class="btn btn-green btn-block" id="eindkaartBtn" style="margin-bottom:12px">🏁 Eindkaart met alle statistieken</button>` : ""}
+    ${leaderRaadselPlanHtml()}
     ${nRole < n ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">🎭 ${nRole} van de ${n} spelers heeft een rol${nInf ? ` · ${nInf} infiltrant${nInf === 1 ? "" : "en"} toegewezen` : ""}</div>` : ""}
     ${adv ? `<div class="card" style="padding:12px 16px;font-size:13px;color:var(--muted)">💡 Advies bij ${n} spelers: <b style="color:var(--red-t)">${adv[0]} infiltranten</b> en <b style="color:var(--green-t)">${adv[1]} gelovigen</b>${n >= 17 ? " (2x veldwerker)" : " (alle speciale rollen 1x)"}</div>` : ""}
     ${dubbeleLeidersHtml()}
@@ -3479,6 +3496,7 @@ function renderSpelers(el){
   });
   el.querySelectorAll("[data-riddle-del]").forEach(b => b.onclick = () =>
     confirmModal("Ingepland raadsel verwijderen?", async () => { await DB.del("riddles/" + b.dataset.riddleDel); }));
+  wireRaadselPlan(el);
   const nrb = $("#newReportBtn"); if(nrb) nrb.onclick = () => reportModal();
   el.querySelectorAll("[data-report-edit]").forEach(b => b.onclick = () => reportModal(b.dataset.reportEdit));
   el.querySelectorAll("[data-report-del]").forEach(b => b.onclick = () =>
@@ -4009,6 +4027,98 @@ const normAnswer = s => {
   return (zonderLidwoorden.length ? zonderLidwoorden : words).join("");
 };
 
+/* =====================================================================
+   RAADSEL VAN DE DAG — dagelijkse keuze van de spelleider
+   ---------------------------------------------------------------------
+   Elke speeldag ligt er een vraag klaar: komt er vandaag een raadsel, en zo
+   ja in welk uur? De keuze wordt per dag vastgelegd (één document per datum),
+   zodat de vraag verdwijnt zodra hij beantwoord is en de volgende ochtend
+   vanzelf terugkomt.
+
+   Er draait geen server mee die dit kan inplannen, dus "elke ochtend" werkt
+   hier zo: zolang de keuze voor vandaag nog niet gemaakt is, staat de vraag
+   bovenaan bij de spelleider en telt hij mee als openstaand verzoek.
+   ===================================================================== */
+const RAADSEL_UREN = [10,11,12,13,14,15,16,17,18,19,20,21];
+const RAADSEL_TOT_UUR = 22;        // daarna heeft vragen geen zin meer vandaag
+function dagSleutel(d = new Date()){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+const raadselPlanVan = dag => (S.raadselplan || []).find(r => r.id === dag) || null;
+const raadselPlanVandaag = () => raadselPlanVan(dagSleutel());
+// staat de vraag open? alleen tijdens een lopend spel en zolang de dag nog nut heeft
+function raadselVraagOpen(){
+  if(!S.me || !S.me.isLeader) return false;
+  if(!S.settings.rolesRevealed || S.settings.gameOver) return false;
+  if(new Date().getHours() >= RAADSEL_TOT_UUR) return false;
+  return !raadselPlanVandaag();
+}
+const uurTekst = u => `${String(u).padStart(2,"0")}:00`;
+
+function leaderRaadselPlanHtml(){
+  if(!S.me.isLeader || !S.settings.rolesRevealed || S.settings.gameOver) return "";
+  const plan = raadselPlanVandaag();
+  if(plan && !S.raadselWijzig){
+    return `
+    <div class="card raadselplan klaar">
+      <h3>🛡️ Raadsel vandaag</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${plan.keuze === "geen"
+        ? "Je hebt doorgegeven dat er vandaag <b>geen raadsel</b> komt."
+        : `Aangekondigd: vandaag tussen <b>${uurTekst(plan.uur)}</b> en <b>${uurTekst(plan.uur + 1)}</b>.`}</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${plan.keuze === "uur" ? `<button class="btn btn-sm btn-green" id="rpKlaarzetten">🛡️ Raadsel klaarzetten</button>` : ""}
+        <button class="btn btn-sm btn-ghost" id="rpWijzig">✏️ Wijzigen</button>
+      </div>
+    </div>`;
+  }
+  if(!plan && new Date().getHours() >= RAADSEL_TOT_UUR) return "";
+  return `
+    <div class="card raadselplan">
+      <h3>🛡️ ${plan ? "Keuze wijzigen" : "Komt er vandaag een raadsel?"}</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${plan
+        ? "Kies opnieuw. Alleen als de keuze echt verandert komt er een correctie in de groepschat."
+        : "Kies een uur, dan laat de app in de groepschat weten wanneer spelers het kunnen verwachten. De vraag komt morgenochtend vanzelf terug."}</p>
+      <div class="rp-uren">
+        ${RAADSEL_UREN.map(u => `<button class="rp-uur${plan && plan.keuze === "uur" && plan.uur === u ? " aan" : ""}" data-rp-uur="${u}">${uurTekst(u)}</button>`).join("")}
+      </div>
+      <button class="btn btn-ghost btn-block" id="rpGeen" style="margin-top:10px">🚫 ${plan && plan.keuze === "geen" ? "Blijft: geen raadsel" : "Vandaag geen raadsel"}</button>
+      ${plan ? `<button class="btn btn-ghost btn-block" id="rpAnnuleer" style="margin-top:8px">Annuleren</button>` : ""}
+    </div>`;
+}
+
+async function zetRaadselPlan(keuze, uur){
+  const dag = dagSleutel();
+  const oud = raadselPlanVandaag();
+  S.raadselWijzig = false;
+  await DB.set("raadselplan/" + dag, {keuze, uur: uur || null, at: now(), by: S.me.name});
+  // alleen iets in de chat zetten als de boodschap ook echt verandert
+  const zelfde = oud && oud.keuze === keuze && (keuze !== "uur" || oud.uur === uur);
+  if(zelfde) return;
+  const opnieuw = oud ? "Correctie: " : "";
+  await sendSystem("all", keuze === "geen"
+    ? `${opnieuw}🛡️ Vandaag is er geen raadsel om het schild.`
+    : `${opnieuw}🛡️ Het raadsel om het schild wordt vandaag tussen ${uurTekst(uur)} en ${uurTekst(uur + 1)} gedeeld — houd de groepschat in de gaten!`);
+  haptic(12);
+  toast(keuze === "geen" ? "Doorgegeven: geen raadsel vandaag" : `Aangekondigd: tussen ${uurTekst(uur)} en ${uurTekst(uur + 1)}`);
+}
+function wireRaadselPlan(el){
+  el.querySelectorAll("[data-rp-uur]").forEach(b => b.onclick = () => {
+    const u = Number(b.dataset.rpUur);
+    confirmModal(`In de groepschat melden dat het raadsel vandaag tussen <b>${uurTekst(u)}</b> en <b>${uurTekst(u + 1)}</b> komt?`,
+      () => zetRaadselPlan("uur", u));
+  });
+  const geen = el.querySelector("#rpGeen");
+  if(geen) geen.onclick = () => confirmModal("In de groepschat melden dat er vandaag <b>geen raadsel</b> komt?",
+    () => zetRaadselPlan("geen"));
+  // niet wissen maar opnieuw laten kiezen: zo weten we straks nog wat er stond
+  const wijzig = el.querySelector("#rpWijzig");
+  if(wijzig) wijzig.onclick = () => { S.raadselWijzig = true; render(); };
+  const annuleer = el.querySelector("#rpAnnuleer");
+  if(annuleer) annuleer.onclick = () => { S.raadselWijzig = false; render(); };
+  const klaar = el.querySelector("#rpKlaarzetten");
+  if(klaar) klaar.onclick = () => { const p = raadselPlanVandaag(); newRiddleModal(p && p.uur); };
+}
+
 function leaderRiddleHtml(){
   const pending = S.riddles.filter(r => !r.published).sort((a,b) => (a.publishAt||0)-(b.publishAt||0));
   if(!pending.length) return "";
@@ -4026,9 +4136,17 @@ function leaderRiddleHtml(){
     </div>`;
 }
 
-function newRiddleModal(){
-  const defTime = () => { const d = new Date(Date.now() + 60*60*1000);
-    return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16); };
+function newRiddleModal(uur){
+  const defTime = () => {
+    const d = new Date();
+    if(uur == null) d.setTime(Date.now() + 60*60*1000);
+    else {
+      // ergens in het aangekondigde uur, zodat spelers het moment niet kennen
+      d.setHours(uur, 5 + Math.floor(Math.random() * 50), 0, 0);
+      if(d.getTime() < Date.now()) d.setTime(Date.now() + 5*60*1000);
+    }
+    return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  };
   modal(`
     <h3>🛡️ Raadsel om het schild</h3>
     <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Wie als eerste het goede antwoord instuurt, wint het schild en is veilig tijdens het eerstvolgende infiltrantenoverleg. Antwoorden zijn niet gevoelig voor hoofdletters, spaties, leestekens of lidwoorden ("de stoel" = "stoel"); spelers mogen elke 5 minuten één poging doen.</p>
@@ -6782,6 +6900,11 @@ async function boot(){
     publishDueRiddles();
   });
   DB.listen("riddleAttempts", docs => { S.riddleAttempts = docs; });
+  DB.listen("raadselplan", docs => {
+    S.raadselplan = docs;
+    checkMeldingen();
+    if(S.me && !S.openChat && S.tab === "spelers") liveRender();
+  });
   DB.listen("roleRequests", docs => {
     S.roleRequests = docs;
     if(S.me && !S.openChat && (S.tab === "spelers" || S.tab === "rol")) liveRender();
