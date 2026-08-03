@@ -6,7 +6,7 @@
    "Pushmeldingen aanzetten".
 
    Belangrijk: er gaat nooit inhoud mee. De melding bevat alleen een
-   soort ("bericht", "verzoek", "rol", "deadline"); de app en de service
+   soort ("bericht", "genoemd", "verzoek", "rol", "deadline"); de app en de
    worker maken daar zelf een anonieme zin van. Zo staat er nooit een
    naam of een stuk chat op iemands vergrendelscherm.
    ===================================================================== */
@@ -55,7 +55,14 @@ async function ontvangers(chatId, afzenderId) {
 exports.bijNieuwBericht = onDocumentCreated("chats/{chatId}/messages/{msgId}", async (event) => {
   const m = event.data && event.data.data();
   if (!m) return;
-  await stuur(await ontvangers(event.params.chatId, m.sid), "bericht");
+  const allen = await ontvangers(event.params.chatId, m.sid);
+  // wie met @ genoemd is krijgt een ander soort; nog steeds zonder naam of inhoud
+  const genoemd = (m.mentions || []).filter((id) => allen.includes(id));
+  const rest = allen.filter((id) => !genoemd.includes(id));
+  await Promise.all([
+    genoemd.length ? stuur(genoemd, "genoemd") : null,
+    rest.length ? stuur(rest, "bericht") : null,
+  ]);
 });
 
 // verleidingsverzoek dat bij iemand komt te liggen

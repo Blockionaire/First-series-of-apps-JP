@@ -20,6 +20,7 @@ importScripts("firebase-config.js");
 const TITEL = "🕵️ Geheime Dienst";
 const TEKSTEN = {
   bericht:  "Je hebt een nieuw bericht",
+  genoemd:  "Iemand heeft je genoemd",
   verzoek:  "Er ligt een verzoek voor je klaar",
   rol:      "De spelleider heeft iets voor je",
   deadline: "Er staat een nieuwe deadline",
