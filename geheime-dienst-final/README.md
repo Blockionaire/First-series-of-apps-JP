@@ -40,7 +40,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - 🕵️ **Infiltranten** — stemmen samen op de missie van de dag, leveren foto's of filmpjes als bewijs en dienen de opdracht in. Stuurt de spelleider de nachtkeuze, dan stemmen ze ook over 🙈 verleiden of ⛓️ gevangennemen
 - 💻 **Hacker** — stelt maximaal 2 ja/nee-vragen per dag, alleen tussen 11:00 en 22:00; buiten dat tijdvak is het formulier op slot. De spelleider antwoordt met één tik, of wijst de vraag af met een korte uitleg waarom — een afgewezen vraag telt niet mee, dus je krijgt hem terug
 - ⛓️ **Gevangenen** — krijgen een foto van het geheime voorwerp; wie als eerste een goedgekeurde selfie mét het voorwerp instuurt, ontsnapt en keert terug als gewone gelovige
-- 🛡️ **Iedereen** — raadsels om het schild: de eerste met het goede antwoord wint (1 poging per 5 minuten)
+- 🛡️ **Iedereen** — raadsels om het schild: de eerste met het goede antwoord wint (1 poging per 5 minuten). **Zodra iemand het raadt wordt de afloop voor iedereen zichtbaar**: het juiste antwoord staat op de kaart in de chat, en achter *👀 Alle inzendingen* zie je wat er allemaal geprobeerd is, van wie en hoe laat — op volgorde, dus eindigend met het winnende antwoord. Zolang een raadsel nog loopt blijft alles dicht, ook de pogingen van anderen
 - 🙋 Alleen infiltranten reageren op de voorvraag: de rol aannemen of om een andere vragen. Dat kan alleen vóór de onthulling — daarna liggen de rollen vast
 - 👥 In een groepschat tik je op de naam bovenin om te zien wie er nog meer in zit
 
