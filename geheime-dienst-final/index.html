@@ -656,6 +656,14 @@
   .rp-uur:active{transform:scale(.94)}
   .rp-uur:hover{border-color:var(--gold)}
   .rp-uur.aan{border-color:var(--gold); background:rgba(232,178,58,.16); color:var(--gold-t)}
+  .rp-stand{
+    display:flex; gap:10px; align-items:flex-start; font-size:13.5px;
+    background:rgba(232,178,58,.12); border-radius:14px; padding:10px 12px; margin-bottom:10px;
+  }
+  .rp-stand.weg{background:rgba(98,197,84,.13)}
+  .rp-stand-icoon{flex:none; font-size:15px; line-height:1.4}
+  .rp-vraag{font-size:12px; color:var(--muted); margin-top:3px}
+  .rp-let-op{font-size:12px; color:var(--gold-t); margin-top:4px; font-weight:600}
 
   /* ---------- iemand noemen met @ ---------- */
   .mentie{
@@ -4138,18 +4146,47 @@ function raadselVraagOpen(){
 }
 const uurTekst = u => `${String(u).padStart(2,"0")}:00`;
 
+/* Welk raadsel hoort bij vandaag? Een nog niet verstuurd raadsel dat vandaag
+   gepland staat gaat voor; anders het laatste dat vandaag al de deur uit is. */
+function raadselVanVandaag(){
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const van = start.getTime(), tot = van + 24*60*60*1000;
+  const binnenVandaag = t => t >= van && t < tot;
+  const wacht = (S.riddles || [])
+    .filter(r => !r.published && r.publishAt && binnenVandaag(r.publishAt))
+    .sort((a, b) => a.publishAt - b.publishAt);
+  if(wacht.length) return {r: wacht[0], verstuurd: false};
+  const weg = (S.riddles || [])
+    .filter(r => r.published && binnenVandaag(r.publishedAt || r.publishAt || r.at || 0))
+    .sort((a, b) => (b.publishedAt || b.publishAt || 0) - (a.publishedAt || a.publishAt || 0));
+  return weg.length ? {r: weg[0], verstuurd: true} : null;
+}
+
 function leaderRaadselPlanHtml(){
   if(!S.me.isLeader || !S.settings.rolesRevealed || S.settings.gameOver) return "";
   const plan = raadselPlanVandaag();
   if(plan && !S.raadselWijzig){
+    const rv = plan.keuze === "uur" ? raadselVanVandaag() : null;
+    // valt het ingeplande tijdstip buiten wat je hebt aangekondigd? dan zeggen we dat
+    const tijd = rv ? (rv.verstuurd ? (rv.r.publishedAt || rv.r.publishAt) : rv.r.publishAt) : 0;
+    const buitenUur = rv && !rv.verstuurd && new Date(tijd).getHours() !== plan.uur;
     return `
     <div class="card raadselplan klaar">
       <h3>🛡️ Raadsel vandaag</h3>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">${plan.keuze === "geen"
         ? "Je hebt doorgegeven dat er vandaag <b>geen raadsel</b> komt."
         : `Aangekondigd: vandaag tussen <b>${uurTekst(plan.uur)}</b> en <b>${uurTekst(plan.uur + 1)}</b>.`}</p>
+      ${rv ? `<div class="rp-stand${rv.verstuurd ? " weg" : ""}">
+        <span class="rp-stand-icoon">${rv.verstuurd ? "✅" : "⏰"}</span>
+        <span>${rv.verstuurd
+          ? `Verstuurd om <b>${fmtTime(tijd)}</b>`
+          : `Ingepland om <b>${fmtTime(tijd)}</b>`}<div class="rp-vraag">${esc(
+            (rv.r.q || "").length > 60 ? rv.r.q.slice(0, 60) + "…" : (rv.r.q || "Raadsel"))}</div>
+          ${buitenUur ? `<div class="rp-let-op">Let op: dat valt buiten het aangekondigde uur.</div>` : ""}</span>
+      </div>` : ""}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${plan.keuze === "uur" ? `<button class="btn btn-sm btn-green" id="rpKlaarzetten">🛡️ Raadsel klaarzetten</button>` : ""}
+        ${plan.keuze === "uur" && !rv ? `<button class="btn btn-sm btn-green" id="rpKlaarzetten">🛡️ Raadsel klaarzetten</button>` : ""}
+        ${rv && !rv.verstuurd ? `<button class="btn btn-sm btn-ghost" id="rpNogEen">➕ Ander raadsel</button>` : ""}
         <button class="btn btn-sm btn-ghost" id="rpWijzig">✏️ Wijzigen</button>
       </div>
     </div>`;
@@ -4200,6 +4237,8 @@ function wireRaadselPlan(el){
   if(annuleer) annuleer.onclick = () => { S.raadselWijzig = false; render(); };
   const klaar = el.querySelector("#rpKlaarzetten");
   if(klaar) klaar.onclick = () => { const p = raadselPlanVandaag(); newRiddleModal(p && p.uur); };
+  const nogEen = el.querySelector("#rpNogEen");
+  if(nogEen) nogEen.onclick = () => { const p = raadselPlanVandaag(); newRiddleModal(p && p.uur); };
 }
 
 function leaderRiddleHtml(){
