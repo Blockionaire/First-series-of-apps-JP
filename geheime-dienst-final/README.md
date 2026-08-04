@@ -18,7 +18,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - **Eigen pincode van 4 cijfers** (ook voor de spelleider): die kies en bevestig je bij je eerste aanmelding en voer je daarna bij elke keer openen in. Handig als je een telefoon deelt — je partner ziet jouw rol en chats niet. Wijzigen kan via ⚙️ → *Pincode wijzigen*
 - Je geheime rolkaart met de officiële kaartafbeelding en de volledige rolbeschrijving
 - Chats: de groepschat met iedereen, automatische groepschats (infiltranten, gevangenen) en een privéchat met de spelleider — het laatst gebruikte gesprek staat bovenaan, met de groepen altijd boven de privéchats
-- Recap op de tab *Spelers*: welke speeldag het is (1, 2 of de finaledag) plus het aantal spelers, gevangenen en verbannen spelers — het aantal infiltranten blijft geheim en ziet alleen de spelleider
+- Recap op de tab *Spelers*: welke speeldag het is (1, 2 of de finaledag) plus het aantal spelers, gevangenen en verbannen spelers — het aantal infiltranten blijft geheim en ziet alleen de spelleider. **Tik op een tegel** en de lijst eronder toont alleen die groep: alle spelers die nog meedoen (met de gevangenen erbij, gemarkeerd), alleen de gevangenen, of alleen wie eruit ligt. Nog eens tikken of *Toon alles* brengt je terug
 - Deadlines met afteltimer — je ziet alleen de deadlines van de chats waar je in zit
 - Alle spelregels, rollen, dagplanning en de avondbijeenkomst-volgorde uit de flyer
 - Foto's uit de chat bewaren: tik de foto aan en kies 💾 Bewaren

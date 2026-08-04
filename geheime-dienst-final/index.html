@@ -328,6 +328,15 @@
   .stat{flex:1; background:var(--bg2); border:1px solid var(--line); border-radius:16px; padding:11px 8px; text-align:center}
   .stat .num{font-family:'Lilita One'; font-size:22px}
   .stat .lbl{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; font-weight:600}
+  .stat.klikbaar{cursor:pointer; transition:transform .12s var(--ease), border-color .15s ease, background .15s ease}
+  .stat.klikbaar:active{transform:scale(.95)}
+  .stat.klikbaar:after{
+    content:""; display:block; width:16px; height:2px; border-radius:2px;
+    margin:6px auto -2px; background:var(--line);
+  }
+  .stat.klikbaar.aan{border-color:var(--green); background:rgba(98,197,84,.10)}
+  .stat.klikbaar.aan:after{background:var(--green); width:22px}
+  .sf-alles{margin-bottom:12px}
   .switch-row{display:flex; align-items:center; gap:12px; background:var(--bg2); border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin-bottom:12px}
   .switch{position:relative; width:50px; height:30px; flex:none; cursor:pointer}
   .switch input{opacity:0; width:0; height:0}
@@ -1300,6 +1309,7 @@ const S = {
   riddles: [],
   raadselplan: [],     // per dag: wel of geen raadsel, en in welk uur
   raadselWijzig: false,
+  spelerFilter: null,  // welke groep spelers je nu bekijkt (null = alles)
   riddleAttempts: [],
   roleRequests: [],
   takeovers: [],
@@ -3172,8 +3182,15 @@ async function resetGame(wipePlayers){
 /* ---------- recap: speeldag + de drie tellingen ---------- */
 const spelDag = () => Math.min(3, Math.max(1, Number(S.settings.dag) || 1));
 
-const tegel = (getal, label, kleur = "") =>
-  `<div class="stat"><div class="num"${kleur ? ` style="color:${kleur}"` : ""}>${getal}</div><div class="lbl">${label}</div></div>`;
+// Met een filtersleutel wordt de tegel een knop waarmee je de lijst eronder
+// beperkt tot die groep; zonder blijft het gewoon een cijfer.
+const tegel = (getal, label, kleur = "", filter = "") => {
+  const binnen = `<div class="num"${kleur ? ` style="color:${kleur}"` : ""}>${getal}</div><div class="lbl">${label}</div>`;
+  if(!filter) return `<div class="stat">${binnen}</div>`;
+  const aan = S.spelerFilter === filter;
+  return `<button class="stat klikbaar${aan ? " aan" : ""}" data-sfilter="${filter}"
+    aria-pressed="${aan ? "true" : "false"}">${binnen}</button>`;
+};
 
 // het aantal infiltranten is spelgeheim, dus die tegel is alleen voor de spelleider
 function recapHtml(tegels){
@@ -3224,7 +3241,10 @@ function verbannenHtml(){
   return `
     <div class="section-label">⚰️ Verbannen spelers${uit.length ? ` (${uit.length})` : ""}</div>
     ${uit.length === 0 ? `<div class="empty" style="padding:22px">Nog niemand uit het spel.<br>Iedereen is nog in de race! 🎭</div>` : ""}
-    ${uit.map(p => {
+    ${verbannenRijenHtml(uit)}`;
+}
+function verbannenRijenHtml(uit){
+  return uit.map(p => {
       const r = p.role ? ROLES[p.role] : null;
       const inf = r && r.team === "infiltrant";
       return `
@@ -3236,32 +3256,67 @@ function verbannenHtml(){
         </div>
         <span class="pill ${statusPill(p.status)}">${p.status === "gevangen" ? "⛓️ Gevangene" : STATUSES[p.status] || p.status}</span>
       </div>`;
-    }).join("")}`;
+    }).join("");
 }
 
 /* ---------- spelersoverzicht voor spelers (niet de spelleider) ---------- */
 function renderSpelersVoorSpeler(el){
-  const actief = S.players.filter(p => !p.isLeader && (p.status || "actief") === "actief")
-    .sort((a,b) => (a.name||"").localeCompare(b.name||""));
+  const opNaam = (a,b) => (a.name||"").localeCompare(b.name||"");
+  const actief = S.players.filter(p => !p.isLeader && (p.status || "actief") === "actief").sort(opNaam);
   const uit = verbannenSpelers();
-  const gevangen = S.players.filter(p => !p.isLeader && p.status === "gevangen");
-  el.innerHTML = `
-    ${recapHtml(
-      tegel(actief.length + gevangen.length, "Spelers") +
-      tegel(gevangen.length, "Gevangenen", "var(--gold)") +
-      tegel(uit.filter(p => p.status !== "gevangen").length, "Verbannen", "var(--red)")
-    )}
-    <div class="section-label">🎭 Nog in het spel</div>
-    ${actief.length === 0 ? `<div class="empty" style="padding:22px">Nog geen deelnemers.</div>` : ""}
-    ${actief.map(p => `
+  const gevangen = S.players.filter(p => !p.isLeader && p.status === "gevangen").sort(opNaam);
+  const echtWeg = uit.filter(p => p.status !== "gevangen");
+  const filter = S.spelerFilter;
+
+  // een gewone regel voor iemand die nog meedoet; rollen blijven geheim
+  const rij = (p, sub) => `
       <div class="list-row">
         <div class="avatar">${initial(p.name)}</div>
         <div class="row-main">
           <div class="row-title">${esc(p.name)}${p.id === S.me.id ? ` <span class="pill pill-outline">jij</span>` : ""}</div>
-          <div class="row-sub">Rol geheim 🤫</div>
+          <div class="row-sub">${sub}</div>
         </div>
-      </div>`).join("")}
-    ${verbannenHtml()}`;
+      </div>`;
+  const lijst = (spelers, leeg, sub) => spelers.length
+    ? spelers.map(p => rij(p, typeof sub === "function" ? sub(p) : sub)).join("")
+    : `<div class="empty" style="padding:22px">${leeg}</div>`;
+
+  let inhoud = "";
+  if(filter === "spelers"){
+    const allen = [...actief, ...gevangen].sort(opNaam);
+    inhoud = `<div class="section-label">🎭 Nog in het spel (${allen.length})</div>
+      ${lijst(allen, "Nog geen deelnemers.", p => p.status === "gevangen" ? "⛓️ Gevangen" : "Rol geheim 🤫")}`;
+  } else if(filter === "gevangen"){
+    inhoud = `<div class="section-label">⛓️ Gevangenen (${gevangen.length})</div>
+      ${lijst(gevangen, "Er zit op dit moment niemand vast. 🎉", "⛓️ Gevangen — kan nog ontsnappen")}`;
+  } else if(filter === "verbannen"){
+    inhoud = `<div class="section-label">⚰️ Verbannen spelers (${echtWeg.length})</div>
+      ${echtWeg.length === 0
+        ? `<div class="empty" style="padding:22px">Nog niemand uit het spel.<br>Iedereen is nog in de race! 🎭</div>`
+        : verbannenRijenHtml(echtWeg)}`;
+  } else {
+    inhoud = `<div class="section-label">🎭 Nog in het spel</div>
+      ${lijst(actief, "Nog geen deelnemers.", "Rol geheim 🤫")}
+      ${verbannenHtml()}`;
+  }
+
+  el.innerHTML = `
+    ${recapHtml(
+      tegel(actief.length + gevangen.length, "Spelers", "", "spelers") +
+      tegel(gevangen.length, "Gevangenen", "var(--gold)", "gevangen") +
+      tegel(echtWeg.length, "Verbannen", "var(--red)", "verbannen")
+    )}
+    ${filter ? `<button class="btn btn-ghost btn-block sf-alles" id="sfAlles">↩︎ Toon alles</button>` : ""}
+    ${inhoud}`;
+
+  el.querySelectorAll("[data-sfilter]").forEach(b => b.onclick = () => {
+    // nog eens op dezelfde tegel tikken haalt het filter er weer af
+    S.spelerFilter = S.spelerFilter === b.dataset.sfilter ? null : b.dataset.sfilter;
+    haptic(6);
+    render();
+  });
+  const alles = el.querySelector("#sfAlles");
+  if(alles) alles.onclick = () => { S.spelerFilter = null; render(); };
 }
 
 /* Twee spelleidersaccounts kan gebeuren door een oude versie van de app of
