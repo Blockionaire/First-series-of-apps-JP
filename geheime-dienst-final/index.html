@@ -328,6 +328,9 @@
   .stat{flex:1; background:var(--bg2); border:1px solid var(--line); border-radius:16px; padding:11px 8px; text-align:center}
   .stat .num{font-family:'Lilita One'; font-size:22px}
   .stat .lbl{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; font-weight:600}
+  .kaart-lees{align-self:stretch; display:flex; justify-content:flex-end; margin:-4px 0 8px}
+  .kaart-lees .read-badge{background:var(--bg3); color:var(--muted); font-size:10.5px}
+  .kaart-lees .read-badge.allen{background:rgba(98,197,84,.18); color:var(--green-t)}
   .stat.klikbaar{cursor:pointer; transition:transform .12s var(--ease), border-color .15s ease, background .15s ease}
   .stat.klikbaar:active{transform:scale(.95)}
   .stat.klikbaar:after{
@@ -1725,6 +1728,20 @@ function leesBadge(m, c){
   const allen = gelezen.length === totaal;
   return `<span class="read-badge ${allen ? "allen" : ""}" data-lees="${m.id}">${allen ? "✓✓" : "✓"} ${gelezen.length}/${totaal}</span>`;
 }
+/* Kaarten (opdracht, stemming, peiling, raadsel, zoekopdracht, dagrapport)
+   hebben geen afzender in de gewone zin, dus ze krijgen hun leesbevestiging
+   niet ín de bel maar als los regeltje eronder. Alleen de spelleider ziet het:
+   hij is degene die ze verstuurt en wil weten of iedereen ze binnen heeft. */
+function kaartLeesRegel(m, c){
+  if(!S.me || !S.me.isLeader || !m || !m.id) return "";
+  const {gelezen, totaal} = lezersVan(m, c);
+  if(!totaal) return "";
+  const allen = gelezen.length === totaal;
+  return `<div class="kaart-lees">
+    <span class="read-badge ${allen ? "allen" : ""}" data-lees="${m.id}">${allen ? "✓✓" : "✓"} ${gelezen.length}/${totaal} gelezen</span>
+  </div>`;
+}
+
 function leesModal(mid){
   const c = S.chats.find(x => x.id === S.openChat);
   const m = S.msgs.find(x => x.id === mid);
@@ -1732,7 +1749,7 @@ function leesModal(mid){
   const {gelezen, nietGelezen} = lezersVan(m, c);
   modal(`
     <h3>👁️ Gelezen door</h3>
-    <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Jouw bericht van ${fmtDT(m.at)}: "${esc(berichtPreview(m))}"</p>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">${m.sid === S.me.id ? "Jouw bericht" : "Verstuurd"} op ${fmtDT(m.at)}: "${esc(berichtPreview(m))}"</p>
     ${gelezen.length ? `<div class="section-label" style="margin-top:0">✓ Gelezen (${gelezen.length})</div>` : ""}
     ${gelezen.map(({p, t}) => `
       <div class="lees-rij">
@@ -1748,7 +1765,7 @@ function leesModal(mid){
         <div class="lr-tijd">—</div>
       </div>`).join("")}
     ${!gelezen.length && !nietGelezen.length ? `<div class="empty" style="padding:20px">Geen andere deelnemers in deze chat.</div>` : ""}
-    <p style="font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.5">De tijd is het moment waarop diegene deze chat voor het laatst open had nadat jij dit bericht stuurde.</p>
+    <p style="font-size:11.5px;color:var(--muted);margin-top:14px;line-height:1.5">De tijd is het moment waarop diegene deze chat voor het laatst open had nadat dit bericht verstuurd werd. "Gelezen" betekent dus: de chat geopend, niet per se dat er iets mee gedaan is.</p>
   `);
 }
 function berichtPreview(m){
@@ -1761,6 +1778,17 @@ function berichtPreview(m){
     const pe = S.peilingen.find(x => x.id === m.pid);
     return "📊 " + (pe ? pe.vraag : "Peiling");
   }
+  if(m.type === "mission"){
+    const mi = S.missions.find(x => x.id === m.mid);
+    return "📋 " + (mi ? mi.title : "Opdracht");
+  }
+  if(m.type === "poll") return "🗳️ Missiestemming";
+  if(m.type === "report") return "📢 Dagrapport";
+  if(m.type === "riddle"){
+    const r = S.riddles.find(x => x.id === m.rid);
+    return "🛡️ " + (r && r.q ? (r.q.length > 40 ? r.q.slice(0, 40) + "…" : r.q) : "Raadsel");
+  }
+  if(m.type === "hunt") return "🔎 Zoekopdracht";
   const t = (m.t || "").trim();
   return t.length > 80 ? t.slice(0, 80) + "…" : (t || "Bericht");
 }
@@ -4774,39 +4802,41 @@ function renderChat(){
   const msgHtml = S.msgs.map((m, i) => {
     const prev = S.msgs[i-1];
     const gap = !prev || (m.at - (prev.at||0)) > 5*60*1000 || prev.sid !== m.sid;
+    // een kaart plus, voor de spelleider, wie hem al gezien heeft
+    const kaart = html => html ? html + kaartLeesRegel(m, c) : "";
     if(m.type === "sys") return `<div class="msg sys">${esc(m.t)}</div>`;
-    if(m.type === "veld") return veldwerkKaartHtml(m.opts);
+    if(m.type === "veld") return kaart(veldwerkKaartHtml(m.opts));
     if(m.type === "verleid"){
       const v = S.verleidingen.find(x => x.id === m.vid);
-      return v ? verleidKaartHtml(v) : "";
+      return kaart(v ? verleidKaartHtml(v) : "");
     }
     if(m.type === "peiling"){
       const pe = S.peilingen.find(x => x.id === m.pid);
-      return pe ? peilingKaartHtml(pe) : "";
+      return kaart(pe ? peilingKaartHtml(pe) : "");
     }
     if(m.type === "verleidDoel"){
       const vd = S.verleidDoelen.find(x => x.id === m.vdid);
-      return vd ? verleidDoelKaartHtml(vd) : "";
+      return kaart(vd ? verleidDoelKaartHtml(vd) : "");
     }
     if(m.type === "mission"){
       const mi = S.missions.find(x => x.id === m.mid);
-      return mi ? missionCardHtml(mi) : "";
+      return kaart(mi ? missionCardHtml(mi) : "");
     }
     if(m.type === "poll"){
       const p = S.polls.find(x => x.id === m.pollId);
-      return p ? pollCardHtml(p, c) : "";
+      return kaart(p ? pollCardHtml(p, c) : "");
     }
     if(m.type === "report"){
       const r = S.reports.find(x => x.id === m.reportId);
-      return r ? reportCardHtml(r) : "";
+      return kaart(r ? reportCardHtml(r) : "");
     }
     if(m.type === "riddle"){
       const r = S.riddles.find(x => x.id === m.rid);
-      return r ? riddleCardHtml(r) : "";
+      return kaart(r ? riddleCardHtml(r) : "");
     }
     if(m.type === "hunt"){
       const h = S.hunts.find(x => x.id === m.hid);
-      return h ? huntCardHtml(h) : "";
+      return kaart(h ? huntCardHtml(h) : "");
     }
     const mine = m.sid === S.me.id;
     const showSender = c.type !== "dm" && !mine;

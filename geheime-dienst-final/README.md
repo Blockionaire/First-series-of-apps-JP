@@ -51,6 +51,7 @@ De officiële app voor **Geheime Dienst: Real life edition** (Camping Vell Empor
 - Rolverzoeken goedkeuren (met nieuwe rol), afwijzen, of andere spelers vragen de rol over te nemen
 - Vergeten pincodes: wie zijn code kwijt is vraagt toestemming, jij keurt goed of wijst af
 - Deadlines instellen per chat: kies of de melding naar iedereen gaat of alleen naar bijvoorbeeld de infiltranten
+- 👁️ **Wie heeft het gezien?** Onder elke kaart die je verstuurt — opdracht, missiestemming, peiling, raadsel, dagrapport, zoekopdracht, nachtkeuze — staat een tellertje (*✓ 1/3 gelezen*, dubbel vinkje zodra iedereen hem heeft). Tik erop en je ziet per persoon wie hem wel en niet geopend heeft, met tijdstip. Alleen jij ziet die tellers; spelers merken er niets van. Let op wat het betekent: iemand heeft de chat geopend nadat je het verstuurde — niet dat hij er ook iets mee gedaan heeft
 - Opdrachten versturen en ingediende bewijzen goedkeuren of afwijzen
 - Opdrachtenlijst infiltranten (tab *Spelers*): zet je opdrachten één keer klaar en kies ze daarna met één tik
 - Missiestemmingen als checklist versturen; de meerderheid wordt automatisch de opdracht van de dag
