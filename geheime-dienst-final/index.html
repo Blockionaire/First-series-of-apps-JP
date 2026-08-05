@@ -193,6 +193,20 @@
   .keypad button.leeg{background:none; border:none; pointer-events:none}
   .keypad button[data-k="del"]{font-size:20px; background:none; border:none}
 
+  /* ---------- privacyscherm: wat de app-wisselaar te zien krijgt ---------- */
+  .privacy{
+    position:fixed; inset:0; z-index:200; background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px; text-align:center; padding:24px;
+    background-image:
+      radial-gradient(600px 320px at 85% -60px, rgba(255,59,48,.10), transparent 70%),
+      radial-gradient(600px 320px at 10% 105%, rgba(98,197,84,.10), transparent 70%);
+  }
+  .privacy-logo{width:54%; max-width:200px; opacity:.9}
+  body.light .privacy-logo{filter:invert(.92)}
+  .privacy-slot{font-size:38px; line-height:1}
+  .privacy-tekst{font-size:13px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; font-weight:600}
+
   /* ---------- app frame ---------- */
   .topbar{
     display:flex; align-items:center; gap:10px;
@@ -717,7 +731,10 @@
     flex:none; width:26px; height:26px; line-height:26px; text-align:center;
     border-radius:50%; background:rgba(90,150,255,.2); color:var(--blue); font-weight:800; font-size:13px;
   }
-  .mk-naam{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .mk-naam{flex:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .mk-sub{flex:1; min-width:0; font-size:11.5px; color:var(--muted); text-align:right}
+  .mk-rij.allen .mk-naam{font-weight:700}
+  .mk-rij.allen .mk-at{background:rgba(232,178,58,.22)}
   body.light .mentie{background:rgba(47,111,224,.14)}
   body.light .mb-rij{background:rgba(47,111,224,.09); border-color:rgba(47,111,224,.4)}
 
@@ -844,6 +861,7 @@
   .seg{display:flex; background:var(--bg3); border-radius:999px; padding:4px; gap:4px; border:1px solid var(--line)}
   .seg button{flex:1; padding:9px; border-radius:999px; font-weight:600; font-size:13.5px; color:var(--muted); transition:background .2s ease, color .2s ease}
   .seg button.active{background:var(--green); color:#0d1f0a}
+  .seg.vier button{font-size:12.5px; padding:9px 2px}
   .set-card{background:var(--bg3); border:1px solid var(--line); border-radius:16px; padding:14px; margin-bottom:12px}
   .set-card h4{font-size:14px; margin-bottom:10px; font-weight:700}
 
@@ -1159,6 +1177,11 @@
 <body>
 <div id="demoBanner" class="demo-banner hidden">⚠️ DEMO-MODUS — alleen op dit apparaat. Koppel Firebase om samen te spelen (zie README).</div>
 <div class="app" id="root"></div>
+<div class="privacy hidden" id="privacy" aria-hidden="true">
+  <img class="privacy-logo" src="kaarten/logo.png" alt="" onerror="this.remove()">
+  <div class="privacy-slot">🔒</div>
+  <div class="privacy-tekst">Vergrendeld</div>
+</div>
 
 <script src="firebase-config.js"></script>
 <script type="module">
@@ -1692,7 +1715,7 @@ function toonMentieKiezer(ta, c){
   const tok = mentieToken(ta);
   if(!tok){ sluitMentieKiezer(); return; }
   const zoek = tok.zoek.toLowerCase();
-  const opties = chatDeelnemers(c)
+  const opties = mentieKandidaten(c)
     .filter(p => p.name && p.name.toLowerCase().includes(zoek))
     .slice(0, 6);
   if(!opties.length){ sluitMentieKiezer(); return; }
@@ -1705,8 +1728,10 @@ function toonMentieKiezer(ta, c){
     scr.querySelector(".composer").insertAdjacentElement("beforebegin", el);
   }
   el.innerHTML = opties.map(p =>
-    `<button class="mk-rij" data-mentie="${esc(p.id)}">
-       <span class="mk-at">@</span><span class="mk-naam">${esc(p.name)}</span>
+    `<button class="mk-rij${p.allen ? " allen" : ""}" data-mentie="${esc(p.id)}">
+       <span class="mk-at">${p.allen ? "📣" : "@"}</span>
+       <span class="mk-naam">${esc(p.name)}</span>
+       ${p.allen ? `<span class="mk-sub">iedereen in deze chat</span>` : ""}
      </button>`).join("");
   el.querySelectorAll("[data-mentie]").forEach(b => {
     // mousedown, niet click: anders sluit de blur van het tekstvak ons eerst af
@@ -1715,7 +1740,7 @@ function toonMentieKiezer(ta, c){
   });
 }
 function kiesMentie(ta, c, pid){
-  const p = S.players.find(x => x.id === pid);
+  const p = pid === "__allen__" ? {name: ALLEN_NAAM} : S.players.find(x => x.id === pid);
   const tok = mentieToken(ta);
   if(!p || !tok) { sluitMentieKiezer(); return; }
   const na = ta.value.slice((ta.selectionStart ?? ta.value.length));
@@ -1862,6 +1887,7 @@ function pickImage(accept = "image/*"){
     const af = bestand => {
       if(klaar) return;
       klaar = true;
+      meldKiezerDicht();
       setTimeout(() => inp.remove(), 0);
       resolve(bestand || null);
     };
@@ -1869,6 +1895,7 @@ function pickImage(accept = "image/*"){
     inp.oncancel = () => af(null);
     document.body.appendChild(inp);
     inp.value = "";
+    meldKiezerOpen();          // het slot mag hier niet tussen komen
     inp.click();
     // vangnet: als er niets gekozen is en het venster weer actief wordt, opruimen
     const opFocus = () => {
@@ -2539,6 +2566,91 @@ function wachtOpSpelleider(speler, reqId){
 }
 
 /* =====================================================================
+   PRIVACYSLOT
+   Swipe je de app weg, dan legt hij er meteen een dicht scherm overheen: in de
+   app-wisselaar staat een slot in plaats van je chats. Kom je terug en ben je
+   langer weg geweest dan je zelf instelt, dan vraagt de app opnieuw je pincode.
+
+   Eerlijk over de grens: iOS maakt het plaatje voor de app-wisselaar op het
+   moment dát je het gebaar begint, en een webapp krijgt dat moment niet te
+   pakken. Het overlegscherm is dus het best haalbare, geen harde garantie.
+   Het opnieuw vergrendelen bij terugkomst is dat wél.
+   ===================================================================== */
+const SLOT_STANDAARD = "60000";
+const SLOT_KEUZES = [["0","Direct"], ["60000","Na 1 min"], ["300000","Na 5 min"], ["uit","Uit"]];
+const slotInstelling = () => {
+  const v = localStorage.getItem("gd_slot");
+  return SLOT_KEUZES.some(k => k[0] === v) ? v : SLOT_STANDAARD;
+};
+const slotAan = () => slotInstelling() !== "uit";
+
+let slotBezig = false;      // staat het pinscherm nu open?
+let wegSinds = 0;           // sinds wanneer staat de app op de achtergrond
+let echtVerborgen = false;  // was het scherm ook echt weg (en niet alleen onscherp)?
+let kiezerTot = 0;          // tot wanneer een foto-/videokiezer het wegvallen verklaart
+
+/* De fotokiezer en de camera halen de app zelf naar de achtergrond. Daar mag
+   geen slot op vallen — anders raak je halverwege een upload je scherm kwijt. */
+function meldKiezerOpen(){ kiezerTot = Date.now() + 120000; }
+function meldKiezerDicht(){ setTimeout(() => { kiezerTot = 0; }, 2000); }
+const kiezerBezig = () => Date.now() < kiezerTot;
+
+function toonPrivacy(aan){
+  const el = document.getElementById("privacy");
+  if(el) el.classList.toggle("hidden", !aan);
+}
+
+function appNaarAchtergrond(verborgen){
+  if(verborgen) echtVerborgen = true;
+  if(!S.me || !slotAan() || slotBezig || kiezerBezig()) return;
+  if(!wegSinds) wegSinds = Date.now();
+  toonPrivacy(true);
+}
+
+async function appNaarVoorgrond(){
+  const weg = wegSinds ? Date.now() - wegSinds : 0;
+  const wasVerborgen = echtVerborgen;
+  wegSinds = 0; echtVerborgen = false;
+  if(!S.me || !slotAan() || slotBezig || kiezerBezig()){ toonPrivacy(false); return; }
+  const wacht = Number(slotInstelling());
+  // een korte flikkering van het venster is geen wegswipen
+  const echtWeg = wasVerborgen || weg >= 800;
+  if(!S.me.pinHash || !echtWeg || weg < wacht){ toonPrivacy(false); return; }
+  await hervergrendel();
+}
+
+async function hervergrendel(){
+  if(slotBezig || !S.me || !S.me.pinHash) return;
+  slotBezig = true;
+  const tab = S.tab, chat = S.openChat;
+  try{
+    closeModal(true);
+    if(chat){ meldTypen(chat, false); stopTypen(); }   // achter een slot typ je niet
+    if(S.unsubMsgs){ S.unsubMsgs(); S.unsubMsgs = null; }
+    // live updates mogen niet over het slot heen tekenen
+    S.openChat = null; S.renderedChat = null; S.closingChat = false;
+    const bezig = ontgrendel(S.me);    // tekent het pinscherm meteen
+    toonPrivacy(false);
+    const ok = await bezig;
+    slotBezig = false;
+    if(!ok) return;                    // uitgelogd — ontgrendel() heeft het scherm al
+    S.tab = tab;
+    if(chat) openChat(chat); else render();   // openChat zet ook de berichtenluisteraar terug
+  } finally {
+    slotBezig = false;
+    toonPrivacy(false);
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden) appNaarAchtergrond(true); else appNaarVoorgrond();
+});
+window.addEventListener("blur", () => appNaarAchtergrond(false));
+window.addEventListener("focus", () => { if(!document.hidden) appNaarVoorgrond(); });
+window.addEventListener("pagehide", () => appNaarAchtergrond(true));
+window.addEventListener("pageshow", () => { if(!document.hidden) appNaarVoorgrond(); });
+
+/* =====================================================================
    INLOGGEN / AANMELDEN
    ===================================================================== */
 function renderJoin(err = "", leaderMode = false){
@@ -2848,25 +2960,44 @@ const regexVeilig = t => String(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // geen letter of cijfer erachter, anders zou "@Tim" ook in "@Timo" raken
 function mentieRegex(naam, vlaggen){ return new RegExp("@" + regexVeilig(naam) + "(?![\\p{L}\\p{N}])", vlaggen); }
 
+// Alleen de spelleider kan iedereen tegelijk oproepen; anders zou elke speler
+// de hele groep kunnen laten piepen.
+const ALLEN_NAAM = "iedereen";
+const magAllenNoemen = () => !!(S.me && S.me.isLeader);
+function mentieKandidaten(c){
+  const lijst = chatDeelnemers(c);
+  return magAllenNoemen() ? [{id:"__allen__", name: ALLEN_NAAM, allen:true}, ...lijst] : lijst;
+}
+// is dit een oproep aan de hele chat? (alleen de spelleider kan dat)
+const noemtAllen = tekst => !!tekst && magAllenNoemen() && mentieRegex(ALLEN_NAAM, "iu").test(tekst);
 function vindMentions(tekst, c){
   if(!tekst || tekst.indexOf("@") < 0) return [];
   // chatDeelnemers laat jezelf al weg: jezelf noemen hoeft geen melding te geven
-  return chatDeelnemers(c)
+  const leden = chatDeelnemers(c);
+  if(noemtAllen(tekst)) return leden.map(p => p.id);   // @iedereen = iedereen in deze chat
+  return leden
     .filter(p => p.name && mentieRegex(p.name, "iu").test(tekst))
     .map(p => p.id);
 }
 // de namen in een al ontsmette tekst oplichten
-function markeerMentions(veiligeTekst, c){
+function markeerMentions(veiligeTekst, c, m){
   if(!veiligeTekst || veiligeTekst.indexOf("@") < 0) return veiligeTekst;
+  // "@iedereen" is alleen van de spelleider: bij een speler is het gewone tekst
+  const afzender = m && S.players.find(p => p.id === m.sid);
   // hier juist mét jezelf erbij, anders licht je eigen naam niet op
   const namen = [...chatDeelnemers(c), S.me].map(p => p && p.name).filter(Boolean)
+    .concat(afzender && afzender.isLeader ? [ALLEN_NAAM] : [])
     .sort((a, b) => b.length - a.length)          // langste eerst: "Jan Peter" vóór "Jan"
     .map(n => regexVeilig(esc(n)));
   if(!namen.length) return veiligeTekst;
   const mij = S.me ? esc(S.me.name).toLowerCase() : "";
   const re = new RegExp("@(" + namen.join("|") + ")(?![\\p{L}\\p{N}])", "giu");
-  return veiligeTekst.replace(re, treffer =>
-    `<span class="mentie${treffer.slice(1).toLowerCase() === mij ? " mij" : ""}">${treffer}</span>`);
+  return veiligeTekst.replace(re, treffer => {
+    const woord = treffer.slice(1).toLowerCase();
+    // "@iedereen" is ook aan jou gericht, dus die licht net zo op als je naam
+    const aanMij = woord === mij || woord === ALLEN_NAAM;
+    return `<span class="mentie${aanMij ? " mij" : ""}">${treffer}</span>`;
+  });
 }
 // is er in deze chat een @ voor mij die ik nog niet gezien heb?
 function openMentie(c){
@@ -2920,7 +3051,7 @@ async function sendMessage(chatId, data){
   // per genoemde speler een los veld, zodat twee mensen die tegelijk iemand
   // noemen elkaars merkteken niet overschrijven
   const merken = {};
-  for(const pid of (data.mentions || [])) merken["mnt_" + pid] = {at: base.at, by: S.me.name, mid};
+  for(const pid of (data.mentions || [])) merken["mnt_" + pid] = {at: base.at, by: S.me.name, mid, ...(data.allen ? {allen:true} : {})};
   await DB.set("chats/" + chatId, {
     lastAt: base.at, lastSid: base.sid,
     lastText: data.type === "img" ? "📷 Foto" : data.type === "video" ? "🎬 Filmpje"
@@ -2970,7 +3101,7 @@ document.addEventListener("focusout", () => {
 }, true);
 
 function render(){
-  if(!S.me) return;
+  if(!S.me || slotBezig) return;       // over een openstaand pinscherm tekenen we niets
   uitgesteldeRender = false;
   if(S.openChat){ renderChat(); return; }
   if(S.unsubMsgs){ S.unsubMsgs(); S.unsubMsgs = null; }
@@ -3062,6 +3193,7 @@ function applyTheme(){
 function settingsModal(){
   const isL = S.me && S.me.isLeader;
   const theme = localStorage.getItem("gd_theme") === "light" ? "light" : "dark";
+  const slot = slotInstelling();
   modal(`
     <h3>⚙️ Instellingen</h3>
     <div class="set-card">
@@ -3070,6 +3202,17 @@ function settingsModal(){
         <button data-theme="dark" class="${theme === "dark" ? "active" : ""}">🌙 Donker</button>
         <button data-theme="light" class="${theme === "light" ? "active" : ""}">☀️ Licht</button>
       </div>
+    </div>
+    <div class="set-card">
+      <h4>🔒 Privacyslot</h4>
+      <p style="font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:10px">
+        Swipe je de app weg, dan komt er een slot overheen — in de app-wisselaar ziet niemand je chats.
+        Kom je terug nadat je een tijdje weg was, dan vraagt de app opnieuw je pincode.
+      </p>
+      <div class="seg vier" id="slotSeg">
+        ${SLOT_KEUZES.map(([v, l]) => `<button data-slot="${v}" class="${slot === v ? "active" : ""}">${l}</button>`).join("")}
+      </div>
+      ${S.me.pinHash ? "" : `<p style="font-size:12px;color:var(--gold-t);margin-top:8px">Je hebt nog geen eigen pincode — stel er eerst één in, anders valt er niets te vergrendelen.</p>`}
     </div>
     <div class="set-card">
       <h4>🔔 Meldingen</h4>
@@ -3110,6 +3253,11 @@ function settingsModal(){
       localStorage.setItem("gd_theme", b.dataset.theme);
       applyTheme();
       m.querySelectorAll("[data-theme]").forEach(x => x.classList.toggle("active", x === b));
+      haptic(6);
+    });
+    m.querySelectorAll("[data-slot]").forEach(b => b.onclick = () => {
+      localStorage.setItem("gd_slot", b.dataset.slot);
+      m.querySelectorAll("[data-slot]").forEach(x => x.classList.toggle("active", x === b));
       haptic(6);
     });
     const ma = m.querySelector("#meldAan");
@@ -4694,7 +4842,7 @@ function renderChats(el){
       <div class="row-main">
         <div class="row-title">${esc(chatTitle(c).replace(/^\S+ /, ""))}</div>
         <div class="row-sub">${mnt
-          ? `<span class="rij-mentie">@ ${esc(mnt.by)} noemde je</span>`
+          ? `<span class="rij-mentie">${mnt.allen ? "📣" : "@"} ${esc(mnt.by)} ${mnt.allen ? "riep iedereen op" : "noemde je"}</span>`
           : (c.lastText ? esc(c.lastText) : esc(chatMembersLabel(c)))}</div>
       </div>
       <div class="row-side">
@@ -4747,8 +4895,8 @@ function renderChats(el){
     <div class="mentie-balk">
       ${menties.map(({c, m}) => `
         <button class="mb-rij" data-mentie-chat="${esc(c.id)}" data-mentie-mid="${esc(m.mid || "")}">
-          <span class="mb-at">@</span>
-          <span class="mb-tekst"><b>${esc(m.by)}</b> noemde je in <b>${esc(chatTitle(c).replace(/^\S+ /, ""))}</b></span>
+          <span class="mb-at">${m.allen ? "📣" : "@"}</span>
+          <span class="mb-tekst"><b>${esc(m.by)}</b> ${m.allen ? "riep iedereen op" : "noemde je"} in <b>${esc(chatTitle(c).replace(/^\S+ /, ""))}</b></span>
           <span class="mb-tijd">${fmtTime(m.at)}</span>
         </button>`).join("")}
     </div>` : "";
@@ -4856,7 +5004,7 @@ function closeChat(skipAnim){
 }
 
 function renderChat(){
-  if(S.closingChat) return;
+  if(S.closingChat || slotBezig) return;
   const c = S.chats.find(x => x.id === S.openChat);
   if(!c){ closeChat(true); return; }
   const root = $("#root");
@@ -4922,7 +5070,7 @@ function renderChat(){
         </div>` : ""}
         ${m.type === "img" ? `<img data-img="${m.imgId}" alt="foto">` : ""}
         ${m.type === "video" ? videoTegelHtml(m.vidId, m.posterId) : ""}
-        ${m.t ? `<div>${markeerMentions(esc(m.t), c)}</div>` : ""}
+        ${m.t ? `<div>${markeerMentions(esc(m.t), c, m)}</div>` : ""}
         <div class="mtime">${fmtTime(m.at)}${mine ? leesBadge(m, c) : ""}</div>
         ${reactieBalkHtml(m)}
       </div>`;
@@ -5187,8 +5335,9 @@ function renderChat(){
       meldTypen(c.id, false);
       const re = S.replyTo; S.replyTo = null;
       const mentions = vindMentions(t, c);
+      const allen = mentions.length > 0 && noemtAllen(t);
       haptic(6);
-      await sendMessage(c.id, {type:"text", t, ...(mentions.length ? {mentions} : {}), ...(re ? {re} : {})});
+      await sendMessage(c.id, {type:"text", t, ...(mentions.length ? {mentions} : {}), ...(allen ? {allen:true} : {}), ...(re ? {re} : {})});
     };
     ta.onkeydown = e => { if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); doSend(); } };
     $("#btnSend").onclick = doSend;
