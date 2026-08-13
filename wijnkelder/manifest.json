@@ -1,0 +1,33 @@
+{
+  "name": "Wijnkelder",
+  "short_name": "Wijnkelder",
+  "description": "Je wijnkelder op zak: flessen, rijping, spijs-wijncombinaties, statistieken en kelderwaarde.",
+  "lang": "nl",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#14100f",
+  "theme_color": "#14100f",
+  "categories": ["food", "lifestyle", "utilities"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Fles toevoegen",
+      "short_name": "Toevoegen",
+      "url": "./#/toevoegen",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Wat drinken we vanavond?",
+      "short_name": "Combineren",
+      "url": "./#/combineer",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
