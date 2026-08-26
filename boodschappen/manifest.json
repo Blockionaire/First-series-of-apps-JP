@@ -1,0 +1,17 @@
+{
+  "name": "Huisje OVS — Boodschappen",
+  "short_name": "Boodschappen",
+  "description": "De gedeelde boodschappenlijst van Huisje OVS.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F2EDE4",
+  "theme_color": "#F2EDE4",
+  "lang": "nl",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

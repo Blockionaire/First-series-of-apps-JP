@@ -1,0 +1,134 @@
+# 🧺 Huisje OVS — Boodschappen
+
+De gedeelde boodschappenlijst van **Huisje OVS**, voor Merel en Jelle samen.
+
+**🔗 De app staat live op:**
+👉 https://blockionaire.github.io/First-series-of-apps-JP/boodschappen/
+
+> Tip: open de link op je telefoon en kies *"Zet op beginscherm"*. Dan staat Boodschappen
+> als echte app tussen je andere apps, opent hij zonder adresbalk en werkt hij ook offline.
+
+---
+
+## Inloggen
+
+Bij de eerste keer maak je een account: je naam plus een **pincode van 4 cijfers**.
+Daarna kies je bij het openen je naam en vul je je code in. De app onthoudt je op dat
+apparaat, dus normaal gesproken hoef je maar één keer in te loggen.
+
+Je naam staat bij alles wat je doet: wie iets op de lijst zette, wie het afvinkte en
+wie welke bon betaalde.
+
+**Pincode kwijt?** Vraag je huisgenoot om in de app naar *Meer → Huisgenoten → jouw naam
+→ Pincode wissen* te gaan. Daarna kies je bij de volgende keer inloggen gewoon een nieuwe.
+
+---
+
+## Wat kan de app?
+
+### De lijst
+- **Boodschap toevoegen** met naam, hoeveelheid ("2 pakken", "500 g"), winkel, categorie,
+  notitie en een **foto** — handig om het juiste merk of de verpakking te laten zien.
+- De app **raadt de categorie** zelf zodra je begint te typen. "Tomaten" wordt Groente & fruit,
+  "Afwasmiddel" wordt Huishouden. Kloppen doet hij het niet? Tik gewoon een andere aan.
+- **Snelknoppen**: dingen die je vaker koopt staan als suggestie onder het invoerveld,
+  met de winkel en categorie van de vorige keer er meteen bij.
+- **Spoed** ⚡ zet iets bovenaan de lijst.
+- **Afvinken** met één tik. Afgevinkte boodschappen zakken naar *In de kar*, met wie het
+  gehaald heeft en hoe laat. Per ongeluk afgevinkt? Nog een tik zet hem terug.
+- **Opruimen** wist de kar in één keer, of alleen wat ouder is dan een week.
+- **Groeperen** op winkel (standaard) of op categorie.
+
+### Filters & zoeken
+- Chips bovenin filteren op winkel, met het aantal erbij.
+- 🔍 Zoeken door naam, notitie, winkel en categorie tegelijk.
+- Filterpaneel voor categorie, spoed en **wie het erop zette**.
+- Actieve filters staan als chips in beeld — één tik haalt ze er weer af.
+
+### Winkelen
+Kies de winkel waar je bent en je krijgt een **groot afvinkscherm**: dikke regels,
+grote vinkjes, op supermarktvolgorde gegroepeerd, met een voortgangsbalk (*7 van 12*).
+Je **scherm blijft aan** zolang je in dit scherm zit, en thuis ziet je huisgenoot live
+wat er al in de kar ligt. Onderin zit *Klaar met winkelen* — daar noteer je meteen
+wat je betaald hebt.
+
+### Uitgaven
+- Na het winkelen (of los, met de ＋) noteer je het bedrag, de winkel en eventueel een
+  **foto van de bon**.
+- De app rekent uit **wie wat heeft voorgeschoten**: *"Merel moet dit nog aan jou
+  terugbetalen — €18,40"*.
+- Getekend? *Alles verrekend — op nul zetten* zet het saldo op nul. De bedragen blijven
+  bewaard in het maandoverzicht.
+
+### Meer
+- **Vaste boodschappen** — de dingen die jullie elke week nodig hebben. Eén tik zet er
+  eentje op de lijst, of zet ze allemaal in één keer klaar.
+- **Winkels** toevoegen, verwijderen en op volgorde zetten (de volgorde bepaalt hoe de
+  lijst gegroepeerd staat).
+- **Lijst delen** als bericht, bijvoorbeeld via WhatsApp.
+- **Huisgenoten** met online-stipje, wie hoeveel toevoegde, haalde en betaalde.
+- **Thema**: licht (warm beige), donker, of automatisch meebewegen met je telefoon.
+
+### Klein maar fijn
+- Voegt je huisgenoot iets toe terwijl jij de app open hebt? Dan zie je *"Merel zette
+  Melk op de lijst"* voorbijkomen.
+- De terugknop van je telefoon sluit eerst het paneel of de winkelmodus, niet de app.
+- Zonder internet blijft de app gewoon werken; wat je doet wordt gesynchroniseerd
+  zodra je weer verbinding hebt.
+
+---
+
+## Techniek
+
+Eén HTML-bestand, geen bouwstap, geen framework. Openen in een browser is genoeg.
+
+| Bestand | Wat het doet |
+|---|---|
+| `index.html` | de hele app (opmaak, schermen en logica) |
+| `firebase-config.js` | instellingen: Firebase-project, huisnaam, naamruimte |
+| `manifest.json`, `sw.js` | maken er een installeerbare app van die offline werkt |
+| `icon*.png` | het appicoon |
+
+### Waar staan de gegevens?
+
+In Firestore, in het bestaande project `geheime-dienst`, onder eigen collecties met het
+voorvoegsel `ovs_`:
+
+```
+ovs_leden    accounts (naam, kleur, pincode-hash, laatst gezien)
+ovs_items    de boodschappen
+ovs_fotos    de foto's (verkleind, als data-url; `<id>_k` is de miniatuur)
+ovs_winkels  de winkels
+ovs_vast     de vaste boodschappen
+ovs_bonnen   de uitgaven
+```
+
+De Geheime Dienst-app gebruikt andere collecties, dus de twee apps zitten elkaar niet
+in de weg. Wil je met een schone lijst beginnen? Zet `ruimte` in `firebase-config.js`
+op bijvoorbeeld `"ovs2"`.
+
+Foto's worden vóór het versturen verkleind (maximaal 1280 px, JPEG) en er wordt een
+aparte miniatuur van 220 px bewaard, zodat de lijst snel blijft laden.
+
+### Demo-modus
+
+Staat `firebase` in `firebase-config.js` op `null`, dan draait de app volledig, maar
+staat alles alleen op dat ene apparaat (in `localStorage`). Handig om iets te proberen
+zonder de echte lijst te raken. De app zegt zelf in een balkje dat hij in demo-modus staat.
+
+### Een eigen Firebase-project gebruiken
+
+1. Maak een gratis project op [console.firebase.google.com](https://console.firebase.google.com)
+2. Zet **Firestore Database** aan
+3. Voeg een web-app toe en kopieer de `firebaseConfig` naar `firebase-config.js`
+
+### Let op: de database staat open
+
+De Firestore-regels van dit project staan op "iedereen mag lezen en schrijven". Wie de
+link van de app heeft, kan bij de boodschappen — de pincode regelt alleen *wie je bent
+in huis*, het is geen slot op de database. Voor een boodschappenlijst is dat prima, maar
+zet er geen dingen in die niet gezien mogen worden.
+
+Wil je het dichttimmeren, dan is de nette route Firebase Authentication (anoniem of met
+e-mail) plus regels die op `request.auth` controleren. Dat is een grotere verbouwing dan
+deze app nu is.
