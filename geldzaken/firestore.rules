@@ -1,0 +1,134 @@
+/* =====================================================================
+   GELDZAKEN — beveiligingsregels voor Firestore
+   =====================================================================
+   Dit bestand is de échte beveiliging van de app. Alles wat de app zelf
+   controleert is vriendelijkheid richting de gebruiker; wat hier staat
+   draait bij Google en is niet te omzeilen — ook niet door iemand die
+   de app openbreekt of rechtstreeks de database aanroept.
+
+   Zo zet je ze aan:
+     Firebase Console → Firestore Database → Rules → alles hieronder
+     erin plakken → Publish.
+
+   ZET EERST JE EIGEN E-MAILADRES IN beheerderMails() HIERONDER.
+   Zonder dat kan niemand de eerste aanmelding goedkeuren, ook jij niet.
+   Gebruik hetzelfde adres als in firebase-config.js.
+
+   De afspraak in het kort:
+
+     - Iedereen die inlogt mag één ding aanmaken: een aanvraag voor
+       zichzelf, met status "wacht". Meer niet.
+     - Wie status "actief" heeft mag de cijfers lezen.
+     - Wie daarnaast rol "bewerker" of "beheerder" heeft mag ze wijzigen.
+     - Alleen een beheerder mag de status of rol van een ander zetten.
+     - Niemand kan zichzelf promoveren: bij het bijwerken van je eigen
+       ledendocument moeten status en rol precies blijven wat ze waren.
+   ===================================================================== */
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------------------------------------------------------------
+       De beheerders van het eerste uur
+       ---------------------------------------------------------------
+       Deze adressen zijn altijd beheerder, ook als er nog geen enkel
+       ledendocument bestaat. Zet hier je eigen adres neer. Meerdere mag:
+       return ['jij@voorbeeld.nl', 'partner@voorbeeld.nl'];
+       --------------------------------------------------------------- */
+    function beheerderMails() {
+      return ['jij@voorbeeld.nl'];
+    }
+
+    function ingelogd() {
+      return request.auth != null;
+    }
+
+    function mijnMail() {
+      return ingelogd() && request.auth.token.email != null
+        ? request.auth.token.email.lower()
+        : '';
+    }
+
+    function isHoofdbeheerder() {
+      return mijnMail() in beheerderMails();
+    }
+
+    /* Het eigen ledendocument opzoeken. Let op: elke get() en exists()
+       telt als een leesactie. Voor een huishoudboekje valt dat ruim
+       binnen de gratis grens. */
+    function lidPad(ruimte) {
+      return /databases/$(database)/documents/geldzaken/$(ruimte)/leden/$(request.auth.uid);
+    }
+
+    function heeftLid(ruimte) {
+      return ingelogd() && exists(lidPad(ruimte));
+    }
+
+    function lid(ruimte) {
+      return get(lidPad(ruimte)).data;
+    }
+
+    function isActief(ruimte) {
+      return heeftLid(ruimte) && lid(ruimte).status == 'actief';
+    }
+
+    function magSchrijven(ruimte) {
+      return isActief(ruimte) && lid(ruimte).rol in ['beheerder', 'bewerker'];
+    }
+
+    function isBeheerder(ruimte) {
+      return isHoofdbeheerder() || (isActief(ruimte) && lid(ruimte).rol == 'beheerder');
+    }
+
+    /* ---------------------------------------------------------------
+       Toegangsbeheer: wie mag erbij
+       --------------------------------------------------------------- */
+    match /geldzaken/{ruimte}/leden/{uid} {
+
+      /* Je ziet je eigen aanvraag; de beheerder ziet iedereen. */
+      allow read: if isBeheerder(ruimte) || (ingelogd() && request.auth.uid == uid);
+
+      /* Aanmelden. Meer dan een verzoek in de wachtrij is dit niet:
+         status en rol liggen vast, dus niemand meldt zich aan als
+         beheerder. */
+      allow create: if ingelogd()
+                    && request.auth.uid == uid
+                    && request.resource.data.status == 'wacht'
+                    && request.resource.data.rol == 'kijker';
+
+      /* Je eigen naam bijwerken mag. Je eigen status of rol niet. */
+      allow update: if ingelogd()
+                    && request.auth.uid == uid
+                    && request.resource.data.status == resource.data.status
+                    && request.resource.data.rol == resource.data.rol;
+
+      /* Het startpunt: het adres uit de lijst hierboven mag zijn eigen
+         document zetten, zodat er altijd één beheerder is. */
+      allow create, update: if isHoofdbeheerder() && request.auth.uid == uid;
+
+      /* En de beheerder beslist over alle anderen. */
+      allow read, write: if isBeheerder(ruimte);
+    }
+
+    /* ---------------------------------------------------------------
+       De cijfers zelf
+       ---------------------------------------------------------------
+       transacties, terugkerend, potjes, doelen, rekeningen,
+       categorieen, regels en instellingen. Lezen mag wie is toegelaten,
+       schrijven alleen wie bewerkrechten heeft.
+
+       De uitzondering op "leden" is nodig omdat deze regel anders óók
+       op de ledenlijst zou passen — en dan zou een gewoon lid zijn
+       eigen rol kunnen ophogen.
+       --------------------------------------------------------------- */
+    match /geldzaken/{ruimte}/{collectie}/{document} {
+      allow read:  if collectie != 'leden' && isActief(ruimte);
+      allow write: if collectie != 'leden' && magSchrijven(ruimte);
+    }
+
+    /* Alles wat hier niet staat, mag niet. Dat is de standaard van
+       Firestore en dat houden we zo. */
+  }
+}

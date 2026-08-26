@@ -1,0 +1,3489 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Boodschappen">
+<meta name="theme-color" content="#F2EDE4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#191713" media="(prefers-color-scheme: dark)">
+<meta name="description" content="De boodschappenlijst van Huisje OVS — voor Merel en Jelle samen.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Huisje OVS — Boodschappen</title>
+<style>
+/* =====================================================================
+   HUISJE OVS · BOODSCHAPPEN
+   Ontwerp: warm beige, rustig, strak. Alles in één bestand.
+   ===================================================================== */
+
+:root{
+  --bg:#F2EDE4;
+  --bg-2:#EAE3D6;
+  --card:#FBF8F3;
+  --card-2:#F6F1E8;
+  --ink:#2E2A24;
+  --ink-2:#5C554A;
+  --muted:#918878;
+  --line:#E4DBCA;
+  --line-2:#D6CAB4;
+  --accent:#8C6E4F;
+  --accent-ink:#FFF9F0;
+  --accent-zacht:#EFE4D5;
+  --groen:#6E8B62;
+  --groen-zacht:#E4EBDF;
+  --rood:#B85C43;
+  --rood-zacht:#F6E3DC;
+  --geel:#C9A227;
+  --schaduw:0 1px 2px rgba(60,45,25,.05), 0 8px 24px -12px rgba(60,45,25,.18);
+  --schaduw-op:0 2px 6px rgba(60,45,25,.08), 0 20px 40px -16px rgba(60,45,25,.30);
+  --r-s:10px; --r-m:14px; --r-l:20px; --r-xl:26px;
+  --kop:-0.02em;
+  --nav-h:64px;
+  --vt:.22s cubic-bezier(.32,.72,0,1);
+}
+html[data-thema="donker"]{
+  --bg:#191713;
+  --bg-2:#12100D;
+  --card:#221F1A;
+  --card-2:#2A2620;
+  --ink:#F1EBE1;
+  --ink-2:#C8BFB1;
+  --muted:#928A7C;
+  --line:#332E27;
+  --line-2:#433C32;
+  --accent:#C9A67C;
+  --accent-ink:#241D14;
+  --accent-zacht:#33291F;
+  --groen:#93B183;
+  --groen-zacht:#25302172;
+  --rood:#D98168;
+  --rood-zacht:#3A241D;
+  --geel:#DFBE4E;
+  --schaduw:0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.7);
+  --schaduw-op:0 2px 8px rgba(0,0,0,.4), 0 24px 48px -18px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0; height:100%;}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size:16px; line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:none;
+  transition:background .25s ease, color .25s ease;
+}
+input,button,select,textarea{font:inherit; color:inherit;}
+button{border:none; background:none; padding:0; cursor:pointer;}
+::selection{background:var(--accent-zacht); color:var(--ink);}
+
+/* ---------- scrollbar ---------- */
+::-webkit-scrollbar{width:0; height:0;}
+
+/* ---------- app frame ---------- */
+#app{min-height:100dvh; display:flex; flex-direction:column;}
+.scherm{flex:1; display:flex; flex-direction:column; min-height:0;}
+.inhoud{
+  flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:0 16px calc(var(--nav-h) + 96px + env(safe-area-inset-bottom));
+}
+.wrap{max-width:620px; margin:0 auto; width:100%;}
+
+/* ---------- kop ---------- */
+.kop{
+  position:sticky; top:0; z-index:30;
+  background:color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter:saturate(1.6) blur(14px);
+  -webkit-backdrop-filter:saturate(1.6) blur(14px);
+  border-bottom:1px solid transparent;
+  padding:calc(env(safe-area-inset-top) + 10px) 16px 8px;
+  transition:border-color .2s ease;
+}
+.kop.geplakt{border-bottom-color:var(--line);}
+.kop-rij{max-width:620px; margin:0 auto; display:flex; align-items:center; gap:12px;}
+.kop-titel{flex:1; min-width:0;}
+.kop-titel h1{
+  margin:0; font-size:22px; font-weight:700; letter-spacing:var(--kop);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.kop-titel .sub{font-size:12.5px; color:var(--muted); margin-top:1px; letter-spacing:.01em;}
+.kop-acties{display:flex; align-items:center; gap:6px;}
+
+.ikoonknop{
+  width:38px; height:38px; border-radius:12px; display:grid; place-items:center;
+  color:var(--ink-2); background:transparent; transition:background var(--vt), transform var(--vt);
+}
+.ikoonknop:active{transform:scale(.9); background:var(--bg-2);}
+.ikoonknop.aan{background:var(--accent); color:var(--accent-ink);}
+.ikoonknop svg{width:21px; height:21px; stroke-width:1.9;}
+
+/* ---------- avatars ---------- */
+.av{
+  width:30px; height:30px; border-radius:50%; display:grid; place-items:center;
+  font-size:11.5px; font-weight:700; letter-spacing:.02em; color:#fff;
+  flex:none; position:relative; user-select:none;
+}
+.av.mini{width:20px; height:20px; font-size:9px; border-radius:50%;}
+.av.groot{width:52px; height:52px; font-size:18px;}
+.av.xl{width:76px; height:76px; font-size:26px;}
+.av .stip{
+  position:absolute; right:-1px; bottom:-1px; width:9px; height:9px; border-radius:50%;
+  background:var(--groen); border:2px solid var(--bg);
+}
+.av-stapel{display:flex;}
+.av-stapel .av{margin-left:-8px; box-shadow:0 0 0 2px var(--bg);}
+.av-stapel .av:first-child{margin-left:0;}
+
+/* ---------- zoek ---------- */
+.zoekbalk{position:relative; margin:10px auto 0; max-width:620px;}
+.zoekbalk svg{
+  position:absolute; left:12px; top:50%; transform:translateY(-50%);
+  width:18px; height:18px; color:var(--muted); pointer-events:none;
+}
+.zoekbalk input{
+  width:100%; padding:11px 38px 11px 38px; border-radius:var(--r-m);
+  background:var(--card); border:1px solid var(--line); color:var(--ink);
+  font-size:15.5px; outline:none; transition:border-color var(--vt), box-shadow var(--vt);
+}
+.zoekbalk input::placeholder{color:var(--muted);}
+.zoekbalk input:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-zacht);}
+.zoek-wis{
+  position:absolute; right:6px; top:50%; transform:translateY(-50%);
+  width:28px; height:28px; border-radius:50%; display:grid; place-items:center; color:var(--muted);
+}
+
+/* ---------- chips ---------- */
+.chiprij{
+  display:flex; gap:7px; overflow-x:auto; padding:10px 16px 2px;
+  margin:0 -16px; scrollbar-width:none;
+}
+.chiprij::-webkit-scrollbar{display:none;}
+.chiprij .rek{flex:none; width:0;}
+.chip{
+  flex:none; display:inline-flex; align-items:center; gap:6px;
+  padding:7px 13px; border-radius:999px; font-size:13.5px; font-weight:600;
+  background:var(--card); border:1px solid var(--line); color:var(--ink-2);
+  white-space:nowrap; transition:all var(--vt); letter-spacing:.005em;
+}
+.chip:active{transform:scale(.95);}
+.chip.aan{background:var(--ink); border-color:var(--ink); color:var(--bg);}
+.chip.aan.winkel{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+.chip .telw{
+  font-size:11px; font-weight:700; opacity:.6; font-variant-numeric:tabular-nums;
+}
+.chip .punt{width:8px; height:8px; border-radius:50%; flex:none;}
+
+/* ---------- secties & kaarten ---------- */
+.sectie{margin-top:22px;}
+.sectie-kop{
+  display:flex; align-items:center; gap:9px; padding:0 4px 8px;
+}
+.sectie-kop h2{
+  margin:0; font-size:12px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--muted); display:flex; align-items:center; gap:7px;
+}
+.sectie-kop .lijn{flex:1; height:1px; background:var(--line);}
+.sectie-kop .telw{
+  font-size:11px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums;
+  background:var(--bg-2); padding:2px 7px; border-radius:999px;
+}
+.sectie-kop button.mini{
+  font-size:12px; font-weight:600; color:var(--accent); padding:4px 8px; border-radius:8px;
+}
+.sectie-kop button.mini:active{background:var(--accent-zacht);}
+
+.lijst{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r-l);
+  overflow:hidden; box-shadow:var(--schaduw);
+}
+
+/* ---------- item ---------- */
+.item{
+  display:flex; align-items:flex-start; gap:12px; padding:12px 14px;
+  border-bottom:1px solid var(--line); position:relative;
+  background:var(--card); transition:background var(--vt);
+}
+.item:last-child{border-bottom:none;}
+.item:active{background:var(--card-2);}
+.item.af .item-tekst{text-decoration:line-through; color:var(--muted);}
+.item.af .item-mid{opacity:.6;}
+.item.weg{animation:wegvegen .3s ease forwards;}
+@keyframes wegvegen{to{opacity:0; transform:translateX(24px); max-height:0; padding-top:0; padding-bottom:0;}}
+.item.nieuw{animation:erin .35s cubic-bezier(.32,.72,0,1);}
+@keyframes erin{from{opacity:0; transform:translateY(-6px);}}
+
+.vink{
+  width:26px; height:26px; border-radius:50%; flex:none; margin-top:1px;
+  border:2px solid var(--line-2); display:grid; place-items:center;
+  transition:all var(--vt); background:transparent;
+}
+.vink:active{transform:scale(.85);}
+.vink svg{width:15px; height:15px; stroke-width:3; color:#fff; opacity:0; transform:scale(.5); transition:all var(--vt);}
+.item.af .vink{background:var(--groen); border-color:var(--groen);}
+.item.af .vink svg{opacity:1; transform:scale(1);}
+
+.item-mid{flex:1; min-width:0;}
+.item-titelrij{display:flex; align-items:baseline; gap:7px; flex-wrap:wrap;}
+.item-tekst{font-size:16px; font-weight:600; letter-spacing:-.005em; word-break:break-word;}
+.item-hoev{
+  font-size:12.5px; font-weight:700; color:var(--accent);
+  background:var(--accent-zacht); padding:1px 7px; border-radius:7px; flex:none;
+}
+.item-meta{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  margin-top:4px; font-size:12.5px; color:var(--muted);
+}
+.item-meta .stuk{display:inline-flex; align-items:center; gap:4px;}
+.item-meta svg{width:12px; height:12px; stroke-width:2.2;}
+.item-notitie{
+  margin-top:5px; font-size:13.5px; color:var(--ink-2); line-height:1.4;
+  padding-left:9px; border-left:2px solid var(--line-2);
+}
+.vlag{
+  font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+  padding:2px 6px; border-radius:6px; background:var(--rood-zacht); color:var(--rood); flex:none;
+}
+.item-thumb{
+  width:46px; height:46px; border-radius:var(--r-s); object-fit:cover; flex:none;
+  background:var(--bg-2); border:1px solid var(--line); margin-top:1px;
+}
+.item-thumb.laden{animation:pols 1.4s ease-in-out infinite;}
+@keyframes pols{50%{opacity:.45;}}
+
+/* ---------- lege staat ---------- */
+.leeg{
+  text-align:center; padding:54px 24px; color:var(--muted);
+}
+.leeg .em{font-size:40px; display:block; margin-bottom:10px; opacity:.85;}
+.leeg h3{margin:0 0 5px; font-size:17px; font-weight:700; color:var(--ink); letter-spacing:var(--kop);}
+.leeg p{margin:0; font-size:14px; line-height:1.5; max-width:280px; margin-inline:auto;}
+
+/* ---------- knoppen ---------- */
+.knop{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:13px 20px; border-radius:var(--r-m); font-size:15.5px; font-weight:650;
+  background:var(--accent); color:var(--accent-ink); letter-spacing:.005em;
+  transition:transform var(--vt), opacity var(--vt), background var(--vt);
+}
+.knop:active{transform:scale(.97); opacity:.9;}
+.knop.vol{width:100%;}
+.knop.stil{background:var(--card); color:var(--ink); border:1px solid var(--line);}
+.knop.zacht{background:var(--accent-zacht); color:var(--accent);}
+.knop.groen{background:var(--groen); color:#fff;}
+.knop.gevaar{background:var(--rood-zacht); color:var(--rood);}
+.knop.klein{padding:9px 14px; font-size:14px; border-radius:var(--r-s);}
+.knop[disabled]{opacity:.45; pointer-events:none;}
+.knop svg{width:18px; height:18px; stroke-width:2.2;}
+
+/* ---------- fab ---------- */
+.fab{
+  position:fixed; right:16px; z-index:40;
+  bottom:calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));
+  height:54px; padding:0 22px 0 18px; border-radius:999px;
+  background:var(--accent); color:var(--accent-ink);
+  display:flex; align-items:center; gap:8px; font-size:16px; font-weight:650;
+  box-shadow:0 6px 20px -4px rgba(90,65,35,.45); letter-spacing:-.005em;
+  transition:transform var(--vt), box-shadow var(--vt);
+}
+.fab:active{transform:scale(.94);}
+.fab svg{width:22px; height:22px; stroke-width:2.4;}
+@media(min-width:660px){ .fab{right:calc(50vw - 310px);} }
+
+/* ---------- navigatie ---------- */
+.nav{
+  position:fixed; left:0; right:0; bottom:0; z-index:45;
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:saturate(1.6) blur(16px);
+  -webkit-backdrop-filter:saturate(1.6) blur(16px);
+  border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.nav-rij{display:flex; max-width:620px; margin:0 auto; height:var(--nav-h);}
+.nav-knop{
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  color:var(--muted); font-size:10.5px; font-weight:650; letter-spacing:.01em;
+  transition:color var(--vt); position:relative;
+}
+.nav-knop svg{width:23px; height:23px; stroke-width:1.9; transition:transform var(--vt);}
+.nav-knop:active svg{transform:scale(.86);}
+.nav-knop.aan{color:var(--accent);}
+.nav-knop .bel{
+  position:absolute; top:8px; left:50%; margin-left:6px;
+  min-width:17px; height:17px; padding:0 5px; border-radius:999px;
+  background:var(--rood); color:#fff; font-size:10px; font-weight:700;
+  display:grid; place-items:center; font-variant-numeric:tabular-nums;
+}
+
+/* ---------- bottom sheet ---------- */
+.overlay{
+  position:fixed; inset:0; z-index:80; background:rgba(35,26,14,.42);
+  backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+  opacity:0; transition:opacity var(--vt);
+}
+.overlay.open{opacity:1;}
+.sheet{
+  position:fixed; left:0; right:0; bottom:0; z-index:81;
+  background:var(--bg); border-radius:var(--r-xl) var(--r-xl) 0 0;
+  box-shadow:var(--schaduw-op);
+  transform:translateY(100%); transition:transform .3s cubic-bezier(.32,.72,0,1);
+  max-height:92dvh; display:flex; flex-direction:column;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.sheet.open{transform:translateY(0);}
+.sheet-in{max-width:620px; margin:0 auto; width:100%; display:flex; flex-direction:column; min-height:0;}
+.greep{
+  width:38px; height:4.5px; border-radius:999px; background:var(--line-2);
+  margin:9px auto 4px; flex:none;
+}
+.sheet-kop{
+  display:flex; align-items:center; gap:10px; padding:6px 18px 12px; flex:none;
+}
+.sheet-kop h2{margin:0; font-size:19px; font-weight:700; letter-spacing:var(--kop); flex:1;}
+.sheet-body{overflow-y:auto; padding:0 18px 18px; -webkit-overflow-scrolling:touch;}
+.sheet-voet{
+  padding:12px 18px calc(12px + env(safe-area-inset-bottom)); flex:none;
+  border-top:1px solid var(--line); background:var(--bg);
+  display:flex; gap:10px;
+}
+@media(min-width:660px){
+  .sheet{left:50%; transform:translate(-50%,100%); width:620px; border-radius:var(--r-xl);
+         bottom:20px; max-height:86dvh;}
+  .sheet.open{transform:translate(-50%,0);}
+}
+
+/* ---------- formulier ---------- */
+.veld{margin-bottom:15px;}
+.veld > label{
+  display:block; font-size:12px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:7px; padding-left:2px;
+}
+.invoer{
+  width:100%; padding:13px 14px; border-radius:var(--r-m);
+  background:var(--card); border:1px solid var(--line); color:var(--ink);
+  font-size:16px; outline:none; transition:border-color var(--vt), box-shadow var(--vt);
+}
+.invoer::placeholder{color:var(--muted);}
+.invoer:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-zacht);}
+textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
+.veld-rij{display:flex; gap:10px;}
+.veld-rij > *{flex:1; min-width:0;}
+
+.keuzes{display:flex; flex-wrap:wrap; gap:7px;}
+.keuze{
+  display:inline-flex; align-items:center; gap:6px; padding:8px 13px; border-radius:999px;
+  font-size:14px; font-weight:600; background:var(--card); border:1px solid var(--line);
+  color:var(--ink-2); transition:all var(--vt);
+}
+.keuze:active{transform:scale(.95);}
+.keuze.aan{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+.keuze.aan.grijs{background:var(--ink); border-color:var(--ink); color:var(--bg);}
+
+.schakel{
+  display:flex; align-items:center; gap:12px; padding:13px 14px;
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r-m);
+}
+.schakel .tk{flex:1; min-width:0;}
+.schakel .tk b{display:block; font-size:15px; font-weight:650;}
+.schakel .tk span{font-size:12.5px; color:var(--muted);}
+.tuimel{
+  width:48px; height:29px; border-radius:999px; background:var(--line-2); flex:none;
+  position:relative; transition:background var(--vt);
+}
+.tuimel::after{
+  content:""; position:absolute; top:2.5px; left:2.5px; width:24px; height:24px;
+  border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25);
+  transition:transform var(--vt);
+}
+.tuimel.aan{background:var(--groen);}
+.tuimel.aan::after{transform:translateX(19px);}
+
+/* ---------- foto in formulier ---------- */
+.fotovak{
+  display:flex; gap:10px; align-items:center;
+}
+.fotoknop{
+  flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:14px; border-radius:var(--r-m); border:1.5px dashed var(--line-2);
+  color:var(--ink-2); font-size:14.5px; font-weight:600; background:var(--card);
+  transition:all var(--vt);
+}
+.fotoknop:active{background:var(--card-2); transform:scale(.98);}
+.fotoknop svg{width:19px; height:19px; stroke-width:2;}
+.fotovb{
+  position:relative; width:82px; height:82px; border-radius:var(--r-m); overflow:hidden;
+  border:1px solid var(--line); flex:none; background:var(--bg-2);
+}
+.fotovb img{width:100%; height:100%; object-fit:cover; display:block;}
+.fotovb .weg{
+  position:absolute; top:4px; right:4px; width:24px; height:24px; border-radius:50%;
+  background:rgba(20,14,6,.62); color:#fff; display:grid; place-items:center;
+  backdrop-filter:blur(4px);
+}
+.fotovb .weg svg{width:13px; height:13px; stroke-width:2.6;}
+
+/* ---------- suggesties ---------- */
+.sugg{display:flex; gap:7px; flex-wrap:wrap; margin-top:9px;}
+.sugg button{
+  padding:7px 12px; border-radius:999px; font-size:13.5px; font-weight:600;
+  background:var(--accent-zacht); color:var(--accent); border:1px solid transparent;
+  transition:transform var(--vt);
+}
+.sugg button:active{transform:scale(.94);}
+
+/* ---------- winkelmodus ---------- */
+.wm-kop{
+  padding:16px; border-radius:var(--r-l); background:var(--card);
+  border:1px solid var(--line); box-shadow:var(--schaduw); margin-top:14px;
+}
+.wm-kop .bovenrij{display:flex; align-items:center; gap:12px;}
+.wm-kop h2{margin:0; font-size:20px; font-weight:700; letter-spacing:var(--kop); flex:1;}
+.balk{height:8px; border-radius:999px; background:var(--bg-2); overflow:hidden; margin-top:12px;}
+.balk > div{
+  height:100%; border-radius:999px; background:var(--groen);
+  transition:width .4s cubic-bezier(.32,.72,0,1);
+}
+.wm-tel{
+  font-size:13px; color:var(--muted); margin-top:7px; display:flex; justify-content:space-between;
+  font-variant-numeric:tabular-nums;
+}
+.winkelkaart{
+  display:flex; align-items:center; gap:13px; padding:15px 16px;
+  border-bottom:1px solid var(--line); transition:background var(--vt);
+}
+.winkelkaart:last-child{border-bottom:none;}
+.winkelkaart:active{background:var(--card-2);}
+.winkelkaart .bol{
+  width:42px; height:42px; border-radius:13px; display:grid; place-items:center;
+  font-size:19px; flex:none;
+}
+.winkelkaart .tk{flex:1; min-width:0;}
+.winkelkaart .tk b{display:block; font-size:16px; font-weight:650; letter-spacing:-.005em;}
+.winkelkaart .tk span{font-size:13px; color:var(--muted);}
+.winkelkaart .pijl{color:var(--line-2);}
+.winkelkaart .pijl svg{width:19px; height:19px; stroke-width:2.4;}
+
+.wm-item{
+  display:flex; align-items:center; gap:14px; padding:16px 16px;
+  border-bottom:1px solid var(--line); transition:background var(--vt);
+}
+.wm-item:last-child{border-bottom:none;}
+.wm-item:active{background:var(--card-2);}
+.wm-item .vink{width:30px; height:30px; margin-top:0;}
+.wm-item .vink svg{width:17px; height:17px;}
+.wm-item .tk{flex:1; min-width:0;}
+.wm-item .tk b{font-size:17px; font-weight:650; letter-spacing:-.01em; display:block;}
+.wm-item.af .tk b{text-decoration:line-through; color:var(--muted);}
+.wm-item .tk span{font-size:13px; color:var(--muted);}
+
+/* ---------- uitgaven ---------- */
+.saldo{
+  padding:20px 18px; border-radius:var(--r-l); text-align:center;
+  background:var(--card); border:1px solid var(--line); box-shadow:var(--schaduw); margin-top:14px;
+}
+.saldo .bedrag{
+  font-size:34px; font-weight:750; letter-spacing:-.03em; margin:6px 0 3px;
+  font-variant-numeric:tabular-nums;
+}
+.saldo .uitleg{font-size:14px; color:var(--ink-2); line-height:1.45;}
+.saldo .label{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);}
+.stat-rij{display:flex; gap:10px; margin-top:12px;}
+.stat{
+  flex:1; padding:13px 12px; border-radius:var(--r-m); background:var(--card);
+  border:1px solid var(--line); text-align:center;
+}
+.stat b{display:block; font-size:19px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums;}
+.stat span{font-size:11.5px; color:var(--muted); font-weight:600;}
+
+.bon{
+  display:flex; align-items:center; gap:12px; padding:13px 14px;
+  border-bottom:1px solid var(--line);
+}
+.bon:last-child{border-bottom:none;}
+.bon .tk{flex:1; min-width:0;}
+.bon .tk b{font-size:15.5px; font-weight:650; display:block;}
+.bon .tk span{font-size:12.5px; color:var(--muted);}
+.bon .eur{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em;}
+
+/* ---------- rij (instellingen) ---------- */
+.rij{
+  display:flex; align-items:center; gap:13px; padding:14px 15px;
+  border-bottom:1px solid var(--line); text-align:left; width:100%;
+  transition:background var(--vt); background:var(--card);
+}
+.rij:last-child{border-bottom:none;}
+.rij:active{background:var(--card-2);}
+.rij .ik{
+  width:34px; height:34px; border-radius:10px; display:grid; place-items:center;
+  background:var(--bg-2); color:var(--ink-2); flex:none;
+}
+.rij .ik svg{width:18px; height:18px; stroke-width:2;}
+.rij .tk{flex:1; min-width:0;}
+.rij .tk b{display:block; font-size:15.5px; font-weight:600;}
+.rij .tk span{font-size:12.5px; color:var(--muted);}
+.rij .na{color:var(--muted); font-size:14px; display:flex; align-items:center; gap:6px;}
+.rij .na svg{width:17px; height:17px; stroke-width:2.4; color:var(--line-2);}
+
+/* ---------- inlog ---------- */
+.inlog{
+  min-height:100dvh; display:flex; flex-direction:column; justify-content:center;
+  padding:32px 24px calc(32px + env(safe-area-inset-bottom)); max-width:440px; margin:0 auto; width:100%;
+}
+.merk{text-align:center; margin-bottom:30px;}
+.merk .logo{
+  width:70px; height:70px; border-radius:22px; margin:0 auto 16px;
+  background:var(--accent); display:grid; place-items:center;
+  box-shadow:0 10px 26px -10px rgba(90,65,35,.6);
+}
+.merk .logo svg{width:36px; height:36px; color:var(--accent-ink); stroke-width:1.8;}
+.merk h1{margin:0; font-size:27px; font-weight:750; letter-spacing:-.03em;}
+.merk p{margin:6px 0 0; font-size:14.5px; color:var(--muted); line-height:1.45;}
+
+.pinvakken{display:flex; gap:11px; justify-content:center; margin:22px 0 4px;}
+.pinvak{
+  width:52px; height:62px; border-radius:var(--r-m); background:var(--card);
+  border:1.5px solid var(--line); display:grid; place-items:center;
+  font-size:26px; font-weight:700; transition:all var(--vt);
+}
+.pinvak.vol{border-color:var(--accent); background:var(--accent-zacht);}
+.pinvak.fout{border-color:var(--rood); animation:schud .4s;}
+@keyframes schud{
+  10%,90%{transform:translateX(-2px);} 20%,80%{transform:translateX(4px);}
+  30%,50%,70%{transform:translateX(-7px);} 40%,60%{transform:translateX(7px);}
+}
+.toetsen{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:11px; margin-top:22px;
+  max-width:300px; margin-inline:auto; width:100%;
+}
+.toets{
+  height:62px; border-radius:var(--r-m); background:var(--card); border:1px solid var(--line);
+  font-size:24px; font-weight:600; display:grid; place-items:center;
+  transition:all var(--vt); color:var(--ink);
+}
+.toets:active{background:var(--accent-zacht); transform:scale(.94);}
+.toets.leeg{background:transparent; border-color:transparent; pointer-events:none;}
+.toets.fn{font-size:15px; font-weight:650; color:var(--ink-2);}
+.toets svg{width:24px; height:24px; stroke-width:2;}
+
+.persoonkaart{
+  display:flex; align-items:center; gap:14px; padding:14px 16px; width:100%;
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r-l);
+  margin-bottom:10px; text-align:left; transition:all var(--vt); box-shadow:var(--schaduw);
+}
+.persoonkaart:active{transform:scale(.98);}
+.persoonkaart .tk{flex:1; min-width:0;}
+.persoonkaart .tk b{display:block; font-size:17px; font-weight:650; letter-spacing:-.01em;}
+.persoonkaart .tk span{font-size:12.5px; color:var(--muted);}
+
+/* ---------- fotobekijker ---------- */
+.kijker{
+  position:fixed; inset:0; z-index:95; background:rgba(18,13,5,.94);
+  display:flex; align-items:center; justify-content:center; flex-direction:column;
+  opacity:0; transition:opacity var(--vt); padding:20px;
+}
+.kijker.open{opacity:1;}
+.kijker img{max-width:100%; max-height:74dvh; border-radius:var(--r-m); object-fit:contain;}
+.kijker .bijschrift{color:rgba(255,250,242,.72); font-size:14px; margin-top:16px; text-align:center;}
+.kijker .sluit{
+  position:absolute; top:calc(env(safe-area-inset-top) + 12px); right:14px;
+  width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.14);
+  color:#fff; display:grid; place-items:center; backdrop-filter:blur(6px);
+}
+
+/* ---------- budget ---------- */
+.budgetkaart{
+  padding:22px 18px 20px; border-radius:var(--r-l); text-align:center;
+  background:var(--card); border:1px solid var(--line); box-shadow:var(--schaduw); margin-top:14px;
+}
+.ringvak{position:relative; width:190px; height:190px; margin:0 auto;}
+.ring{width:190px; height:190px; display:block; transform:rotate(-90deg);}
+.ring circle{fill:none; stroke-linecap:round;}
+.ring .baan{stroke:var(--bg-2); stroke-width:11;}
+.ring .vul{stroke:var(--groen); stroke-width:11;
+  transition:stroke-dashoffset .7s cubic-bezier(.32,.72,0,1), stroke .35s ease;}
+.ringtekst{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; padding:0 26px;
+}
+.ringtekst .groot{
+  font-size:34px; font-weight:750; letter-spacing:-.035em; line-height:1.05;
+  font-variant-numeric:tabular-nums;
+}
+.ringtekst .klein{
+  font-size:11px; font-weight:700; color:var(--muted); letter-spacing:.08em;
+  text-transform:uppercase; margin-top:5px;
+}
+.budgetkaart .onder{font-size:14px; color:var(--ink-2); margin-top:16px; line-height:1.45;}
+.tempo{
+  display:inline-flex; align-items:center; gap:8px; margin-top:13px;
+  padding:9px 15px; border-radius:999px; font-size:13.5px; font-weight:600;
+  line-height:1.35; text-align:left;
+}
+.tempo.goed{background:var(--groen-zacht); color:var(--groen);}
+.tempo.let{background:var(--rood-zacht); color:var(--rood);}
+.tempo.neutraal{background:var(--bg-2); color:var(--ink-2);}
+.tempo svg{width:16px; height:16px; flex:none; stroke-width:2.3;}
+
+.verdeel{padding:13px 15px; border-bottom:1px solid var(--line);}
+.verdeel:last-child{border-bottom:none;}
+.verdeel .rij1{display:flex; align-items:center; gap:9px; margin-bottom:7px;}
+.verdeel .rij1 .em{font-size:15px; flex:none;}
+.verdeel .rij1 b{
+  flex:1; min-width:0; font-size:14.5px; font-weight:600;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.verdeel .rij1 .eur{font-size:14.5px; font-weight:700; font-variant-numeric:tabular-nums;}
+.verdeel .rij1 .pct{
+  font-size:11.5px; color:var(--muted); font-weight:650;
+  font-variant-numeric:tabular-nums; min-width:34px; text-align:right;
+}
+.staaf{height:7px; border-radius:999px; background:var(--bg-2); overflow:hidden;}
+.staaf > div{height:100%; border-radius:999px; transition:width .5s cubic-bezier(.32,.72,0,1);}
+
+.maandgrafiek{display:flex; align-items:flex-end; gap:7px; padding:16px 15px 12px;}
+.mkolom{flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:5px;}
+.mkolom .staafvak{width:100%; height:86px; display:flex; align-items:flex-end; position:relative;}
+.mkolom .mstaaf{
+  width:100%; min-height:3px; border-radius:6px 6px 3px 3px;
+  background:var(--accent-zacht); transition:height .55s cubic-bezier(.32,.72,0,1);
+}
+.mkolom.nu .mstaaf{background:var(--accent);}
+.mkolom.over .mstaaf{background:var(--rood);}
+.mkolom .mdoel{
+  position:absolute; left:-1px; right:-1px; height:0;
+  border-top:1.5px dashed var(--line-2); pointer-events:none;
+}
+.mkolom .mlabel{
+  font-size:9.5px; color:var(--muted); font-weight:700;
+  text-transform:uppercase; letter-spacing:.04em;
+}
+.mkolom .mbedrag{font-size:10.5px; font-weight:700; font-variant-numeric:tabular-nums;}
+
+.uitgaverij{
+  display:flex; align-items:center; gap:12px; padding:12px 14px; width:100%;
+  text-align:left; background:var(--card); border-bottom:1px solid var(--line);
+  transition:background var(--vt);
+}
+.uitgaverij:last-child{border-bottom:none;}
+.uitgaverij:active{background:var(--card-2);}
+.uitgaverij .bol{
+  width:38px; height:38px; border-radius:12px; display:grid; place-items:center;
+  font-size:17px; flex:none;
+}
+.uitgaverij .tk{flex:1; min-width:0;}
+.uitgaverij .tk b{font-size:15px; font-weight:650; display:block;}
+.uitgaverij .tk span{
+  font-size:12.5px; color:var(--muted); display:block;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.uitgaverij .eur{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em;}
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed; left:50%; transform:translateX(-50%) translateY(0); z-index:120;
+  bottom:calc(var(--nav-h) + 82px + env(safe-area-inset-bottom));
+  background:var(--ink); color:var(--bg); padding:11px 18px; border-radius:999px;
+  font-size:14.5px; font-weight:600; box-shadow:var(--schaduw-op); max-width:88vw;
+  text-align:center; animation:toastIn .28s cubic-bezier(.32,.72,0,1);
+  display:flex; align-items:center; gap:8px;
+}
+@keyframes toastIn{from{opacity:0; transform:translateX(-50%) translateY(14px);}}
+.toast.weg{opacity:0; transform:translateX(-50%) translateY(14px); transition:all .3s ease;}
+
+/* ---------- banner ---------- */
+.banner{
+  display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:var(--r-m);
+  background:var(--rood-zacht); color:var(--rood); font-size:13.5px; font-weight:600;
+  margin-top:12px; line-height:1.35;
+}
+.banner.info{background:var(--accent-zacht); color:var(--accent);}
+.banner svg{width:18px; height:18px; flex:none; stroke-width:2.2;}
+
+/* ---------- diversen ---------- */
+.spinner{
+  width:20px; height:20px; border-radius:50%; border:2.5px solid var(--line);
+  border-top-color:var(--accent); animation:draai .7s linear infinite;
+}
+@keyframes draai{to{transform:rotate(360deg);}}
+.midden{display:grid; place-items:center; min-height:60dvh; gap:14px; color:var(--muted); font-size:14px;}
+.hint{font-size:12.5px; color:var(--muted); margin-top:7px; padding-left:2px; line-height:1.4;}
+.fade{animation:fadein .28s ease;}
+@keyframes fadein{from{opacity:0; transform:translateY(5px);}}
+.verborgen{display:none !important;}
+.nowrap{white-space:nowrap;}
+</style>
+</head>
+<body>
+<div id="app"><div class="midden"><div class="spinner"></div><span>Boodschappen laden…</span></div></div>
+<script src="firebase-config.js"></script>
+<script>
+/* =====================================================================
+   0 · INSTELLINGEN & CONSTANTEN
+   ===================================================================== */
+const CFG = Object.assign({
+  firebase:null, huisNaam:"Huisje OVS", ondertitel:"Boodschappen", ruimte:"ovs"
+}, window.BOODSCHAPPEN_CONFIG || {});
+
+const VERSIE = "1.0.0";
+const P = CFG.ruimte || "ovs";                    // voorvoegsel van alle collecties
+const PAD = {
+  leden:  P+"_leden",
+  items:  P+"_items",
+  fotos:  P+"_fotos",
+  winkels:P+"_winkels",
+  vast:   P+"_vast",
+  bonnen: P+"_bonnen",
+  meta:   P+"_meta"
+};
+
+const KLEUREN = ["#8C6E4F","#6E8B62","#B85C43","#4F6E8C","#8C5F7A","#A8853C","#5B7D7A","#7A5C8C"];
+
+const CATS = [
+  {id:"groente",  naam:"Groente & fruit", em:"🥬"},
+  {id:"brood",    naam:"Brood & banket",  em:"🥖"},
+  {id:"zuivel",   naam:"Zuivel & eieren", em:"🥛"},
+  {id:"vlees",    naam:"Vlees & vis",     em:"🥩"},
+  {id:"maaltijd", naam:"Maaltijd & pasta",em:"🍝"},
+  {id:"voorraad", naam:"Voorraadkast",    em:"🥫"},
+  {id:"diepvries",naam:"Diepvries",       em:"🧊"},
+  {id:"snacks",   naam:"Snoep & snacks",  em:"🍫"},
+  {id:"drinken",  naam:"Drinken",         em:"🥤"},
+  {id:"huis",     naam:"Huishouden",      em:"🧴"},
+  {id:"verzorg",  naam:"Verzorging",      em:"🧼"},
+  {id:"klus",     naam:"Huisje & klussen",em:"🔧"},
+  {id:"overig",   naam:"Overig",          em:"📦"}
+];
+const catVan = id => CATS.find(c => c.id === id) || CATS[CATS.length-1];
+const catIndex = id => { const i = CATS.findIndex(c => c.id === id); return i < 0 ? 99 : i; };
+
+const STANDAARD_WINKELS = [
+  {id:"ah",      naam:"Albert Heijn", em:"🛒", kleur:"#4F84C4", volgorde:1},
+  {id:"jumbo",   naam:"Jumbo",        em:"🛒", kleur:"#C9A227", volgorde:2},
+  {id:"lidl",    naam:"Lidl",         em:"🛒", kleur:"#5B8C5A", volgorde:3},
+  {id:"action",  naam:"Action",       em:"🏬", kleur:"#B85C43", volgorde:4},
+  {id:"bouw",    naam:"Bouwmarkt",    em:"🔨", kleur:"#8C6E4F", volgorde:5},
+  {id:"drog",    naam:"Drogist",      em:"💊", kleur:"#8C5F7A", volgorde:6},
+  {id:"markt",   naam:"Markt",        em:"🧺", kleur:"#6E8B62", volgorde:7},
+  {id:"online",  naam:"Online",       em:"📦", kleur:"#5B7D7A", volgorde:8},
+  {id:"nvt",     naam:"Nog niet gekozen", em:"❓", kleur:"#918878", volgorde:99}
+];
+
+/* woorden waarmee de app zelf een categorie raadt bij het typen */
+const RAAD = {
+  groente:["appel","banaan","sla","tomaat","komkommer","ui","uien","paprika","wortel","aardappel","avocado","citroen","sinaasappel","broccoli","spinazie","champignon","knoflook","druiven","peer","aardbei","courgette","bloemkool","mandarijn","meloen","prei","boontjes","salade","fruit","groente"],
+  brood:["brood","bolletjes","croissant","stokbrood","beschuit","crackers","taart","gebak","pistolet","wraps","tortilla","bagel","cake","koek"],
+  zuivel:["melk","kaas","yoghurt","boter","ei","eieren","kwark","room","slagroom","vla","karnemelk","mozzarella","feta","margarine","skyr"],
+  vlees:["kip","gehakt","biefstuk","worst","ham","spek","zalm","vis","garnalen","tonijn","kipfilet","hamburger","salami","tofu","vegaburger","rookworst","speklapjes"],
+  maaltijd:["pasta","spaghetti","rijst","noedels","couscous","penne","macaroni","lasagne","pizza","maaltijdmix","bami","nasi"],
+  voorraad:["olie","azijn","zout","peper","suiker","meel","bloem","tomatenblik","bonen","soep","saus","ketchup","mayonaise","mosterd","kruiden","bouillon","pindakaas","jam","hagelslag","honing","muesli","cornflakes","thee","koffie","kokosmelk","curry","sambal"],
+  diepvries:["diepvries","ijs","spinazie diepvries","friet","frites","pizza diepvries","ijsjes","erwtjes"],
+  snacks:["chips","chocola","chocolade","koekjes","snoep","nootjes","popcorn","zoutjes","reep","drop","toffee","stroopwafel"],
+  drinken:["water","cola","bier","wijn","sap","limonade","fris","spa","tonic","prosecco","appelsap","sinas","radler","ijsthee","energiedrank"],
+  huis:["afwasmiddel","wasmiddel","vuilniszakken","allesreiniger","wc-papier","toiletpapier","keukenrol","sponsjes","schoonmaak","wasverzachter","vaatwastabletten","luchtverfrisser","aluminiumfolie","bakpapier","kaarsen","batterijen","lampen","lamp"],
+  verzorg:["tandpasta","shampoo","zeep","deodorant","scheerschuim","douchegel","tandenborstel","zonnebrand","bodylotion","pleisters","paracetamol","crème"],
+  klus:["schroeven","verf","kwast","tape","spijkers","kit","schuurpapier","plinten","hout","tuinaarde","planten","gereedschap","boor","stopcontact","slot"]
+};
+/* “tomaten” en “tomaat”, “broodjes” en “brood”: terug naar de stam */
+function stam(w){
+  let s = String(w||"").toLowerCase().replace(/[^a-zà-ÿ]/g, "");
+  s = s.replace(/(tjes|jes|tje)$/, "");
+  s = s.replace(/(en|s)$/, "");
+  s = s.replace(/([bdfgklmnprst])\1$/, "$1");     // pakken → pak
+  s = s.replace(/aa([bdfgklmnprstz])$/, "a$1");   // tomaten → tomat → tomaat-achtig
+  return s;
+}
+const RAAD_STAM = {};
+for(const [cat, woorden] of Object.entries(RAAD)){
+  for(const w of woorden){
+    for(const deel of w.split(" ")){
+      const s = stam(deel);
+      if(s.length >= 3 && !(s in RAAD_STAM)) RAAD_STAM[s] = cat;
+    }
+  }
+}
+function raadCategorie(tekst){
+  const t = String(tekst||"").toLowerCase().trim();
+  if(!t) return null;
+  const heel = stam(t);
+  if(heel.length >= 3 && RAAD_STAM[heel]) return RAAD_STAM[heel];
+  const woorden = t.split(/[\s,./-]+/).filter(Boolean);
+  for(const woord of woorden){
+    const s = stam(woord);
+    if(s.length >= 3 && RAAD_STAM[s]) return RAAD_STAM[s];
+  }
+  /* samengestelde woorden: volkorenbrood, wasmiddel, sinaasappelsap */
+  for(const woord of woorden){
+    const s = stam(woord);
+    if(s.length < 5) continue;
+    let besteLengte = 0, besteCat = null;
+    for(const [sleutel, cat] of Object.entries(RAAD_STAM)){
+      if(sleutel.length >= 4 && sleutel.length > besteLengte && s.includes(sleutel)){
+        besteLengte = sleutel.length; besteCat = cat;
+      }
+    }
+    if(besteCat) return besteCat;
+  }
+  return null;
+}
+
+/* =====================================================================
+   1 · KLEINE HELPERS
+   ===================================================================== */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nu = () => Date.now();
+const id6 = () => Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-4);
+const tril = (ms=8) => { try{ navigator.vibrate && navigator.vibrate(ms); }catch(e){} };
+
+function euro(n){
+  const v = Number(n)||0;
+  return "€" + v.toFixed(2).replace(".", ",");
+}
+function initialen(naam){
+  const d = String(naam||"?").trim().split(/\s+/);
+  return ((d[0]?.[0]||"") + (d.length>1 ? d[d.length-1][0] : "")).toUpperCase() || "?";
+}
+function datumKort(ts){
+  if(!ts) return "";
+  const d = new Date(ts), n = new Date();
+  const zelfdeDag = d.toDateString() === n.toDateString();
+  const gisteren = new Date(n.getTime() - 864e5).toDateString() === d.toDateString();
+  const tijd = d.toLocaleTimeString("nl-NL", {hour:"2-digit", minute:"2-digit"});
+  if(zelfdeDag) return tijd;
+  if(gisteren) return "gisteren " + tijd;
+  const dagen = Math.round((n - d) / 864e5);
+  if(dagen < 7) return d.toLocaleDateString("nl-NL", {weekday:"short"}) + " " + tijd;
+  return d.toLocaleDateString("nl-NL", {day:"numeric", month:"short"});
+}
+function datumLang(ts){
+  if(!ts) return "";
+  return new Date(ts).toLocaleDateString("nl-NL", {weekday:"long", day:"numeric", month:"long"});
+}
+function maandSleutel(ts){ const d = new Date(ts); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); }
+function maandKort(sleutel){
+  const [j, m] = sleutel.split("-").map(Number);
+  const naam = new Date(j, m-1, 1).toLocaleDateString("nl-NL", {month:"long"});
+  const kop = naam.charAt(0).toUpperCase() + naam.slice(1);
+  return j === new Date().getFullYear() ? kop : kop + " " + j;
+}
+function maandNaam(sleutel){
+  const [j,m] = sleutel.split("-").map(Number);
+  const naam = new Date(j, m-1, 1).toLocaleDateString("nl-NL", {month:"long", year:"numeric"});
+  return naam.charAt(0).toUpperCase() + naam.slice(1);
+}
+
+/* iconen (inline svg, één stijl) */
+const IK = {
+  zoek:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
+  vink:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5.2 5.2L20 7"/></svg>',
+  kruis:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  lijst:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.3"/><circle cx="4.5" cy="12" r="1.3"/><circle cx="4.5" cy="18" r="1.3"/></svg>',
+  kar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2.2l2.3 11.2a1.6 1.6 0 0 0 1.6 1.3h8.3a1.6 1.6 0 0 0 1.6-1.2L21 8H6.2"/><circle cx="10" cy="20" r="1.4"/><circle cx="17.5" cy="20" r="1.4"/></svg>',
+  euro:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 6.2A6.4 6.4 0 0 0 12 4.4c-3.4 0-6.2 3.4-6.2 7.6s2.8 7.6 6.2 7.6a6.4 6.4 0 0 0 4.5-1.8"/><path d="M4 10.2h8.4M4 13.8h8.4"/></svg>',
+  meer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18.5" r="1.5"/></svg>',
+  tandwiel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>',
+  camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5h2.8l1.4-2.2h7.6l1.4 2.2H20a1.5 1.5 0 0 1 1.5 1.5v7.5A1.5 1.5 0 0 1 20 19H4a1.5 1.5 0 0 1-1.5-1.5V10A1.5 1.5 0 0 1 4 8.5Z"/><circle cx="12" cy="13.5" r="3.2"/></svg>',
+  foto:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.2"/><circle cx="8.5" cy="10" r="1.6"/><path d="m3.5 17 4.8-4.4a1.6 1.6 0 0 1 2.2 0l4 3.7M14 14.6l1.6-1.4a1.6 1.6 0 0 1 2.2 0l2.7 2.4"/></svg>',
+  prul:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16M9.5 6.5V4.8A1.3 1.3 0 0 1 10.8 3.5h2.4a1.3 1.3 0 0 1 1.3 1.3v1.7M6.5 6.5 7.4 19a1.5 1.5 0 0 0 1.5 1.4h6.2a1.5 1.5 0 0 0 1.5-1.4l.9-12.5M10.5 10v6.5M13.5 10v6.5"/></svg>',
+  potlood:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0 0-3l-1-1a2.1 2.1 0 0 0-3 0L4 16z"/><path d="m13.5 6.5 4 4"/></svg>',
+  pijl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>',
+  terug:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg>',
+  filter:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5h17l-6.6 7.6V19l-3.8 2v-7.9z"/></svg>',
+  ster:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3.7 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.9l5.9-.9z"/></svg>',
+  bliksem:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 2.5 4.8 13.2h5.6l-.9 8.3 8.7-10.7h-5.6z"/></svg>',
+  winkel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19V9.5"/><path d="M3 9.5 4.7 4.4A1.5 1.5 0 0 1 6.1 3.5h11.8a1.5 1.5 0 0 1 1.4 1L21 9.5a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0Z"/></svg>',
+  persoon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg>',
+  maan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>',
+  deel:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="17.5" cy="5.5" r="2.5"/><circle cx="6.5" cy="12" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/><path d="m8.8 10.7 6.4-3.8M8.8 13.3l6.4 3.8"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r=".9" fill="currentColor"/></svg>',
+  klok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.2 2"/></svg>',
+  slot:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>',
+  uit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5h3A1.5 1.5 0 0 1 19.5 6v12a1.5 1.5 0 0 1-1.5 1.5h-3"/><path d="M10 8 6 12l4 4M6.5 12H15"/></svg>',
+  herhaal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5A6.5 6.5 0 0 1 16.6 7L19 9.5M20 14.5A6.5 6.5 0 0 1 7.4 17L5 14.5"/><path d="M19 4.5v5h-5M5 19.5v-5h5"/></svg>',
+  wolk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18.5h10.2a4 4 0 0 0 .6-8A6 6 0 0 0 6.3 9.6 4.5 4.5 0 0 0 7 18.5Z"/></svg>',
+  waarsch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.2 2.6 17.5A1.9 1.9 0 0 0 4.3 20.4h15.4a1.9 1.9 0 0 0 1.7-2.9L13.7 4.2a1.9 1.9 0 0 0-3.4 0Z"/><path d="M12 9.5v4"/><circle cx="12" cy="16.8" r=".9" fill="currentColor"/></svg>',
+  sorteer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15M7 19.5 4 16.5M7 19.5l3-3M17 19.5v-15M17 4.5l-3 3M17 4.5l3 3"/></svg>',
+  bon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 3.5v17l2.2-1.4 2.1 1.4 2.2-1.4 2.1 1.4 2.2-1.4 2.2 1.4v-17z"/><path d="M8.8 8h6.4M8.8 12h6.4"/></svg>',
+  vlam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c3.6 0 6.2-2.4 6.2-5.7 0-4.4-4.3-5.6-3.4-10.8C11.3 6 9 8.6 9.4 11.6c-1-.5-1.7-1.6-1.9-2.9-1.1 1.3-1.7 3.2-1.7 5.1C5.8 18 8.4 21 12 21Z"/></svg>'
+};
+
+/* =====================================================================
+   2 · OPSLAG — demo (dit apparaat) of Firestore (gedeeld)
+   ===================================================================== */
+const LS = {
+  get(k, val){ try{ const s = localStorage.getItem(k); return s === null ? val : JSON.parse(s); }catch(e){ return val; } },
+  zet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+  weg(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+
+function demoDB(){
+  const SLEUTEL = "boodschappen_demo_" + P;
+  let store = LS.get(SLEUTEL, {});
+  const luisteraars = {};
+  const bewaar = () => LS.zet(SLEUTEL, store);
+  const herlaad = () => { store = LS.get(SLEUTEL, {}); };
+  const meld = col => (luisteraars[col]||[]).forEach(cb => cb(alles(col)));
+  const alles = col => Object.entries(store[col]||{}).map(([id,d]) => ({id, ...d}));
+  window.addEventListener("storage", e => {
+    if(e.key === SLEUTEL){ herlaad(); Object.keys(luisteraars).forEach(meld); }
+  });
+  return {
+    demo:true,
+    luister(col, cb){
+      (luisteraars[col] ||= []).push(cb);
+      herlaad(); setTimeout(() => cb(alles(col)), 0);
+      return () => { luisteraars[col] = (luisteraars[col]||[]).filter(f => f !== cb); };
+    },
+    async voegToe(col, data){ herlaad(); const i = id6(); (store[col] ||= {})[i] = data; bewaar(); meld(col); return i; },
+    async zet(pad, data){
+      herlaad(); const d = pad.split("/"); const i = d.pop(); const col = d.join("/");
+      (store[col] ||= {})[i] = Object.assign({}, store[col][i]||{}, data); bewaar(); meld(col);
+    },
+    async wis(pad){
+      herlaad(); const d = pad.split("/"); const i = d.pop(); const col = d.join("/");
+      if(store[col]){ delete store[col][i]; bewaar(); meld(col); }
+    },
+    async haal(pad){
+      herlaad(); const d = pad.split("/"); const i = d.pop(); const col = d.join("/");
+      return store[col] && store[col][i] ? {id:i, ...store[col][i]} : null;
+    },
+    async haalAlles(col){ herlaad(); return alles(col); }
+  };
+}
+
+async function firestoreDB(){
+  const {initializeApp} = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  const F = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+  const app = initializeApp(CFG.firebase);
+  let db;
+  try{
+    db = F.initializeFirestore(app, {localCache: F.persistentLocalCache({tabManager: F.persistentMultipleTabManager()})});
+  }catch(e){ db = F.getFirestore(app); }
+  const colRef = p => F.collection(db, ...p.split("/"));
+  const docRef = p => F.doc(db, ...p.split("/"));
+  return {
+    demo:false,
+    luister(col, cb){
+      return F.onSnapshot(colRef(col),
+        s => cb(s.docs.map(d => ({id:d.id, ...d.data()}))),
+        e => { console.error("luister", col, e); toonSyncFout(e); });
+    },
+    /* Firestore lost een schrijfactie pas in als de server hem bevestigt.
+       De lokale cache is meteen bij, dus we wachten daar niet op: zo werkt de
+       app ook met een slechte verbinding of helemaal offline gewoon door. */
+    async voegToe(col, data){
+      const i = id6();
+      F.setDoc(docRef(col + "/" + i), data).catch(e => { console.error("schrijven", col, e); toonSyncFout(e); });
+      return i;
+    },
+    async zet(pad, data){
+      F.setDoc(docRef(pad), data, {merge:true}).catch(e => { console.error("schrijven", pad, e); toonSyncFout(e); });
+    },
+    async wis(pad){
+      F.deleteDoc(docRef(pad)).catch(e => { console.error("wissen", pad, e); toonSyncFout(e); });
+    },
+    async haal(pad){ const s = await F.getDoc(docRef(pad)); return s.exists() ? {id:s.id, ...s.data()} : null; },
+    async haalAlles(col){ const s = await F.getDocs(colRef(col)); return s.docs.map(d => ({id:d.id, ...d.data()})); }
+  };
+}
+
+let DB = null;
+let syncFoutGemeld = false;
+function toonSyncFout(e){
+  if(syncFoutGemeld) return;
+  syncFoutGemeld = true;
+  S.syncFout = (e && e.code === "permission-denied")
+    ? "Geen toegang tot de gedeelde database. Controleer de Firestore-regels (zie README)."
+    : "Geen verbinding met de gedeelde lijst — je ziet de laatst bekende versie.";
+  tekenNu();
+}
+
+/* =====================================================================
+   3 · TOESTAND
+   ===================================================================== */
+const S = {
+  ik:null,                 // {id, naam}
+  leden:[], items:[], winkels:[], vast:[], bonnen:[],
+  geladen:false,
+  tab:"lijst",
+  syncFout:null,
+  fotoCache:{},
+  filter:{winkel:null, cat:null, door:null, urgent:false, zoek:"", groep:"winkel", toonAf:true},
+  winkelSessie:null,       // {winkelId, gestart}
+  maand:null,                    // welke maand het budgetscherm laat zien
+  budget:{standaard:0, perMaand:{}},
+  laatsteItemIds:null,     // om nieuwe items van de ander te herkennen
+  sheet:null,
+  kijker:null
+};
+
+const AV = {
+  html(lid, klas="", online=false){
+    if(!lid) return "";
+    const k = lid.kleur || KLEUREN[0];
+    return `<span class="av ${klas}" style="background:${esc(k)}" title="${esc(lid.naam||"")}">${esc(initialen(lid.naam))}${online?'<i class="stip"></i>':""}</span>`;
+  }
+};
+const lidVan = idd => S.leden.find(l => l.id === idd) || null;
+const naamVan = idd => (lidVan(idd)?.naam) || "Iemand";
+const isOnline = lid => lid && lid.laatstGezien && (nu() - lid.laatstGezien < 3*60*1000);
+const winkelVan = wid => S.winkels.find(w => w.id === wid) || S.winkels.find(w => w.id === "nvt") || {id:"nvt", naam:"Nog niet gekozen", em:"❓", kleur:"#918878"};
+
+/* ---------- scrollen ----------
+   De hele pagina scrolt met het venster (zo blijft op iOS het adresbalk-gedrag
+   normaal). Deze helpers houden dat op één plek. */
+const scrollNu = () => window.scrollY || document.documentElement.scrollTop || 0;
+const naarBoven = (zacht) => window.scrollTo(zacht ? {top:0, behavior:"smooth"} : {top:0});
+function volgScroll(){
+  const kop = $("#kop");
+  if(!kop) return;
+  const bij = () => kop.classList.toggle("geplakt", scrollNu() > 4);
+  window.onscroll = bij;
+  bij();
+}
+
+/* ---------- toast ---------- */
+function toast(tekst, em){
+  $$(".toast").forEach(t => t.remove());
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.innerHTML = (em ? `<span>${em}</span>` : "") + `<span>${esc(tekst)}</span>`;
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add("weg"), 2400);
+  setTimeout(() => t.remove(), 2750);
+}
+
+/* ---------- thema ---------- */
+function zetThema(t){
+  LS.zet("boodschappen_thema", t);
+  const echt = t === "auto"
+    ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "donker" : "licht")
+    : t;
+  document.documentElement.dataset.thema = echt;
+  const kleur = echt === "donker" ? "#191713" : "#F2EDE4";
+  $$('meta[name="theme-color"]').forEach(m => m.setAttribute("content", kleur));
+}
+zetThema(LS.get("boodschappen_thema", "auto"));
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if(LS.get("boodschappen_thema","auto") === "auto") zetThema("auto");
+});
+
+/* =====================================================================
+   4 · FOTO'S — verkleinen, opslaan, ophalen
+   ===================================================================== */
+function leesBestand(file){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+function laadPlaatje(src){
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = rej;
+    im.src = src;
+  });
+}
+function schaal(im, maxZij, kwaliteit){
+  const f = Math.min(1, maxZij / Math.max(im.width, im.height));
+  const cv = document.createElement("canvas");
+  cv.width = Math.round(im.width * f);
+  cv.height = Math.round(im.height * f);
+  const ct = cv.getContext("2d");
+  ct.fillStyle = "#fff"; ct.fillRect(0,0,cv.width,cv.height);
+  ct.drawImage(im, 0, 0, cv.width, cv.height);
+  return cv.toDataURL("image/jpeg", kwaliteit);
+}
+/* geeft {groot, klein} terug — allebei data-urls */
+async function verkleinFoto(file){
+  const ruw = await leesBestand(file);
+  const im = await laadPlaatje(ruw);
+  let groot = schaal(im, 1280, 0.72);
+  let q = 0.72;
+  while(groot.length > 780000 && q > 0.32){ q -= 0.1; groot = schaal(im, 1280, q); }
+  if(groot.length > 780000) groot = schaal(im, 900, 0.5);
+  const klein = schaal(im, 220, 0.55);
+  return {groot, klein};
+}
+async function bewaarFoto(file){
+  const {groot, klein} = await verkleinFoto(file);
+  const fid = id6();
+  await DB.zet(PAD.fotos + "/" + fid, {data:groot, gemaakt:nu()});
+  await DB.zet(PAD.fotos + "/" + fid + "_k", {data:klein, gemaakt:nu()});
+  S.fotoCache[fid] = groot;
+  S.fotoCache[fid + "_k"] = klein;
+  return fid;
+}
+async function haalFoto(fid){
+  if(!fid) return null;
+  if(S.fotoCache[fid]) return S.fotoCache[fid];
+  const d = await DB.haal(PAD.fotos + "/" + fid);
+  if(d && d.data){ S.fotoCache[fid] = d.data; return d.data; }
+  return null;
+}
+/* vult <img data-foto="..."> zodra het plaatje binnen is */
+async function vulFotos(root){
+  const els = Array.from((root||document).querySelectorAll("img[data-foto]"));
+  for(const el of els){
+    const fid = el.dataset.foto;
+    el.removeAttribute("data-foto");
+    const d = await haalFoto(fid);
+    if(d){ el.src = d; el.classList.remove("laden"); }
+    else { el.classList.remove("laden"); el.style.visibility = "hidden"; }
+  }
+}
+async function wisFoto(fid){
+  if(!fid) return;
+  try{ await DB.wis(PAD.fotos + "/" + fid); await DB.wis(PAD.fotos + "/" + fid + "_k"); }catch(e){}
+  delete S.fotoCache[fid]; delete S.fotoCache[fid + "_k"];
+}
+
+function openKijker(fid, bijschrift){
+  const el = document.createElement("div");
+  el.className = "kijker";
+  el.innerHTML = `
+    <button class="sluit">${IK.kruis}</button>
+    <img class="laden" data-foto="${esc(fid)}" alt="">
+    <div class="bijschrift">${esc(bijschrift||"")}</div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("open"));
+  const geopend = nu();
+  const dicht = () => { el.classList.remove("open"); setTimeout(() => el.remove(), 220); };
+  el.addEventListener("click", () => { if(nu() - geopend > 400) dicht(); });
+  vulFotos(el);
+}
+
+/* =====================================================================
+   5 · PINCODE
+   ===================================================================== */
+async function hashPin(naam, pin){
+  const tekst = "huisje-ovs::" + String(naam).toLowerCase().trim() + "::" + pin;
+  try{
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(tekst));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+  }catch(e){
+    let h = 5381;
+    for(let i=0;i<tekst.length;i++){ h = ((h<<5) + h + tekst.charCodeAt(i)) | 0; }
+    return "s" + (h >>> 0).toString(16);
+  }
+}
+
+/* =====================================================================
+   6 · INLOGSCHERM
+   ===================================================================== */
+const IN = {stap:"kies", lid:null, naam:"", pin:"", pin2:"", fout:false, bezig:false};
+
+function tekenInlog(){
+  const app = $("#app");
+  if(IN.stap === "kies")      app.innerHTML = inlogKies();
+  else if(IN.stap === "naam") app.innerHTML = inlogNaam();
+  else                        app.innerHTML = inlogPin();
+  bindInlog();
+}
+
+function merkHtml(titel, onder){
+  return `
+  <div class="merk">
+    <div class="logo">${IK.winkel}</div>
+    <h1>${esc(titel)}</h1>
+    <p>${onder}</p>
+  </div>`;
+}
+
+function inlogKies(){
+  const leden = [...S.leden].sort((a,b) => (b.laatstGezien||0) - (a.laatstGezien||0));
+  return `<div class="inlog fade">
+    ${merkHtml(CFG.huisNaam, "De boodschappenlijst van het huisje.<br>Kies wie je bent om verder te gaan.")}
+    ${leden.map(l => `
+      <button class="persoonkaart" data-lid="${esc(l.id)}">
+        ${AV.html(l, "groot", isOnline(l))}
+        <div class="tk">
+          <b>${esc(l.naam)}</b>
+          <span>${l.laatstGezien ? "laatst actief " + datumKort(l.laatstGezien) : "nog niet ingelogd"}</span>
+        </div>
+        <span class="na" style="color:var(--line-2)">${IK.pijl}</span>
+      </button>`).join("")}
+    <button class="persoonkaart" id="nieuw-account" style="border-style:dashed; box-shadow:none; background:transparent">
+      <span class="av groot" style="background:var(--bg-2); color:var(--muted)">+</span>
+      <div class="tk"><b>Nieuw account</b><span>Maak een account met je eigen pincode</span></div>
+    </button>
+    ${S.syncFout ? `<div class="banner">${IK.waarsch}<span>${esc(S.syncFout)}</span></div>` : ""}
+    ${DB && DB.demo ? `<div class="banner info">${IK.info}<span>Demo-modus: de lijst staat alleen op dit apparaat. Zie README om het delen aan te zetten.</span></div>` : ""}
+  </div>`;
+}
+
+function inlogNaam(){
+  return `<div class="inlog fade">
+    ${merkHtml("Nieuw account", "Hoe heet je? Deze naam zien de anderen<br>bij de boodschappen die jij toevoegt.")}
+    <div class="veld">
+      <label>Je naam</label>
+      <input class="invoer" id="naam-in" placeholder="Bijvoorbeeld Merel" autocomplete="given-name"
+             maxlength="24" value="${esc(IN.naam)}">
+      <div class="hint" id="naam-hint">Straks kies je een pincode van 4 cijfers.</div>
+    </div>
+    <button class="knop vol" id="naam-door">Verder</button>
+    <button class="knop stil vol" id="naam-terug" style="margin-top:10px">Terug</button>
+  </div>`;
+}
+
+function inlogPin(){
+  const nieuw = IN.stap === "pin-nieuw" || IN.stap === "pin-herhaal";
+  const herhaal = IN.stap === "pin-herhaal";
+  const pin = herhaal ? IN.pin2 : IN.pin;
+  const titel = herhaal ? "Nog een keer" : (nieuw ? "Kies een pincode" : "Welkom terug");
+  const onder = herhaal ? "Voer dezelfde vier cijfers nog eens in."
+              : nieuw   ? "Vier cijfers. Die heb je voortaan nodig<br>om de lijst te openen."
+                        : `Hoi ${esc(IN.lid?.naam||"")} — voer je pincode in.`;
+  return `<div class="inlog fade">
+    <div class="merk">
+      ${IN.lid ? `<div style="display:grid;place-items:center;margin-bottom:14px">${AV.html(IN.lid,"xl")}</div>`
+               : `<div class="logo">${IK.slot}</div>`}
+      <h1>${titel}</h1>
+      <p>${onder}</p>
+    </div>
+    <div class="pinvakken">
+      ${[0,1,2,3].map(i => `<div class="pinvak ${pin.length>i?"vol":""} ${IN.fout?"fout":""}">${pin[i]?"•":""}</div>`).join("")}
+    </div>
+    <div class="hint" style="text-align:center; min-height:20px; color:${IN.fout?"var(--rood)":"var(--muted)"}">
+      ${IN.fout ? "Dat klopt niet. Probeer het opnieuw." : ""}
+    </div>
+    <div class="toetsen">
+      ${[1,2,3,4,5,6,7,8,9].map(n => `<button class="toets" data-cijfer="${n}">${n}</button>`).join("")}
+      <button class="toets fn" id="pin-terug">Terug</button>
+      <button class="toets" data-cijfer="0">0</button>
+      <button class="toets fn" id="pin-wis">${IK.terug}</button>
+    </div>
+    ${(!nieuw) ? `<button class="knop stil vol" id="pin-vergeten" style="margin-top:20px">Pincode vergeten?</button>` : ""}
+  </div>`;
+}
+
+function bindInlog(){
+  $$("[data-lid]").forEach(b => b.onclick = () => {
+    IN.lid = lidVan(b.dataset.lid); IN.pin = ""; IN.fout = false;
+    IN.stap = IN.lid && IN.lid.pinHash ? "pin" : "pin-nieuw";
+    tril(); tekenInlog();
+  });
+  const nw = $("#nieuw-account");
+  if(nw) nw.onclick = () => { IN.stap = "naam"; IN.naam = ""; tril(); tekenInlog(); };
+
+  const nin = $("#naam-in");
+  if(nin){
+    setTimeout(() => nin.focus(), 120);
+    const door = () => {
+      const n = nin.value.trim();
+      if(n.length < 2){ $("#naam-hint").textContent = "Vul minstens twee letters in."; $("#naam-hint").style.color = "var(--rood)"; return; }
+      if(S.leden.some(l => l.naam.toLowerCase() === n.toLowerCase())){
+        $("#naam-hint").textContent = "Die naam bestaat al — kies hem in de lijst hiervoor.";
+        $("#naam-hint").style.color = "var(--rood)"; return;
+      }
+      IN.naam = n; IN.lid = null; IN.pin = ""; IN.pin2 = ""; IN.stap = "pin-nieuw"; tekenInlog();
+    };
+    $("#naam-door").onclick = door;
+    nin.onkeydown = e => { if(e.key === "Enter") door(); };
+    $("#naam-terug").onclick = () => { IN.stap = "kies"; tekenInlog(); };
+  }
+
+  $$("[data-cijfer]").forEach(b => b.onclick = () => {
+    const veld = IN.stap === "pin-herhaal" ? "pin2" : "pin";
+    if(IN[veld].length >= 4) return;
+    IN[veld] += b.dataset.cijfer; IN.fout = false; tril(6);
+    tekenInlog();
+    if(IN[veld].length === 4) setTimeout(pinKlaar, 130);
+  });
+  const wis = $("#pin-wis");
+  if(wis) wis.onclick = () => {
+    const veld = IN.stap === "pin-herhaal" ? "pin2" : "pin";
+    IN[veld] = IN[veld].slice(0,-1); IN.fout = false; tril(6); tekenInlog();
+  };
+  const pt = $("#pin-terug");
+  if(pt) pt.onclick = () => {
+    if(IN.stap === "pin-herhaal"){ IN.stap = "pin-nieuw"; IN.pin = ""; IN.pin2 = ""; }
+    else if(IN.stap === "pin-nieuw" && !IN.lid){ IN.stap = "naam"; }
+    else { IN.stap = "kies"; IN.lid = null; IN.pin = ""; }
+    IN.fout = false; tekenInlog();
+  };
+  const pv = $("#pin-vergeten");
+  if(pv) pv.onclick = () => {
+    alert("Pincode vergeten?\n\nVraag " + (S.leden.filter(l => l.id !== IN.lid?.id)[0]?.naam || "de ander") +
+          " om de app te openen en bij Meer → Huisgenoten jouw pincode te wissen. Daarna kies je een nieuwe.");
+  };
+}
+
+async function pinKlaar(){
+  if(IN.bezig) return;
+  IN.bezig = true;
+  try{
+    if(IN.stap === "pin"){
+      const h = await hashPin(IN.lid.naam, IN.pin);
+      if(h === IN.lid.pinHash){ await inloggenAls(IN.lid.id); return; }
+      IN.fout = true; IN.pin = ""; tril(60); tekenInlog();
+    }
+    else if(IN.stap === "pin-nieuw"){
+      IN.stap = "pin-herhaal"; IN.pin2 = ""; tekenInlog();
+    }
+    else if(IN.stap === "pin-herhaal"){
+      if(IN.pin !== IN.pin2){
+        IN.fout = true; IN.pin = ""; IN.pin2 = ""; IN.stap = "pin-nieuw"; tril(60); tekenInlog();
+        setTimeout(() => toast("De codes waren niet gelijk", "🔒"), 100);
+        return;
+      }
+      const naam = IN.lid ? IN.lid.naam : IN.naam;
+      const h = await hashPin(naam, IN.pin);
+      if(IN.lid){
+        await DB.zet(PAD.leden + "/" + IN.lid.id, {pinHash:h});
+        await inloggenAls(IN.lid.id);
+      }else{
+        const lid = {
+          naam,
+          kleur: KLEUREN[S.leden.length % KLEUREN.length],
+          pinHash: h, gemaakt: nu(), laatstGezien: nu()
+        };
+        const nid = await DB.voegToe(PAD.leden, lid);
+        S.leden.push({id:nid, ...lid});
+        await inloggenAls(nid);
+      }
+    }
+  }catch(e){
+    console.error(e); toast("Er ging iets mis — probeer opnieuw");
+    IN.fout = true; IN.pin = ""; IN.pin2 = ""; tekenInlog();
+  }finally{ IN.bezig = false; }
+}
+
+async function inloggenAls(lidId){
+  const lid = lidVan(lidId);
+  S.ik = {id:lidId, naam: lid ? lid.naam : "Ik"};
+  LS.zet("boodschappen_ik_" + P, S.ik);
+  try{ await DB.zet(PAD.leden + "/" + lidId, {laatstGezien: nu()}); }catch(e){}
+  IN.pin = ""; IN.pin2 = ""; IN.fout = false;
+  startHartslag();
+  tekenNu();
+  setTimeout(() => toast("Welkom, " + (lid?.naam.split(" ")[0] || "") + "!", "👋"), 260);
+}
+
+function uitloggen(){
+  LS.weg("boodschappen_ik_" + P);
+  S.ik = null; IN.stap = "kies"; IN.lid = null; IN.pin = ""; IN.pin2 = "";
+  /* wie hierna inlogt begint gewoon weer bovenaan de lijst */
+  S.tab = "lijst"; S.winkelSessie = null; S.maand = null;
+  S.filter = Object.assign(S.filter, {winkel:null, cat:null, door:null, urgent:false, zoek:"", zoekOpen:false});
+  clearInterval(hartslagTimer);
+  houdSchermAan(false);
+  tekenNu();
+}
+
+let hartslagTimer = null;
+function startHartslag(){
+  clearInterval(hartslagTimer);
+  const tik = () => { if(S.ik && document.visibilityState === "visible") DB.zet(PAD.leden + "/" + S.ik.id, {laatstGezien: nu()}).catch(()=>{}); };
+  tik();
+  hartslagTimer = setInterval(tik, 90*1000);
+}
+
+/* =====================================================================
+   7 · ITEMS — filteren, groeperen, acties
+   ===================================================================== */
+function openItems(){ return S.items.filter(i => !i.af); }
+function afItems(){ return S.items.filter(i => i.af); }
+
+function pasFilterToe(lijst){
+  const f = S.filter;
+  const z = f.zoek.trim().toLowerCase();
+  return lijst.filter(i => {
+    if(f.winkel && (i.winkel || "nvt") !== f.winkel) return false;
+    if(f.cat && (i.cat || "overig") !== f.cat) return false;
+    if(f.door && i.door !== f.door) return false;
+    if(f.urgent && !i.urgent) return false;
+    if(z){
+      const hooi = [i.tekst, i.notitie, i.hoeveelheid, winkelVan(i.winkel).naam, catVan(i.cat).naam].join(" ").toLowerCase();
+      if(!hooi.includes(z)) return false;
+    }
+    return true;
+  });
+}
+function filterActief(){
+  const f = S.filter;
+  return !!(f.cat || f.door || f.urgent || f.zoek.trim());
+}
+function sorteerItems(lijst){
+  return [...lijst].sort((a,b) => {
+    if(!!b.urgent !== !!a.urgent) return b.urgent ? 1 : -1;
+    const ca = catIndex(a.cat), cb = catIndex(b.cat);
+    if(ca !== cb) return ca - cb;
+    return (a.gemaakt||0) - (b.gemaakt||0);
+  });
+}
+function groepeer(lijst){
+  const groepen = new Map();
+  if(S.filter.groep === "cat"){
+    for(const i of sorteerItems(lijst)){
+      const c = catVan(i.cat);
+      if(!groepen.has(c.id)) groepen.set(c.id, {sleutel:c.id, naam:c.naam, em:c.em, kleur:null, items:[]});
+      groepen.get(c.id).items.push(i);
+    }
+    return [...groepen.values()].sort((a,b) => catIndex(a.sleutel) - catIndex(b.sleutel));
+  }
+  for(const i of sorteerItems(lijst)){
+    const w = winkelVan(i.winkel);
+    if(!groepen.has(w.id)) groepen.set(w.id, {sleutel:w.id, naam:w.naam, em:w.em, kleur:w.kleur, volgorde:w.volgorde||50, items:[]});
+    groepen.get(w.id).items.push(i);
+  }
+  return [...groepen.values()].sort((a,b) => (a.volgorde||50) - (b.volgorde||50) || a.naam.localeCompare(b.naam));
+}
+
+async function nieuwItem(data){
+  const item = Object.assign({
+    tekst:"", hoeveelheid:"", winkel:"nvt", cat:"overig", notitie:"", fotoId:null,
+    urgent:false, af:false, door:S.ik.id, gemaakt:nu()
+  }, data);
+  const iid = await DB.voegToe(PAD.items, item);
+  onthoudVoorSuggestie(item);
+  return iid;
+}
+async function vinkItem(item, af){
+  await DB.zet(PAD.items + "/" + item.id, af
+    ? {af:true, afDoor:S.ik.id, afOp:nu()}
+    : {af:false, afDoor:null, afOp:null});
+}
+async function verwijderItem(item){
+  await wisFoto(item.fotoId);
+  await DB.wis(PAD.items + "/" + item.id);
+}
+
+/* onthoudt wat je vaak koopt, voor de snelknoppen bij toevoegen */
+function onthoudVoorSuggestie(item){
+  const t = (item.tekst||"").trim();
+  if(t.length < 2) return;
+  const lijst = LS.get("boodschappen_vaak_" + P, {});
+  const k = t.toLowerCase();
+  lijst[k] = {tekst:t, n:(lijst[k]?.n||0)+1, winkel:item.winkel, cat:item.cat, laatst:nu()};
+  LS.zet("boodschappen_vaak_" + P, lijst);
+}
+function vaakGekocht(n=8, zoek=""){
+  const lijst = Object.values(LS.get("boodschappen_vaak_" + P, {}));
+  const opLijst = new Set(openItems().map(i => (i.tekst||"").toLowerCase()));
+  const z = zoek.trim().toLowerCase();
+  return lijst
+    .filter(v => !opLijst.has(v.tekst.toLowerCase()))
+    .filter(v => !z || v.tekst.toLowerCase().includes(z))
+    .sort((a,b) => (b.n - a.n) || (b.laatst - a.laatst))
+    .slice(0, n);
+}
+
+/* =====================================================================
+   8 · SCHERM: LIJST
+   ===================================================================== */
+function schermLijst(){
+  const alleOpen = openItems();
+  const zichtbaar = pasFilterToe(alleOpen);
+  const groepen = groepeer(zichtbaar);
+  const af = S.filter.toonAf
+    ? pasFilterToe(afItems()).sort((a,b) => (b.afOp||0) - (a.afOp||0))
+    : [];
+  const f = S.filter;
+
+  const winkelTellers = {};
+  alleOpen.forEach(i => { const w = i.winkel || "nvt"; winkelTellers[w] = (winkelTellers[w]||0)+1; });
+  const winkelsMetItems = S.winkels.filter(w => winkelTellers[w.id]).sort((a,b) => (a.volgorde||50)-(b.volgorde||50));
+
+  return `
+  <div class="scherm">
+    <div class="kop" id="kop">
+      <div class="kop-rij">
+        <div class="kop-titel">
+          <h1>${esc(CFG.huisNaam)}</h1>
+          <div class="sub">${alleOpen.length === 0 ? "Alles is gehaald" :
+            alleOpen.length + " te halen" + (alleOpen.filter(i=>i.urgent).length ? " · " + alleOpen.filter(i=>i.urgent).length + " met spoed" : "")}</div>
+        </div>
+        <div class="kop-acties">
+          <button class="ikoonknop ${f.zoek?"aan":""}" id="k-zoek" aria-label="Zoeken">${IK.zoek}</button>
+          <button class="ikoonknop ${filterActief()?"aan":""}" id="k-filter" aria-label="Filters">${IK.filter}</button>
+          <button id="k-leden" style="display:flex; align-items:center; padding-left:4px">
+            <span class="av-stapel">${S.leden.slice(0,3).map(l => AV.html(l, "", isOnline(l))).join("")}</span>
+          </button>
+        </div>
+      </div>
+      ${f.zoekOpen || f.zoek ? `
+        <div class="zoekbalk">
+          ${IK.zoek}
+          <input id="zoek-in" placeholder="Zoek in de lijst…" value="${esc(f.zoek)}" autocomplete="off">
+          ${f.zoek ? `<button class="zoek-wis" id="zoek-wis">${IK.kruis}</button>` : ""}
+        </div>` : ""}
+      <div class="chiprij">
+        <button class="chip ${!f.winkel?"aan winkel":""}" data-wfilter="">Alles <span class="telw">${alleOpen.length}</span></button>
+        ${winkelsMetItems.map(w => `
+          <button class="chip ${f.winkel===w.id?"aan winkel":""}" data-wfilter="${esc(w.id)}">
+            <span>${w.em}</span>${esc(w.naam)} <span class="telw">${winkelTellers[w.id]}</span>
+          </button>`).join("")}
+        <span class="rek">&nbsp;</span>
+      </div>
+      ${filterActief() ? `
+      <div class="chiprij" style="padding-top:7px">
+        ${f.urgent ? `<button class="chip aan" data-wisfilter="urgent">${IK.bliksem} Spoed ${IK.kruis}</button>` : ""}
+        ${f.cat ? `<button class="chip aan" data-wisfilter="cat">${catVan(f.cat).em} ${esc(catVan(f.cat).naam)} ${IK.kruis}</button>` : ""}
+        ${f.door ? `<button class="chip aan" data-wisfilter="door">Van ${esc(naamVan(f.door))} ${IK.kruis}</button>` : ""}
+        ${f.zoek ? `<button class="chip aan" data-wisfilter="zoek">"${esc(f.zoek)}" ${IK.kruis}</button>` : ""}
+        <span class="rek">&nbsp;</span>
+      </div>` : ""}
+    </div>
+
+    <div class="inhoud" id="inhoud">
+      <div class="wrap">
+        ${S.syncFout ? `<div class="banner">${IK.waarsch}<span>${esc(S.syncFout)}</span></div>` : ""}
+        ${DB && DB.demo ? `<div class="banner info">${IK.info}<span>Demo-modus — deze lijst staat alleen op dit apparaat.</span></div>` : ""}
+
+        ${zichtbaar.length === 0 ? legeLijst(alleOpen.length) : groepen.map(g => `
+          <div class="sectie">
+            <div class="sectie-kop">
+              <h2>${g.em ? `<span style="font-size:14px">${g.em}</span>` : ""}${esc(g.naam)}</h2>
+              <span class="telw">${g.items.length}</span>
+              <span class="lijn"></span>
+              ${S.filter.groep === "winkel" && g.sleutel !== "nvt"
+                ? `<button class="mini" data-winkelen="${esc(g.sleutel)}">Winkelen ›</button>` : ""}
+            </div>
+            <div class="lijst">${g.items.map(itemHtml).join("")}</div>
+          </div>`).join("")}
+
+        ${af.length ? `
+          <div class="sectie">
+            <div class="sectie-kop">
+              <h2>In de kar</h2>
+              <span class="telw">${af.length}</span>
+              <span class="lijn"></span>
+              <button class="mini" id="wis-af">Opruimen</button>
+            </div>
+            <div class="lijst">${af.slice(0,40).map(itemHtml).join("")}</div>
+            ${af.length > 40 ? `<div class="hint" style="text-align:center">en nog ${af.length-40} eerder afgevinkt</div>` : ""}
+          </div>` : ""}
+      </div>
+    </div>
+
+    <button class="fab" id="fab">${IK.plus}<span>Toevoegen</span></button>
+  </div>`;
+}
+
+function legeLijst(aantalOpen){
+  if(filterActief() || S.filter.winkel){
+    return `<div class="leeg fade">
+      <span class="em">🔍</span><h3>Niets gevonden</h3>
+      <p>Er staat niets op de lijst dat aan deze filters voldoet.</p>
+      <button class="knop zacht klein" id="wis-alle-filters" style="margin-top:14px">Filters wissen</button>
+    </div>`;
+  }
+  return `<div class="leeg fade">
+    <span class="em">🧺</span><h3>De lijst is leeg</h3>
+    <p>Zodra jij of je huisgenoot iets toevoegt, staat het hier meteen voor jullie allebei.</p>
+  </div>`;
+}
+
+function itemHtml(i){
+  const lid = lidVan(i.door);
+  const w = winkelVan(i.winkel);
+  const c = catVan(i.cat);
+  const afLid = i.af ? lidVan(i.afDoor) : null;
+  return `
+  <div class="item ${i.af?"af":""}" data-item="${esc(i.id)}">
+    <button class="vink" data-vink="${esc(i.id)}" aria-label="Afvinken">${IK.vink}</button>
+    <div class="item-mid" data-open="${esc(i.id)}">
+      <div class="item-titelrij">
+        ${i.hoeveelheid ? `<span class="item-hoev">${esc(i.hoeveelheid)}</span>` : ""}
+        <span class="item-tekst">${esc(i.tekst)}</span>
+        ${i.urgent && !i.af ? `<span class="vlag">spoed</span>` : ""}
+      </div>
+      <div class="item-meta">
+        ${S.filter.groep === "cat"
+          ? `<span class="stuk">${w.em} ${esc(w.naam)}</span>`
+          : `<span class="stuk">${c.em} ${esc(c.naam)}</span>`}
+        ${lid ? `<span class="stuk">${AV.html(lid,"mini")} ${esc(lid.naam.split(" ")[0])}</span>` : ""}
+        ${i.af && afLid
+          ? `<span class="stuk">${IK.vink} ${esc(afLid.naam.split(" ")[0])} · ${datumKort(i.afOp)}</span>`
+          : `<span class="stuk">${IK.klok} ${datumKort(i.gemaakt)}</span>`}
+      </div>
+      ${i.notitie ? `<div class="item-notitie">${esc(i.notitie)}</div>` : ""}
+    </div>
+    ${i.fotoId ? `<img class="item-thumb laden" data-foto="${esc(i.fotoId)}_k" data-groot="${esc(i.fotoId)}" alt="">` : ""}
+  </div>`;
+}
+
+function bindLijst(){
+  const zoekIn = $("#zoek-in");
+  if(zoekIn){
+    zoekIn.oninput = () => { S.filter.zoek = zoekIn.value; tekenAlleenInhoud(); };
+    if(S.filter.zoekOpen && !S.filter.zoek) setTimeout(() => zoekIn.focus(), 60);
+  }
+  const zk = $("#k-zoek");
+  if(zk) zk.onclick = () => {
+    S.filter.zoekOpen = !S.filter.zoekOpen;
+    if(!S.filter.zoekOpen) S.filter.zoek = "";
+    tril(); tekenNu();
+  };
+  const zw = $("#zoek-wis");
+  if(zw) zw.onclick = () => { S.filter.zoek = ""; tekenNu(); };
+  const kf = $("#k-filter"); if(kf) kf.onclick = () => { tril(); sheetFilters(); };
+  const kl = $("#k-leden");  if(kl) kl.onclick = () => { tril(); S.tab = "meer"; tekenNu(); };
+
+  $$("[data-wfilter]").forEach(b => b.onclick = () => {
+    S.filter.winkel = b.dataset.wfilter || null; tril(); tekenNu();
+  });
+  $$("[data-wisfilter]").forEach(b => b.onclick = () => {
+    const k = b.dataset.wisfilter;
+    if(k === "urgent") S.filter.urgent = false;
+    else if(k === "zoek"){ S.filter.zoek = ""; S.filter.zoekOpen = false; }
+    else S.filter[k] = null;
+    tril(); tekenNu();
+  });
+  const waf = $("#wis-alle-filters");
+  if(waf) waf.onclick = () => {
+    S.filter = Object.assign(S.filter, {winkel:null, cat:null, door:null, urgent:false, zoek:"", zoekOpen:false});
+    tekenNu();
+  };
+  $$("[data-winkelen]").forEach(b => b.onclick = () => {
+    S.winkelSessie = {winkelId:b.dataset.winkelen, gestart:nu()};
+    S.tab = "winkelen"; tril(); tekenNu();
+  });
+
+  $$("[data-vink]").forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const it = S.items.find(x => x.id === b.dataset.vink);
+    if(!it) return;
+    tril(12);
+    const rij = b.closest(".item");
+    if(!it.af && rij) rij.classList.add("af");
+    await vinkItem(it, !it.af);
+  });
+  $$("[data-open]").forEach(el => el.onclick = () => {
+    const it = S.items.find(x => x.id === el.dataset.open);
+    if(it) sheetItem(it);
+  });
+  $$(".item-thumb").forEach(im => im.onclick = e => {
+    e.stopPropagation();
+    const it = S.items.find(x => x.id === im.closest(".item").dataset.item);
+    if(it) openKijker(it.fotoId, it.tekst);
+  });
+  const wa = $("#wis-af");
+  if(wa) wa.onclick = () => sheetOpruimen();
+  const fab = $("#fab");
+  if(fab) fab.onclick = () => { tril(); sheetToevoegen(); };
+
+  volgScroll();
+}
+
+/* =====================================================================
+   9 · BODEMPANEEL (sheet)
+   ===================================================================== */
+function sluitSheet(){
+  $$(".overlay").forEach(ov => { ov.classList.remove("open"); setTimeout(() => ov.remove(), 240); });
+  $$(".sheet").forEach(sh => {
+    sh.removeAttribute("id");
+    sh.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
+    sh.classList.remove("open");
+    setTimeout(() => sh.remove(), 320);
+  });
+  S.sheet = null;
+}
+function sheet({titel, body, voet="", naTeken, sluitKnop=true}){
+  /* een openstaand paneel gaat er meteen uit — anders staan er even twee
+     panelen met dezelfde id's in de pagina en klik je op de verkeerde */
+  const vervangt = !!$(".sheet");
+  $$(".sheet").forEach(el => el.remove());
+  let ov = $(".overlay");
+  if(!ov){ ov = document.createElement("div"); ov.className = "overlay"; document.body.appendChild(ov); }
+  ov.classList.remove("weg");
+  const sh = document.createElement("div"); sh.className = "sheet" + (vervangt ? " open" : "");
+  sh.innerHTML = `
+    <div class="greep"></div>
+    <div class="sheet-in">
+      <div class="sheet-kop">
+        <h2>${titel}</h2>
+        ${sluitKnop ? `<button class="ikoonknop" id="sheet-dicht">${IK.kruis}</button>` : ""}
+      </div>
+      <div class="sheet-body">${body}</div>
+      ${voet ? `<div class="sheet-voet">${voet}</div>` : ""}
+    </div>`;
+  document.body.appendChild(sh);
+  requestAnimationFrame(() => { ov.classList.add("open"); sh.classList.add("open"); });
+  /* de tik die dit paneel opende, komt op een telefoon vlak daarna nóg een keer
+     als "click" binnen — die zou de overlay meteen weer sluiten */
+  const geopend = nu();
+  ov.onclick = () => { if(nu() - geopend > 400) sluitSheet(); };
+  const d = $("#sheet-dicht"); if(d) d.onclick = sluitSheet;
+  /* naar beneden vegen sluit ook */
+  let start = null;
+  const greep = sh.querySelector(".greep");
+  const kop = sh.querySelector(".sheet-kop");
+  [greep, kop].forEach(el => {
+    el.addEventListener("touchstart", e => { start = e.touches[0].clientY; }, {passive:true});
+    el.addEventListener("touchmove", e => {
+      if(start === null) return;
+      const dy = e.touches[0].clientY - start;
+      if(dy > 0) sh.style.transform = `translateY(${dy}px)` + (window.innerWidth >= 660 ? "" : "");
+    }, {passive:true});
+    el.addEventListener("touchend", e => {
+      const dy = (e.changedTouches[0].clientY - (start||0));
+      sh.style.transform = "";
+      if(dy > 90) sluitSheet();
+      start = null;
+    });
+  });
+  S.sheet = sh;
+  if(naTeken) naTeken(sh);
+  return sh;
+}
+
+function keuzeChips(naam, opties, huidig, extraKlas=""){
+  return `<div class="keuzes" data-keuze="${naam}">
+    ${opties.map(o => `
+      <button type="button" class="keuze ${extraKlas} ${o.id===huidig?"aan":""}" data-waarde="${esc(o.id)}">
+        ${o.em ? `<span>${o.em}</span>` : ""}${esc(o.naam)}
+      </button>`).join("")}
+  </div>`;
+}
+function bindKeuze(naam, opZet){
+  const vak = document.querySelector(`[data-keuze="${naam}"]`);
+  if(!vak) return;
+  vak.querySelectorAll(".keuze").forEach(b => b.onclick = () => {
+    vak.querySelectorAll(".keuze").forEach(x => x.classList.remove("aan"));
+    b.classList.add("aan"); tril(6);
+    opZet(b.dataset.waarde);
+  });
+}
+
+/* =====================================================================
+   10 · SHEET: item toevoegen / bewerken
+   ===================================================================== */
+function sheetToevoegen(voorinvul){
+  const f = Object.assign({
+    tekst:"", hoeveelheid:"", winkel:S.filter.winkel || "nvt", cat:S.filter.cat || "overig",
+    notitie:"", urgent:false, fotoVb:null, fotoFile:null, catHandmatig:false
+  }, voorinvul||{});
+
+  const body = `
+    <div class="veld">
+      <label>Wat heb je nodig?</label>
+      <input class="invoer" id="f-tekst" placeholder="Bijvoorbeeld melk" maxlength="60"
+             autocomplete="off" autocapitalize="sentences" value="${esc(f.tekst)}">
+      <div class="sugg" id="f-sugg"></div>
+    </div>
+    <div class="veld-rij">
+      <div class="veld">
+        <label>Hoeveel</label>
+        <input class="invoer" id="f-hoev" placeholder="2 pakken" maxlength="18" autocomplete="off" value="${esc(f.hoeveelheid)}">
+      </div>
+      <div class="veld">
+        <label>Spoed</label>
+        <button type="button" class="schakel" id="f-urgent" style="width:100%">
+          <span class="tk"><b style="font-size:14px">Snel nodig</b></span>
+          <span class="tuimel ${f.urgent?"aan":""}"></span>
+        </button>
+      </div>
+    </div>
+    <div class="veld">
+      <label>Waar te koop</label>
+      ${keuzeChips("winkel", S.winkels.map(w => ({id:w.id, naam:w.naam, em:w.em})), f.winkel)}
+    </div>
+    <div class="veld">
+      <label>Categorie</label>
+      ${keuzeChips("cat", CATS.map(c => ({id:c.id, naam:c.naam, em:c.em})), f.cat, "grijs")}
+    </div>
+    <div class="veld">
+      <label>Foto <span style="text-transform:none; letter-spacing:0; font-weight:500">(bijv. het merk of de verpakking)</span></label>
+      <div class="fotovak">
+        <button type="button" class="fotoknop" id="f-foto">${IK.camera}<span>Foto toevoegen</span></button>
+        <div class="fotovb verborgen" id="f-fotovb"><img alt=""><button type="button" class="weg" id="f-fotoweg">${IK.kruis}</button></div>
+      </div>
+      <input type="file" accept="image/*" id="f-bestand" class="verborgen">
+    </div>
+    <div class="veld">
+      <label>Notitie</label>
+      <textarea class="invoer" id="f-notitie" placeholder="Merk, smaak, of waar het voor is…" maxlength="200">${esc(f.notitie)}</textarea>
+    </div>`;
+
+  const voet = `
+    <button class="knop stil" id="f-annuleer" style="flex:0 0 auto">Annuleer</button>
+    <button class="knop" id="f-opslaan" style="flex:1">${IK.plus} Op de lijst</button>`;
+
+  sheet({titel:"Boodschap toevoegen", body, voet, naTeken:() => {
+    const ti = $("#f-tekst");
+    setTimeout(() => ti.focus(), 260);
+
+    const tekenSugg = () => {
+      const s = vaakGekocht(6, ti.value);
+      $("#f-sugg").innerHTML = s.length
+        ? s.map(v => `<button type="button" data-sug="${esc(v.tekst)}">${esc(v.tekst)}</button>`).join("")
+        : "";
+      $$("#f-sugg [data-sug]").forEach(b => b.onclick = () => {
+        ti.value = b.dataset.sug; f.tekst = ti.value;
+        const bron = Object.values(LS.get("boodschappen_vaak_" + P, {})).find(v => v.tekst === b.dataset.sug);
+        if(bron){
+          if(bron.cat) zetKeuze("cat", bron.cat), f.cat = bron.cat;
+          if(bron.winkel && !S.filter.winkel) zetKeuze("winkel", bron.winkel), f.winkel = bron.winkel;
+        }
+        tril(6); tekenSugg(); $("#f-hoev").focus();
+      });
+    };
+    const zetKeuze = (naam, waarde) => {
+      const vak = document.querySelector(`[data-keuze="${naam}"]`);
+      if(!vak) return;
+      vak.querySelectorAll(".keuze").forEach(x => x.classList.toggle("aan", x.dataset.waarde === waarde));
+      const aan = vak.querySelector(".keuze.aan"); if(aan) aan.scrollIntoView({block:"nearest", inline:"center", behavior:"smooth"});
+    };
+    tekenSugg();
+
+    ti.oninput = () => {
+      f.tekst = ti.value;
+      tekenSugg();
+      if(!f.catHandmatig){
+        const geraden = raadCategorie(ti.value);
+        if(geraden && geraden !== f.cat){ f.cat = geraden; zetKeuze("cat", geraden); }
+      }
+    };
+    ti.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); $("#f-hoev").focus(); } };
+    $("#f-hoev").oninput = e => f.hoeveelheid = e.target.value;
+    $("#f-notitie").oninput = e => f.notitie = e.target.value;
+    $("#f-urgent").onclick = () => {
+      f.urgent = !f.urgent; tril();
+      $("#f-urgent .tuimel").classList.toggle("aan", f.urgent);
+    };
+    bindKeuze("winkel", v => f.winkel = v);
+    bindKeuze("cat", v => { f.cat = v; f.catHandmatig = true; });
+
+    $("#f-foto").onclick = () => $("#f-bestand").click();
+    $("#f-bestand").onchange = async e => {
+      const file = e.target.files[0]; if(!file) return;
+      $("#f-foto").innerHTML = `<span class="spinner"></span><span>Foto klaarmaken…</span>`;
+      try{
+        const {klein} = await verkleinFoto(file);
+        f.fotoFile = file; f.fotoVb = klein;
+        $("#f-fotovb").classList.remove("verborgen");
+        $("#f-fotovb img").src = klein;
+        $("#f-foto").innerHTML = `${IK.herhaal}<span>Andere foto</span>`;
+      }catch(err){
+        console.error(err); toast("Die foto lukte niet");
+        $("#f-foto").innerHTML = `${IK.camera}<span>Foto toevoegen</span>`;
+      }
+      e.target.value = "";
+    };
+    $("#f-fotoweg").onclick = () => {
+      f.fotoFile = null; f.fotoVb = null;
+      $("#f-fotovb").classList.add("verborgen");
+      $("#f-foto").innerHTML = `${IK.camera}<span>Foto toevoegen</span>`;
+    };
+    $("#f-annuleer").onclick = sluitSheet;
+
+    $("#f-opslaan").onclick = async () => {
+      const tekst = ti.value.trim();
+      if(!tekst){ ti.focus(); ti.style.borderColor = "var(--rood)"; return; }
+      const knop = $("#f-opslaan");
+      knop.disabled = true; knop.innerHTML = `<span class="spinner"></span> Opslaan…`;
+      try{
+        let fotoId = null;
+        if(f.fotoFile) fotoId = await bewaarFoto(f.fotoFile);
+        await nieuwItem({
+          tekst, hoeveelheid:f.hoeveelheid.trim(), winkel:f.winkel, cat:f.cat,
+          notitie:f.notitie.trim(), urgent:f.urgent, fotoId
+        });
+        sluitSheet();
+        toast(tekst + " staat op de lijst", "✓");
+        tril(14);
+      }catch(e){
+        console.error(e); toast("Opslaan lukte niet");
+        knop.disabled = false; knop.innerHTML = `${IK.plus} Op de lijst`;
+      }
+    };
+  }});
+}
+
+function sheetItem(item){
+  const w = winkelVan(item.winkel), c = catVan(item.cat);
+  const lid = lidVan(item.door), afLid = lidVan(item.afDoor);
+  const body = `
+    <div style="display:flex; gap:14px; align-items:flex-start; margin-bottom:16px">
+      ${item.fotoId ? `<img class="item-thumb laden" data-foto="${esc(item.fotoId)}_k" id="det-foto"
+            style="width:78px;height:78px;border-radius:var(--r-m);cursor:zoom-in" alt="">` : ""}
+      <div style="flex:1; min-width:0">
+        <div style="font-size:20px; font-weight:700; letter-spacing:-.02em; word-break:break-word">
+          ${item.hoeveelheid ? `<span class="item-hoev" style="font-size:14px; vertical-align:middle">${esc(item.hoeveelheid)}</span> ` : ""}
+          ${esc(item.tekst)}
+        </div>
+        <div class="item-meta" style="margin-top:7px">
+          <span class="stuk">${w.em} ${esc(w.naam)}</span>
+          <span class="stuk">${c.em} ${esc(c.naam)}</span>
+          ${item.urgent ? `<span class="vlag">spoed</span>` : ""}
+        </div>
+      </div>
+    </div>
+    ${item.notitie ? `<div class="item-notitie" style="margin-bottom:16px; font-size:14.5px">${esc(item.notitie)}</div>` : ""}
+    <div class="lijst" style="margin-bottom:14px">
+      <div class="rij">
+        <span class="ik">${IK.persoon}</span>
+        <div class="tk"><b>${esc(lid ? lid.naam : "Onbekend")}</b><span>zette dit op de lijst · ${datumKort(item.gemaakt)}</span></div>
+        ${lid ? AV.html(lid) : ""}
+      </div>
+      ${item.af ? `
+      <div class="rij">
+        <span class="ik" style="background:var(--groen-zacht); color:var(--groen)">${IK.vink}</span>
+        <div class="tk"><b>${esc(afLid ? afLid.naam : "Iemand")}</b><span>heeft dit gehaald · ${datumKort(item.afOp)}</span></div>
+      </div>` : ""}
+    </div>
+    <div class="lijst">
+      <button class="rij" id="det-vink">
+        <span class="ik" style="background:var(--groen-zacht); color:var(--groen)">${IK.vink}</span>
+        <div class="tk"><b>${item.af ? "Terug op de lijst zetten" : "Afvinken"}</b>
+          <span>${item.af ? "toch nog nodig" : "gehaald — of toch niet nodig"}</span></div>
+      </button>
+      <button class="rij" id="det-urgent">
+        <span class="ik" style="background:var(--rood-zacht); color:var(--rood)">${IK.bliksem}</span>
+        <div class="tk"><b>${item.urgent ? "Spoed eraf halen" : "Markeer als spoed"}</b>
+          <span>staat dan bovenaan de lijst</span></div>
+      </button>
+      <button class="rij" id="det-bewerk">
+        <span class="ik">${IK.potlood}</span>
+        <div class="tk"><b>Aanpassen</b><span>naam, winkel, aantal of notitie</span></div>
+      </button>
+      <button class="rij" id="det-vast">
+        <span class="ik" style="background:var(--accent-zacht); color:var(--accent)">${IK.ster}</span>
+        <div class="tk"><b>Bij de vaste boodschappen</b><span>voeg dit later met één tik weer toe</span></div>
+      </button>
+      <button class="rij" id="det-wis">
+        <span class="ik" style="background:var(--rood-zacht); color:var(--rood)">${IK.prul}</span>
+        <div class="tk"><b style="color:var(--rood)">Verwijderen</b><span>haal dit helemaal van de lijst</span></div>
+      </button>
+    </div>`;
+
+  sheet({titel:"Boodschap", body, naTeken:() => {
+    vulFotos($(".sheet"));
+    const df = $("#det-foto");
+    if(df) df.onclick = () => openKijker(item.fotoId, item.tekst);
+    $("#det-vink").onclick = async () => { tril(12); await vinkItem(item, !item.af); sluitSheet(); };
+    $("#det-urgent").onclick = async () => {
+      tril(); await DB.zet(PAD.items + "/" + item.id, {urgent: !item.urgent}); sluitSheet();
+      toast(item.urgent ? "Spoed eraf" : "Met spoed", item.urgent ? "" : "⚡");
+    };
+    $("#det-bewerk").onclick = () => sheetBewerk(item);
+    $("#det-vast").onclick = async () => {
+      const bestaat = S.vast.some(v => v.tekst.toLowerCase() === item.tekst.toLowerCase());
+      if(bestaat){ toast("Staat er al bij"); return; }
+      await DB.voegToe(PAD.vast, {tekst:item.tekst, hoeveelheid:item.hoeveelheid||"", winkel:item.winkel, cat:item.cat, door:S.ik.id, gemaakt:nu()});
+      sluitSheet(); toast(item.tekst + " is nu een vaste boodschap", "⭐");
+    };
+    $("#det-wis").onclick = async () => {
+      if(!confirm("“" + item.tekst + "” verwijderen?")) return;
+      await verwijderItem(item); sluitSheet(); toast("Verwijderd");
+    };
+  }});
+}
+
+function sheetBewerk(item){
+  const f = {
+    tekst:item.tekst||"", hoeveelheid:item.hoeveelheid||"", winkel:item.winkel||"nvt",
+    cat:item.cat||"overig", notitie:item.notitie||"", urgent:!!item.urgent,
+    fotoFile:null, fotoWeg:false
+  };
+  const body = `
+    <div class="veld"><label>Boodschap</label>
+      <input class="invoer" id="b-tekst" maxlength="60" value="${esc(f.tekst)}"></div>
+    <div class="veld-rij">
+      <div class="veld"><label>Hoeveel</label>
+        <input class="invoer" id="b-hoev" maxlength="18" placeholder="2 pakken" value="${esc(f.hoeveelheid)}"></div>
+      <div class="veld"><label>Spoed</label>
+        <button type="button" class="schakel" id="b-urgent" style="width:100%">
+          <span class="tk"><b style="font-size:14px">Snel nodig</b></span>
+          <span class="tuimel ${f.urgent?"aan":""}"></span></button></div>
+    </div>
+    <div class="veld"><label>Waar te koop</label>
+      ${keuzeChips("winkel", S.winkels.map(w => ({id:w.id, naam:w.naam, em:w.em})), f.winkel)}</div>
+    <div class="veld"><label>Categorie</label>
+      ${keuzeChips("cat", CATS.map(c => ({id:c.id, naam:c.naam, em:c.em})), f.cat, "grijs")}</div>
+    <div class="veld"><label>Foto</label>
+      <div class="fotovak">
+        <button type="button" class="fotoknop" id="b-foto">${item.fotoId ? IK.herhaal : IK.camera}<span>${item.fotoId ? "Andere foto" : "Foto toevoegen"}</span></button>
+        <div class="fotovb ${item.fotoId?"":"verborgen"}" id="b-fotovb">
+          <img alt="" ${item.fotoId?`class="laden" data-foto="${esc(item.fotoId)}_k"`:""}>
+          <button type="button" class="weg" id="b-fotoweg">${IK.kruis}</button></div>
+      </div>
+      <input type="file" accept="image/*" id="b-bestand" class="verborgen"></div>
+    <div class="veld"><label>Notitie</label>
+      <textarea class="invoer" id="b-notitie" maxlength="200">${esc(f.notitie)}</textarea></div>`;
+  const voet = `
+    <button class="knop stil" id="b-annuleer" style="flex:0 0 auto">Terug</button>
+    <button class="knop" id="b-opslaan" style="flex:1">Opslaan</button>`;
+
+  sheet({titel:"Aanpassen", body, voet, naTeken:() => {
+    vulFotos($(".sheet"));
+    bindKeuze("winkel", v => f.winkel = v);
+    bindKeuze("cat", v => f.cat = v);
+    $("#b-urgent").onclick = () => { f.urgent = !f.urgent; tril(); $("#b-urgent .tuimel").classList.toggle("aan", f.urgent); };
+    $("#b-foto").onclick = () => $("#b-bestand").click();
+    $("#b-bestand").onchange = async e => {
+      const file = e.target.files[0]; if(!file) return;
+      $("#b-foto").innerHTML = `<span class="spinner"></span><span>Bezig…</span>`;
+      try{
+        const {klein} = await verkleinFoto(file);
+        f.fotoFile = file; f.fotoWeg = false;
+        $("#b-fotovb").classList.remove("verborgen");
+        $("#b-fotovb img").src = klein; $("#b-fotovb img").classList.remove("laden");
+        $("#b-foto").innerHTML = `${IK.herhaal}<span>Andere foto</span>`;
+      }catch(err){ toast("Die foto lukte niet"); $("#b-foto").innerHTML = `${IK.camera}<span>Foto toevoegen</span>`; }
+      e.target.value = "";
+    };
+    $("#b-fotoweg").onclick = () => {
+      f.fotoFile = null; f.fotoWeg = true;
+      $("#b-fotovb").classList.add("verborgen");
+      $("#b-foto").innerHTML = `${IK.camera}<span>Foto toevoegen</span>`;
+    };
+    $("#b-annuleer").onclick = () => sheetItem(item);
+    $("#b-opslaan").onclick = async () => {
+      const tekst = $("#b-tekst").value.trim();
+      if(!tekst){ $("#b-tekst").focus(); return; }
+      const knop = $("#b-opslaan");
+      knop.disabled = true; knop.innerHTML = `<span class="spinner"></span> Opslaan…`;
+      try{
+        const wijz = {
+          tekst, hoeveelheid:$("#b-hoev").value.trim(), winkel:f.winkel, cat:f.cat,
+          notitie:$("#b-notitie").value.trim(), urgent:f.urgent
+        };
+        if(f.fotoFile){ await wisFoto(item.fotoId); wijz.fotoId = await bewaarFoto(f.fotoFile); }
+        else if(f.fotoWeg && item.fotoId){ await wisFoto(item.fotoId); wijz.fotoId = null; }
+        await DB.zet(PAD.items + "/" + item.id, wijz);
+        sluitSheet(); toast("Aangepast", "✓");
+      }catch(e){ console.error(e); toast("Opslaan lukte niet"); knop.disabled = false; knop.innerHTML = "Opslaan"; }
+    };
+  }});
+}
+
+/* =====================================================================
+   11 · SHEET: filters
+   ===================================================================== */
+function sheetFilters(){
+  const f = S.filter;
+  const catsMetItems = CATS.filter(c => openItems().some(i => (i.cat||"overig") === c.id));
+  const body = `
+    <div class="veld">
+      <label>Groeperen op</label>
+      <div class="keuzes" data-keuze="groep">
+        <button type="button" class="keuze ${f.groep==="winkel"?"aan":""}" data-waarde="winkel">🛒 Winkel</button>
+        <button type="button" class="keuze ${f.groep==="cat"?"aan":""}" data-waarde="cat">🗂️ Categorie</button>
+      </div>
+    </div>
+    <div class="veld">
+      <label>Alleen met spoed</label>
+      <button type="button" class="schakel" id="ff-urgent" style="width:100%">
+        <span class="tk"><b>Spoed</b><span>toon alleen wat snel nodig is</span></span>
+        <span class="tuimel ${f.urgent?"aan":""}"></span>
+      </button>
+    </div>
+    <div class="veld">
+      <label>Wie zette het erop</label>
+      <div class="keuzes" data-keuze="door">
+        <button type="button" class="keuze grijs ${!f.door?"aan":""}" data-waarde="">Iedereen</button>
+        ${S.leden.map(l => `<button type="button" class="keuze grijs ${f.door===l.id?"aan":""}" data-waarde="${esc(l.id)}">${esc(l.naam)}</button>`).join("")}
+      </div>
+    </div>
+    <div class="veld">
+      <label>Categorie</label>
+      <div class="keuzes" data-keuze="cat">
+        <button type="button" class="keuze grijs ${!f.cat?"aan":""}" data-waarde="">Alles</button>
+        ${catsMetItems.map(c => `<button type="button" class="keuze grijs ${f.cat===c.id?"aan":""}" data-waarde="${esc(c.id)}">${c.em} ${esc(c.naam)}</button>`).join("")}
+      </div>
+      ${catsMetItems.length === 0 ? `<div class="hint">Er staat nog niets op de lijst om op te filteren.</div>` : ""}
+    </div>
+    <div class="veld">
+      <label>Afgevinkte boodschappen</label>
+      <button type="button" class="schakel" id="ff-af" style="width:100%">
+        <span class="tk"><b>Toon “in de kar”</b><span>wat er al afgevinkt is</span></span>
+        <span class="tuimel ${f.toonAf?"aan":""}"></span>
+      </button>
+    </div>`;
+  const voet = `
+    <button class="knop stil" id="ff-wis" style="flex:0 0 auto">Alles wissen</button>
+    <button class="knop" id="ff-klaar" style="flex:1">Klaar</button>`;
+  sheet({titel:"Filters", body, voet, naTeken:() => {
+    bindKeuze("groep", v => { S.filter.groep = v; });
+    bindKeuze("door",  v => { S.filter.door = v || null; });
+    bindKeuze("cat",   v => { S.filter.cat = v || null; });
+    $("#ff-urgent").onclick = () => { S.filter.urgent = !S.filter.urgent; tril(); $("#ff-urgent .tuimel").classList.toggle("aan", S.filter.urgent); };
+    $("#ff-af").onclick = () => { S.filter.toonAf = !S.filter.toonAf; tril(); $("#ff-af .tuimel").classList.toggle("aan", S.filter.toonAf); };
+    $("#ff-wis").onclick = () => {
+      S.filter = Object.assign(S.filter, {winkel:null, cat:null, door:null, urgent:false, zoek:"", zoekOpen:false});
+      sluitSheet(); tekenNu();
+    };
+    $("#ff-klaar").onclick = () => { sluitSheet(); tekenNu(); };
+  }});
+}
+
+/* =====================================================================
+   12 · SHEET: opruimen
+   ===================================================================== */
+function sheetOpruimen(){
+  const af = afItems();
+  const body = `
+    <p style="margin:0 0 16px; color:var(--ink-2); font-size:15px; line-height:1.5">
+      Er ${af.length===1?"staat":"staan"} <b>${af.length}</b> afgevinkte ${af.length===1?"boodschap":"boodschappen"} in de kar.
+      Opruimen haalt ze van de lijst — de uitgaven blijven wel bewaard.
+    </p>
+    <div class="lijst">
+      <button class="rij" id="op-alles">
+        <span class="ik" style="background:var(--rood-zacht); color:var(--rood)">${IK.prul}</span>
+        <div class="tk"><b>Alles opruimen</b><span>alle ${af.length} afgevinkte boodschappen</span></div>
+      </button>
+      <button class="rij" id="op-oud">
+        <span class="ik">${IK.klok}</span>
+        <div class="tk"><b>Ouder dan een week</b><span>${af.filter(i => nu()-(i.afOp||0) > 7*864e5).length} boodschappen</span></div>
+      </button>
+      <button class="rij" id="op-terug">
+        <span class="ik" style="background:var(--accent-zacht); color:var(--accent)">${IK.herhaal}</span>
+        <div class="tk"><b>Alles terug op de lijst</b><span>vinkjes weghalen, niets verwijderen</span></div>
+      </button>
+    </div>`;
+  sheet({titel:"In de kar opruimen", body, naTeken:() => {
+    const doe = async (lijst, melding) => {
+      sluitSheet();
+      for(const i of lijst){ await verwijderItem(i); }
+      toast(melding, "🧹");
+    };
+    $("#op-alles").onclick = () => { if(confirm("Alle " + af.length + " afgevinkte boodschappen verwijderen?")) doe(af, "Kar leeggemaakt"); };
+    $("#op-oud").onclick = () => doe(af.filter(i => nu()-(i.afOp||0) > 7*864e5), "Oude boodschappen opgeruimd");
+    $("#op-terug").onclick = async () => {
+      sluitSheet();
+      for(const i of af){ await vinkItem(i, false); }
+      toast("Alles staat weer op de lijst", "↩️");
+    };
+  }});
+}
+
+/* =====================================================================
+   13 · SCHERM: WINKELEN
+   ===================================================================== */
+let wakeLock = null;
+async function houdSchermAan(aan){
+  try{
+    if(aan && "wakeLock" in navigator && !wakeLock){ wakeLock = await navigator.wakeLock.request("screen"); }
+    else if(!aan && wakeLock){ await wakeLock.release(); wakeLock = null; }
+  }catch(e){ wakeLock = null; }
+}
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState === "visible" && S.tab === "winkelen" && S.winkelSessie) houdSchermAan(true);
+});
+
+function schermWinkelen(){
+  if(!S.winkelSessie) return schermWinkelKiezen();
+
+  const wid = S.winkelSessie.winkelId;
+  const w = wid === "alles" ? {id:"alles", naam:"Alle winkels", em:"🧺", kleur:"var(--accent)"} : winkelVan(wid);
+  const alle = S.items.filter(i => wid === "alles" ? true : (i.winkel||"nvt") === wid)
+                      .filter(i => !i.af || (S.winkelSessie.gepakt||[]).includes(i.id) || (i.afOp||0) >= S.winkelSessie.gestart);
+  const gedaan = alle.filter(i => i.af).length;
+  const pct = alle.length ? Math.round(gedaan / alle.length * 100) : 0;
+
+  const perCat = new Map();
+  sorteerItems(alle).forEach(i => {
+    const c = catVan(i.cat);
+    if(!perCat.has(c.id)) perCat.set(c.id, {c, items:[]});
+    perCat.get(c.id).items.push(i);
+  });
+  const groepen = [...perCat.values()].sort((a,b) => catIndex(a.c.id) - catIndex(b.c.id));
+
+  return `
+  <div class="scherm">
+    <div class="kop" id="kop">
+      <div class="kop-rij">
+        <button class="ikoonknop" id="w-terug">${IK.terug}</button>
+        <div class="kop-titel">
+          <h1>${w.em} ${esc(w.naam)}</h1>
+          <div class="sub">${gedaan} van ${alle.length} in de kar</div>
+        </div>
+        <button class="ikoonknop" id="w-plus">${IK.plus}</button>
+      </div>
+    </div>
+    <div class="inhoud" id="inhoud">
+      <div class="wrap">
+        <div class="wm-kop">
+          <div class="bovenrij">
+            <div class="bol" style="width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:var(--bg-2)">${w.em}</div>
+            <h2>${pct}% gedaan</h2>
+            ${gedaan === alle.length && alle.length ? `<span style="font-size:26px">🎉</span>` : ""}
+          </div>
+          <div class="balk"><div style="width:${pct}%"></div></div>
+          <div class="wm-tel">
+            <span>${alle.length - gedaan} nog te pakken</span>
+            <span>${gedaan}/${alle.length}</span>
+          </div>
+        </div>
+
+        ${alle.length === 0 ? `
+          <div class="leeg fade"><span class="em">✨</span><h3>Niets te halen hier</h3>
+          <p>Er staat op dit moment niets op de lijst voor deze winkel.</p></div>`
+        : groepen.map(g => `
+          <div class="sectie">
+            <div class="sectie-kop">
+              <h2><span style="font-size:14px">${g.c.em}</span>${esc(g.c.naam)}</h2>
+              <span class="telw">${g.items.filter(i=>!i.af).length}</span>
+              <span class="lijn"></span>
+            </div>
+            <div class="lijst">${g.items.map(wmItemHtml).join("")}</div>
+          </div>`).join("")}
+
+        ${alle.length ? `
+        <button class="knop ${gedaan===alle.length?"groen":"stil"} vol" id="w-klaar" style="margin-top:24px">
+          ${IK.bon} Klaar met winkelen
+        </button>
+        <div class="hint" style="text-align:center">Je kunt daarna meteen noteren wat je betaald hebt.</div>` : ""}
+      </div>
+    </div>
+  </div>`;
+}
+
+function wmItemHtml(i){
+  const lid = lidVan(i.door);
+  return `
+  <div class="wm-item ${i.af?"af":""}" data-wmitem="${esc(i.id)}">
+    <span class="vink">${IK.vink}</span>
+    <div class="tk">
+      <b>${i.hoeveelheid ? `<span class="item-hoev" style="font-size:13px;vertical-align:2px">${esc(i.hoeveelheid)}</span> ` : ""}${esc(i.tekst)}${i.urgent && !i.af ? ` <span class="vlag">spoed</span>`:""}</b>
+      <span>${i.notitie ? esc(i.notitie) + " · " : ""}${lid ? esc(lid.naam.split(" ")[0]) : ""}</span>
+    </div>
+    ${i.fotoId ? `<img class="item-thumb laden" data-foto="${esc(i.fotoId)}_k" data-wmfoto="${esc(i.id)}" alt="">` : ""}
+  </div>`;
+}
+
+function schermWinkelKiezen(){
+  const open = openItems();
+  const tellers = {};
+  open.forEach(i => { const w = i.winkel || "nvt"; tellers[w] = (tellers[w]||0)+1; });
+  const lijst = S.winkels.filter(w => tellers[w.id]).sort((a,b) => (a.volgorde||50)-(b.volgorde||50));
+
+  return `
+  <div class="scherm">
+    <div class="kop" id="kop">
+      <div class="kop-rij">
+        <div class="kop-titel"><h1>Winkelen</h1>
+          <div class="sub">Kies waar je bent — dan krijg je een groot afvinkscherm</div></div>
+      </div>
+    </div>
+    <div class="inhoud" id="inhoud">
+      <div class="wrap">
+        ${open.length === 0 ? `
+          <div class="leeg fade"><span class="em">🎉</span><h3>Niets te halen</h3>
+          <p>De hele lijst is leeg. Geniet ervan.</p></div>` : `
+          <div class="sectie" style="margin-top:14px">
+            <div class="lijst">
+              ${lijst.map(w => `
+                <button class="winkelkaart" data-start="${esc(w.id)}">
+                  <span class="bol" style="background:${esc(w.kleur)}22">${w.em}</span>
+                  <div class="tk"><b>${esc(w.naam)}</b>
+                    <span>${tellers[w.id]} ${tellers[w.id]===1?"boodschap":"boodschappen"}</span></div>
+                  <span class="pijl">${IK.pijl}</span>
+                </button>`).join("")}
+              <button class="winkelkaart" data-start="alles">
+                <span class="bol" style="background:var(--accent-zacht)">🧺</span>
+                <div class="tk"><b>Alles in één lijst</b><span>${open.length} boodschappen, op categorie</span></div>
+                <span class="pijl">${IK.pijl}</span>
+              </button>
+            </div>
+          </div>
+          <div class="hint" style="text-align:center; margin-top:18px">
+            Tijdens het winkelen blijft je scherm aan en vink je met één tik af.<br>
+            ${esc((S.leden.find(l => l.id !== S.ik.id)||{}).naam || "De ander")} ziet thuis meteen wat er al in de kar ligt.
+          </div>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+function bindWinkelen(){
+  const t = $("#w-terug");
+  if(t) t.onclick = () => { S.winkelSessie = null; houdSchermAan(false); tril(); tekenNu(); };
+  const p = $("#w-plus");
+  if(p) p.onclick = () => sheetToevoegen({winkel: S.winkelSessie.winkelId === "alles" ? "nvt" : S.winkelSessie.winkelId});
+  $$("[data-start]").forEach(b => b.onclick = () => {
+    S.winkelSessie = {winkelId:b.dataset.start, gestart:nu(), gepakt:[]};
+    tril(); houdSchermAan(true); tekenNu();
+  });
+  $$("[data-wmitem]").forEach(el => el.onclick = async e => {
+    if(e.target.closest("[data-wmfoto]")) return;
+    const it = S.items.find(x => x.id === el.dataset.wmitem);
+    if(!it) return;
+    tril(14);
+    el.classList.toggle("af", !it.af);
+    (S.winkelSessie.gepakt ||= []).push(it.id);
+    await vinkItem(it, !it.af);
+  });
+  $$("[data-wmfoto]").forEach(im => im.onclick = e => {
+    e.stopPropagation();
+    const it = S.items.find(x => x.id === im.dataset.wmfoto);
+    if(it) openKijker(it.fotoId, it.tekst);
+  });
+  const k = $("#w-klaar");
+  if(k) k.onclick = () => sheetAfrekenen();
+  volgScroll();
+}
+
+function sheetAfrekenen(){
+  const wid = S.winkelSessie ? S.winkelSessie.winkelId : "alles";
+  const w = wid === "alles" ? {naam:"Boodschappen", em:"🧺"} : winkelVan(wid);
+  const st = {bedrag:"", fotoFile:null};
+  const body = `
+    <p style="margin:0 0 16px; color:var(--ink-2); font-size:15px; line-height:1.5">
+      Wat heb je bij <b>${esc(w.naam)}</b> uitgegeven? Dan telt het meteen mee
+      in het budget van deze maand.${budgetVoor(maandSleutel(nu())) > 0
+        ? " Er is nu nog <b>" + euro(Math.max(0, budgetVoor(maandSleutel(nu())) - bonnenVan(maandSleutel(nu())).reduce((s,b) => s + (Number(b.bedrag)||0), 0))) + "</b> over."
+        : ""}
+    </p>
+    <div class="veld">
+      <label>Bedrag</label>
+      <input class="invoer" id="a-bedrag" inputmode="decimal" placeholder="0,00"
+             style="font-size:26px; font-weight:700; text-align:center; letter-spacing:-.02em">
+    </div>
+    <div class="veld">
+      <label>Foto van de bon <span style="text-transform:none;letter-spacing:0;font-weight:500">(mag ook later)</span></label>
+      <div class="fotovak">
+        <button type="button" class="fotoknop" id="a-foto">${IK.camera}<span>Bon fotograferen</span></button>
+        <div class="fotovb verborgen" id="a-fotovb"><img alt=""><button type="button" class="weg" id="a-fotoweg">${IK.kruis}</button></div>
+      </div>
+      <input type="file" accept="image/*" id="a-bestand" class="verborgen">
+    </div>`;
+  const voet = `
+    <button class="knop stil" id="a-over" style="flex:0 0 auto">Overslaan</button>
+    <button class="knop groen" id="a-klaar" style="flex:1">${IK.vink} Klaar</button>`;
+  sheet({titel:"Klaar met winkelen", body, voet, naTeken:() => {
+    const bi = $("#a-bedrag");
+    setTimeout(() => bi.focus(), 250);
+    bi.oninput = () => { st.bedrag = bi.value; };
+    $("#a-foto").onclick = () => $("#a-bestand").click();
+    $("#a-bestand").onchange = async e => {
+      const file = e.target.files[0]; if(!file) return;
+      $("#a-foto").innerHTML = `<span class="spinner"></span><span>Bezig…</span>`;
+      try{
+        const {klein} = await verkleinFoto(file);
+        st.fotoFile = file;
+        $("#a-fotovb").classList.remove("verborgen"); $("#a-fotovb img").src = klein;
+        $("#a-foto").innerHTML = `${IK.herhaal}<span>Andere foto</span>`;
+      }catch(err){ toast("Die foto lukte niet"); $("#a-foto").innerHTML = `${IK.camera}<span>Bon fotograferen</span>`; }
+      e.target.value = "";
+    };
+    $("#a-fotoweg").onclick = () => { st.fotoFile = null; $("#a-fotovb").classList.add("verborgen");
+      $("#a-foto").innerHTML = `${IK.camera}<span>Bon fotograferen</span>`; };
+    const stoppen = () => { S.winkelSessie = null; houdSchermAan(false); sluitSheet(); S.tab = "lijst"; tekenNu(); };
+    $("#a-over").onclick = stoppen;
+    $("#a-klaar").onclick = async () => {
+      const bedrag = Number(String(st.bedrag).replace(",", ".").replace(/[^0-9.]/g,"")) || 0;
+      const knop = $("#a-klaar");
+      knop.disabled = true; knop.innerHTML = `<span class="spinner"></span> Opslaan…`;
+      try{
+        if(bedrag > 0){
+          let fotoId = null;
+          if(st.fotoFile) fotoId = await bewaarFoto(st.fotoFile);
+          await DB.voegToe(PAD.bonnen, {
+            winkel: wid === "alles" ? "nvt" : wid, bedrag, omschrijving:"", door:S.ik.id, datum:nu(), fotoId
+          });
+          S.winkelSessie = null; houdSchermAan(false); sluitSheet();
+          S.maand = maandSleutel(nu()); S.tab = "budget"; tekenNu();
+          toast(euro(bedrag) + " genoteerd" + restTekst(), "🧾");
+        }else stoppen();
+      }catch(e){ console.error(e); toast("Opslaan lukte niet"); knop.disabled = false; knop.innerHTML = `${IK.vink} Klaar`; }
+    };
+  }});
+}
+
+/* =====================================================================
+   BUDGET — rekenwerk
+   ===================================================================== */
+function budgetVoor(maand){
+  const per = (S.budget && S.budget.perMaand) || {};
+  if(per[maand] != null && per[maand] !== "") return Number(per[maand]) || 0;
+  return Number((S.budget && S.budget.standaard) || 0);
+}
+function bonnenVan(maand){
+  return S.bonnen.filter(b => maandSleutel(b.datum || b.gemaakt || 0) === maand);
+}
+function maandInfo(maand){
+  const [jaar, mnd] = maand.split("-").map(Number);
+  const dagenTotaal = new Date(jaar, mnd, 0).getDate();
+  const n = new Date();
+  const isNu = maand === maandSleutel(nu());
+  const isToekomst = maand > maandSleutel(nu());
+  const dagVandaag = isNu ? n.getDate() : (isToekomst ? 0 : dagenTotaal);
+  return {jaar, mnd, dagenTotaal, dagVandaag, isNu, isToekomst,
+          dagenOver: Math.max(0, dagenTotaal - dagVandaag + (isNu ? 1 : 0))};
+}
+
+/* =====================================================================
+   14 · SCHERM: BUDGET
+   ===================================================================== */
+function schermBudget(){
+  const maand = S.maand || maandSleutel(nu());
+  const budget = budgetVoor(maand);
+  const bonnen = bonnenVan(maand).sort((a,b) => (b.datum||0) - (a.datum||0));
+  const uitgegeven = bonnen.reduce((s,b) => s + (Number(b.bedrag)||0), 0);
+  const over = budget - uitgegeven;
+  const deel = budget > 0 ? uitgegeven / budget : 0;
+  const info = maandInfo(maand);
+
+  /* maanden om tussen te wisselen: alles met bonnen, plus deze maand */
+  const maanden = [...new Set([maandSleutel(nu()), ...S.bonnen.map(b => maandSleutel(b.datum||b.gemaakt||0))])]
+    .filter(m => m > "2000-00").sort().reverse().slice(0, 13);
+
+  return `
+  <div class="scherm">
+    <div class="kop" id="kop">
+      <div class="kop-rij">
+        <div class="kop-titel">
+          <h1>Budget</h1>
+          <div class="sub">${esc(maandNaam(maand))}${info.isNu && info.dagenOver ? " · nog " + info.dagenOver + (info.dagenOver===1?" dag":" dagen") : ""}</div>
+        </div>
+        <button class="ikoonknop" id="b-instel" aria-label="Budget instellen">${IK.tandwiel}</button>
+        <button class="ikoonknop" id="b-plus" aria-label="Uitgave toevoegen">${IK.plus}</button>
+      </div>
+      ${maanden.length > 1 ? `
+      <div class="chiprij">
+        ${maanden.map(m => `<button class="chip ${maand===m?"aan":""}" data-maand="${esc(m)}">${esc(maandKort(m))}</button>`).join("")}
+        <span class="rek">&nbsp;</span>
+      </div>` : ""}
+    </div>
+
+    <div class="inhoud" id="inhoud">
+      <div class="wrap">
+        ${budget <= 0 ? geenBudgetKaart(uitgegeven, bonnen.length) : budgetKaart(budget, uitgegeven, over, deel, info)}
+        ${budget > 0 ? statRij(bonnen, uitgegeven, info, budget) : ""}
+        ${verdelingSectie(bonnen, uitgegeven)}
+        ${uitgavenSectie(bonnen, maand)}
+        ${maandenSectie(maand)}
+      </div>
+    </div>
+
+    <button class="fab" id="b-fab">${IK.plus}<span>Uitgave</span></button>
+  </div>`;
+}
+
+function geenBudgetKaart(uitgegeven, aantal){
+  return `
+  <div class="budgetkaart">
+    <div style="font-size:38px; margin-bottom:8px">🎯</div>
+    <div style="font-size:19px; font-weight:700; letter-spacing:var(--kop)">Nog geen maandbudget</div>
+    <p style="color:var(--ink-2); font-size:14.5px; line-height:1.5; margin:8px 0 0">
+      Stel in hoeveel jullie per maand aan boodschappen willen uitgeven.
+      Daarna zie je hier in één oogopslag wat er nog over is.
+    </p>
+    ${aantal ? `<div class="hint" style="margin-top:10px">Deze maand al ${euro(uitgegeven)} uitgegeven in ${aantal} ${aantal===1?"bon":"bonnen"}.</div>` : ""}
+    <button class="knop vol" id="b-instel2" style="margin-top:16px">${IK.euro} Budget instellen</button>
+  </div>`;
+}
+
+function budgetKaart(budget, uitgegeven, over, deel, info){
+  const O = 2 * Math.PI * 52;                       /* omtrek van de ring */
+  const gevuld = Math.min(1, Math.max(0, deel));
+  const kleur = deel > 1 ? "var(--rood)" : (deel > 0.85 ? "var(--geel)" : "var(--groen)");
+  const procent = Math.round(deel * 100);
+
+  /* ligt het uitgavetempo voor of achter op schema? */
+  let tempo = "";
+  if(info.isNu && info.dagVandaag > 0){
+    const verwacht = budget * (info.dagVandaag / info.dagenTotaal);
+    const verschil = verwacht - uitgegeven;
+    if(over < 0){
+      tempo = `<div class="tempo let">${IK.waarsch}<span>Je zit ${euro(-over)} boven het budget van deze maand</span></div>`;
+    }else if(Math.abs(verschil) < budget * 0.03){
+      tempo = `<div class="tempo neutraal">${IK.klok}<span>Je zit precies op schema</span></div>`;
+    }else if(verschil > 0){
+      tempo = `<div class="tempo goed">${IK.vink}<span>Je ligt ${euro(verschil)} voor op schema</span></div>`;
+    }else{
+      tempo = `<div class="tempo let">${IK.waarsch}<span>Je ligt ${euro(-verschil)} achter op schema</span></div>`;
+    }
+  }else if(!info.isToekomst){
+    tempo = over >= 0
+      ? `<div class="tempo goed">${IK.vink}<span>Deze maand ${euro(over)} onder het budget gebleven</span></div>`
+      : `<div class="tempo let">${IK.waarsch}<span>Deze maand ${euro(-over)} over het budget gegaan</span></div>`;
+  }
+
+  const perDag = (info.isNu && info.dagenOver > 0 && over > 0) ? over / info.dagenOver : null;
+
+  return `
+  <div class="budgetkaart">
+    <div class="ringvak">
+      <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="baan" cx="60" cy="60" r="52"></circle>
+        <circle class="vul" cx="60" cy="60" r="52"
+                style="stroke:${kleur}"
+                stroke-dasharray="${O.toFixed(1)}"
+                stroke-dashoffset="${(O * (1 - gevuld)).toFixed(1)}"></circle>
+      </svg>
+      <div class="ringtekst">
+        <div class="groot" style="color:${over < 0 ? "var(--rood)" : "var(--ink)"}">${over < 0 ? "−" : ""}${euro(Math.abs(over))}</div>
+        <div class="klein">${over < 0 ? "te veel" : "nog te gaan"}</div>
+      </div>
+    </div>
+    <div class="onder">
+      <b>${euro(uitgegeven)}</b> van ${euro(budget)} uitgegeven · ${procent}%
+    </div>
+    ${tempo}
+    ${perDag !== null ? `<div class="hint" style="text-align:center; margin-top:10px">
+      Dat is nog ${euro(perDag)} per dag voor de resterende ${info.dagenOver} ${info.dagenOver===1?"dag":"dagen"}.</div>` : ""}
+  </div>`;
+}
+
+function statRij(bonnen, uitgegeven, info, budget){
+  const dagenGeweest = Math.max(1, info.dagVandaag);
+  const perDag = uitgegeven / dagenGeweest;
+  const gem = bonnen.length ? uitgegeven / bonnen.length : 0;
+  const verwachtEind = info.isNu ? perDag * info.dagenTotaal : uitgegeven;
+  return `
+  <div class="stat-rij">
+    <div class="stat"><b>${bonnen.length}</b><span>${bonnen.length===1?"uitgave":"uitgaven"}</span></div>
+    <div class="stat"><b>${euro(perDag)}</b><span>per dag</span></div>
+    <div class="stat">
+      <b style="color:${verwachtEind > budget ? "var(--rood)" : "var(--ink)"}">${euro(verwachtEind)}</b>
+      <span>${info.isNu ? "einde maand" : "totaal"}</span>
+    </div>
+  </div>`;
+}
+
+function verdelingSectie(bonnen, uitgegeven){
+  if(!bonnen.length) return "";
+  const perWinkel = new Map();
+  bonnen.forEach(b => {
+    const w = winkelVan(b.winkel);
+    if(!perWinkel.has(w.id)) perWinkel.set(w.id, {w, som:0, n:0});
+    const v = perWinkel.get(w.id);
+    v.som += Number(b.bedrag)||0; v.n++;
+  });
+  const lijst = [...perWinkel.values()].sort((a,b) => b.som - a.som);
+  const grootste = lijst[0].som || 1;
+  return `
+  <div class="sectie">
+    <div class="sectie-kop"><h2>Waar gaat het heen</h2><span class="lijn"></span></div>
+    <div class="lijst">
+      ${lijst.map(v => `
+        <div class="verdeel">
+          <div class="rij1">
+            <span class="em">${v.w.em}</span>
+            <b>${esc(v.w.naam)}</b>
+            <span class="eur">${euro(v.som)}</span>
+            <span class="pct">${uitgegeven ? Math.round(v.som/uitgegeven*100) : 0}%</span>
+          </div>
+          <div class="staaf"><div style="width:${(v.som/grootste*100).toFixed(1)}%; background:${esc(v.w.kleur)}"></div></div>
+        </div>`).join("")}
+    </div>
+  </div>`;
+}
+
+function uitgavenSectie(bonnen, maand){
+  if(!bonnen.length){
+    return `
+    <div class="leeg fade"><span class="em">🧾</span><h3>Nog geen uitgaven</h3>
+    <p>Noteer na het winkelen wat je hebt uitgegeven, dan loopt de teller mee.</p>
+    <button class="knop zacht klein" id="b-plus2" style="margin-top:14px">${IK.plus} Uitgave toevoegen</button></div>`;
+  }
+  return `
+  <div class="sectie">
+    <div class="sectie-kop">
+      <h2>Uitgaven</h2>
+      <span class="telw">${bonnen.length}</span>
+      <span class="lijn"></span>
+    </div>
+    <div class="lijst">
+      ${bonnen.map(b => {
+        const w = winkelVan(b.winkel), lid = lidVan(b.door);
+        return `<button class="uitgaverij" data-bon="${esc(b.id)}">
+          <span class="bol" style="background:${esc(w.kleur)}22">${w.em}</span>
+          <div class="tk">
+            <b>${esc(w.naam)}</b>
+            <span>${b.omschrijving ? esc(b.omschrijving) + " · " : ""}${datumKort(b.datum)}${lid ? " · " + esc(lid.naam.split(" ")[0]) : ""}${b.fotoId ? " · 📷" : ""}</span>
+          </div>
+          <span class="eur">${euro(b.bedrag)}</span>
+        </button>`;
+      }).join("")}
+    </div>
+  </div>`;
+}
+
+function maandenSectie(huidigeMaand){
+  const perMaand = new Map();
+  S.bonnen.forEach(b => {
+    const m = maandSleutel(b.datum || b.gemaakt || 0);
+    perMaand.set(m, (perMaand.get(m)||0) + (Number(b.bedrag)||0));
+  });
+  const nuM = maandSleutel(nu());
+  perMaand.set(nuM, perMaand.get(nuM) || 0);
+  const maanden = [...perMaand.keys()].filter(m => m > "2000-00").sort().slice(-6);
+  if(maanden.length < 2) return "";
+
+  const budgetten = maanden.map(m => budgetVoor(m));
+  const top = Math.max(...maanden.map(m => perMaand.get(m)||0), ...budgetten, 1) * 1.12;
+
+  return `
+  <div class="sectie">
+    <div class="sectie-kop"><h2>Per maand</h2><span class="lijn"></span>
+      <span class="telw">gemiddeld ${euro(maanden.reduce((s,m)=>s+(perMaand.get(m)||0),0)/maanden.length)}</span>
+    </div>
+    <div class="lijst">
+      <div class="maandgrafiek">
+        ${maanden.map(m => {
+          const som = perMaand.get(m) || 0;
+          const bud = budgetVoor(m);
+          const h = Math.max(3, som/top*86);
+          const doel = bud > 0 ? (bud/top*86) : null;
+          return `<button class="mkolom ${m===huidigeMaand?"nu":""} ${bud>0&&som>bud?"over":""}" data-maand="${esc(m)}">
+            <span class="mbedrag">${som >= 100 ? "€" + Math.round(som) : euro(som)}</span>
+            <span class="staafvak">
+              ${doel !== null ? `<span class="mdoel" style="bottom:${doel.toFixed(1)}px"></span>` : ""}
+              <span class="mstaaf" style="height:${h.toFixed(1)}px"></span>
+            </span>
+            <span class="mlabel">${new Date(Number(m.slice(0,4)), Number(m.slice(5,7))-1, 1).toLocaleDateString("nl-NL",{month:"short"}).replace(".","")}</span>
+          </button>`;
+        }).join("")}
+      </div>
+      <div class="hint" style="padding:0 15px 13px; text-align:center">
+        De stippellijn is het budget van die maand.
+      </div>
+    </div>
+  </div>`;
+}
+
+function bindBudget(){
+  const instel = () => sheetBudgetInstellen();
+  [$("#b-instel"), $("#b-instel2")].forEach(b => { if(b) b.onclick = instel; });
+  [$("#b-plus"), $("#b-plus2"), $("#b-fab")].forEach(b => { if(b) b.onclick = () => { tril(); sheetUitgave(); }; });
+  $$("[data-maand]").forEach(b => b.onclick = () => {
+    S.maand = b.dataset.maand; tril(); tekenNu();
+    naarBoven();
+  });
+  $$("[data-bon]").forEach(b => b.onclick = () => {
+    const bon = S.bonnen.find(x => x.id === b.dataset.bon);
+    if(bon) sheetUitgaveDetail(bon);
+  });
+  volgScroll();
+}
+
+/* ---------- budget instellen ---------- */
+function sheetBudgetInstellen(){
+  const maand = S.maand || maandSleutel(nu());
+  const standaard = Number((S.budget && S.budget.standaard) || 0);
+  const perMaand = (S.budget && S.budget.perMaand) || {};
+  const heeftEigen = perMaand[maand] != null && perMaand[maand] !== "";
+  const body = `
+    <p style="margin:0 0 16px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+      Hoeveel willen jullie per maand aan boodschappen uitgeven? Dit geldt voor jullie samen
+      en je huisgenoot ziet dezelfde teller.
+    </p>
+    <div class="veld">
+      <label>Budget per maand</label>
+      <div style="position:relative">
+        <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); font-size:24px; font-weight:700; color:var(--muted)">€</span>
+        <input class="invoer" id="bi-bedrag" inputmode="decimal" placeholder="400"
+               value="${standaard ? String(standaard).replace(".", ",") : ""}"
+               style="font-size:26px; font-weight:700; text-align:center; letter-spacing:-.02em; padding-left:40px">
+      </div>
+      <div class="sugg" id="bi-sugg">
+        ${[250, 300, 400, 500, 600].map(n => `<button type="button" data-snel="${n}">€${n}</button>`).join("")}
+      </div>
+    </div>
+    <div class="veld">
+      <label>Alleen voor ${esc(maandNaam(maand))}</label>
+      <button type="button" class="schakel" id="bi-eigen" style="width:100%">
+        <span class="tk"><b>Afwijkend bedrag deze maand</b>
+          <span>handig voor een feestmaand of een lange vakantie</span></span>
+        <span class="tuimel ${heeftEigen?"aan":""}"></span>
+      </button>
+      <div class="${heeftEigen?"":"verborgen"}" id="bi-eigenvak" style="margin-top:10px">
+        <input class="invoer" id="bi-eigenbedrag" inputmode="decimal" placeholder="Budget voor deze maand"
+               value="${heeftEigen ? String(perMaand[maand]).replace(".", ",") : ""}"
+               style="text-align:center; font-weight:650">
+      </div>
+    </div>`;
+  const voet = `
+    <button class="knop stil" id="bi-annuleer" style="flex:0 0 auto">Annuleer</button>
+    <button class="knop" id="bi-opslaan" style="flex:1">Opslaan</button>`;
+
+  sheet({titel:"Maandbudget", body, voet, naTeken:() => {
+    const inp = $("#bi-bedrag");
+    setTimeout(() => inp.focus(), 250);
+    let eigenAan = heeftEigen;
+    $$("#bi-sugg [data-snel]").forEach(b => b.onclick = () => { inp.value = b.dataset.snel; tril(6); });
+    $("#bi-eigen").onclick = () => {
+      eigenAan = !eigenAan; tril();
+      $("#bi-eigen .tuimel").classList.toggle("aan", eigenAan);
+      $("#bi-eigenvak").classList.toggle("verborgen", !eigenAan);
+      if(eigenAan) $("#bi-eigenbedrag").focus();
+    };
+    $("#bi-annuleer").onclick = sluitSheet;
+    $("#bi-opslaan").onclick = async () => {
+      const lees = el => Number(String(el.value).replace(",", ".").replace(/[^0-9.]/g,"")) || 0;
+      const bedrag = lees(inp);
+      if(bedrag <= 0){ inp.focus(); inp.style.borderColor = "var(--rood)"; return; }
+      const nieuwPer = Object.assign({}, perMaand);
+      if(eigenAan){
+        const eigen = lees($("#bi-eigenbedrag"));
+        if(eigen > 0) nieuwPer[maand] = eigen; else delete nieuwPer[maand];
+      }else delete nieuwPer[maand];
+      const knop = $("#bi-opslaan");
+      knop.disabled = true; knop.innerHTML = `<span class="spinner"></span> Opslaan…`;
+      try{
+        await DB.zet(PAD.meta + "/budget", {standaard:bedrag, perMaand:nieuwPer, gewijzigdDoor:S.ik.id, gewijzigdOp:nu()});
+        S.budget = {standaard:bedrag, perMaand:nieuwPer};
+        sluitSheet(); tekenNu(); toast("Budget ingesteld op " + euro(budgetVoor(maand)), "🎯");
+      }catch(e){ console.error(e); toast("Opslaan lukte niet"); knop.disabled = false; knop.innerHTML = "Opslaan"; }
+    };
+  }});
+}
+
+/* ---------- uitgave toevoegen of aanpassen ---------- */
+function datumVoorVeld(ts){
+  const d = new Date(ts || nu());
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function veldNaarDatum(s){
+  const [j,m,d] = String(s||"").split("-").map(Number);
+  if(!j || !m || !d) return nu();
+  return new Date(j, m-1, d, 12, 0, 0).getTime();
+}
+
+function sheetUitgave(bestaand){
+  const bewerk = !!bestaand;
+  const st = {
+    winkel: bestaand ? (bestaand.winkel || "nvt") : "nvt",
+    fotoFile: null, fotoWeg: false
+  };
+  const body = `
+    <div class="veld"><label>Bedrag</label>
+      <div style="position:relative">
+        <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); font-size:24px; font-weight:700; color:var(--muted)">€</span>
+        <input class="invoer" id="u-bedrag" inputmode="decimal" placeholder="0,00"
+               value="${bewerk ? String(bestaand.bedrag).replace(".", ",") : ""}"
+               style="font-size:26px; font-weight:700; text-align:center; letter-spacing:-.02em; padding-left:40px">
+      </div></div>
+    <div class="veld"><label>Winkel</label>
+      ${keuzeChips("winkel", S.winkels.map(w => ({id:w.id, naam:w.naam, em:w.em})), st.winkel)}</div>
+    <div class="veld"><label>Waarvoor <span style="text-transform:none;letter-spacing:0;font-weight:500">(mag leeg)</span></label>
+      <input class="invoer" id="u-oms" maxlength="60" placeholder="Bijvoorbeeld weekboodschappen"
+             value="${bewerk ? esc(bestaand.omschrijving||"") : ""}"></div>
+    <div class="veld"><label>Datum</label>
+      <input class="invoer" type="date" id="u-datum" value="${datumVoorVeld(bewerk ? bestaand.datum : nu())}"></div>
+    <div class="veld"><label>Foto van de bon</label>
+      <div class="fotovak">
+        <button type="button" class="fotoknop" id="u-foto">${bewerk && bestaand.fotoId ? IK.herhaal : IK.camera}<span>${bewerk && bestaand.fotoId ? "Andere foto" : "Bon fotograferen"}</span></button>
+        <div class="fotovb ${bewerk && bestaand.fotoId ? "" : "verborgen"}" id="u-fotovb">
+          <img alt="" ${bewerk && bestaand.fotoId ? `class="laden" data-foto="${esc(bestaand.fotoId)}_k"` : ""}>
+          <button type="button" class="weg" id="u-fotoweg">${IK.kruis}</button></div>
+      </div>
+      <input type="file" accept="image/*" id="u-bestand" class="verborgen"></div>`;
+  const voet = `
+    <button class="knop stil" id="u-annuleer" style="flex:0 0 auto">${bewerk ? "Terug" : "Annuleer"}</button>
+    <button class="knop" id="u-opslaan" style="flex:1">${bewerk ? "Opslaan" : "Uitgave opslaan"}</button>`;
+
+  sheet({titel: bewerk ? "Uitgave aanpassen" : "Uitgave toevoegen", body, voet, naTeken:() => {
+    vulFotos($(".sheet"));
+    if(!bewerk) setTimeout(() => $("#u-bedrag").focus(), 250);
+    bindKeuze("winkel", v => st.winkel = v);
+    $("#u-foto").onclick = () => $("#u-bestand").click();
+    $("#u-bestand").onchange = async e => {
+      const file = e.target.files[0]; if(!file) return;
+      $("#u-foto").innerHTML = `<span class="spinner"></span><span>Bezig…</span>`;
+      try{
+        const {klein} = await verkleinFoto(file);
+        st.fotoFile = file; st.fotoWeg = false;
+        $("#u-fotovb").classList.remove("verborgen");
+        $("#u-fotovb img").src = klein; $("#u-fotovb img").classList.remove("laden");
+        $("#u-foto").innerHTML = `${IK.herhaal}<span>Andere foto</span>`;
+      }catch(err){ toast("Die foto lukte niet"); $("#u-foto").innerHTML = `${IK.camera}<span>Bon fotograferen</span>`; }
+      e.target.value = "";
+    };
+    $("#u-fotoweg").onclick = () => {
+      st.fotoFile = null; st.fotoWeg = true;
+      $("#u-fotovb").classList.add("verborgen");
+      $("#u-foto").innerHTML = `${IK.camera}<span>Bon fotograferen</span>`;
+    };
+    $("#u-annuleer").onclick = () => bewerk ? sheetUitgaveDetail(bestaand) : sluitSheet();
+    $("#u-opslaan").onclick = async () => {
+      const bedrag = Number(String($("#u-bedrag").value).replace(",", ".").replace(/[^0-9.]/g,"")) || 0;
+      if(bedrag <= 0){ $("#u-bedrag").focus(); $("#u-bedrag").style.borderColor = "var(--rood)"; return; }
+      const knop = $("#u-opslaan");
+      knop.disabled = true; knop.innerHTML = `<span class="spinner"></span> Opslaan…`;
+      try{
+        const datum = veldNaarDatum($("#u-datum").value);
+        const gegevens = {
+          winkel: st.winkel, bedrag, omschrijving: $("#u-oms").value.trim(), datum
+        };
+        if(bewerk){
+          if(st.fotoFile){ await wisFoto(bestaand.fotoId); gegevens.fotoId = await bewaarFoto(st.fotoFile); }
+          else if(st.fotoWeg && bestaand.fotoId){ await wisFoto(bestaand.fotoId); gegevens.fotoId = null; }
+          await DB.zet(PAD.bonnen + "/" + bestaand.id, gegevens);
+          sluitSheet(); toast("Aangepast", "✓");
+        }else{
+          gegevens.door = S.ik.id;
+          gegevens.fotoId = st.fotoFile ? await bewaarFoto(st.fotoFile) : null;
+          await DB.voegToe(PAD.bonnen, gegevens);
+          S.maand = maandSleutel(datum);
+          sluitSheet(); tekenNu();
+          naarBoven();
+          toast(euro(bedrag) + " genoteerd" + restTekst(), "🧾");
+        }
+      }catch(e){
+        console.error(e); toast("Opslaan lukte niet");
+        knop.disabled = false; knop.innerHTML = bewerk ? "Opslaan" : "Uitgave opslaan";
+      }
+    };
+  }});
+}
+
+/* korte staart voor de melding: hoeveel budget er nog over is */
+function restTekst(){
+  const m = maandSleutel(nu());
+  const budget = budgetVoor(m);
+  if(budget <= 0) return "";
+  const over = budget - bonnenVan(m).reduce((s,b) => s + (Number(b.bedrag)||0), 0);
+  return over >= 0 ? " · nog " + euro(over) : " · " + euro(-over) + " over budget";
+}
+
+function sheetUitgaveDetail(bon){
+  const w = winkelVan(bon.winkel), lid = lidVan(bon.door);
+  const body = `
+    <div style="text-align:center; margin-bottom:18px">
+      <div style="font-size:34px; font-weight:750; letter-spacing:-.035em">${euro(bon.bedrag)}</div>
+      <div style="color:var(--muted); font-size:14px; margin-top:3px">${w.em} ${esc(w.naam)} · ${datumLang(bon.datum)}</div>
+      ${bon.omschrijving ? `<div style="font-size:15px; color:var(--ink-2); margin-top:8px">${esc(bon.omschrijving)}</div>` : ""}
+    </div>
+    ${bon.fotoId ? `<img class="laden" data-foto="${esc(bon.fotoId)}" id="bon-foto"
+        style="width:100%; border-radius:var(--r-m); margin-bottom:16px; cursor:zoom-in; border:1px solid var(--line)" alt="">` : ""}
+    ${lid ? `<div class="lijst" style="margin-bottom:14px">
+      <div class="rij">
+        <span class="ik">${IK.persoon}</span>
+        <div class="tk"><b>${esc(lid.naam)}</b><span>noteerde deze uitgave</span></div>
+        ${AV.html(lid)}
+      </div>
+    </div>` : ""}
+    <div class="lijst">
+      <button class="rij" id="bon-bewerk">
+        <span class="ik">${IK.potlood}</span>
+        <div class="tk"><b>Aanpassen</b><span>bedrag, winkel, datum of foto</span></div>
+      </button>
+      <button class="rij" id="bon-wis">
+        <span class="ik" style="background:var(--rood-zacht); color:var(--rood)">${IK.prul}</span>
+        <div class="tk"><b style="color:var(--rood)">Verwijderen</b><span>telt dan niet meer mee in het budget</span></div>
+      </button>
+    </div>`;
+  sheet({titel:"Uitgave", body, naTeken:() => {
+    vulFotos($(".sheet"));
+    const bf = $("#bon-foto"); if(bf) bf.onclick = () => openKijker(bon.fotoId, w.naam + " · " + euro(bon.bedrag));
+    $("#bon-bewerk").onclick = () => sheetUitgave(bon);
+    $("#bon-wis").onclick = async () => {
+      if(!confirm("Deze uitgave van " + euro(bon.bedrag) + " verwijderen?")) return;
+      await wisFoto(bon.fotoId);
+      await DB.wis(PAD.bonnen + "/" + bon.id);
+      sluitSheet(); toast("Verwijderd");
+    };
+  }});
+}
+
+/* =====================================================================
+   15 · SCHERM: MEER
+   ===================================================================== */
+function schermMeer(){
+  const ik = lidVan(S.ik.id);
+  const thema = LS.get("boodschappen_thema", "auto");
+  const themaNaam = {auto:"Automatisch", licht:"Licht", donker:"Donker"}[thema] || "Automatisch";
+  const open = openItems();
+  const dezeMaand = bonnenVan(maandSleutel(nu()));
+  const uitgegevenNu = dezeMaand.reduce((s,b) => s + (Number(b.bedrag)||0), 0);
+  const budgetNu = budgetVoor(maandSleutel(nu()));
+  return `
+  <div class="scherm">
+    <div class="kop" id="kop">
+      <div class="kop-rij"><div class="kop-titel"><h1>Meer</h1>
+        <div class="sub">Instellingen, vaste boodschappen en huisgenoten</div></div></div>
+    </div>
+    <div class="inhoud" id="inhoud">
+      <div class="wrap">
+        <div class="sectie" style="margin-top:14px">
+          <div class="lijst">
+            <div class="rij">
+              ${AV.html(ik, "groot", true)}
+              <div class="tk"><b style="font-size:17px">${esc(ik?ik.naam:"Ik")}</b>
+                <span>ingelogd op dit apparaat</span></div>
+              <button class="knop stil klein" id="m-uitloggen">Wissel</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sectie">
+          <div class="sectie-kop"><h2>Deze maand</h2><span class="lijn"></span></div>
+          <div class="stat-rij" style="margin-top:0">
+            <div class="stat"><b>${open.length}</b><span>op de lijst</span></div>
+            <div class="stat"><b>${S.items.filter(i => i.af && maandSleutel(i.afOp||0) === maandSleutel(nu())).length}</b><span>gehaald</span></div>
+            <div class="stat"><b>${euro(uitgegevenNu)}</b><span>uitgegeven</span></div>
+          </div>
+          ${budgetNu > 0 ? `
+            <div class="staaf" style="margin-top:10px">
+              <div style="width:${Math.min(100, budgetNu ? uitgegevenNu/budgetNu*100 : 0).toFixed(1)}%;
+                          background:${uitgegevenNu > budgetNu ? "var(--rood)" : "var(--groen)"}"></div>
+            </div>
+            <div class="hint" style="text-align:center; margin-top:7px">
+              ${uitgegevenNu > budgetNu
+                ? euro(uitgegevenNu - budgetNu) + " over het budget van " + euro(budgetNu)
+                : "nog " + euro(budgetNu - uitgegevenNu) + " van je budget van " + euro(budgetNu)}
+            </div>` : `
+            <button class="knop zacht klein vol" id="m-budget" style="margin-top:10px">${IK.euro} Maandbudget instellen</button>`}
+        </div>
+
+        <div class="sectie">
+          <div class="sectie-kop"><h2>Lijst</h2><span class="lijn"></span></div>
+          <div class="lijst">
+            <button class="rij" id="m-vast">
+              <span class="ik" style="background:var(--accent-zacht); color:var(--accent)">${IK.ster}</span>
+              <div class="tk"><b>Vaste boodschappen</b><span>wat je elke week nodig hebt, met één tik erop</span></div>
+              <span class="na">${S.vast.length}${IK.pijl}</span>
+            </button>
+            <button class="rij" id="m-winkels">
+              <span class="ik">${IK.winkel}</span>
+              <div class="tk"><b>Winkels</b><span>toevoegen, hernoemen en op volgorde zetten</span></div>
+              <span class="na">${S.winkels.length}${IK.pijl}</span>
+            </button>
+            <button class="rij" id="m-delen">
+              <span class="ik">${IK.deel}</span>
+              <div class="tk"><b>Lijst delen</b><span>stuur de lijst als bericht, bijv. via WhatsApp</span></div>
+              <span class="na">${IK.pijl}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="sectie">
+          <div class="sectie-kop"><h2>Huisgenoten</h2><span class="lijn"></span></div>
+          <div class="lijst">
+            ${S.leden.map(l => `
+              <button class="rij" data-lidbeheer="${esc(l.id)}">
+                ${AV.html(l, "", isOnline(l))}
+                <div class="tk"><b>${esc(l.naam)}${l.id===S.ik.id?" <span style='font-size:11px;color:var(--muted)'>· jij</span>":""}</b>
+                  <span>${isOnline(l) ? "nu online" : (l.laatstGezien ? "laatst gezien " + datumKort(l.laatstGezien) : "nog niet ingelogd")}</span></div>
+                <span class="na">${IK.pijl}</span>
+              </button>`).join("")}
+          </div>
+        </div>
+
+        <div class="sectie">
+          <div class="sectie-kop"><h2>App</h2><span class="lijn"></span></div>
+          <div class="lijst">
+            <button class="rij" id="m-thema">
+              <span class="ik">${IK.maan}</span>
+              <div class="tk"><b>Thema</b><span>licht, donker of meebewegen met je telefoon</span></div>
+              <span class="na">${themaNaam}${IK.pijl}</span>
+            </button>
+            <div class="rij">
+              <span class="ik" style="background:${DB && DB.demo ? "var(--rood-zacht)" : "var(--groen-zacht)"}; color:${DB && DB.demo ? "var(--rood)" : "var(--groen)"}">${IK.wolk}</span>
+              <div class="tk"><b>${DB && DB.demo ? "Demo-modus" : "Gedeelde lijst"}</b>
+                <span>${DB && DB.demo ? "alles staat alleen op dit apparaat" : "alles loopt live gelijk met je huisgenoten"}</span></div>
+            </div>
+            <button class="rij" id="m-over">
+              <span class="ik">${IK.info}</span>
+              <div class="tk"><b>Over deze app</b><span>versie ${VERSIE} · voor ${esc(CFG.huisNaam)}</span></div>
+              <span class="na">${IK.pijl}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="hint" style="text-align:center; margin-top:26px; opacity:.8">
+          ${esc(CFG.huisNaam)} · Boodschappen<br>gemaakt voor Merel &amp; Jelle
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function bindMeer(){
+  $("#m-uitloggen").onclick = () => { if(confirm("Uitloggen van dit apparaat?")) uitloggen(); };
+  $("#m-vast").onclick = sheetVast;
+  $("#m-winkels").onclick = sheetWinkels;
+  $("#m-delen").onclick = deelLijst;
+  $("#m-thema").onclick = sheetThema;
+  $("#m-over").onclick = sheetOver;
+  $$("[data-lidbeheer]").forEach(b => b.onclick = () => sheetLid(lidVan(b.dataset.lidbeheer)));
+  const mb = $("#m-budget");
+  if(mb) mb.onclick = () => { S.maand = maandSleutel(nu()); sheetBudgetInstellen(); };
+  volgScroll();
+}
+
+/* ---------- vaste boodschappen ---------- */
+function sheetVast(){
+  const opLijst = new Set(openItems().map(i => (i.tekst||"").toLowerCase()));
+  const body = `
+    <p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+      Dingen die jullie steeds nodig hebben. Tik erop om ze op de boodschappenlijst te zetten.
+    </p>
+    ${S.vast.length === 0 ? `
+      <div class="leeg" style="padding:30px 10px"><span class="em">⭐</span><h3>Nog geen vaste boodschappen</h3>
+      <p>Voeg ze hier toe, of tik bij een boodschap op “Bij de vaste boodschappen”.</p></div>`
+    : `<div class="lijst" style="margin-bottom:14px">
+      ${[...S.vast].sort((a,b) => (a.tekst||"").localeCompare(b.tekst||"")).map(v => {
+        const staatErop = opLijst.has((v.tekst||"").toLowerCase());
+        const w = winkelVan(v.winkel);
+        return `<div class="rij">
+          <span class="ik" style="background:${staatErop?"var(--groen-zacht)":"var(--bg-2)"}; color:${staatErop?"var(--groen)":"var(--ink-2)"}">
+            ${staatErop ? IK.vink : catVan(v.cat).em}</span>
+          <div class="tk"><b>${esc(v.tekst)}</b><span>${w.em} ${esc(w.naam)}${v.hoeveelheid?" · "+esc(v.hoeveelheid):""}</span></div>
+          ${staatErop
+            ? `<span class="na nowrap" style="font-size:12px">staat erop</span>`
+            : `<button class="knop zacht klein" data-vastadd="${esc(v.id)}">${IK.plus}</button>`}
+          <button class="ikoonknop" data-vastwis="${esc(v.id)}" style="width:32px;height:32px;color:var(--muted)">${IK.prul}</button>
+        </div>`;
+      }).join("")}
+    </div>`}
+    <div class="veld" style="margin-bottom:0">
+      <label>Nieuwe vaste boodschap</label>
+      <div class="veld-rij">
+        <input class="invoer" id="v-tekst" placeholder="Bijvoorbeeld koffie" maxlength="40">
+        <button class="knop" id="v-add" style="flex:0 0 auto">${IK.plus}</button>
+      </div>
+    </div>`;
+  const voet = `${S.vast.length ? `<button class="knop vol" id="v-alles">${IK.plus} Alles op de lijst zetten</button>` : ""}`;
+  sheet({titel:"Vaste boodschappen", body, voet, naTeken:() => {
+    $$("[data-vastadd]").forEach(b => b.onclick = async () => {
+      const v = S.vast.find(x => x.id === b.dataset.vastadd); if(!v) return;
+      await nieuwItem({tekst:v.tekst, hoeveelheid:v.hoeveelheid||"", winkel:v.winkel||"nvt", cat:v.cat||"overig"});
+      tril(12); toast(v.tekst + " staat op de lijst", "✓"); sheetVast();
+    });
+    $$("[data-vastwis]").forEach(b => b.onclick = async () => {
+      await DB.wis(PAD.vast + "/" + b.dataset.vastwis); sheetVast();
+    });
+    const inp = $("#v-tekst");
+    const voegToe = async () => {
+      const t = inp.value.trim(); if(t.length < 2) return;
+      const cat = raadCategorie(t) || "overig";
+      await DB.voegToe(PAD.vast, {tekst:t, hoeveelheid:"", winkel:"nvt", cat, door:S.ik.id, gemaakt:nu()});
+      inp.value = ""; sheetVast();
+    };
+    $("#v-add").onclick = voegToe;
+    inp.onkeydown = e => { if(e.key === "Enter") voegToe(); };
+    const alles = $("#v-alles");
+    if(alles) alles.onclick = async () => {
+      let n = 0;
+      for(const v of S.vast){
+        if(opLijst.has((v.tekst||"").toLowerCase())) continue;
+        await nieuwItem({tekst:v.tekst, hoeveelheid:v.hoeveelheid||"", winkel:v.winkel||"nvt", cat:v.cat||"overig"});
+        n++;
+      }
+      sluitSheet(); S.tab = "lijst"; tekenNu();
+      toast(n ? n + " boodschappen toegevoegd" : "Ze stonden er al", "⭐");
+    };
+  }});
+}
+
+/* ---------- winkels beheren ---------- */
+function sheetWinkels(){
+  const gesorteerd = [...S.winkels].sort((a,b) => (a.volgorde||50)-(b.volgorde||50));
+  const body = `
+    <p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+      Bij elke boodschap kies je waar hij te koop is. Hier bepaal je welke winkels dat zijn.
+    </p>
+    <div class="lijst" style="margin-bottom:14px">
+      ${gesorteerd.map((w,idx) => `
+        <div class="rij">
+          <span class="ik" style="background:${esc(w.kleur)}22; font-size:17px">${w.em}</span>
+          <div class="tk"><b>${esc(w.naam)}</b>
+            <span>${S.items.filter(i => !i.af && (i.winkel||"nvt")===w.id).length} op de lijst</span></div>
+          <button class="ikoonknop" data-wop="${esc(w.id)}" style="width:30px;height:30px" ${idx===0?"disabled":""}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+          ${w.id === "nvt" ? "" : `<button class="ikoonknop" data-wwis="${esc(w.id)}" style="width:30px;height:30px;color:var(--muted)">${IK.prul}</button>`}
+        </div>`).join("")}
+    </div>
+    <div class="veld" style="margin-bottom:0">
+      <label>Winkel toevoegen</label>
+      <div class="veld-rij">
+        <input class="invoer" id="w-emoji" placeholder="🛒" maxlength="2" style="flex:0 0 62px; text-align:center; font-size:20px">
+        <input class="invoer" id="w-naam" placeholder="Naam van de winkel" maxlength="26">
+        <button class="knop" id="w-add" style="flex:0 0 auto">${IK.plus}</button>
+      </div>
+      <div class="hint">De volgorde bepaalt hoe de lijst gegroepeerd staat.</div>
+    </div>`;
+  sheet({titel:"Winkels", body, naTeken:() => {
+    $$("[data-wop]").forEach(b => b.onclick = async () => {
+      const lijst = [...S.winkels].sort((a,b) => (a.volgorde||50)-(b.volgorde||50));
+      const i = lijst.findIndex(w => w.id === b.dataset.wop);
+      if(i <= 0) return;
+      const a = lijst[i], vorige = lijst[i-1];
+      await DB.zet(PAD.winkels + "/" + a.id, {volgorde: (vorige.volgorde||50) - 1});
+      tril(); setTimeout(sheetWinkels, 140);
+    });
+    $$("[data-wwis]").forEach(b => b.onclick = async () => {
+      const w = winkelVan(b.dataset.wwis);
+      const aantal = S.items.filter(i => (i.winkel||"nvt") === w.id).length;
+      if(!confirm(`“${w.naam}” verwijderen?` + (aantal ? `\n\n${aantal} boodschappen komen dan bij “Nog niet gekozen”.` : ""))) return;
+      for(const i of S.items.filter(i => (i.winkel||"nvt") === w.id)){
+        await DB.zet(PAD.items + "/" + i.id, {winkel:"nvt"});
+      }
+      await DB.wis(PAD.winkels + "/" + w.id);
+      setTimeout(sheetWinkels, 140);
+    });
+    const voegToe = async () => {
+      const naam = $("#w-naam").value.trim();
+      if(naam.length < 2){ $("#w-naam").focus(); return; }
+      const em = $("#w-emoji").value.trim() || "🛒";
+      const max = Math.max(0, ...S.winkels.filter(w => w.id !== "nvt").map(w => w.volgorde||0));
+      await DB.voegToe(PAD.winkels, {
+        naam, em, kleur: KLEUREN[S.winkels.length % KLEUREN.length], volgorde: max + 1
+      });
+      setTimeout(sheetWinkels, 160);
+    };
+    $("#w-add").onclick = voegToe;
+    $("#w-naam").onkeydown = e => { if(e.key === "Enter") voegToe(); };
+  }});
+}
+
+/* ---------- huisgenoot ---------- */
+function sheetLid(lid){
+  if(!lid) return;
+  const ikZelf = lid.id === S.ik.id;
+  const items = S.items.filter(i => i.door === lid.id);
+  const gehaald = S.items.filter(i => i.afDoor === lid.id).length;
+  const betaald = S.bonnen.filter(b => b.door === lid.id).reduce((s,b) => s+(Number(b.bedrag)||0), 0);
+  const body = `
+    <div style="text-align:center; margin-bottom:20px">
+      <div style="display:grid; place-items:center; margin-bottom:12px">${AV.html(lid, "xl", isOnline(lid))}</div>
+      <div style="font-size:21px; font-weight:700; letter-spacing:-.02em">${esc(lid.naam)}</div>
+      <div style="color:var(--muted); font-size:13.5px; margin-top:2px">
+        ${isOnline(lid) ? "nu online" : (lid.laatstGezien ? "laatst gezien " + datumKort(lid.laatstGezien) : "nog niet ingelogd")}
+      </div>
+    </div>
+    <div class="stat-rij" style="margin-bottom:16px">
+      <div class="stat"><b>${items.length}</b><span>toegevoegd</span></div>
+      <div class="stat"><b>${gehaald}</b><span>gehaald</span></div>
+      <div class="stat"><b>${euro(betaald)}</b><span>betaald</span></div>
+    </div>
+    <div class="lijst">
+      <button class="rij" id="l-filter">
+        <span class="ik">${IK.filter}</span>
+        <div class="tk"><b>Toon wat ${ikZelf ? "jij" : esc(lid.naam.split(" ")[0])} erop zette</b><span>filtert de lijst</span></div>
+      </button>
+      ${ikZelf ? `
+      <button class="rij" id="l-naam">
+        <span class="ik">${IK.potlood}</span>
+        <div class="tk"><b>Naam wijzigen</b></div>
+      </button>
+      <button class="rij" id="l-pin">
+        <span class="ik">${IK.slot}</span>
+        <div class="tk"><b>Pincode wijzigen</b></div>
+      </button>` : `
+      <button class="rij" id="l-pinreset">
+        <span class="ik" style="background:var(--rood-zacht); color:var(--rood)">${IK.slot}</span>
+        <div class="tk"><b>Pincode wissen</b><span>als ${esc(lid.naam.split(" ")[0])} de code kwijt is</span></div>
+      </button>`}
+    </div>`;
+  sheet({titel:"Huisgenoot", body, naTeken:() => {
+    $("#l-filter").onclick = () => { S.filter.door = lid.id; S.tab = "lijst"; sluitSheet(); tekenNu(); };
+    const ln = $("#l-naam");
+    if(ln) ln.onclick = async () => {
+      const n = prompt("Nieuwe naam:", lid.naam);
+      if(!n || n.trim().length < 2) return;
+      await DB.zet(PAD.leden + "/" + lid.id, {naam:n.trim()});
+      S.ik.naam = n.trim(); LS.zet("boodschappen_ik_" + P, S.ik);
+      sluitSheet(); toast("Naam gewijzigd");
+    };
+    const lp = $("#l-pin");
+    if(lp) lp.onclick = async () => {
+      const oud = prompt("Je huidige pincode:");
+      if(oud === null) return;
+      if(await hashPin(lid.naam, oud) !== lid.pinHash){ toast("Die code klopt niet", "🔒"); return; }
+      const nieuw = prompt("Nieuwe pincode (4 cijfers):");
+      if(!nieuw || !/^\d{4}$/.test(nieuw)){ toast("Vier cijfers graag"); return; }
+      await DB.zet(PAD.leden + "/" + lid.id, {pinHash: await hashPin(lid.naam, nieuw)});
+      sluitSheet(); toast("Pincode gewijzigd", "🔒");
+    };
+    const lr = $("#l-pinreset");
+    if(lr) lr.onclick = async () => {
+      if(!confirm("De pincode van " + lid.naam + " wissen?\n\n" + lid.naam.split(" ")[0] +
+                  " kiest bij de volgende keer inloggen zelf een nieuwe code.")) return;
+      await DB.zet(PAD.leden + "/" + lid.id, {pinHash:null});
+      sluitSheet(); toast("Pincode gewist");
+    };
+  }});
+}
+
+/* ---------- thema ---------- */
+function sheetThema(){
+  const huidig = LS.get("boodschappen_thema", "auto");
+  const opties = [
+    {id:"auto", naam:"Automatisch", uitleg:"volgt de instelling van je telefoon", em:"🌗"},
+    {id:"licht", naam:"Licht", uitleg:"warm beige, altijd licht", em:"☀️"},
+    {id:"donker", naam:"Donker", uitleg:"rustig donker, fijn 's avonds", em:"🌙"}
+  ];
+  const body = `<div class="lijst">
+    ${opties.map(o => `
+      <button class="rij" data-themakeuze="${o.id}">
+        <span class="ik" style="font-size:17px">${o.em}</span>
+        <div class="tk"><b>${o.naam}</b><span>${o.uitleg}</span></div>
+        ${huidig === o.id ? `<span class="na" style="color:var(--accent)">${IK.vink}</span>` : ""}
+      </button>`).join("")}
+  </div>`;
+  sheet({titel:"Thema", body, naTeken:() => {
+    $$("[data-themakeuze]").forEach(b => b.onclick = () => {
+      zetThema(b.dataset.themakeuze); tril(); sluitSheet(); tekenNu();
+    });
+  }});
+}
+
+/* ---------- over ---------- */
+function sheetOver(){
+  const body = `
+    <div style="text-align:center; margin-bottom:20px">
+      <div class="logo" style="width:64px;height:64px;border-radius:20px;background:var(--accent);display:grid;place-items:center;margin:0 auto 14px">
+        <span style="width:32px;height:32px;color:var(--accent-ink)">${IK.winkel}</span></div>
+      <div style="font-size:19px; font-weight:700; letter-spacing:-.02em">${esc(CFG.huisNaam)} · Boodschappen</div>
+      <div style="color:var(--muted); font-size:13.5px; margin-top:3px">versie ${VERSIE}</div>
+    </div>
+    <p style="color:var(--ink-2); font-size:14.5px; line-height:1.55; margin:0 0 16px">
+      Een gedeelde boodschappenlijst voor het huisje. Alles wat jij toevoegt of afvinkt,
+      ziet je huisgenoot meteen — inclusief wie wat erop zette, waar het te koop is en de foto's erbij.
+    </p>
+    <div class="lijst" style="margin-bottom:14px">
+      <div class="rij"><span class="ik">${IK.kar}</span>
+        <div class="tk"><b>Winkelmodus</b><span>groot afvinkscherm per winkel, scherm blijft aan</span></div></div>
+      <div class="rij"><span class="ik">${IK.euro}</span>
+        <div class="tk"><b>Uitgaven</b><span>wie schoot wat voor — met één tik verrekend</span></div></div>
+      <div class="rij"><span class="ik">${IK.ster}</span>
+        <div class="tk"><b>Vaste boodschappen</b><span>de wekelijkse dingen in één tik op de lijst</span></div></div>
+    </div>
+    <div class="lijst">
+      <button class="rij" id="o-installeer">
+        <span class="ik" style="background:var(--accent-zacht); color:var(--accent)">${IK.plus}</span>
+        <div class="tk"><b>Op je beginscherm zetten</b><span>dan opent hij als een echte app</span></div>
+      </button>
+      <button class="rij" id="o-ververs">
+        <span class="ik">${IK.herhaal}</span>
+        <div class="tk"><b>App verversen</b><span>haal de nieuwste versie op</span></div>
+      </button>
+    </div>`;
+  sheet({titel:"Over deze app", body, naTeken:() => {
+    $("#o-installeer").onclick = () => {
+      if(window.installPrompt){ window.installPrompt.prompt(); sluitSheet(); }
+      else alert("Op de iPhone: tik onderin op het deelicoon en kies “Zet op beginscherm”.\n\nOp Android: tik op de drie puntjes rechtsboven en kies “App installeren”.");
+    };
+    $("#o-ververs").onclick = async () => {
+      try{
+        if("caches" in window){ for(const k of await caches.keys()) await caches.delete(k); }
+        const regs = await navigator.serviceWorker?.getRegistrations?.() || [];
+        for(const r of regs) await r.update();
+      }catch(e){}
+      location.reload();
+    };
+  }});
+}
+
+/* ---------- delen ---------- */
+function deelLijst(){
+  const groepen = groepeer(openItems());
+  let t = "🧺 " + CFG.huisNaam + " — boodschappen\n";
+  groepen.forEach(g => {
+    t += "\n*" + g.naam + "*\n";
+    g.items.forEach(i => {
+      t += "• " + (i.hoeveelheid ? i.hoeveelheid + " " : "") + i.tekst +
+           (i.notitie ? " (" + i.notitie + ")" : "") + (i.urgent ? " ⚡" : "") + "\n";
+    });
+  });
+  if(!groepen.length) t += "\nDe lijst is leeg 🎉\n";
+  if(navigator.share){
+    navigator.share({title:"Boodschappen", text:t}).catch(()=>{});
+  }else{
+    navigator.clipboard?.writeText(t).then(() => toast("Lijst gekopieerd", "📋"))
+      .catch(() => alert(t));
+  }
+}
+
+/* =====================================================================
+   16 · NAVIGATIE & TEKENEN
+   ===================================================================== */
+function navHtml(){
+  const open = openItems().length;
+  const tabs = [
+    {id:"lijst",    naam:"Lijst",    ik:IK.lijst, bel:open},
+    {id:"winkelen", naam:"Winkelen", ik:IK.kar},
+    {id:"budget",   naam:"Budget",   ik:IK.euro},
+    {id:"meer",     naam:"Meer",     ik:IK.meer}
+  ];
+  return `<nav class="nav"><div class="nav-rij">
+    ${tabs.map(t => `
+      <button class="nav-knop ${S.tab===t.id?"aan":""}" data-tab="${t.id}">
+        ${t.ik}<span>${t.naam}</span>
+        ${t.bel ? `<span class="bel">${t.bel > 99 ? "99+" : t.bel}</span>` : ""}
+      </button>`).join("")}
+  </div></nav>`;
+}
+
+function tekenNu(){
+  const app = $("#app");
+
+  if(!S.geladen){
+    app.innerHTML = `<div class="midden"><div class="spinner"></div><span>Boodschappen laden…</span></div>`;
+    return;
+  }
+  if(!S.ik){ tekenInlog(); return; }
+  if(S.ik && !lidVan(S.ik.id)){ uitloggen(); return; }
+
+  let scherm = "";
+  if(S.tab === "lijst")         scherm = schermLijst();
+  else if(S.tab === "winkelen") scherm = schermWinkelen();
+  else if(S.tab === "budget")   scherm = schermBudget();
+  else                          scherm = schermMeer();
+
+  const inWinkelSessie = S.tab === "winkelen" && S.winkelSessie;
+  app.innerHTML = scherm + (inWinkelSessie ? "" : navHtml());
+
+  $$("[data-tab]").forEach(b => b.onclick = () => {
+    if(S.tab === b.dataset.tab && b.dataset.tab === "lijst"){
+      naarBoven(true);
+      return;
+    }
+    S.tab = b.dataset.tab; tril();
+    if(S.tab !== "winkelen") houdSchermAan(false);
+    tekenNu(); naarBoven();
+  });
+
+  if(S.tab === "lijst")         bindLijst();
+  else if(S.tab === "winkelen") bindWinkelen();
+  else if(S.tab === "budget")   bindBudget();
+  else                          bindMeer();
+
+  vulFotos(app);
+}
+
+/* hertekent alleen de inhoud — zo blijft het zoekveld de focus houden */
+function tekenAlleenInhoud(){
+  if(S.tab !== "lijst") return tekenNu();
+  const nieuw = document.createElement("div");
+  nieuw.innerHTML = schermLijst();
+  const bron = nieuw.querySelector("#inhoud"), doel = $("#inhoud");
+  if(!bron || !doel) return tekenNu();
+  const pos = scrollNu();
+  doel.innerHTML = bron.innerHTML;
+  window.scrollTo({top:pos});
+  bindLijst();
+  vulFotos(doel);
+}
+
+/* =====================================================================
+   17 · LUISTEREN NAAR DE GEDEELDE LIJST
+   ===================================================================== */
+let eersteItems = true;
+function startLuisteren(){
+  DB.luister(PAD.leden, l => {
+    S.leden = l.sort((a,b) => (a.gemaakt||0)-(b.gemaakt||0));
+    if(S.ik){
+      const m = lidVan(S.ik.id);
+      if(m && m.naam !== S.ik.naam){ S.ik.naam = m.naam; LS.zet("boodschappen_ik_" + P, S.ik); }
+    }else{
+      /* kwamen de accounts pas ná het opstarten binnen? Dan alsnog inloggen */
+      const bewaard = LS.get("boodschappen_ik_" + P, null);
+      if(bewaard && l.some(x => x.id === bewaard.id)){ S.ik = bewaard; startHartslag(); }
+    }
+    if(S.geladen) tekenNu();
+  });
+
+  DB.luister(PAD.items, l => {
+    const oud = S.items;
+    S.items = l;
+    if(!eersteItems && S.ik){
+      const oudeIds = new Set(oud.map(i => i.id));
+      const nieuweVanAnder = l.filter(i => !oudeIds.has(i.id) && i.door !== S.ik.id && (nu() - (i.gemaakt||0) < 90000));
+      if(nieuweVanAnder.length === 1){
+        const i = nieuweVanAnder[0];
+        toast(naamVan(i.door).split(" ")[0] + " zette " + i.tekst + " op de lijst", "🧺");
+      }else if(nieuweVanAnder.length > 1){
+        toast(naamVan(nieuweVanAnder[0].door).split(" ")[0] + " voegde " + nieuweVanAnder.length + " boodschappen toe", "🧺");
+      }
+    }
+    eersteItems = false;
+    if(S.geladen) tekenNu();
+  });
+
+  DB.luister(PAD.winkels, l => {
+    S.winkels = l.length ? l : S.winkels;
+    if(S.geladen) tekenNu();
+  });
+  DB.luister(PAD.vast,   l => { S.vast = l;   if(S.geladen && S.tab === "meer") tekenNu(); });
+  DB.luister(PAD.bonnen, l => { S.bonnen = l; if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu(); });
+  DB.luister(PAD.meta, l => {
+    const b = l.find(x => x.id === "budget");
+    S.budget = b ? {standaard: Number(b.standaard)||0, perMaand: b.perMaand || {}} : {standaard:0, perMaand:{}};
+    if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu();
+  });
+}
+
+async function zetWinkelsKlaar(){
+  /* meteen bruikbaar, ook als de database nog niet geantwoord heeft */
+  S.winkels = STANDAARD_WINKELS.map(w => ({...w}));
+  const bestaand = await DB.haalAlles(PAD.winkels);
+  if(bestaand.length){ S.winkels = bestaand; return; }
+  /* de eerste keer de standaardwinkels wegschrijven — op de achtergrond.
+     Firestore lost een schrijfactie pas in als de server hem bevestigt; daar
+     mag het laadscherm niet op blijven wachten. */
+  Promise.all(STANDAARD_WINKELS.map(w => {
+    const {id, ...rest} = w;
+    return DB.zet(PAD.winkels + "/" + id, rest);
+  })).catch(e => console.error("standaardwinkels", e));
+}
+
+/* =====================================================================
+   18 · START
+   ===================================================================== */
+async function start(){
+  try{
+    DB = CFG.firebase ? await firestoreDB() : demoDB();
+  }catch(e){
+    console.error("Firebase lukte niet:", e);
+    DB = demoDB();
+    S.syncFout = "De gedeelde lijst kon niet geladen worden — de app draait nu op dit apparaat.";
+  }
+
+  /* nooit langer dan een paar tellen op de database wachten — de luisteraars
+     vullen alles alsnog aan zodra het binnen is */
+  const metGrens = (belofte, terugval, ms = 5000) =>
+    Promise.race([belofte, new Promise(r => setTimeout(() => r(terugval), ms))]);
+
+  try{ await metGrens(zetWinkelsKlaar(), null); }
+  catch(e){ console.error(e); S.winkels = STANDAARD_WINKELS.map(w => ({...w})); toonSyncFout(e); }
+
+  startLuisteren();
+
+  try{ S.leden  = await metGrens(DB.haalAlles(PAD.leden), []); }catch(e){ toonSyncFout(e); }
+  try{ S.items  = await metGrens(DB.haalAlles(PAD.items), []); eersteItems = false; }catch(e){}
+  try{ S.bonnen = await metGrens(DB.haalAlles(PAD.bonnen), []); }catch(e){}
+  try{ S.vast   = await metGrens(DB.haalAlles(PAD.vast), []); }catch(e){}
+
+  const bewaard = LS.get("boodschappen_ik_" + P, null);
+  if(bewaard && S.leden.some(l => l.id === bewaard.id)){
+    S.ik = bewaard;
+    startHartslag();
+  }
+
+  S.geladen = true;
+  tekenNu();
+
+  /* installeerbaar maken */
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); window.installPrompt = e; });
+
+  /* service worker voor offline gebruik */
+  if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+
+  /* terug-knop sluit eerst een sheet of de winkelmodus */
+  history.pushState({app:true}, "");
+  window.addEventListener("popstate", () => {
+    history.pushState({app:true}, "");
+    if($(".kijker")){ $(".kijker").click(); return; }
+    if(S.sheet){ sluitSheet(); return; }
+    if(S.tab === "winkelen" && S.winkelSessie){ S.winkelSessie = null; houdSchermAan(false); tekenNu(); return; }
+    if(S.tab !== "lijst"){ S.tab = "lijst"; tekenNu(); }
+  });
+
+  /* ververs de "laatst gezien"-tijden af en toe */
+  setInterval(() => { if(S.geladen && S.ik && document.visibilityState === "visible" && !S.sheet) tekenNu(); }, 60000);
+}
+
+start();
+</script>
+</body>
+</html>
