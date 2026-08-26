@@ -593,6 +593,94 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
   color:#fff; display:grid; place-items:center; backdrop-filter:blur(6px);
 }
 
+/* ---------- budget ---------- */
+.budgetkaart{
+  padding:22px 18px 20px; border-radius:var(--r-l); text-align:center;
+  background:var(--card); border:1px solid var(--line); box-shadow:var(--schaduw); margin-top:14px;
+}
+.ringvak{position:relative; width:190px; height:190px; margin:0 auto;}
+.ring{width:190px; height:190px; display:block; transform:rotate(-90deg);}
+.ring circle{fill:none; stroke-linecap:round;}
+.ring .baan{stroke:var(--bg-2); stroke-width:11;}
+.ring .vul{stroke:var(--groen); stroke-width:11;
+  transition:stroke-dashoffset .7s cubic-bezier(.32,.72,0,1), stroke .35s ease;}
+.ringtekst{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; padding:0 26px;
+}
+.ringtekst .groot{
+  font-size:34px; font-weight:750; letter-spacing:-.035em; line-height:1.05;
+  font-variant-numeric:tabular-nums;
+}
+.ringtekst .klein{
+  font-size:11px; font-weight:700; color:var(--muted); letter-spacing:.08em;
+  text-transform:uppercase; margin-top:5px;
+}
+.budgetkaart .onder{font-size:14px; color:var(--ink-2); margin-top:16px; line-height:1.45;}
+.tempo{
+  display:inline-flex; align-items:center; gap:8px; margin-top:13px;
+  padding:9px 15px; border-radius:999px; font-size:13.5px; font-weight:600;
+  line-height:1.35; text-align:left;
+}
+.tempo.goed{background:var(--groen-zacht); color:var(--groen);}
+.tempo.let{background:var(--rood-zacht); color:var(--rood);}
+.tempo.neutraal{background:var(--bg-2); color:var(--ink-2);}
+.tempo svg{width:16px; height:16px; flex:none; stroke-width:2.3;}
+
+.verdeel{padding:13px 15px; border-bottom:1px solid var(--line);}
+.verdeel:last-child{border-bottom:none;}
+.verdeel .rij1{display:flex; align-items:center; gap:9px; margin-bottom:7px;}
+.verdeel .rij1 .em{font-size:15px; flex:none;}
+.verdeel .rij1 b{
+  flex:1; min-width:0; font-size:14.5px; font-weight:600;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.verdeel .rij1 .eur{font-size:14.5px; font-weight:700; font-variant-numeric:tabular-nums;}
+.verdeel .rij1 .pct{
+  font-size:11.5px; color:var(--muted); font-weight:650;
+  font-variant-numeric:tabular-nums; min-width:34px; text-align:right;
+}
+.staaf{height:7px; border-radius:999px; background:var(--bg-2); overflow:hidden;}
+.staaf > div{height:100%; border-radius:999px; transition:width .5s cubic-bezier(.32,.72,0,1);}
+
+.maandgrafiek{display:flex; align-items:flex-end; gap:7px; padding:16px 15px 12px;}
+.mkolom{flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:5px;}
+.mkolom .staafvak{width:100%; height:86px; display:flex; align-items:flex-end; position:relative;}
+.mkolom .mstaaf{
+  width:100%; min-height:3px; border-radius:6px 6px 3px 3px;
+  background:var(--accent-zacht); transition:height .55s cubic-bezier(.32,.72,0,1);
+}
+.mkolom.nu .mstaaf{background:var(--accent);}
+.mkolom.over .mstaaf{background:var(--rood);}
+.mkolom .mdoel{
+  position:absolute; left:-1px; right:-1px; height:0;
+  border-top:1.5px dashed var(--line-2); pointer-events:none;
+}
+.mkolom .mlabel{
+  font-size:9.5px; color:var(--muted); font-weight:700;
+  text-transform:uppercase; letter-spacing:.04em;
+}
+.mkolom .mbedrag{font-size:10.5px; font-weight:700; font-variant-numeric:tabular-nums;}
+
+.uitgaverij{
+  display:flex; align-items:center; gap:12px; padding:12px 14px; width:100%;
+  text-align:left; background:var(--card); border-bottom:1px solid var(--line);
+  transition:background var(--vt);
+}
+.uitgaverij:last-child{border-bottom:none;}
+.uitgaverij:active{background:var(--card-2);}
+.uitgaverij .bol{
+  width:38px; height:38px; border-radius:12px; display:grid; place-items:center;
+  font-size:17px; flex:none;
+}
+.uitgaverij .tk{flex:1; min-width:0;}
+.uitgaverij .tk b{font-size:15px; font-weight:650; display:block;}
+.uitgaverij .tk span{
+  font-size:12.5px; color:var(--muted); display:block;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.uitgaverij .eur{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em;}
+
 /* ---------- toast ---------- */
 .toast{
   position:fixed; left:50%; transform:translateX(-50%) translateY(0); z-index:120;
@@ -776,6 +864,12 @@ function datumLang(ts){
   return new Date(ts).toLocaleDateString("nl-NL", {weekday:"long", day:"numeric", month:"long"});
 }
 function maandSleutel(ts){ const d = new Date(ts); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); }
+function maandKort(sleutel){
+  const [j, m] = sleutel.split("-").map(Number);
+  const naam = new Date(j, m-1, 1).toLocaleDateString("nl-NL", {month:"long"});
+  const kop = naam.charAt(0).toUpperCase() + naam.slice(1);
+  return j === new Date().getFullYear() ? kop : kop + " " + j;
+}
 function maandNaam(sleutel){
   const [j,m] = sleutel.split("-").map(Number);
   const naam = new Date(j, m-1, 1).toLocaleDateString("nl-NL", {month:"long", year:"numeric"});
@@ -921,7 +1015,8 @@ const S = {
   fotoCache:{},
   filter:{winkel:null, cat:null, door:null, urgent:false, zoek:"", groep:"winkel", toonAf:true},
   winkelSessie:null,       // {winkelId, gestart}
-  bonMaand:null,
+  maand:null,                    // welke maand het budgetscherm laat zien
+  budget:{standaard:0, perMaand:{}},
   laatsteItemIds:null,     // om nieuwe items van de ander te herkennen
   sheet:null,
   kijker:null
@@ -938,6 +1033,19 @@ const lidVan = idd => S.leden.find(l => l.id === idd) || null;
 const naamVan = idd => (lidVan(idd)?.naam) || "Iemand";
 const isOnline = lid => lid && lid.laatstGezien && (nu() - lid.laatstGezien < 3*60*1000);
 const winkelVan = wid => S.winkels.find(w => w.id === wid) || S.winkels.find(w => w.id === "nvt") || {id:"nvt", naam:"Nog niet gekozen", em:"❓", kleur:"#918878"};
+
+/* ---------- scrollen ----------
+   De hele pagina scrolt met het venster (zo blijft op iOS het adresbalk-gedrag
+   normaal). Deze helpers houden dat op één plek. */
+const scrollNu = () => window.scrollY || document.documentElement.scrollTop || 0;
+const naarBoven = (zacht) => window.scrollTo(zacht ? {top:0, behavior:"smooth"} : {top:0});
+function volgScroll(){
+  const kop = $("#kop");
+  if(!kop) return;
+  const bij = () => kop.classList.toggle("geplakt", scrollNu() > 4);
+  window.onscroll = bij;
+  bij();
+}
 
 /* ---------- toast ---------- */
 function toast(tekst, em){
@@ -1264,7 +1372,7 @@ function uitloggen(){
   LS.weg("boodschappen_ik_" + P);
   S.ik = null; IN.stap = "kies"; IN.lid = null; IN.pin = ""; IN.pin2 = "";
   /* wie hierna inlogt begint gewoon weer bovenaan de lijst */
-  S.tab = "lijst"; S.winkelSessie = null; S.bonMaand = null;
+  S.tab = "lijst"; S.winkelSessie = null; S.maand = null;
   S.filter = Object.assign(S.filter, {winkel:null, cat:null, door:null, urgent:false, zoek:"", zoekOpen:false});
   clearInterval(hartslagTimer);
   houdSchermAan(false);
@@ -1564,8 +1672,7 @@ function bindLijst(){
   const fab = $("#fab");
   if(fab) fab.onclick = () => { tril(); sheetToevoegen(); };
 
-  const inh = $("#inhoud"), kop = $("#kop");
-  if(inh && kop) inh.onscroll = () => kop.classList.toggle("geplakt", inh.scrollTop > 4);
+  volgScroll();
 }
 
 /* =====================================================================
@@ -2215,8 +2322,7 @@ function bindWinkelen(){
   });
   const k = $("#w-klaar");
   if(k) k.onclick = () => sheetAfrekenen();
-  const inh = $("#inhoud"), kop = $("#kop");
-  if(inh && kop) inh.onscroll = () => kop.classList.toggle("geplakt", inh.scrollTop > 4);
+  volgScroll();
 }
 
 function sheetAfrekenen(){
@@ -2225,8 +2331,10 @@ function sheetAfrekenen(){
   const st = {bedrag:"", fotoFile:null};
   const body = `
     <p style="margin:0 0 16px; color:var(--ink-2); font-size:15px; line-height:1.5">
-      Wat heb je bij <b>${esc(w.naam)}</b> betaald? Dan houdt de app bij wie
-      hoeveel heeft voorgeschoten — verrekenen doe je later in één keer.
+      Wat heb je bij <b>${esc(w.naam)}</b> uitgegeven? Dan telt het meteen mee
+      in het budget van deze maand.${budgetVoor(maandSleutel(nu())) > 0
+        ? " Er is nu nog <b>" + euro(Math.max(0, budgetVoor(maandSleutel(nu())) - bonnenVan(maandSleutel(nu())).reduce((s,b) => s + (Number(b.bedrag)||0), 0))) + "</b> over."
+        : ""}
     </p>
     <div class="veld">
       <label>Bedrag</label>
@@ -2273,11 +2381,11 @@ function sheetAfrekenen(){
           let fotoId = null;
           if(st.fotoFile) fotoId = await bewaarFoto(st.fotoFile);
           await DB.voegToe(PAD.bonnen, {
-            winkel: wid === "alles" ? "nvt" : wid, bedrag, door:S.ik.id, datum:nu(), fotoId, verrekend:false
+            winkel: wid === "alles" ? "nvt" : wid, bedrag, omschrijving:"", door:S.ik.id, datum:nu(), fotoId
           });
           S.winkelSessie = null; houdSchermAan(false); sluitSheet();
-          S.tab = "uitgaven"; tekenNu();
-          toast(euro(bedrag) + " genoteerd", "🧾");
+          S.maand = maandSleutel(nu()); S.tab = "budget"; tekenNu();
+          toast(euro(bedrag) + " genoteerd" + restTekst(), "🧾");
         }else stoppen();
       }catch(e){ console.error(e); toast("Opslaan lukte niet"); knop.disabled = false; knop.innerHTML = `${IK.vink} Klaar`; }
     };
@@ -2285,225 +2393,490 @@ function sheetAfrekenen(){
 }
 
 /* =====================================================================
-   14 · SCHERM: UITGAVEN
+   BUDGET — rekenwerk
    ===================================================================== */
-function saldoBerekening(bonnen){
-  const deelnemers = S.leden.length || 1;
-  const totaal = bonnen.reduce((s,b) => s + (Number(b.bedrag)||0), 0);
-  const perPersoon = totaal / deelnemers;
-  const betaald = {};
-  S.leden.forEach(l => betaald[l.id] = 0);
-  bonnen.forEach(b => { betaald[b.door] = (betaald[b.door]||0) + (Number(b.bedrag)||0); });
-  const saldi = S.leden.map(l => ({lid:l, betaald:betaald[l.id]||0, saldo:(betaald[l.id]||0) - perPersoon}));
-  return {totaal, perPersoon, saldi};
+function budgetVoor(maand){
+  const per = (S.budget && S.budget.perMaand) || {};
+  if(per[maand] != null && per[maand] !== "") return Number(per[maand]) || 0;
+  return Number((S.budget && S.budget.standaard) || 0);
+}
+function bonnenVan(maand){
+  return S.bonnen.filter(b => maandSleutel(b.datum || b.gemaakt || 0) === maand);
+}
+function maandInfo(maand){
+  const [jaar, mnd] = maand.split("-").map(Number);
+  const dagenTotaal = new Date(jaar, mnd, 0).getDate();
+  const n = new Date();
+  const isNu = maand === maandSleutel(nu());
+  const isToekomst = maand > maandSleutel(nu());
+  const dagVandaag = isNu ? n.getDate() : (isToekomst ? 0 : dagenTotaal);
+  return {jaar, mnd, dagenTotaal, dagVandaag, isNu, isToekomst,
+          dagenOver: Math.max(0, dagenTotaal - dagVandaag + (isNu ? 1 : 0))};
 }
 
-function schermUitgaven(){
-  const open = S.bonnen.filter(b => !b.verrekend).sort((a,b) => (b.datum||0)-(a.datum||0));
-  const {totaal, saldi} = saldoBerekening(open);
-  const ik = saldi.find(s => s.lid.id === S.ik.id);
-  const ander = saldi.filter(s => s.lid.id !== S.ik.id).sort((a,b) => a.saldo - b.saldo)[0];
+/* =====================================================================
+   14 · SCHERM: BUDGET
+   ===================================================================== */
+function schermBudget(){
+  const maand = S.maand || maandSleutel(nu());
+  const budget = budgetVoor(maand);
+  const bonnen = bonnenVan(maand).sort((a,b) => (b.datum||0) - (a.datum||0));
+  const uitgegeven = bonnen.reduce((s,b) => s + (Number(b.bedrag)||0), 0);
+  const over = budget - uitgegeven;
+  const deel = budget > 0 ? uitgegeven / budget : 0;
+  const info = maandInfo(maand);
 
-  let saldoTekst = "Alles staat gelijk", saldoBedrag = euro(0), saldoKleur = "var(--muted)";
-  if(ik && Math.abs(ik.saldo) >= 0.01){
-    if(ik.saldo > 0){
-      saldoKleur = "var(--groen)";
-      saldoBedrag = "+" + euro(ik.saldo);
-      saldoTekst = S.leden.length === 2 && ander
-        ? `<b>${esc(ander.lid.naam)}</b> moet dit nog aan jou terugbetalen`
-        : "Dit heb jij meer betaald dan je aandeel";
-    }else{
-      saldoKleur = "var(--rood)";
-      saldoBedrag = "−" + euro(Math.abs(ik.saldo));
-      saldoTekst = S.leden.length === 2 && ander
-        ? `Dit moet jij nog aan <b>${esc(ander.lid.naam)}</b> terugbetalen`
-        : "Dit heb jij minder betaald dan je aandeel";
-    }
-  }
-
-  const maanden = [...new Set(S.bonnen.map(b => maandSleutel(b.datum||nu())))].sort().reverse();
-  const gekozenMaand = S.bonMaand;
-  const getoond = (gekozenMaand ? S.bonnen.filter(b => maandSleutel(b.datum||nu()) === gekozenMaand) : open)
-                    .sort((a,b) => (b.datum||0)-(a.datum||0));
+  /* maanden om tussen te wisselen: alles met bonnen, plus deze maand */
+  const maanden = [...new Set([maandSleutel(nu()), ...S.bonnen.map(b => maandSleutel(b.datum||b.gemaakt||0))])]
+    .filter(m => m > "2000-00").sort().reverse().slice(0, 13);
 
   return `
   <div class="scherm">
     <div class="kop" id="kop">
       <div class="kop-rij">
-        <div class="kop-titel"><h1>Uitgaven</h1>
-          <div class="sub">${open.length ? open.length + " open " + (open.length===1?"bon":"bonnen") + " · " + euro(totaal) : "nog niets te verrekenen"}</div></div>
-        <button class="ikoonknop" id="u-plus">${IK.plus}</button>
+        <div class="kop-titel">
+          <h1>Budget</h1>
+          <div class="sub">${esc(maandNaam(maand))}${info.isNu && info.dagenOver ? " · nog " + info.dagenOver + (info.dagenOver===1?" dag":" dagen") : ""}</div>
+        </div>
+        <button class="ikoonknop" id="b-instel" aria-label="Budget instellen">${IK.tandwiel}</button>
+        <button class="ikoonknop" id="b-plus" aria-label="Uitgave toevoegen">${IK.plus}</button>
       </div>
-      ${maanden.length ? `
+      ${maanden.length > 1 ? `
       <div class="chiprij">
-        <button class="chip ${!gekozenMaand?"aan":""}" data-maand="">Openstaand</button>
-        ${maanden.map(m => `<button class="chip ${gekozenMaand===m?"aan":""}" data-maand="${esc(m)}">${esc(maandNaam(m))}</button>`).join("")}
+        ${maanden.map(m => `<button class="chip ${maand===m?"aan":""}" data-maand="${esc(m)}">${esc(maandKort(m))}</button>`).join("")}
         <span class="rek">&nbsp;</span>
       </div>` : ""}
     </div>
+
     <div class="inhoud" id="inhoud">
       <div class="wrap">
-        ${!gekozenMaand ? `
-        <div class="saldo">
-          <div class="label">Jouw saldo</div>
-          <div class="bedrag" style="color:${saldoKleur}">${saldoBedrag}</div>
-          <div class="uitleg">${saldoTekst}</div>
-          ${S.leden.length < 2 ? `<div class="hint" style="text-align:center; margin-top:8px">
-            Zodra je huisgenoot ook een account heeft, verdeelt de app de kosten automatisch.</div>` : ""}
-        </div>
-        <div class="stat-rij">
-          ${saldi.map(s => `
-            <div class="stat">
-              <b>${euro(s.betaald)}</b>
-              <span>${esc(s.lid.naam.split(" ")[0])} betaalde</span>
-            </div>`).join("")}
-        </div>
-        ${open.length ? `<button class="knop stil vol" id="u-verreken" style="margin-top:12px">${IK.vink} Alles verrekend — op nul zetten</button>` : ""}
-        ` : ""}
+        ${budget <= 0 ? geenBudgetKaart(uitgegeven, bonnen.length) : budgetKaart(budget, uitgegeven, over, deel, info)}
+        ${budget > 0 ? statRij(bonnen, uitgegeven, info, budget) : ""}
+        ${verdelingSectie(bonnen, uitgegeven)}
+        ${uitgavenSectie(bonnen, maand)}
+        ${maandenSectie(maand)}
+      </div>
+    </div>
 
-        ${getoond.length === 0 ? `
-          <div class="leeg fade"><span class="em">🧾</span><h3>Geen bonnen</h3>
-          <p>Noteer na het winkelen wat je betaald hebt, dan rekent de app het samen uit.</p>
-          <button class="knop zacht klein" id="u-plus2" style="margin-top:14px">${IK.plus} Bon toevoegen</button></div>`
-        : `
-        <div class="sectie">
-          <div class="sectie-kop">
-            <h2>${gekozenMaand ? esc(maandNaam(gekozenMaand)) : "Openstaand"}</h2>
-            <span class="telw">${euro(getoond.reduce((s,b)=>s+(Number(b.bedrag)||0),0))}</span>
-            <span class="lijn"></span>
+    <button class="fab" id="b-fab">${IK.plus}<span>Uitgave</span></button>
+  </div>`;
+}
+
+function geenBudgetKaart(uitgegeven, aantal){
+  return `
+  <div class="budgetkaart">
+    <div style="font-size:38px; margin-bottom:8px">🎯</div>
+    <div style="font-size:19px; font-weight:700; letter-spacing:var(--kop)">Nog geen maandbudget</div>
+    <p style="color:var(--ink-2); font-size:14.5px; line-height:1.5; margin:8px 0 0">
+      Stel in hoeveel jullie per maand aan boodschappen willen uitgeven.
+      Daarna zie je hier in één oogopslag wat er nog over is.
+    </p>
+    ${aantal ? `<div class="hint" style="margin-top:10px">Deze maand al ${euro(uitgegeven)} uitgegeven in ${aantal} ${aantal===1?"bon":"bonnen"}.</div>` : ""}
+    <button class="knop vol" id="b-instel2" style="margin-top:16px">${IK.euro} Budget instellen</button>
+  </div>`;
+}
+
+function budgetKaart(budget, uitgegeven, over, deel, info){
+  const O = 2 * Math.PI * 52;                       /* omtrek van de ring */
+  const gevuld = Math.min(1, Math.max(0, deel));
+  const kleur = deel > 1 ? "var(--rood)" : (deel > 0.85 ? "var(--geel)" : "var(--groen)");
+  const procent = Math.round(deel * 100);
+
+  /* ligt het uitgavetempo voor of achter op schema? */
+  let tempo = "";
+  if(info.isNu && info.dagVandaag > 0){
+    const verwacht = budget * (info.dagVandaag / info.dagenTotaal);
+    const verschil = verwacht - uitgegeven;
+    if(over < 0){
+      tempo = `<div class="tempo let">${IK.waarsch}<span>Je zit ${euro(-over)} boven het budget van deze maand</span></div>`;
+    }else if(Math.abs(verschil) < budget * 0.03){
+      tempo = `<div class="tempo neutraal">${IK.klok}<span>Je zit precies op schema</span></div>`;
+    }else if(verschil > 0){
+      tempo = `<div class="tempo goed">${IK.vink}<span>Je ligt ${euro(verschil)} voor op schema</span></div>`;
+    }else{
+      tempo = `<div class="tempo let">${IK.waarsch}<span>Je ligt ${euro(-verschil)} achter op schema</span></div>`;
+    }
+  }else if(!info.isToekomst){
+    tempo = over >= 0
+      ? `<div class="tempo goed">${IK.vink}<span>Deze maand ${euro(over)} onder het budget gebleven</span></div>`
+      : `<div class="tempo let">${IK.waarsch}<span>Deze maand ${euro(-over)} over het budget gegaan</span></div>`;
+  }
+
+  const perDag = (info.isNu && info.dagenOver > 0 && over > 0) ? over / info.dagenOver : null;
+
+  return `
+  <div class="budgetkaart">
+    <div class="ringvak">
+      <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="baan" cx="60" cy="60" r="52"></circle>
+        <circle class="vul" cx="60" cy="60" r="52"
+                style="stroke:${kleur}"
+                stroke-dasharray="${O.toFixed(1)}"
+                stroke-dashoffset="${(O * (1 - gevuld)).toFixed(1)}"></circle>
+      </svg>
+      <div class="ringtekst">
+        <div class="groot" style="color:${over < 0 ? "var(--rood)" : "var(--ink)"}">${over < 0 ? "−" : ""}${euro(Math.abs(over))}</div>
+        <div class="klein">${over < 0 ? "te veel" : "nog te gaan"}</div>
+      </div>
+    </div>
+    <div class="onder">
+      <b>${euro(uitgegeven)}</b> van ${euro(budget)} uitgegeven · ${procent}%
+    </div>
+    ${tempo}
+    ${perDag !== null ? `<div class="hint" style="text-align:center; margin-top:10px">
+      Dat is nog ${euro(perDag)} per dag voor de resterende ${info.dagenOver} ${info.dagenOver===1?"dag":"dagen"}.</div>` : ""}
+  </div>`;
+}
+
+function statRij(bonnen, uitgegeven, info, budget){
+  const dagenGeweest = Math.max(1, info.dagVandaag);
+  const perDag = uitgegeven / dagenGeweest;
+  const gem = bonnen.length ? uitgegeven / bonnen.length : 0;
+  const verwachtEind = info.isNu ? perDag * info.dagenTotaal : uitgegeven;
+  return `
+  <div class="stat-rij">
+    <div class="stat"><b>${bonnen.length}</b><span>${bonnen.length===1?"uitgave":"uitgaven"}</span></div>
+    <div class="stat"><b>${euro(perDag)}</b><span>per dag</span></div>
+    <div class="stat">
+      <b style="color:${verwachtEind > budget ? "var(--rood)" : "var(--ink)"}">${euro(verwachtEind)}</b>
+      <span>${info.isNu ? "einde maand" : "totaal"}</span>
+    </div>
+  </div>`;
+}
+
+function verdelingSectie(bonnen, uitgegeven){
+  if(!bonnen.length) return "";
+  const perWinkel = new Map();
+  bonnen.forEach(b => {
+    const w = winkelVan(b.winkel);
+    if(!perWinkel.has(w.id)) perWinkel.set(w.id, {w, som:0, n:0});
+    const v = perWinkel.get(w.id);
+    v.som += Number(b.bedrag)||0; v.n++;
+  });
+  const lijst = [...perWinkel.values()].sort((a,b) => b.som - a.som);
+  const grootste = lijst[0].som || 1;
+  return `
+  <div class="sectie">
+    <div class="sectie-kop"><h2>Waar gaat het heen</h2><span class="lijn"></span></div>
+    <div class="lijst">
+      ${lijst.map(v => `
+        <div class="verdeel">
+          <div class="rij1">
+            <span class="em">${v.w.em}</span>
+            <b>${esc(v.w.naam)}</b>
+            <span class="eur">${euro(v.som)}</span>
+            <span class="pct">${uitgegeven ? Math.round(v.som/uitgegeven*100) : 0}%</span>
           </div>
-          <div class="lijst">
-            ${getoond.map(b => {
-              const lid = lidVan(b.door), w = winkelVan(b.winkel);
-              return `<button class="bon" data-bon="${esc(b.id)}" style="width:100%; text-align:left; background:var(--card)">
-                ${lid ? AV.html(lid) : ""}
-                <div class="tk">
-                  <b>${esc(w.naam)}${b.verrekend?` <span style="font-size:11px;color:var(--muted);font-weight:600">· verrekend</span>`:""}</b>
-                  <span>${esc(lid?lid.naam.split(" ")[0]:"Iemand")} betaalde · ${datumKort(b.datum)}${b.fotoId?" · 📷":""}</span>
-                </div>
-                <span class="eur">${euro(b.bedrag)}</span>
-              </button>`;
-            }).join("")}
+          <div class="staaf"><div style="width:${(v.som/grootste*100).toFixed(1)}%; background:${esc(v.w.kleur)}"></div></div>
+        </div>`).join("")}
+    </div>
+  </div>`;
+}
+
+function uitgavenSectie(bonnen, maand){
+  if(!bonnen.length){
+    return `
+    <div class="leeg fade"><span class="em">🧾</span><h3>Nog geen uitgaven</h3>
+    <p>Noteer na het winkelen wat je hebt uitgegeven, dan loopt de teller mee.</p>
+    <button class="knop zacht klein" id="b-plus2" style="margin-top:14px">${IK.plus} Uitgave toevoegen</button></div>`;
+  }
+  return `
+  <div class="sectie">
+    <div class="sectie-kop">
+      <h2>Uitgaven</h2>
+      <span class="telw">${bonnen.length}</span>
+      <span class="lijn"></span>
+    </div>
+    <div class="lijst">
+      ${bonnen.map(b => {
+        const w = winkelVan(b.winkel), lid = lidVan(b.door);
+        return `<button class="uitgaverij" data-bon="${esc(b.id)}">
+          <span class="bol" style="background:${esc(w.kleur)}22">${w.em}</span>
+          <div class="tk">
+            <b>${esc(w.naam)}</b>
+            <span>${b.omschrijving ? esc(b.omschrijving) + " · " : ""}${datumKort(b.datum)}${lid ? " · " + esc(lid.naam.split(" ")[0]) : ""}${b.fotoId ? " · 📷" : ""}</span>
           </div>
-        </div>`}
+          <span class="eur">${euro(b.bedrag)}</span>
+        </button>`;
+      }).join("")}
+    </div>
+  </div>`;
+}
+
+function maandenSectie(huidigeMaand){
+  const perMaand = new Map();
+  S.bonnen.forEach(b => {
+    const m = maandSleutel(b.datum || b.gemaakt || 0);
+    perMaand.set(m, (perMaand.get(m)||0) + (Number(b.bedrag)||0));
+  });
+  const nuM = maandSleutel(nu());
+  perMaand.set(nuM, perMaand.get(nuM) || 0);
+  const maanden = [...perMaand.keys()].filter(m => m > "2000-00").sort().slice(-6);
+  if(maanden.length < 2) return "";
+
+  const budgetten = maanden.map(m => budgetVoor(m));
+  const top = Math.max(...maanden.map(m => perMaand.get(m)||0), ...budgetten, 1) * 1.12;
+
+  return `
+  <div class="sectie">
+    <div class="sectie-kop"><h2>Per maand</h2><span class="lijn"></span>
+      <span class="telw">gemiddeld ${euro(maanden.reduce((s,m)=>s+(perMaand.get(m)||0),0)/maanden.length)}</span>
+    </div>
+    <div class="lijst">
+      <div class="maandgrafiek">
+        ${maanden.map(m => {
+          const som = perMaand.get(m) || 0;
+          const bud = budgetVoor(m);
+          const h = Math.max(3, som/top*86);
+          const doel = bud > 0 ? (bud/top*86) : null;
+          return `<button class="mkolom ${m===huidigeMaand?"nu":""} ${bud>0&&som>bud?"over":""}" data-maand="${esc(m)}">
+            <span class="mbedrag">${som >= 100 ? "€" + Math.round(som) : euro(som)}</span>
+            <span class="staafvak">
+              ${doel !== null ? `<span class="mdoel" style="bottom:${doel.toFixed(1)}px"></span>` : ""}
+              <span class="mstaaf" style="height:${h.toFixed(1)}px"></span>
+            </span>
+            <span class="mlabel">${new Date(Number(m.slice(0,4)), Number(m.slice(5,7))-1, 1).toLocaleDateString("nl-NL",{month:"short"}).replace(".","")}</span>
+          </button>`;
+        }).join("")}
+      </div>
+      <div class="hint" style="padding:0 15px 13px; text-align:center">
+        De stippellijn is het budget van die maand.
       </div>
     </div>
   </div>`;
 }
 
-function bindUitgaven(){
-  const p = $("#u-plus"), p2 = $("#u-plus2");
-  if(p) p.onclick = () => sheetBon();
-  if(p2) p2.onclick = () => sheetBon();
-  $$("[data-maand]").forEach(b => b.onclick = () => { S.bonMaand = b.dataset.maand || null; tril(); tekenNu(); });
+function bindBudget(){
+  const instel = () => sheetBudgetInstellen();
+  [$("#b-instel"), $("#b-instel2")].forEach(b => { if(b) b.onclick = instel; });
+  [$("#b-plus"), $("#b-plus2"), $("#b-fab")].forEach(b => { if(b) b.onclick = () => { tril(); sheetUitgave(); }; });
+  $$("[data-maand]").forEach(b => b.onclick = () => {
+    S.maand = b.dataset.maand; tril(); tekenNu();
+    naarBoven();
+  });
   $$("[data-bon]").forEach(b => b.onclick = () => {
     const bon = S.bonnen.find(x => x.id === b.dataset.bon);
-    if(bon) sheetBonDetail(bon);
+    if(bon) sheetUitgaveDetail(bon);
   });
-  const v = $("#u-verreken");
-  if(v) v.onclick = async () => {
-    const open = S.bonnen.filter(b => !b.verrekend);
-    if(!confirm("Alle " + open.length + " openstaande bonnen als verrekend markeren?\n\nDe bedragen blijven bewaard in het maandoverzicht.")) return;
-    for(const b of open){ await DB.zet(PAD.bonnen + "/" + b.id, {verrekend:true, verrekendOp:nu()}); }
-    toast("Op nul gezet", "🤝");
-  };
-  const inh = $("#inhoud"), kop = $("#kop");
-  if(inh && kop) inh.onscroll = () => kop.classList.toggle("geplakt", inh.scrollTop > 4);
+  volgScroll();
 }
 
-function sheetBon(){
-  const st = {winkel:"nvt", fotoFile:null, door:S.ik.id};
+/* ---------- budget instellen ---------- */
+function sheetBudgetInstellen(){
+  const maand = S.maand || maandSleutel(nu());
+  const standaard = Number((S.budget && S.budget.standaard) || 0);
+  const perMaand = (S.budget && S.budget.perMaand) || {};
+  const heeftEigen = perMaand[maand] != null && perMaand[maand] !== "";
   const body = `
-    <div class="veld"><label>Bedrag</label>
-      <input class="invoer" id="n-bedrag" inputmode="decimal" placeholder="0,00"
-             style="font-size:26px;font-weight:700;text-align:center;letter-spacing:-.02em"></div>
-    <div class="veld"><label>Winkel</label>
-      ${keuzeChips("winkel", S.winkels.map(w => ({id:w.id, naam:w.naam, em:w.em})), "nvt")}</div>
-    <div class="veld"><label>Wie betaalde</label>
-      ${keuzeChips("door", S.leden.map(l => ({id:l.id, naam:l.naam})), S.ik.id, "grijs")}</div>
-    <div class="veld"><label>Foto van de bon</label>
-      <div class="fotovak">
-        <button type="button" class="fotoknop" id="n-foto">${IK.camera}<span>Bon fotograferen</span></button>
-        <div class="fotovb verborgen" id="n-fotovb"><img alt=""><button type="button" class="weg" id="n-fotoweg">${IK.kruis}</button></div>
+    <p style="margin:0 0 16px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+      Hoeveel willen jullie per maand aan boodschappen uitgeven? Dit geldt voor jullie samen
+      en je huisgenoot ziet dezelfde teller.
+    </p>
+    <div class="veld">
+      <label>Budget per maand</label>
+      <div style="position:relative">
+        <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); font-size:24px; font-weight:700; color:var(--muted)">€</span>
+        <input class="invoer" id="bi-bedrag" inputmode="decimal" placeholder="400"
+               value="${standaard ? String(standaard).replace(".", ",") : ""}"
+               style="font-size:26px; font-weight:700; text-align:center; letter-spacing:-.02em; padding-left:40px">
       </div>
-      <input type="file" accept="image/*" id="n-bestand" class="verborgen"></div>`;
-  const voet = `<button class="knop vol" id="n-opslaan">Bon opslaan</button>`;
-  sheet({titel:"Bon toevoegen", body, voet, naTeken:() => {
-    setTimeout(() => $("#n-bedrag").focus(), 250);
-    bindKeuze("winkel", v => st.winkel = v);
-    bindKeuze("door", v => st.door = v);
-    $("#n-foto").onclick = () => $("#n-bestand").click();
-    $("#n-bestand").onchange = async e => {
-      const file = e.target.files[0]; if(!file) return;
-      $("#n-foto").innerHTML = `<span class="spinner"></span><span>Bezig…</span>`;
-      try{
-        const {klein} = await verkleinFoto(file);
-        st.fotoFile = file;
-        $("#n-fotovb").classList.remove("verborgen"); $("#n-fotovb img").src = klein;
-        $("#n-foto").innerHTML = `${IK.herhaal}<span>Andere foto</span>`;
-      }catch(err){ toast("Die foto lukte niet"); $("#n-foto").innerHTML = `${IK.camera}<span>Bon fotograferen</span>`; }
-      e.target.value = "";
+      <div class="sugg" id="bi-sugg">
+        ${[250, 300, 400, 500, 600].map(n => `<button type="button" data-snel="${n}">€${n}</button>`).join("")}
+      </div>
+    </div>
+    <div class="veld">
+      <label>Alleen voor ${esc(maandNaam(maand))}</label>
+      <button type="button" class="schakel" id="bi-eigen" style="width:100%">
+        <span class="tk"><b>Afwijkend bedrag deze maand</b>
+          <span>handig voor een feestmaand of een lange vakantie</span></span>
+        <span class="tuimel ${heeftEigen?"aan":""}"></span>
+      </button>
+      <div class="${heeftEigen?"":"verborgen"}" id="bi-eigenvak" style="margin-top:10px">
+        <input class="invoer" id="bi-eigenbedrag" inputmode="decimal" placeholder="Budget voor deze maand"
+               value="${heeftEigen ? String(perMaand[maand]).replace(".", ",") : ""}"
+               style="text-align:center; font-weight:650">
+      </div>
+    </div>`;
+  const voet = `
+    <button class="knop stil" id="bi-annuleer" style="flex:0 0 auto">Annuleer</button>
+    <button class="knop" id="bi-opslaan" style="flex:1">Opslaan</button>`;
+
+  sheet({titel:"Maandbudget", body, voet, naTeken:() => {
+    const inp = $("#bi-bedrag");
+    setTimeout(() => inp.focus(), 250);
+    let eigenAan = heeftEigen;
+    $$("#bi-sugg [data-snel]").forEach(b => b.onclick = () => { inp.value = b.dataset.snel; tril(6); });
+    $("#bi-eigen").onclick = () => {
+      eigenAan = !eigenAan; tril();
+      $("#bi-eigen .tuimel").classList.toggle("aan", eigenAan);
+      $("#bi-eigenvak").classList.toggle("verborgen", !eigenAan);
+      if(eigenAan) $("#bi-eigenbedrag").focus();
     };
-    $("#n-fotoweg").onclick = () => { st.fotoFile = null; $("#n-fotovb").classList.add("verborgen");
-      $("#n-foto").innerHTML = `${IK.camera}<span>Bon fotograferen</span>`; };
-    $("#n-opslaan").onclick = async () => {
-      const bedrag = Number(String($("#n-bedrag").value).replace(",", ".").replace(/[^0-9.]/g,"")) || 0;
-      if(bedrag <= 0){ $("#n-bedrag").focus(); $("#n-bedrag").style.borderColor = "var(--rood)"; return; }
-      const knop = $("#n-opslaan");
+    $("#bi-annuleer").onclick = sluitSheet;
+    $("#bi-opslaan").onclick = async () => {
+      const lees = el => Number(String(el.value).replace(",", ".").replace(/[^0-9.]/g,"")) || 0;
+      const bedrag = lees(inp);
+      if(bedrag <= 0){ inp.focus(); inp.style.borderColor = "var(--rood)"; return; }
+      const nieuwPer = Object.assign({}, perMaand);
+      if(eigenAan){
+        const eigen = lees($("#bi-eigenbedrag"));
+        if(eigen > 0) nieuwPer[maand] = eigen; else delete nieuwPer[maand];
+      }else delete nieuwPer[maand];
+      const knop = $("#bi-opslaan");
       knop.disabled = true; knop.innerHTML = `<span class="spinner"></span> Opslaan…`;
       try{
-        let fotoId = null;
-        if(st.fotoFile) fotoId = await bewaarFoto(st.fotoFile);
-        await DB.voegToe(PAD.bonnen, {winkel:st.winkel, bedrag, door:st.door, datum:nu(), fotoId, verrekend:false});
-        sluitSheet(); toast(euro(bedrag) + " genoteerd", "🧾");
-      }catch(e){ console.error(e); toast("Opslaan lukte niet"); knop.disabled = false; knop.innerHTML = "Bon opslaan"; }
+        await DB.zet(PAD.meta + "/budget", {standaard:bedrag, perMaand:nieuwPer, gewijzigdDoor:S.ik.id, gewijzigdOp:nu()});
+        S.budget = {standaard:bedrag, perMaand:nieuwPer};
+        sluitSheet(); tekenNu(); toast("Budget ingesteld op " + euro(budgetVoor(maand)), "🎯");
+      }catch(e){ console.error(e); toast("Opslaan lukte niet"); knop.disabled = false; knop.innerHTML = "Opslaan"; }
     };
   }});
 }
 
-function sheetBonDetail(bon){
-  const lid = lidVan(bon.door), w = winkelVan(bon.winkel);
+/* ---------- uitgave toevoegen of aanpassen ---------- */
+function datumVoorVeld(ts){
+  const d = new Date(ts || nu());
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function veldNaarDatum(s){
+  const [j,m,d] = String(s||"").split("-").map(Number);
+  if(!j || !m || !d) return nu();
+  return new Date(j, m-1, d, 12, 0, 0).getTime();
+}
+
+function sheetUitgave(bestaand){
+  const bewerk = !!bestaand;
+  const st = {
+    winkel: bestaand ? (bestaand.winkel || "nvt") : "nvt",
+    fotoFile: null, fotoWeg: false
+  };
+  const body = `
+    <div class="veld"><label>Bedrag</label>
+      <div style="position:relative">
+        <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); font-size:24px; font-weight:700; color:var(--muted)">€</span>
+        <input class="invoer" id="u-bedrag" inputmode="decimal" placeholder="0,00"
+               value="${bewerk ? String(bestaand.bedrag).replace(".", ",") : ""}"
+               style="font-size:26px; font-weight:700; text-align:center; letter-spacing:-.02em; padding-left:40px">
+      </div></div>
+    <div class="veld"><label>Winkel</label>
+      ${keuzeChips("winkel", S.winkels.map(w => ({id:w.id, naam:w.naam, em:w.em})), st.winkel)}</div>
+    <div class="veld"><label>Waarvoor <span style="text-transform:none;letter-spacing:0;font-weight:500">(mag leeg)</span></label>
+      <input class="invoer" id="u-oms" maxlength="60" placeholder="Bijvoorbeeld weekboodschappen"
+             value="${bewerk ? esc(bestaand.omschrijving||"") : ""}"></div>
+    <div class="veld"><label>Datum</label>
+      <input class="invoer" type="date" id="u-datum" value="${datumVoorVeld(bewerk ? bestaand.datum : nu())}"></div>
+    <div class="veld"><label>Foto van de bon</label>
+      <div class="fotovak">
+        <button type="button" class="fotoknop" id="u-foto">${bewerk && bestaand.fotoId ? IK.herhaal : IK.camera}<span>${bewerk && bestaand.fotoId ? "Andere foto" : "Bon fotograferen"}</span></button>
+        <div class="fotovb ${bewerk && bestaand.fotoId ? "" : "verborgen"}" id="u-fotovb">
+          <img alt="" ${bewerk && bestaand.fotoId ? `class="laden" data-foto="${esc(bestaand.fotoId)}_k"` : ""}>
+          <button type="button" class="weg" id="u-fotoweg">${IK.kruis}</button></div>
+      </div>
+      <input type="file" accept="image/*" id="u-bestand" class="verborgen"></div>`;
+  const voet = `
+    <button class="knop stil" id="u-annuleer" style="flex:0 0 auto">${bewerk ? "Terug" : "Annuleer"}</button>
+    <button class="knop" id="u-opslaan" style="flex:1">${bewerk ? "Opslaan" : "Uitgave opslaan"}</button>`;
+
+  sheet({titel: bewerk ? "Uitgave aanpassen" : "Uitgave toevoegen", body, voet, naTeken:() => {
+    vulFotos($(".sheet"));
+    if(!bewerk) setTimeout(() => $("#u-bedrag").focus(), 250);
+    bindKeuze("winkel", v => st.winkel = v);
+    $("#u-foto").onclick = () => $("#u-bestand").click();
+    $("#u-bestand").onchange = async e => {
+      const file = e.target.files[0]; if(!file) return;
+      $("#u-foto").innerHTML = `<span class="spinner"></span><span>Bezig…</span>`;
+      try{
+        const {klein} = await verkleinFoto(file);
+        st.fotoFile = file; st.fotoWeg = false;
+        $("#u-fotovb").classList.remove("verborgen");
+        $("#u-fotovb img").src = klein; $("#u-fotovb img").classList.remove("laden");
+        $("#u-foto").innerHTML = `${IK.herhaal}<span>Andere foto</span>`;
+      }catch(err){ toast("Die foto lukte niet"); $("#u-foto").innerHTML = `${IK.camera}<span>Bon fotograferen</span>`; }
+      e.target.value = "";
+    };
+    $("#u-fotoweg").onclick = () => {
+      st.fotoFile = null; st.fotoWeg = true;
+      $("#u-fotovb").classList.add("verborgen");
+      $("#u-foto").innerHTML = `${IK.camera}<span>Bon fotograferen</span>`;
+    };
+    $("#u-annuleer").onclick = () => bewerk ? sheetUitgaveDetail(bestaand) : sluitSheet();
+    $("#u-opslaan").onclick = async () => {
+      const bedrag = Number(String($("#u-bedrag").value).replace(",", ".").replace(/[^0-9.]/g,"")) || 0;
+      if(bedrag <= 0){ $("#u-bedrag").focus(); $("#u-bedrag").style.borderColor = "var(--rood)"; return; }
+      const knop = $("#u-opslaan");
+      knop.disabled = true; knop.innerHTML = `<span class="spinner"></span> Opslaan…`;
+      try{
+        const datum = veldNaarDatum($("#u-datum").value);
+        const gegevens = {
+          winkel: st.winkel, bedrag, omschrijving: $("#u-oms").value.trim(), datum
+        };
+        if(bewerk){
+          if(st.fotoFile){ await wisFoto(bestaand.fotoId); gegevens.fotoId = await bewaarFoto(st.fotoFile); }
+          else if(st.fotoWeg && bestaand.fotoId){ await wisFoto(bestaand.fotoId); gegevens.fotoId = null; }
+          await DB.zet(PAD.bonnen + "/" + bestaand.id, gegevens);
+          sluitSheet(); toast("Aangepast", "✓");
+        }else{
+          gegevens.door = S.ik.id;
+          gegevens.fotoId = st.fotoFile ? await bewaarFoto(st.fotoFile) : null;
+          await DB.voegToe(PAD.bonnen, gegevens);
+          S.maand = maandSleutel(datum);
+          sluitSheet(); tekenNu();
+          naarBoven();
+          toast(euro(bedrag) + " genoteerd" + restTekst(), "🧾");
+        }
+      }catch(e){
+        console.error(e); toast("Opslaan lukte niet");
+        knop.disabled = false; knop.innerHTML = bewerk ? "Opslaan" : "Uitgave opslaan";
+      }
+    };
+  }});
+}
+
+/* korte staart voor de melding: hoeveel budget er nog over is */
+function restTekst(){
+  const m = maandSleutel(nu());
+  const budget = budgetVoor(m);
+  if(budget <= 0) return "";
+  const over = budget - bonnenVan(m).reduce((s,b) => s + (Number(b.bedrag)||0), 0);
+  return over >= 0 ? " · nog " + euro(over) : " · " + euro(-over) + " over budget";
+}
+
+function sheetUitgaveDetail(bon){
+  const w = winkelVan(bon.winkel), lid = lidVan(bon.door);
   const body = `
     <div style="text-align:center; margin-bottom:18px">
-      <div style="font-size:32px; font-weight:750; letter-spacing:-.03em">${euro(bon.bedrag)}</div>
-      <div style="color:var(--muted); font-size:14px; margin-top:2px">${w.em} ${esc(w.naam)} · ${datumLang(bon.datum)}</div>
+      <div style="font-size:34px; font-weight:750; letter-spacing:-.035em">${euro(bon.bedrag)}</div>
+      <div style="color:var(--muted); font-size:14px; margin-top:3px">${w.em} ${esc(w.naam)} · ${datumLang(bon.datum)}</div>
+      ${bon.omschrijving ? `<div style="font-size:15px; color:var(--ink-2); margin-top:8px">${esc(bon.omschrijving)}</div>` : ""}
     </div>
     ${bon.fotoId ? `<img class="laden" data-foto="${esc(bon.fotoId)}" id="bon-foto"
         style="width:100%; border-radius:var(--r-m); margin-bottom:16px; cursor:zoom-in; border:1px solid var(--line)" alt="">` : ""}
-    <div class="lijst" style="margin-bottom:14px">
+    ${lid ? `<div class="lijst" style="margin-bottom:14px">
       <div class="rij">
         <span class="ik">${IK.persoon}</span>
-        <div class="tk"><b>${esc(lid?lid.naam:"Onbekend")}</b><span>heeft betaald</span></div>
-        ${lid ? AV.html(lid) : ""}
+        <div class="tk"><b>${esc(lid.naam)}</b><span>noteerde deze uitgave</span></div>
+        ${AV.html(lid)}
       </div>
-      <div class="rij">
-        <span class="ik">${bon.verrekend ? IK.vink : IK.klok}</span>
-        <div class="tk"><b>${bon.verrekend ? "Verrekend" : "Nog openstaand"}</b>
-          <span>${bon.verrekend ? datumKort(bon.verrekendOp) : "telt mee in het saldo"}</span></div>
-      </div>
-    </div>
+    </div>` : ""}
     <div class="lijst">
-      <button class="rij" id="bon-toggle">
-        <span class="ik" style="background:var(--accent-zacht); color:var(--accent)">${IK.herhaal}</span>
-        <div class="tk"><b>${bon.verrekend ? "Terug naar openstaand" : "Markeer als verrekend"}</b></div>
+      <button class="rij" id="bon-bewerk">
+        <span class="ik">${IK.potlood}</span>
+        <div class="tk"><b>Aanpassen</b><span>bedrag, winkel, datum of foto</span></div>
       </button>
       <button class="rij" id="bon-wis">
         <span class="ik" style="background:var(--rood-zacht); color:var(--rood)">${IK.prul}</span>
-        <div class="tk"><b style="color:var(--rood)">Bon verwijderen</b></div>
+        <div class="tk"><b style="color:var(--rood)">Verwijderen</b><span>telt dan niet meer mee in het budget</span></div>
       </button>
     </div>`;
-  sheet({titel:"Bon", body, naTeken:() => {
+  sheet({titel:"Uitgave", body, naTeken:() => {
     vulFotos($(".sheet"));
     const bf = $("#bon-foto"); if(bf) bf.onclick = () => openKijker(bon.fotoId, w.naam + " · " + euro(bon.bedrag));
-    $("#bon-toggle").onclick = async () => {
-      await DB.zet(PAD.bonnen + "/" + bon.id, {verrekend: !bon.verrekend, verrekendOp: nu()});
-      sluitSheet();
-    };
+    $("#bon-bewerk").onclick = () => sheetUitgave(bon);
     $("#bon-wis").onclick = async () => {
-      if(!confirm("Deze bon van " + euro(bon.bedrag) + " verwijderen?")) return;
+      if(!confirm("Deze uitgave van " + euro(bon.bedrag) + " verwijderen?")) return;
       await wisFoto(bon.fotoId);
       await DB.wis(PAD.bonnen + "/" + bon.id);
-      sluitSheet(); toast("Bon verwijderd");
+      sluitSheet(); toast("Verwijderd");
     };
   }});
 }
@@ -2516,7 +2889,9 @@ function schermMeer(){
   const thema = LS.get("boodschappen_thema", "auto");
   const themaNaam = {auto:"Automatisch", licht:"Licht", donker:"Donker"}[thema] || "Automatisch";
   const open = openItems();
-  const dezeMaand = S.bonnen.filter(b => maandSleutel(b.datum||nu()) === maandSleutel(nu()));
+  const dezeMaand = bonnenVan(maandSleutel(nu()));
+  const uitgegevenNu = dezeMaand.reduce((s,b) => s + (Number(b.bedrag)||0), 0);
+  const budgetNu = budgetVoor(maandSleutel(nu()));
   return `
   <div class="scherm">
     <div class="kop" id="kop">
@@ -2541,8 +2916,19 @@ function schermMeer(){
           <div class="stat-rij" style="margin-top:0">
             <div class="stat"><b>${open.length}</b><span>op de lijst</span></div>
             <div class="stat"><b>${S.items.filter(i => i.af && maandSleutel(i.afOp||0) === maandSleutel(nu())).length}</b><span>gehaald</span></div>
-            <div class="stat"><b>${euro(dezeMaand.reduce((s,b)=>s+(Number(b.bedrag)||0),0))}</b><span>uitgegeven</span></div>
+            <div class="stat"><b>${euro(uitgegevenNu)}</b><span>uitgegeven</span></div>
           </div>
+          ${budgetNu > 0 ? `
+            <div class="staaf" style="margin-top:10px">
+              <div style="width:${Math.min(100, budgetNu ? uitgegevenNu/budgetNu*100 : 0).toFixed(1)}%;
+                          background:${uitgegevenNu > budgetNu ? "var(--rood)" : "var(--groen)"}"></div>
+            </div>
+            <div class="hint" style="text-align:center; margin-top:7px">
+              ${uitgegevenNu > budgetNu
+                ? euro(uitgegevenNu - budgetNu) + " over het budget van " + euro(budgetNu)
+                : "nog " + euro(budgetNu - uitgegevenNu) + " van je budget van " + euro(budgetNu)}
+            </div>` : `
+            <button class="knop zacht klein vol" id="m-budget" style="margin-top:10px">${IK.euro} Maandbudget instellen</button>`}
         </div>
 
         <div class="sectie">
@@ -2616,8 +3002,9 @@ function bindMeer(){
   $("#m-thema").onclick = sheetThema;
   $("#m-over").onclick = sheetOver;
   $$("[data-lidbeheer]").forEach(b => b.onclick = () => sheetLid(lidVan(b.dataset.lidbeheer)));
-  const inh = $("#inhoud"), kop = $("#kop");
-  if(inh && kop) inh.onscroll = () => kop.classList.toggle("geplakt", inh.scrollTop > 4);
+  const mb = $("#m-budget");
+  if(mb) mb.onclick = () => { S.maand = maandSleutel(nu()); sheetBudgetInstellen(); };
+  volgScroll();
 }
 
 /* ---------- vaste boodschappen ---------- */
@@ -2913,7 +3300,7 @@ function navHtml(){
   const tabs = [
     {id:"lijst",    naam:"Lijst",    ik:IK.lijst, bel:open},
     {id:"winkelen", naam:"Winkelen", ik:IK.kar},
-    {id:"uitgaven", naam:"Uitgaven", ik:IK.euro},
+    {id:"budget",   naam:"Budget",   ik:IK.euro},
     {id:"meer",     naam:"Meer",     ik:IK.meer}
   ];
   return `<nav class="nav"><div class="nav-rij">
@@ -2938,7 +3325,7 @@ function tekenNu(){
   let scherm = "";
   if(S.tab === "lijst")         scherm = schermLijst();
   else if(S.tab === "winkelen") scherm = schermWinkelen();
-  else if(S.tab === "uitgaven") scherm = schermUitgaven();
+  else if(S.tab === "budget")   scherm = schermBudget();
   else                          scherm = schermMeer();
 
   const inWinkelSessie = S.tab === "winkelen" && S.winkelSessie;
@@ -2946,17 +3333,17 @@ function tekenNu(){
 
   $$("[data-tab]").forEach(b => b.onclick = () => {
     if(S.tab === b.dataset.tab && b.dataset.tab === "lijst"){
-      const inh = $("#inhoud"); if(inh) inh.scrollTo({top:0, behavior:"smooth"});
+      naarBoven(true);
       return;
     }
     S.tab = b.dataset.tab; tril();
     if(S.tab !== "winkelen") houdSchermAan(false);
-    tekenNu();
+    tekenNu(); naarBoven();
   });
 
   if(S.tab === "lijst")         bindLijst();
   else if(S.tab === "winkelen") bindWinkelen();
-  else if(S.tab === "uitgaven") bindUitgaven();
+  else if(S.tab === "budget")   bindBudget();
   else                          bindMeer();
 
   vulFotos(app);
@@ -2969,9 +3356,9 @@ function tekenAlleenInhoud(){
   nieuw.innerHTML = schermLijst();
   const bron = nieuw.querySelector("#inhoud"), doel = $("#inhoud");
   if(!bron || !doel) return tekenNu();
-  const pos = doel.scrollTop;
+  const pos = scrollNu();
   doel.innerHTML = bron.innerHTML;
-  doel.scrollTop = pos;
+  window.scrollTo({top:pos});
   bindLijst();
   vulFotos(doel);
 }
@@ -3016,7 +3403,12 @@ function startLuisteren(){
     if(S.geladen) tekenNu();
   });
   DB.luister(PAD.vast,   l => { S.vast = l;   if(S.geladen && S.tab === "meer") tekenNu(); });
-  DB.luister(PAD.bonnen, l => { S.bonnen = l; if(S.geladen && (S.tab === "uitgaven" || S.tab === "meer")) tekenNu(); });
+  DB.luister(PAD.bonnen, l => { S.bonnen = l; if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu(); });
+  DB.luister(PAD.meta, l => {
+    const b = l.find(x => x.id === "budget");
+    S.budget = b ? {standaard: Number(b.standaard)||0, perMaand: b.perMaand || {}} : {standaard:0, perMaand:{}};
+    if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu();
+  });
 }
 
 async function zetWinkelsKlaar(){
