@@ -279,9 +279,39 @@ export const POTSOORTEN = {
 
 export const potSoort = potje => POTSOORTEN[potje?.soort] ? potje.soort : "sparen";
 
+/* ---------------------------------------------------------------
+   Wat er uit de boodschappenapp binnenkomt
+   ---------------------------------------------------------------
+   Een spiegel, geen kopie: deze bedragen staan niet als boeking in
+   Geldzaken. Ze tellen daarom mee bij het potje waaraan je ze hangt —
+   daar wil je immers zien wat er nog over is — maar niet in de
+   maandtotalen, zodat er niets dubbel telt als je daarnaast je
+   bankafschrift inleest.
+   --------------------------------------------------------------- */
+export function externeUitgaven(state, maand = maandNu()) {
+  const koppeling = state.instellingen.koppeling || {};
+  const bonnen = koppeling.aan
+    ? (state.extern?.bonnen || []).filter(b => maandVan(b.datum) === maand)
+    : [];
+  return {
+    aan: !!koppeling.aan,
+    potje: koppeling.potje || "",
+    bonnen,
+    aantal: bonnen.length,
+    totaal: bonnen.reduce((s, b) => s + (Number(b.bedrag) || 0), 0),
+  };
+}
+
+/* Hoeveel van dat externe bedrag hoort bij dít potje? */
+function externVoorPotje(state, potjeId, maand) {
+  const extern = externeUitgaven(state, maand);
+  return extern.aan && extern.potje === potjeId ? extern.totaal : 0;
+}
+
 export function potSaldo(state, potje, totMaand = maandNu()) {
   const soort = potSoort(potje);
   const maandbedrag = Number(potje.maandelijks) || 0;
+  const extern = externVoorPotje(state, potje.id, totMaand);
 
   /* Wat er in deze ene maand aan dit potje geboekt is. */
   let ditGestort = 0, ditUit = 0;
@@ -300,13 +330,14 @@ export function potSaldo(state, potje, totMaand = maandNu()) {
       else if (eruit) ditUit += bedrag;
     }
   }
+  ditUit += extern;
 
   /* Een vaste last is elke maand weg: geen saldo, wel een maandbedrag. */
   if (soort === "vast") {
     return {
       soort, maandbedrag, saldo: 0, automatisch: maandbedrag,
       gestort: 0, opgenomen: 0, maandenGevuld: 0, deel: null,
-      ditUit, ditOver: 0, verbruikt: true,
+      ditUit, ditOver: 0, extern, verbruikt: true,
     };
   }
 
@@ -317,7 +348,7 @@ export function potSaldo(state, potje, totMaand = maandNu()) {
       soort, maandbedrag, saldo: over, automatisch: maandbedrag,
       gestort: ditGestort, opgenomen: ditUit, maandenGevuld: 1,
       deel: maandbedrag > 0 ? ditUit / maandbedrag : null,
-      ditUit, ditOver: over, verbruikt: false,
+      ditUit, ditOver: over, extern, verbruikt: false,
     };
   }
 
@@ -334,7 +365,7 @@ export function potSaldo(state, potje, totMaand = maandNu()) {
     opgenomen: eraf,
     maandenGevuld: maanden,
     deel: potje.doelBedrag > 0 ? saldo / potje.doelBedrag : null,
-    ditUit, ditOver: null, verbruikt: false,
+    ditUit, ditOver: null, extern, verbruikt: false,
   };
 }
 

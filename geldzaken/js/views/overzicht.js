@@ -11,8 +11,8 @@
    ===================================================================== */
 
 import { esc, geld, procent, maandLabel, maandNu, maandPlus, ring, voortgang } from "../util.js";
-import { state, zetInstelling, meld, Sync } from "../store.js";
-import { verdeling, POTSOORTEN, maandOverzicht } from "../bereken.js";
+import { state, zetInstelling, meld, Sync, Koppeling } from "../store.js";
+import { verdeling, POTSOORTEN, maandOverzicht, externeUitgaven } from "../bereken.js";
 import { maandkiezer, koppelMaandkiezer, leeg } from "./onderdelen.js";
 import { ga } from "../app.js";
 
@@ -55,6 +55,7 @@ export function html() {
     ${inkomenBlok(v)}
     ${taart(v)}
     ${samenvatting(v)}
+    ${boodschappenBlok()}
     ${potjesBlok(v)}
     ${spaarBlok(v)}
     ${losseInkomsten()}
@@ -241,6 +242,63 @@ function potRij(p) {
       </span>
       <span class="rij__rechts">${rechts}</span>
     </button>`;
+}
+
+/* -------------------- Uit de boodschappenapp ------------------------ */
+/* Wat er in de andere app is afgerekend, live meegelezen. Er komt geen
+   boeking bij: dit is een spiegel, geen kopie. */
+function boodschappenBlok() {
+  const extern = externeUitgaven(state, state.maand);
+  if (!extern.aan) return "";
+
+  const k = Koppeling.koppeling;
+  const potje = state.potjes.find(p => p.id === extern.potje);
+  const budget = Number(potje?.maandelijks) || 0;
+  const laatste = extern.bonnen.slice(0, 3);
+
+  return `
+    <div class="sectiekop">
+      <h2>${esc(Koppeling.appNaam())}</h2>
+      <a class="sectiekop__actie" href="${esc(Koppeling.appLink())}" target="_blank" rel="noopener">Open de app</a>
+    </div>
+    <div class="kaart">
+      ${k.fout ? `
+        <div class="veld__fout" style="margin:0 0 10px">Meelezen lukt even niet: ${esc(k.fout)}</div>` : ""}
+
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+        <span>
+          <span class="dof" style="font-size:.78rem;font-weight:600">Deze maand afgerekend</span>
+          <span style="display:block;font-size:1.6rem;font-weight:700;letter-spacing:-.02em" class="bedrag">${geld(extern.totaal)}</span>
+        </span>
+        <span class="dof" style="font-size:.8rem">${extern.aantal} ${extern.aantal === 1 ? "bon" : "bonnen"}</span>
+      </div>
+
+      ${budget > 0 ? `
+        ${voortgang(extern.totaal, budget)}
+        <div class="veld__hint" style="margin-top:8px">
+          ${extern.totaal > budget
+            ? `${geld(extern.totaal - budget)} over het potje ${esc(potje.naam)} heen.`
+            : `Nog ${geld(budget - extern.totaal)} over in ${esc(potje.naam)}.`}
+        </div>` : `
+        <div class="veld__hint" style="margin-top:8px">
+          Hang dit aan een potje onder ⚙️ → Koppelingen, dan zie je hier wat er nog over is.
+        </div>`}
+
+      ${laatste.length ? `
+        <div class="kaart__voet">
+          ${laatste.map(b => `
+            <div style="display:flex;justify-content:space-between;gap:10px;font-size:.85rem;margin-bottom:6px">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                ${esc(Koppeling.bonNaam(b))}
+                <span class="dof">· ${esc(b.datum.slice(8, 10))}-${esc(b.datum.slice(5, 7))}</span>
+              </span>
+              <span class="bedrag">${geld(b.bedrag)}</span>
+            </div>`).join("")}
+        </div>` : `
+        <div class="veld__hint" style="margin-top:8px">
+          ${k.bezig ? "Even ophalen…" : "Nog geen bonnen in deze maand."}
+        </div>`}
+    </div>`;
 }
 
 /* ----------------------------- Gespaard ----------------------------- */

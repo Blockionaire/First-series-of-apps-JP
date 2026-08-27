@@ -13,10 +13,11 @@
 import { dbAlles, dbZet, dbWis, dbZetVeel, dbWisVeel, dbLeeg,
          beschikbaar, STORES } from "./db.js";
 import * as Sync from "./sync.js";
+import * as Koppeling from "./koppeling.js";
 import { CATEGORIEEN, TREFWOORDEN } from "./data/standaard.js";
 import { maandNu, normaliseer, vandaagISO, maandVan } from "./util.js";
 
-export { Sync };
+export { Sync, Koppeling };
 
 /* ---------------------------------------------------------------
    De toestand
@@ -43,9 +44,15 @@ export const state = {
     privacy: false,              // bedragen verbergen
     potjesAutomatisch: true,     // maandelijks automatisch in de potjes storten
     personen: [],                // wie er meedoen, voor het verdelen van uitgaven
+    /* Meelezen met de boodschappenapp: {aan, potje}. Zie koppeling.js. */
+    koppeling: { aan: false, potje: "" },
     ingericht: false,            // is de eerste keer instellen gedaan?
     bijgewerkt: 0,
   },
+
+  /* Wat er uit een andere app binnenkomt. Leest alleen mee; het staat
+     bewust niet in de database van Geldzaken zelf. */
+  extern: { bonnen: [] },
 
   /* Wordt door de schermen gebruikt om te weten wat er te zien is. */
   maand: maandNu(),
@@ -127,6 +134,36 @@ export async function start() {
     onStatus: meld,
     onToegang: opToegangVeranderd,
   });
+
+  stemKoppelingAf();
+}
+
+/* ---------------------------------------------------------------
+   De koppeling met de boodschappenapp
+   ---------------------------------------------------------------
+   Aan of uit volgt de instelling, en die kan ook van een ander
+   apparaat binnenkomen. Daarom stemmen we hem na elke wijziging
+   opnieuw af in plaats van hem één keer te starten.
+   --------------------------------------------------------------- */
+export function stemKoppelingAf() {
+  const aan = !!state.instellingen.koppeling?.aan;
+  if (aan) {
+    Koppeling.start({
+      onData: () => {
+        state.extern.bonnen = Koppeling.koppeling.bonnen;
+        meld();
+      },
+    });
+  } else if (Koppeling.koppeling.actief || Koppeling.koppeling.bonnen.length) {
+    Koppeling.stop();
+    state.extern.bonnen = [];
+    meld();
+  }
+}
+
+export async function zetKoppeling(velden) {
+  await zetInstelling({ koppeling: { ...(state.instellingen.koppeling || {}), ...velden } });
+  stemKoppelingAf();
 }
 
 async function zetStandaardCategorieen() {
@@ -144,6 +181,7 @@ async function verwerkRemote(collectie, records) {
     if (remote && (remote.bijgewerkt || 0) > (state.instellingen.bijgewerkt || 0)) {
       state.instellingen = { ...state.instellingen, ...remote };
       if (opslagWerkt) await dbZet("instellingen", state.instellingen);
+      stemKoppelingAf();
       meld();
     }
     return;

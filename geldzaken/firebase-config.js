@@ -57,6 +57,34 @@ window.GELDZAKEN_CONFIG = {
   /* Naam boven het inlogscherm. */
   huisNaam: "Geldzaken",
 
+  /* Meelezen met een andere app
+     ---------------------------------------------------------------
+     De boodschappenapp van het huisje bewaart zijn bonnen in Firestore.
+     Geldzaken kan die meelezen, zodat je ziet wat er deze maand aan
+     boodschappen is uitgegeven zonder het over te tikken.
+
+     Dit is een aparte verbinding naast die van je financiën: er wordt
+     alleen gelezen, nooit geschreven, en er komen geen boekingen bij.
+     Aanzetten doe je in de app onder ⚙️ → Koppelingen.
+
+     Gebruik je een ander project of een andere ruimte voor de
+     boodschappen? Pas het dan hieronder aan. */
+  koppelingen: {
+    boodschappen: {
+      naam: "Boodschappen",
+      link: "../boodschappen/",
+      ruimte: "ovs",
+      firebase: {
+        apiKey: "AIzaSyB_ekiYsV6RG7YsIK8kVXtghZNu7obHC4g",
+        authDomain: "geheime-dienst.firebaseapp.com",
+        projectId: "geheime-dienst",
+        storageBucket: "geheime-dienst.firebasestorage.app",
+        messagingSenderId: "996478249104",
+        appId: "1:996478249104:web:205651eb2e539b0cdd5015"
+      },
+    },
+  },
+
   /* De ruimte waarin alles wordt opgeslagen. Wil je een tweede,
      losstaande boekhouding (bijvoorbeeld voor een vereniging), zet dit
      dan op iets anders — dan delen de twee niets met elkaar. */

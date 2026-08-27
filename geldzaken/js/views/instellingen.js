@@ -10,11 +10,12 @@
 
 import { esc, geld, melding, bevestig, dialoog, downloadTekst,
          kiesBestand, leesTekst, leesBedrag } from "../util.js";
-import { state, zetInstelling, Sync, magBewerken, isBeheerder,
+import { state, zetInstelling, zetKoppeling, Sync, Koppeling, magBewerken, isBeheerder,
          legeCategorie, bewaarCategorie, wisCategorie, alsBackup,
          herstelBackup, alsCSV, wisAlles, duwAllesOmhoog } from "../store.js";
-import { perCategorie } from "../bereken.js";
+import { perCategorie, externeUitgaven } from "../bereken.js";
 import { ICONEN, KLEUREN } from "../data/standaard.js";
+import { potjeOpties } from "./onderdelen.js";
 import { ga, terug, eisBewerkrecht, pasThemaToe } from "../app.js";
 
 export const terugknop = true;
@@ -153,6 +154,8 @@ export function html(params) {
       <span class="rij__rechts dof">›</span>
     </a>
 
+    ${koppelingBlok()}
+
     ${accountBlok(s)}
 
     <div class="sectiekop"><h2>Back-up</h2></div>
@@ -190,6 +193,61 @@ export function html(params) {
     <button class="knop knop--rand knop--breed" data-wis-alles style="margin-top:8px;color:var(--fout);border-color:color-mix(in srgb, var(--fout) 40%, transparent)">
       Alles wissen
     </button>`;
+}
+
+/* ---------------------------- Koppelingen --------------------------- */
+/* Meelezen met een andere app van jezelf. Nu alleen de boodschappenapp;
+   de opzet is zo dat er later meer bij kan. */
+function koppelingBlok() {
+  if (!Koppeling.configuratie()) return "";
+
+  const k = state.instellingen.koppeling || {};
+  const stand = Koppeling.koppeling;
+  const extern = externeUitgaven(state, state.maand);
+
+  return `
+    <div class="sectiekop"><h2>Koppelingen</h2></div>
+    <div class="kaart">
+      <div class="schakelrij">
+        <span class="schakelrij__tekst">
+          <span class="schakelrij__titel">${esc(Koppeling.appNaam())} meelezen</span>
+          <span class="schakelrij__uitleg">
+            Laat zien wat er in die app is afgerekend, zonder dat je het overtikt.
+          </span>
+        </span>
+        <label class="schakelaar">
+          <input type="checkbox" data-koppeling ${k.aan ? "checked" : ""}>
+          <span class="schakelaar__spoor"></span>
+        </label>
+      </div>
+
+      ${k.aan ? `
+        <div class="veld" style="margin-top:12px">
+          <label for="koppelpot">Tel mee bij dit potje</label>
+          <select id="koppelpot">${potjeOpties(k.potje, { leegLabel: "— alleen laten zien —" })}</select>
+          <div class="veld__hint">
+            Kies je hier je potje Boodschappen, dan zie je op het overzicht direct
+            hoeveel daarvan nog over is.
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-top:4px">
+          <span class="dof">Status</span>
+          <strong>${stand.fout ? "probleem" : stand.actief ? "verbonden" : stand.bezig ? "verbinden…" : "uit"}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.85rem">
+          <span class="dof">Deze maand</span>
+          <strong class="bedrag">${geld(extern.totaal)} in ${extern.aantal} ${extern.aantal === 1 ? "bon" : "bonnen"}</strong>
+        </div>
+        ${stand.fout ? `<div class="veld__fout">${esc(stand.fout)}</div>` : ""}
+      ` : ""}
+
+      <div class="veld__hint" style="margin-top:12px">
+        Er wordt alleen gelezen, nooit geschreven, en er komen geen boekingen bij. Het bedrag
+        telt daarom niet mee in je maandtotalen — zo gaat er niets dubbel als je daarnaast je
+        bankafschrift inleest.
+      </div>
+    </div>`;
 }
 
 /* ------------------------------ Account ----------------------------- */
@@ -296,6 +354,8 @@ export function koppel(wortel, params) {
 
   wortel.addEventListener("change", e => {
     if (e.target.matches("[data-privacy]")) zetInstelling({ privacy: e.target.checked });
+    if (e.target.matches("[data-koppeling]")) zetKoppeling({ aan: e.target.checked });
+    if (e.target.id === "koppelpot") zetKoppeling({ potje: e.target.value });
     if (e.target.matches("[data-potjes]")) zetInstelling({ potjesAutomatisch: e.target.checked });
   });
 

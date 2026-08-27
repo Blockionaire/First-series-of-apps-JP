@@ -63,6 +63,11 @@ erbij:
   worden herkend en uitgevinkt, dus niets komt dubbel binnen. Op hoofdlijnen hang
   je elke uitgave meteen aan een potje — bij een potje *vrij te besteden* zie je
   daarna precies wat er deze maand nog over is.
+- **Meelezen met de boodschappenapp** — zet je onder ⚙️ → Koppelingen aan. Geldzaken
+  leest dan live mee met de bonnen uit de boodschappenapp van het huisje en laat zien
+  wat er deze maand is afgerekend. Hang het aan je potje Boodschappen en je ziet
+  meteen wat er nog over is. Er wordt alleen gelezen: er komen geen boekingen bij, dus
+  er telt ook niets dubbel als je daarnaast je bankafschrift inleest.
 - **Spaardoelen** met streefbedrag en datum: wat moet er per maand bij, en lig je
   op schema?
 - **Rekeningen en vermogen**, met saldo gelijkzetten met je bank.
@@ -197,6 +202,7 @@ js/store.js             alle gegevens en alle wijzigingen
 js/bereken.js           alle afgeleide cijfers
 js/db.js                IndexedDB
 js/sync.js              inloggen, lidmaatschap en Firestore
+js/koppeling.js         meelezen met de boodschappenapp
 js/util.js              opmaak, maanden, dialogen, grafiekjes
 js/data/standaard.js    categorieën, potjesvoorstellen, bankprofielen
 js/views/overzicht.js   de taart: inkomen en verdeling
@@ -242,6 +248,15 @@ hun kolomnamen; kent hij jouw bank niet, dan wijs je zelf aan welke kolom de dat
 het bedrag en de omschrijving is. CAMT is XML en heeft niets nodig: daar staan
 datum, bedrag, tegenpartij en omschrijving met naam en toenaam in, en een
 verzamelboeking wordt netjes uit elkaar gehaald. MT940 wordt (nog) niet gelezen.
+
+**Hoe werkt het meelezen met de boodschappenapp?**
+Die app bewaart zijn bonnen in Firestore (collectie `ovs_bonnen` in het project
+`geheime-dienst`). Geldzaken maakt daar een tweede, aparte verbinding mee en luistert
+alleen. Je hoeft er niets voor in te stellen: aanzetten onder ⚙️ → Koppelingen is
+genoeg. Het bedrag verschijnt op je overzicht en gaat af van het potje dat je eraan
+hangt, maar het wordt géén boeking in Geldzaken — dat is precies waarom er niets
+dubbel kan tellen. Wil je een andere app of een andere ruimte meelezen, dan pas je het
+blok `koppelingen` in `firebase-config.js` aan.
 
 **Waarom staat mijn hypotheekpotje altijd op nul?**
 Dat klopt: een potje van het soort *vaste last* houdt geen saldo bij. Het bedrag
