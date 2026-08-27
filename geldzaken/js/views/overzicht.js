@@ -48,6 +48,7 @@ export function html() {
     ${potjesBlok(v)}
     ${spaarBlok(v)}
     ${losseInkomsten()}
+    ${meerBlok()}
   `;
 }
 
@@ -252,6 +253,53 @@ function losseInkomsten() {
           </span>
           <span class="rij__rechts"><span class="rij__bedrag op">+${geld(t.bedrag)}</span></span>
         </button>`).join("")}
+    </div>`;
+}
+
+/* ------------------------------- Meer ------------------------------- */
+/* Wat er nog meer in de app zit, maar niet op je startscherm hoort.
+   Het inlezen van een bankbestand staat er expres bij: je hoeft geen
+   uitgaven te boeken, maar het kan wél. */
+function meerBlok() {
+  const boekingen = state.transacties.length;
+  const doelen = state.doelen.length;
+
+  return `
+    <div class="sectiekop"><h2>Meer</h2></div>
+    <div class="lijst">
+      <a class="rij" href="#/importeren">
+        <span class="rij__icoon">📥</span>
+        <span class="rij__midden">
+          <span class="rij__titel">Bankbestand inlezen</span>
+          <span class="rij__sub">CSV of CAMT · uitgaven meteen aan een potje hangen</span>
+        </span>
+        <span class="rij__rechts dof">›</span>
+      </a>
+      ${boekingen ? `
+        <a class="rij" href="#/maand">
+          <span class="rij__icoon">📒</span>
+          <span class="rij__midden">
+            <span class="rij__titel">Alle boekingen</span>
+            <span class="rij__sub">${boekingen} ${boekingen === 1 ? "boeking" : "boekingen"} · zoeken en filteren</span>
+          </span>
+          <span class="rij__rechts dof">›</span>
+        </a>` : ""}
+      <a class="rij" href="#/doelen">
+        <span class="rij__icoon">🎯</span>
+        <span class="rij__midden">
+          <span class="rij__titel">Spaardoelen</span>
+          <span class="rij__sub">${doelen ? `${doelen} ${doelen === 1 ? "doel" : "doelen"}` : "Sparen met een streefbedrag en een datum"}</span>
+        </span>
+        <span class="rij__rechts dof">›</span>
+      </a>
+      <a class="rij" href="#/rekeningen">
+        <span class="rij__icoon">🏦</span>
+        <span class="rij__midden">
+          <span class="rij__titel">Rekeningen en vermogen</span>
+          <span class="rij__sub">${state.rekeningen.length ? `${state.rekeningen.length} rekeningen` : "Wat staat er waar"}</span>
+        </span>
+        <span class="rij__rechts dof">›</span>
+      </a>
     </div>`;
 }
 

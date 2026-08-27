@@ -4,10 +4,19 @@
    Een maand handmatig overtikken doet niemand vol. Daarom kun je hier
    het CSV-bestand uit je internetbankieren inlezen.
 
+   Twee soorten bestanden:
+
+     CSV   het meest gebruikte exportformaat. De app herkent de grote
+           banken aan hun kolomnamen; kent hij de jouwe niet, dan wijs
+           je in drie klikken zelf aan welke kolom wat is.
+     CAMT  het officiële bankformaat (camt.053, een XML-bestand). Daar
+           valt niets aan te kiezen: datum, bedrag, tegenpartij en
+           omschrijving staan er met naam en toenaam in.
+
    Wat er gebeurt:
-     1. het bestand wordt uitgelezen (puntkomma, komma of tab)
-     2. de app herkent de bank aan de kolomnamen — lukt dat niet, dan
-        wijs je de kolommen zelf aan
+     1. het bestand wordt uitgelezen
+     2. bij CSV herkent de app de bank aan de kolomnamen — lukt dat
+        niet, dan wijs je de kolommen zelf aan
      3. elke regel krijgt alvast een categorie op basis van de
         omschrijving en van wat jij eerder hebt ingedeeld
      4. regels die je al hebt staan worden herkend en uitgevinkt, zodat
@@ -19,13 +28,13 @@
 import { esc, geld, datumNL, melding, kiesBestand, leesTekst,
          normaliseer } from "../util.js";
 import { state, bewaarVeelTransacties, raadCategorie, standaardRekening,
-         meld } from "../store.js";
+         meld, eenvoudig } from "../store.js";
 import { BANKPROFIELEN } from "../data/standaard.js";
-import { leeg, rekeningOpties, categorieOpties } from "./onderdelen.js";
+import { leeg, rekeningOpties, categorieOpties, potjeOpties } from "./onderdelen.js";
 import { ga, eisBewerkrecht } from "../app.js";
 
 export const titel = () => "Bankbestand inlezen";
-export const ondertitel = () => "CSV uit je internetbankieren";
+export const ondertitel = () => "CSV of CAMT uit je internetbankieren";
 export const terugknop = true;
 export const terugNaar = "#/maand";
 
@@ -56,13 +65,14 @@ function kiesScherm() {
     <div class="kaart">
       <div class="kaart__kop"><h2>Zo werkt het</h2></div>
       <ol style="margin:0;padding-left:20px;font-size:.88rem;color:var(--tekst-zacht);line-height:1.6">
-        <li>Download bij je bank een CSV van de periode die je wilt.</li>
+        <li>Download bij je bank een CSV- of CAMT-bestand van de periode die je wilt.</li>
         <li>Kies dat bestand hieronder.</li>
         <li>Controleer wat de app ervan maakt en vink af wat je niet wilt.</li>
       </ol>
       <div class="veld__hint">
-        Herkend zonder instellen: ${BANKPROFIELEN.filter(p => p.id !== "geldzaken").map(p => p.naam).join(", ")}.
-        Een andere bank kan ook — dan wijs je zelf even aan welke kolom wat is.
+        <strong>CSV</strong> herkent de app zonder instellen bij ${BANKPROFIELEN.filter(p => p.id !== "geldzaken").map(p => p.naam).join(", ")};
+        een andere bank kan ook, dan wijs je zelf aan welke kolom wat is.
+        <strong>CAMT</strong> (camt.053, het XML-bestand dat elke bank aanbiedt) werkt altijd meteen.
       </div>
     </div>
 
@@ -71,7 +81,14 @@ function kiesScherm() {
       <select id="ibank">${rekeningOpties(rekeningKeuze, { leegLabel: "— geen rekening —" })}</select>
     </div>
 
-    <button class="knop knop--primair knop--breed" data-kies-bestand>Kies een bestand</button>`;
+    <button class="knop knop--primair knop--breed" data-kies-bestand>Kies een bestand</button>
+
+    ${eenvoudig() ? `
+      <p class="veld__hint" style="margin-top:14px">
+        Je houdt bij op hoofdlijnen, dus hoef je hier niets mee. Doe je het toch, dan kun je
+        elke uitgave aan een potje hangen — bij een potje "vrij te besteden" zie je daarna
+        precies wat er deze maand nog over is.
+      </p>` : ""}`;
 }
 
 function koppelen() {
@@ -126,7 +143,13 @@ function koppelen() {
 function controleren() {
   const teDoen = voorstellen.filter(v => v.kies);
   const dubbel = voorstellen.filter(v => v.dubbel).length;
-  const zonderCategorie = teDoen.filter(v => !v.transactie.categorie).length;
+
+  /* Op hoofdlijnen denk je in potjes, niet in categorieën. Dus laten we
+     bij elke regel zien wat er het meest toe doet. */
+  const opPotjes = eenvoudig() && state.potjes.length > 0;
+  const zonderIndeling = teDoen.filter(v => opPotjes
+    ? (v.transactie.soort === "uitgave" && !v.transactie.potje)
+    : !v.transactie.categorie).length;
 
   return `
     <div class="cijferrij cijferrij--twee">
@@ -140,12 +163,14 @@ function controleren() {
       </div>
     </div>
 
-    ${zonderCategorie ? `
+    ${zonderIndeling ? `
       <div class="signaal signaal--info">
-        <span class="signaal__icoon">🏷️</span>
+        <span class="signaal__icoon">${opPotjes ? "🫙" : "🏷️"}</span>
         <span>
-          <span class="signaal__titel">${zonderCategorie} zonder categorie</span>
-          <span class="signaal__tekst">Je kunt ze hier indelen, of het later per boeking doen. De app onthoudt je keuze voor de volgende keer.</span>
+          <span class="signaal__titel">${zonderIndeling} ${opPotjes ? "zonder potje" : "zonder categorie"}</span>
+          <span class="signaal__tekst">${opPotjes
+            ? "Hang ze aan een potje, dan gaat het bedrag daar vanaf. Laat je het leeg, dan komt de boeking er gewoon in te staan."
+            : "Je kunt ze hier indelen, of het later per boeking doen. De app onthoudt je keuze voor de volgende keer."}</span>
         </span>
       </div>` : ""}
 
@@ -169,9 +194,15 @@ function controleren() {
                 ${esc(datumNL(t.datum, { kort: true }))}
                 ${v.dubbel ? ` · <span style="color:var(--let-op)">stond er al in</span>` : ""}
               </span>
-              <select data-cat="${i}" style="margin-top:6px;padding:6px 8px;font-size:.8rem">
-                ${categorieOpties(t.categorie, t.soort === "inkomst" ? "inkomst" : "uitgave")}
-              </select>
+              ${opPotjes && t.soort === "uitgave"
+                ? `<select data-pot="${i}" style="margin-top:6px;padding:6px 8px;font-size:.8rem">
+                     ${potjeOpties(t.potje, { leegLabel: "— zonder potje —" })}
+                   </select>`
+                : opPotjes
+                  ? ""
+                  : `<select data-cat="${i}" style="margin-top:6px;padding:6px 8px;font-size:.8rem">
+                       ${categorieOpties(t.categorie, t.soort === "inkomst" ? "inkomst" : "uitgave")}
+                     </select>`}
             </span>
             <span class="rij__rechts">
               <span class="rij__bedrag ${t.soort === "inkomst" ? "op" : ""}">${t.soort === "inkomst" ? "+" : "−"}${geld(t.bedrag)}</span>
@@ -205,6 +236,10 @@ export function koppel(wortel) {
       voorstellen[Number(e.target.dataset.cat)].transactie.categorie = e.target.value;
       return;
     }
+    if (e.target.matches("[data-pot]")) {
+      voorstellen[Number(e.target.dataset.pot)].transactie.potje = e.target.value;
+      return;
+    }
     if (["kdatum", "komschrijving", "kbedrag", "krichting"].includes(e.target.id)) {
       kolommen[e.target.id.slice(1)] = e.target.value;
     }
@@ -230,11 +265,23 @@ function herstart() {
 }
 
 async function leesBestand() {
-  const bestand = await kiesBestand(".csv,text/csv,text/plain");
+  const bestand = await kiesBestand(".csv,.xml,.txt,text/csv,text/xml,application/xml");
   if (!bestand) return;
 
   try {
     const tekst = await leesTekst(bestand);
+    if (!tekst.trim()) throw new Error("Het bestand is leeg.");
+
+    /* Een CAMT-bestand is XML en heeft geen kolommen om te kiezen. */
+    if (/^\s*(<\?xml|<Document|<[A-Za-z0-9]+:Document)/.test(tekst)) {
+      const ruwe = leesCAMT(tekst);
+      if (!ruwe.length) throw new Error("Er staan geen boekingen in dit CAMT-bestand.");
+      tabel = null;
+      profiel = { id: "camt", naam: "CAMT" };
+      verwerkRuwe(ruwe);
+      return;
+    }
+
     tabel = leesCSV(tekst);
     if (!tabel || tabel.rijen.length === 0) throw new Error("Er staan geen regels in dit bestand.");
 
@@ -255,6 +302,73 @@ async function leesBestand() {
   } catch (e) {
     melding("Inlezen lukte niet: " + e.message, "fout");
   }
+}
+
+/* ---------------------------------------------------------------
+   CAMT.053 uitlezen
+   ---------------------------------------------------------------
+   Het officiële bankformaat. Elke boeking is een <Ntry> met een bedrag,
+   een richting (DBIT of CRDT) en een boekdatum. De naam van de
+   tegenpartij en de omschrijving zitten een paar lagen dieper.
+
+   We zoeken op de lokale naam van elk element, want de ene bank zet er
+   een naamruimteprefix voor en de andere niet.
+
+   Eén <Ntry> kan meerdere <TxDtls> bevatten — een verzamelboeking van
+   bijvoorbeeld twintig incasso's. Als die elk een eigen bedrag hebben
+   splitsen we ze, anders zou je één regel van duizend euro overhouden.
+   --------------------------------------------------------------- */
+function leesCAMT(tekst) {
+  const doc = new DOMParser().parseFromString(tekst, "application/xml");
+  if (doc.querySelector("parsererror")) throw new Error("Dit XML-bestand is beschadigd.");
+
+  const kinderen = (el, naam) => el ? [...el.getElementsByTagNameNS("*", naam)] : [];
+  const eerste = (el, naam) => kinderen(el, naam)[0] || null;
+  const tekstVan = (el, naam) => eerste(el, naam)?.textContent.trim() || "";
+
+  const uit = [];
+
+  for (const ntry of kinderen(doc, "Ntry")) {
+    const richting = tekstVan(ntry, "CdtDbtInd").toUpperCase();
+    const isAf = richting === "DBIT";
+    const datum = tekstVan(eerste(ntry, "BookgDt"), "Dt") ||
+                  tekstVan(eerste(ntry, "ValDt"), "Dt") ||
+                  tekstVan(ntry, "Dt");
+    if (!datum) continue;
+
+    const details = kinderen(ntry, "TxDtls");
+    const eigenBedragen = details.filter(d => tekstVan(d, "Amt"));
+    const regels = eigenBedragen.length > 1 ? eigenBedragen : [details[0] || null];
+
+    for (const detail of regels) {
+      const bedrag = Number(
+        (detail && eigenBedragen.length > 1 ? tekstVan(detail, "Amt") : tekstVan(ntry, "Amt")) || 0
+      );
+      if (!isFinite(bedrag) || bedrag === 0) continue;
+
+      /* Bij een afschrijving is de tegenpartij de begunstigde, bij een
+         bijschrijving juist de opdrachtgever. */
+      const partijen = detail ? eerste(detail, "RltdPties") : null;
+      const naam = tekstVan(eerste(partijen, isAf ? "Cdtr" : "Dbtr"), "Nm") ||
+                   tekstVan(eerste(partijen, isAf ? "Dbtr" : "Cdtr"), "Nm");
+
+      const mededeling = (detail ? kinderen(eerste(detail, "RmtInf"), "Ustrd") : [])
+        .map(el => el.textContent.trim()).filter(Boolean).join(" ");
+      const extra = tekstVan(ntry, "AddtlNtryInf");
+
+      const omschrijving = [naam, mededeling || extra]
+        .filter(Boolean).join(" — ").slice(0, 140) || extra || "Boeking";
+
+      uit.push({
+        datum: datum.slice(0, 10),
+        bedrag: Math.abs(bedrag),
+        soort: isAf ? "uitgave" : "inkomst",
+        omschrijving,
+      });
+    }
+  }
+
+  return uit;
 }
 
 /* ---------------------------------------------------------------
@@ -334,35 +448,47 @@ function maakVoorstellen() {
 
   const afWoorden = profiel?.richting?.af || ["af", "debit", "d"];
 
-  voorstellen = tabel.rijen.map(rij => {
+  const ruwe = tabel.rijen.map(rij => {
     const datum = leesDatum(rij[iDatum]);
-    const ruw = rij[iBedrag] || "";
-    const bedrag = leesBankBedrag(ruw);
+    const bedrag = leesBankBedrag(rij[iBedrag] || "");
     if (!datum || bedrag == null) return null;
 
-    let soort;
-    if (iRichting >= 0) {
-      soort = afWoorden.includes(normaliseer(rij[iRichting])) ? "uitgave" : "inkomst";
-    } else {
-      soort = bedrag < 0 ? "uitgave" : "inkomst";
-    }
-
-    const omschrijving = omschrijvingKolommen
-      .map(i => rij[i]).filter(Boolean).join(" — ").slice(0, 140);
+    const soort = iRichting >= 0
+      ? (afWoorden.includes(normaliseer(rij[iRichting])) ? "uitgave" : "inkomst")
+      : (bedrag < 0 ? "uitgave" : "inkomst");
 
     return {
+      datum,
+      bedrag: Math.abs(bedrag),
+      soort,
+      omschrijving: omschrijvingKolommen.map(i => rij[i]).filter(Boolean).join(" — ").slice(0, 140),
+    };
+  }).filter(Boolean);
+
+  verwerkRuwe(ruwe);
+}
+
+/* ---------------------------------------------------------------
+   Van ruwe regels naar voorstellen
+   ---------------------------------------------------------------
+   Hierlangs gaat alles, of het nu uit een CSV of uit een CAMT-bestand
+   komt: een categorie raden, een potje raden, en kijken of je de
+   boeking niet allang hebt staan.
+   --------------------------------------------------------------- */
+function verwerkRuwe(ruwe) {
+  voorstellen = ruwe.map(r => {
+    const categorie = raadCategorie(r.omschrijving, r.soort === "inkomst" ? "inkomst" : "uitgave");
+    return {
       transactie: {
-        datum,
-        bedrag: Math.abs(bedrag),
-        soort,
-        omschrijving,
-        categorie: raadCategorie(omschrijving, soort === "inkomst" ? "inkomst" : "uitgave"),
+        ...r,
+        categorie,
+        potje: r.soort === "uitgave" ? raadPotje(r.omschrijving, categorie) : "",
         rekening: rekeningKeuze,
       },
       dubbel: false,
       kies: true,
     };
-  }).filter(Boolean);
+  });
 
   /* Wat er al in staat herkennen: zelfde dag, zelfde bedrag, en een
      omschrijving die op hetzelfde begint. Die laatste voorwaarde is er
@@ -387,13 +513,33 @@ function maakVoorstellen() {
 
   if (!voorstellen.length) {
     melding("Er kwamen geen bruikbare regels uit dit bestand.", "fout");
-    stap = "koppelen";
+    stap = tabel ? "koppelen" : "kies";
     return meld();
   }
 
   voorstellen.sort((a, b) => b.transactie.datum.localeCompare(a.transactie.datum));
   stap = "controleren";
   meld();
+}
+
+/* Bij welk potje hoort deze uitgave? Eerst kijken of de naam van een
+   potje in de omschrijving voorkomt, daarna of er een potje is dat op
+   de geraden categorie lijkt. Vindt hij niets, dan kies je zelf. */
+function raadPotje(omschrijving, categorieId) {
+  const potjes = state.potjes.filter(p => p.actief !== false);
+  if (!potjes.length) return "";
+
+  const tekst = normaliseer(omschrijving);
+  const direct = potjes.find(p => p.naam.length > 3 && tekst.includes(normaliseer(p.naam)));
+  if (direct) return direct.id;
+
+  const categorie = state.categorieen.find(c => c.id === categorieId);
+  if (categorie) {
+    const kern = normaliseer(categorie.naam).split(/[^a-z0-9]+/)[0];
+    const viaCategorie = potjes.find(p => kern.length > 3 && normaliseer(p.naam).includes(kern));
+    if (viaCategorie) return viaCategorie.id;
+  }
+  return "";
 }
 
 /* Datums komen in alle smaken binnen. */

@@ -53,11 +53,16 @@ erbij:
 - **Vaste lasten** als aparte posten (per maand, kwartaal, half jaar of jaar), met
   herkenning van boekingen die erbij horen en een maandbedrag voor de
   jaarrekeningen.
-- **Budgetten per categorie**, en **bankbestanden inlezen** (ING, Rabobank,
-  ABN AMRO, bunq) met dubbele boekingen eruit gefilterd.
+- **Budgetten per categorie**.
 
 ### In allebei
 
+- **Bankbestand inlezen** — CSV of CAMT (camt.053, het XML-bestand dat elke bank
+  aanbiedt). CSV van ING, Rabobank, ABN AMRO en bunq wordt vanzelf herkend; een
+  andere bank koppel je zelf in drie klikken. Boekingen die je al hebt staan
+  worden herkend en uitgevinkt, dus niets komt dubbel binnen. Op hoofdlijnen hang
+  je elke uitgave meteen aan een potje — bij een potje *vrij te besteden* zie je
+  daarna precies wat er deze maand nog over is.
 - **Spaardoelen** met streefbedrag en datum: wat moet er per maand bij, en lig je
   op schema?
 - **Rekeningen en vermogen**, met saldo gelijkzetten met je bank.
@@ -230,6 +235,13 @@ niets, ook geen ledenlijst.
 **Wat gebeurt er met een uitgave uit een potje?**
 Die telt gewoon mee in je categorieën en in het jaartotaal, maar niet in de
 losse uitgaven van deze maand — dat geld was al gereserveerd.
+
+**Welke bankbestanden kan ik uploaden?**
+CSV en CAMT (camt.053). Bij CSV herkent de app ING, Rabobank, ABN AMRO en bunq aan
+hun kolomnamen; kent hij jouw bank niet, dan wijs je zelf aan welke kolom de datum,
+het bedrag en de omschrijving is. CAMT is XML en heeft niets nodig: daar staan
+datum, bedrag, tegenpartij en omschrijving met naam en toenaam in, en een
+verzamelboeking wordt netjes uit elkaar gehaald. MT940 wordt (nog) niet gelezen.
 
 **Waarom staat mijn hypotheekpotje altijd op nul?**
 Dat klopt: een potje van het soort *vaste last* houdt geen saldo bij. Het bedrag
