@@ -49,6 +49,30 @@ export function html(params) {
     </div>
 
     <div class="kaart">
+      <div class="kaart__kop"><h2>Hoe wil je bijhouden?</h2></div>
+      <div class="soortkeuze" id="modus">
+        <button type="button" data-modus="eenvoudig" aria-pressed="${(i.modus || "eenvoudig") === "eenvoudig"}">
+          <span class="soortkeuze__icoon">🥧</span>
+          <span>
+            <span class="soortkeuze__titel">Op hoofdlijnen</span>
+            <span class="soortkeuze__uitleg">Inkomen verdelen over potjes. Losse uitgaven hoef je niet te boeken.</span>
+          </span>
+        </button>
+        <button type="button" data-modus="volledig" aria-pressed="${i.modus === "volledig"}">
+          <span class="soortkeuze__icoon">📒</span>
+          <span>
+            <span class="soortkeuze__titel">Alles bijhouden</span>
+            <span class="soortkeuze__uitleg">Elke boeking erin, met budgetten per categorie en bankbestanden inlezen.</span>
+          </span>
+        </button>
+      </div>
+      <div class="veld__hint">
+        Je kunt altijd wisselen; er gaat niets verloren. Wat je in de ene modus invoert
+        blijft ook in de andere staan.
+      </div>
+    </div>
+
+    <div class="kaart">
       <div class="kaart__kop"><h2>Weergave</h2></div>
       <div class="veld">
         <span class="veld__label">Thema</span>
@@ -80,6 +104,22 @@ export function html(params) {
     </div>
 
     <div class="sectiekop"><h2>Indeling</h2></div>
+    <a class="rij" href="#/inkomen">
+      <span class="rij__icoon">💼</span>
+      <span class="rij__midden">
+        <span class="rij__titel">Inkomen</span>
+        <span class="rij__sub">${state.terugkerend.filter(p => p.soort === "inkomst").length} vaste bronnen</span>
+      </span>
+      <span class="rij__rechts dof">›</span>
+    </a>
+    <a class="rij" href="#/verdelen">
+      <span class="rij__icoon">⚖️</span>
+      <span class="rij__midden">
+        <span class="rij__titel">Verdeling over potjes</span>
+        <span class="rij__sub">${state.potjes.filter(p => p.actief !== false).length} potjes</span>
+      </span>
+      <span class="rij__rechts dof">›</span>
+    </a>
     <a class="rij" href="#/instellingen/categorieen">
       <span class="rij__icoon">🏷️</span>
       <span class="rij__midden">
@@ -265,6 +305,13 @@ export function koppel(wortel, params) {
       await zetInstelling({ thema: thema.dataset.thema });
       pasThemaToe(thema.dataset.thema);
       return;
+    }
+
+    const modus = e.target.closest("[data-modus]");
+    if (modus) {
+      await zetInstelling({ modus: modus.dataset.modus });
+      melding(modus.dataset.modus === "eenvoudig" ? "Op hoofdlijnen." : "Alles bijhouden staat aan.", "goed");
+      return ga("#/start");
     }
 
     if (e.target.closest("[data-nieuw-persoon]")) return voegPersoonToe();

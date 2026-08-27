@@ -840,3 +840,87 @@ hr.scheiding { border: 0; border-top: 1px solid var(--rand-zacht); margin: 18px 
   .scherm { padding: 18px 22px calc(var(--balk-hoogte) + var(--veilig-onder) + 34px); }
   .hero__bedrag { font-size: 2.8rem; }
 }
+
+/* ------------------------- Taart en verdeling ----------------------- */
+/* Het overzicht op hoofdlijnen: één cirkel met de verdeling van je
+   inkomen, en daaronder dezelfde stukken als leesbare lijst. */
+.taart { display: flex; justify-content: center; padding: 4px 0 16px; }
+
+.taartlijst { list-style: none; margin: 0; padding: 0; }
+.taartlijst__rij {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 9px; align-items: center;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--rand-zacht);
+  font-size: .88rem;
+}
+.taartlijst__rij:last-child { border-bottom: 0; }
+.taartlijst__rij[data-potje], .taartlijst__rij[data-route] { cursor: pointer; }
+.taartlijst__naam { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.taartlijst__deel { font-size: .76rem; min-width: 34px; text-align: right; }
+.taartlijst__bedrag { font-weight: 650; min-width: 68px; text-align: right; }
+
+/* De teller boven het verdeelscherm blijft in beeld terwijl je typt. */
+.verdeelkop {
+  position: sticky; top: 56px; z-index: 30;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  background: var(--vlak);
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  padding: 12px 10px;
+  margin-bottom: 16px;
+  box-shadow: var(--schaduw);
+}
+.verdeelkop__deel { text-align: center; min-width: 0; }
+.verdeelkop__label {
+  display: block; font-size: .67rem; font-weight: 650;
+  text-transform: uppercase; letter-spacing: .05em; color: var(--tekst-dof);
+}
+.verdeelkop__waarde {
+  display: block; font-weight: 700; font-size: 1.02rem;
+  margin-top: 2px; font-variant-numeric: tabular-nums;
+}
+
+.verdeelrij {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--vlak);
+  border: 1px solid var(--rand-zacht);
+  border-radius: var(--radius-s);
+  padding: 9px 11px;
+}
+.verdeelrij__icoon {
+  width: 38px; height: 38px; flex: none;
+  border: 0; border-radius: 12px;
+  display: grid; place-items: center; font-size: 1.05rem;
+}
+.verdeelrij__naam {
+  flex: 1; min-width: 0;
+  font-weight: 620; font-size: .92rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.verdeelrij__deel { display: block; font-size: .72rem; font-weight: 600; }
+.verdeelrij__invoer { display: flex; align-items: center; gap: 5px; flex: none; }
+.verdeelrij__invoer input {
+  width: 96px; text-align: right;
+  padding: 9px 10px;
+  font-weight: 650; font-variant-numeric: tabular-nums;
+}
+
+/* Soortkeuze bij een potje: drie kaartjes onder elkaar. */
+.soortkeuze { display: flex; flex-direction: column; gap: 8px; }
+.soortkeuze button {
+  display: flex; align-items: center; gap: 11px;
+  text-align: left; width: 100%;
+  padding: 11px 12px;
+  background: var(--vlak-diep);
+  border: 1px solid var(--rand);
+  border-radius: var(--radius-s);
+}
+.soortkeuze button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--vlak-diep));
+}
+.soortkeuze__icoon { font-size: 1.25rem; flex: none; }
+.soortkeuze__titel { display: block; font-weight: 640; font-size: .92rem; }
+.soortkeuze__uitleg { display: block; font-size: .77rem; color: var(--tekst-dof); margin-top: 1px; }

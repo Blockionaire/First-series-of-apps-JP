@@ -10,10 +10,13 @@
    Zolang dat niet klopt, komt er geen cijfer in beeld.
    ===================================================================== */
 
-import { state, abonneer, start, Sync, magBewerken } from "./store.js";
+import { state, abonneer, start, Sync, magBewerken, eenvoudig } from "./store.js";
 import { $, zetValuta, zetPrivacy, melding } from "./util.js";
 
 import * as Dashboard   from "./views/dashboard.js";
+import * as Overzicht   from "./views/overzicht.js";
+import * as Verdelen    from "./views/verdelen.js";
+import * as Inkomen     from "./views/inkomen.js";
 import * as Maand       from "./views/maand.js";
 import * as Boeken      from "./views/boeken.js";
 import * as Vast        from "./views/vast.js";
@@ -34,7 +37,10 @@ import * as Toegang     from "./views/toegang.js";
    functie terug, dan wordt die aangeroepen als het scherm weggaat.
    --------------------------------------------------------------- */
 const SCHERMEN = {
-  start:        Dashboard,
+  start:        Dashboard,     // in de eenvoudige modus wordt dit Overzicht
+  overzicht:    Overzicht,
+  verdelen:     Verdelen,
+  inkomen:      Inkomen,
   maand:        Maand,
   boeken:       Boeken,
   vast:         Vast,
@@ -48,20 +54,40 @@ const SCHERMEN = {
 };
 
 const TAB_VAN_SCHERM = {
-  start: "start", instellingen: "start", beheer: "start", rekeningen: "start",
+  start: "start", overzicht: "start", instellingen: "start", beheer: "start",
+  rekeningen: "start", inkomen: "start",
   maand: "maand", importeren: "maand",
   boeken: "boeken",
+  verdelen: "verdelen",
   potjes: "potjes", doelen: "potjes",
   cijfers: "cijfers", vast: "cijfers",
 };
 
-const TABS = [
+/* Twee balken, want de twee manieren van bijhouden vragen om andere
+   knoppen. Op hoofdlijnen draait alles om verdelen; wie alles bijhoudt
+   wil bij zijn boekingen kunnen. */
+const TABS_EENVOUDIG = [
+  { id: "start",    route: "#/start",                 icoon: "🥧", label: "Overzicht" },
+  { id: "verdelen", route: "#/verdelen",              icoon: "⚖️", label: "Verdelen" },
+  { id: "boeken",   route: "#/boeken/nieuw/inkomst",  icoon: "＋", label: "Inkomst", hoofd: true },
+  { id: "potjes",   route: "#/potjes",                icoon: "🫙", label: "Potjes" },
+  { id: "cijfers",  route: "#/cijfers",               icoon: "📊", label: "Cijfers" },
+];
+
+const TABS_VOLLEDIG = [
   { id: "start",   route: "#/start",   icoon: "🏠", label: "Start" },
   { id: "maand",   route: "#/maand",   icoon: "📒", label: "Boekingen" },
   { id: "boeken",  route: "#/boeken",  icoon: "＋", label: "Nieuw", hoofd: true },
   { id: "potjes",  route: "#/potjes",  icoon: "🫙", label: "Potjes" },
   { id: "cijfers", route: "#/cijfers", icoon: "📊", label: "Cijfers" },
 ];
+
+/* Welk scherm hoort bij een routenaam? Alleen "start" verschilt per
+   modus; de rest is in beide gewoon bereikbaar. */
+function schermVoor(naam) {
+  if (naam === "start") return eenvoudig() ? Overzicht : Dashboard;
+  return SCHERMEN[naam];
+}
 
 /* ---------------------------------------------------------------
    Route lezen en zetten
@@ -114,7 +140,7 @@ function teken() {
   vorigePoort = null;
 
   const { naam, params } = huidigeRoute();
-  const scherm = SCHERMEN[naam];
+  const scherm = schermVoor(naam);
   const routeSleutel = location.hash;
   const nieuwScherm = routeSleutel !== vorigeRoute;
 
@@ -162,9 +188,10 @@ function standaardKop(scherm, params) {
 
 function tabbalk(schermNaam) {
   const actief = TAB_VAN_SCHERM[schermNaam] || schermNaam;
+  const tabs = eenvoudig() ? TABS_EENVOUDIG : TABS_VOLLEDIG;
   return `
     <nav class="tabbalk" aria-label="Hoofdmenu">
-      ${TABS.map(t => `
+      ${tabs.map(t => `
         <a class="tab ${t.hoofd ? "tab--hoofd" : ""}" href="${t.route}"
            ${actief === t.id ? 'aria-current="page"' : ""}>
           <span class="tab__icoon" aria-hidden="true">${t.icoon}</span>
@@ -225,7 +252,7 @@ async function opstarten() {
   window.addEventListener("hashchange", teken);
 
   abonneer(() => {
-    const stempel = `${state.instellingen.thema}|${state.instellingen.valuta}|${state.instellingen.privacy}`;
+    const stempel = `${state.instellingen.thema}|${state.instellingen.valuta}|${state.instellingen.privacy}|${state.instellingen.modus}`;
     if (stempel !== laatsteInstellingen) {
       laatsteInstellingen = stempel;
       pasThemaToe(state.instellingen.thema);

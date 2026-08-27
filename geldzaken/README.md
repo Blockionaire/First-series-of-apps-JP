@@ -12,67 +12,57 @@ deze app: **iedereen kan zich aanmelden, maar alleen jij bepaalt wie erbij mag.*
 
 ---
 
-## Wat kan het
+## Twee manieren van bijhouden
 
-**Je maand in één oogopslag**
-- Bovenaan het bedrag waar het om gaat: wat je deze maand nog te besteden hebt,
-  inclusief de vaste lasten die nog moeten komen.
-- Een verdeelbalk: hoeveel gaat naar vast, hoeveel naar losse uitgaven, hoeveel
-  gaat opzij, en wat blijft er over.
-- Een prognose op basis van je uitgeeftempo: "zo eindig je op € 240".
-- Signalen die pas verschijnen als ze ergens over gaan: een budget dat bijna op
-  is, een vaste last die te laat is, een maand die duurder loopt dan normaal.
+De app kan meebewegen met hoe precies je wilt zijn. Je kiest onder ⚙️, en je kunt
+altijd wisselen zonder iets kwijt te raken.
 
-**Inkomsten en uitgaven**
-- Boeken in vier smaken: uitgave, inkomst, opzij zetten en overboeken.
-- De categorie wordt geraden uit de omschrijving — en de app onthoudt jouw
-  correcties, dus hij wordt er elke maand beter in.
-- Zoeken door alles, filteren op soort, categorie en persoon.
-- Snelknoppen voor wat je vaak boekt.
+### Op hoofdlijnen (standaard)
 
-**Vaste lasten**
-- Per maand, kwartaal, half jaar, jaar of week, met de dag waarop ze afgeschreven
-  worden.
-- De app herkent zelf of een vaste last al geboekt is — ook als je hem gewoon met
-  de hand hebt ingevoerd of je afschrift hebt ingelezen.
-- Kwartaal- en jaarrekeningen worden omgerekend naar een maandbedrag, met één
-  knop om daar meteen een potje voor te maken. Nooit meer schrikken in januari.
+Je houdt je **inkomen** bij en verdeelt dat over **potjes**. Losse uitgaven hoef je
+niet te boeken: de hypotheek is gewoon een stuk van de taart, want die gaat er toch
+elke maand af.
 
-**Potjes**
-- Enveloppen waar elke maand automatisch een bedrag in gaat: vakantie, auto,
-  kleding, buffer.
-- Een uitgave kun je uit een potje betalen. Dat geld was in eerdere maanden al
-  gereserveerd, dus het drukt niet op de maand die je nu bekijkt — precies zoals
-  enveloppen bedoeld zijn.
+- **Overzicht** — je inkomen groot bovenaan, daaronder een cirkeldiagram met de
+  verdeling. Elk potje een stuk, en wat je niet hebt verdeeld blijft grijs.
+- **Verdelen** — alle potjes onder elkaar met een bedrag erachter. Bovenin staat
+  live wat er nog te verdelen is, dus je hoeft nooit zelf te rekenen. Is er iets
+  over, dan zet je dat met één knop in een potje.
+- **Drie soorten potjes**, want je wilt per soort iets anders weten:
 
-**Spaardoelen**
-- Streefbedrag en streefdatum. De app rekent uit wat er per maand bij moet, en
-  of je met je huidige tempo op schema ligt.
+  | | |
+  |---|---|
+  | **Vaste last** | Hypotheek, energie, verzekering. Gaat er elke maand af, verder niets bij te houden. Geen saldo. |
+  | **Vrij te besteden** | Boodschappen, uitgaan. Bedoeld om op te maken. Boek je wel eens iets, dan zie je wat er déze maand nog over is. |
+  | **Sparen** | Vakantie, buffer, onderhoud. Dit bouwt op; het saldo blijft staan. |
 
-**Rekeningen en vermogen**
-- Betaal-, spaar- en beleggingsrekeningen, contant geld en schulden.
-- Saldo's worden berekend uit je boekingen; met één knop zet je ze weer gelijk
-  met je bank (het verschil wordt netjes een correctieboeking).
-- Je vermogen in een lijn over de afgelopen maanden.
+- **Inkomen** — salaris, toeslagen, het inkomen van je partner. Eén keer instellen,
+  daarna rekent de app er elke maand mee. Een bonus of teruggave boek je los.
+- **Cijfers** — hoe je maanden zich tot elkaar verhouden.
 
-**Cijfers**
-- Erin en eruit per maand, 6 / 12 / 24 maanden of alleen dit jaar.
-- Waar het geld heen ging, gemiddeld per maand.
-- Vast tegenover los — hoe lager je vaste deel, hoe makkelijker je een
-  tegenvaller opvangt.
-- Spaarquote, beste en zwaarste maand, grootste uitgaven, jaartotalen.
+### Alles bijhouden
 
-**Bankbestand inlezen**
-- CSV uit ING, Rabobank, ABN AMRO of bunq wordt vanzelf herkend; een andere bank
-  koppel je zelf in drie klikken.
-- Regels die je al hebt staan worden herkend en uitgevinkt, dus niets komt dubbel
-  binnen.
+Wil je wél elke boeking invoeren, dan zet je de andere modus aan. Daarmee komen
+erbij:
 
-**En verder**
-- Privacyknop: één tik en alle bedragen worden ••••.
-- Meerdere personen in één huishouden, met bij elke boeking van wie hij was.
-- Donker en licht thema.
-- Back-up als één bestand, en boekingen exporteren als CSV.
+- **Boekingen** — uitgaven, inkomsten, sparen en overboekingen, met zoeken en
+  filteren. De categorie wordt geraden uit de omschrijving en de app onthoudt je
+  correcties.
+- **Startscherm met "nog te besteden"** — inclusief prognose op je uitgeeftempo en
+  waarschuwingen bij budgetten die vollopen.
+- **Vaste lasten** als aparte posten (per maand, kwartaal, half jaar of jaar), met
+  herkenning van boekingen die erbij horen en een maandbedrag voor de
+  jaarrekeningen.
+- **Budgetten per categorie**, en **bankbestanden inlezen** (ING, Rabobank,
+  ABN AMRO, bunq) met dubbele boekingen eruit gefilterd.
+
+### In allebei
+
+- **Spaardoelen** met streefbedrag en datum: wat moet er per maand bij, en lig je
+  op schema?
+- **Rekeningen en vermogen**, met saldo gelijkzetten met je bank.
+- **Privacyknop**: één tik en alle bedragen worden ••••.
+- Meerdere personen, back-up als één bestand, CSV-export.
 - Werkt volledig offline en is te installeren op je beginscherm.
 
 ---
@@ -204,7 +194,10 @@ js/db.js                IndexedDB
 js/sync.js              inloggen, lidmaatschap en Firestore
 js/util.js              opmaak, maanden, dialogen, grafiekjes
 js/data/standaard.js    categorieën, potjesvoorstellen, bankprofielen
-js/views/*.js           de schermen
+js/views/overzicht.js   de taart: inkomen en verdeling
+js/views/verdelen.js    inkomen over potjes verdelen
+js/views/inkomen.js     waar je geld vandaan komt
+js/views/*.js           de overige schermen
 ```
 
 ### Hoe een boeking op je rekeningen werkt
@@ -237,6 +230,12 @@ niets, ook geen ledenlijst.
 **Wat gebeurt er met een uitgave uit een potje?**
 Die telt gewoon mee in je categorieën en in het jaartotaal, maar niet in de
 losse uitgaven van deze maand — dat geld was al gereserveerd.
+
+**Waarom staat mijn hypotheekpotje altijd op nul?**
+Dat klopt: een potje van het soort *vaste last* houdt geen saldo bij. Het bedrag
+gaat er elke maand af en telt mee in je verdeling, meer valt er niet over te
+zeggen. Wil je het toch volgen, zet het potje dan op *sparen* of *vrij te
+besteden*.
 
 **Ik heb per ongeluk alles gewist.**
 Als je een back-up hebt (⚙️ → Back-up downloaden) zet je die terug met

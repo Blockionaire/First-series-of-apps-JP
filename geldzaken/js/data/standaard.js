@@ -49,12 +49,20 @@ export const CATEGORIEEN = [
 /* Potjes die de meeste huishoudens uiteindelijk toch aanmaken. Je kiest
    ze bij de eerste keer opstarten met één tik. */
 export const POTJE_SUGGESTIES = [
-  { naam: "Vakantie",        icoon: "✈️", kleur: "#0ea5e9", maandelijks: 150 },
-  { naam: "Auto & onderhoud",icoon: "🔧", kleur: "#38bdf8", maandelijks: 75 },
-  { naam: "Kleding",         icoon: "👕", kleur: "#f87171", maandelijks: 50 },
-  { naam: "Cadeaus & feest", icoon: "🎁", kleur: "#fb7185", maandelijks: 30 },
-  { naam: "Huis & klussen",  icoon: "🛠️", kleur: "#84cc16", maandelijks: 100 },
-  { naam: "Buffer",          icoon: "🛟", kleur: "#a78bfa", maandelijks: 100 },
+  /* Vaste lasten: geld dat er elke maand sowieso afgaat. */
+  { naam: "Huur of hypotheek", icoon: "🏠", kleur: "#5b8dff", soort: "vast",   maandelijks: 0 },
+  { naam: "Energie & water",   icoon: "⚡", kleur: "#60a5fa", soort: "vast",   maandelijks: 0 },
+  { naam: "Verzekeringen",     icoon: "🛡️", kleur: "#818cf8", soort: "vast",   maandelijks: 0 },
+  { naam: "Abonnementen",      icoon: "📺", kleur: "#c084fc", soort: "vast",   maandelijks: 0 },
+
+  /* Vrij te besteden: bedoeld om deze maand op te maken. */
+  { naam: "Boodschappen",      icoon: "🛒", kleur: "#f5a524", soort: "vrij",   maandelijks: 0 },
+  { naam: "Uitgaan & eten",    icoon: "🍽️", kleur: "#fb923c", soort: "vrij",   maandelijks: 0 },
+
+  /* Sparen: dit bouwt op. */
+  { naam: "Vakantie",          icoon: "✈️", kleur: "#0ea5e9", soort: "sparen", maandelijks: 150 },
+  { naam: "Auto & onderhoud",  icoon: "🔧", kleur: "#38bdf8", soort: "sparen", maandelijks: 75 },
+  { naam: "Buffer",            icoon: "🛟", kleur: "#a78bfa", soort: "sparen", maandelijks: 100 },
 ];
 
 /* Trefwoorden die de app gebruikt om een nieuwe of ingelezen boeking
@@ -150,6 +158,43 @@ export const ICONEN = [
   "🏋️", "⚽", "🎾", "✈️", "🏖️", "⛺", "🎁", "🎂", "🧸", "🍼", "🐾", "🐶",
   "💼", "🏛️", "💶", "💰", "🐖", "📈", "🎓", "💍", "🛟", "🔧", "🧹", "✨",
 ];
+
+/* Een potje dat "Energie" heet hoort geen huisje te krijgen. Dit raadt
+   een passend icoon uit de naam; kies je zelf iets anders, dan wint dat
+   natuurlijk. */
+const ICOON_WOORDEN = [
+  ["⚡", ["energie", "stroom", "gas", "licht"]],
+  ["💧", ["water", "waterschap"]],
+  ["🏠", ["huur", "hypotheek", "woning", "wonen", "vve"]],
+  ["🛡️", ["verzeker", "polis", "aansprakelijk"]],
+  ["💊", ["zorg", "ziektekost", "apotheek", "tandarts"]],
+  ["📶", ["internet", "telefoon", "bellen", "mobiel", "wifi"]],
+  ["📺", ["abonnement", "netflix", "spotify", "streaming"]],
+  ["🧾", ["belasting", "gemeente", "aanslag"]],
+  ["🚗", ["auto", "vervoer", "benzine", "tanken"]],
+  ["🚲", ["fiets"]],
+  ["🚆", ["ov", "trein", "reizen"]],
+  ["🛒", ["boodschap", "supermarkt", "eten"]],
+  ["🍽️", ["uitgaan", "uit eten", "restaurant", "horeca"]],
+  ["👕", ["kleding", "kleren", "schoenen"]],
+  ["🎁", ["cadeau", "feest", "verjaardag", "sint", "kerst"]],
+  ["✈️", ["vakantie", "reis", "weekendje"]],
+  ["🏋️", ["sport", "fitness", "sportschool"]],
+  ["🧸", ["kind", "kinderen", "opvang", "bso"]],
+  ["🐾", ["huisdier", "hond", "kat", "dierenarts"]],
+  ["🛟", ["buffer", "noodpot", "reserve", "onvoorzien"]],
+  ["🔧", ["onderhoud", "klussen", "reparatie"]],
+  ["🎓", ["studie", "school", "cursus", "opleiding"]],
+  ["📈", ["beleggen", "aandelen", "pensioen"]],
+];
+
+export function raadIcoon(naam, standaard = "🫙") {
+  const tekst = String(naam || "").toLowerCase();
+  for (const [icoon, woorden] of ICOON_WOORDEN) {
+    if (woorden.some(w => tekst.includes(w))) return icoon;
+  }
+  return standaard;
+}
 
 export const KLEUREN = [
   "#3ddc97", "#22d3ee", "#5b8dff", "#818cf8", "#a78bfa", "#e879f9",

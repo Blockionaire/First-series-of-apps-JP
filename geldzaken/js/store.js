@@ -37,6 +37,9 @@ export const state = {
     huisNaam: "Mijn huishouden",
     valuta: "EUR",
     thema: "auto",
+    /* eenvoudig = inkomen verdelen over potjes, geen uitgaven boeken.
+       volledig  = alles bijhouden, tot de laatste boodschap aan toe. */
+    modus: "eenvoudig",
     privacy: false,              // bedragen verbergen
     potjesAutomatisch: true,     // maandelijks automatisch in de potjes storten
     personen: [],                // wie er meedoen, voor het verdelen van uitgaven
@@ -89,6 +92,9 @@ export function magBewerken() {
 }
 
 export const isBeheerder = () => !Sync.sync.beschikbaar || Sync.sync.beheerder;
+
+/* Draait de app op hoofdlijnen of houd je alles bij? */
+export const eenvoudig = () => (state.instellingen.modus || "eenvoudig") === "eenvoudig";
 
 /* ---------------------------------------------------------------
    Opstarten
@@ -339,6 +345,7 @@ export function legPotje(velden = {}) {
     naam: "",
     icoon: "🫙",
     kleur: "#3ddc97",
+    soort: "sparen",     // vast | sparen | vrij — zie bereken.js
     maandelijks: 0,
     doelBedrag: null,
     startMaand: maandNu(),

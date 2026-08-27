@@ -244,33 +244,97 @@ export function budgetten(state, maand) {
    Potjes
    ---------------------------------------------------------------
    Een potje is geen echte rekening maar een envelop: elke maand gaat er
-   automatisch een bedrag in, je kunt met de hand storten of opnemen, en
-   uitgaven die je aan het potje hangt gaan eraf.
-   --------------------------------------------------------------- */
-export function potSaldo(state, potje, totMaand = maandNu()) {
-  const automatischAan = state.instellingen.potjesAutomatisch !== false && potje.actief !== false;
-  const start = potje.startMaand || maandNu();
-  const maanden = automatischAan ? Math.max(0, maandenTussen(start, totMaand) + 1) : 0;
-  const automatisch = maanden * (Number(potje.maandelijks) || 0);
+   een bedrag in en het geld heeft daarmee een bestemming.
 
+   Er zijn drie soorten, en het verschil zit hem in wat je wilt weten:
+
+     vast    De hypotheek, de energierekening. Dat geld is elke maand
+             weg en daar valt niets aan bij te houden. Een saldo zou
+             hier alleen maar verwarren, dus dat is altijd nul.
+     sparen  Vakantie, buffer, auto-onderhoud. Hier telt juist wat er
+             in de loop van de maanden is opgebouwd.
+     vrij    Boodschappen, uitgaan. Bedoeld om op te maken. Wat telt is
+             wat er déze maand nog over is — en alleen als je boekt.
+
+   Zo kun je op hoofdlijnen bijhouden waar je geld heen gaat zonder
+   elke uitgave in te voeren, en toch precies zijn waar dat helpt.
+   --------------------------------------------------------------- */
+export const POTSOORTEN = {
+  vast: {
+    label: "Vaste last", meervoud: "Vaste lasten",
+    uitleg: "Gaat er elke maand af. Niets bij te houden.",
+    kleur: "var(--sparen)", icoon: "🏠",
+  },
+  vrij: {
+    label: "Vrij te besteden", meervoud: "Vrij te besteden",
+    uitleg: "Om op te maken. Je ziet wat er deze maand nog over is.",
+    kleur: "var(--potje)", icoon: "🛒",
+  },
+  sparen: {
+    label: "Sparen", meervoud: "Sparen",
+    uitleg: "Bouwt op. Het saldo blijft staan.",
+    kleur: "var(--accent)", icoon: "🐖",
+  },
+};
+
+export const potSoort = potje => POTSOORTEN[potje?.soort] ? potje.soort : "sparen";
+
+export function potSaldo(state, potje, totMaand = maandNu()) {
+  const soort = potSoort(potje);
+  const maandbedrag = Number(potje.maandelijks) || 0;
+
+  /* Wat er in deze ene maand aan dit potje geboekt is. */
+  let ditGestort = 0, ditUit = 0;
   let erbij = 0, eraf = 0;
   for (const t of state.transacties) {
     if (t.potje !== potje.id) continue;
-    if (maandVan(t.datum) > totMaand) continue;
+    const maand = maandVan(t.datum);
+    if (maand > totMaand) continue;
     const bedrag = Number(t.bedrag) || 0;
-    if (t.soort === "sparen") erbij += bedrag;
-    else if (t.soort === "opname") eraf += bedrag;
-    else if (t.soort === "uitgave") eraf += bedrag;
+    const erin = t.soort === "sparen";
+    const eruit = t.soort === "opname" || t.soort === "uitgave";
+    if (erin) erbij += bedrag;
+    else if (eruit) eraf += bedrag;
+    if (maand === totMaand) {
+      if (erin) ditGestort += bedrag;
+      else if (eruit) ditUit += bedrag;
+    }
   }
 
+  /* Een vaste last is elke maand weg: geen saldo, wel een maandbedrag. */
+  if (soort === "vast") {
+    return {
+      soort, maandbedrag, saldo: 0, automatisch: maandbedrag,
+      gestort: 0, opgenomen: 0, maandenGevuld: 0, deel: null,
+      ditUit, ditOver: 0, verbruikt: true,
+    };
+  }
+
+  /* Een vrij potje kijkt alleen naar deze maand. */
+  if (soort === "vrij") {
+    const over = maandbedrag + ditGestort - ditUit;
+    return {
+      soort, maandbedrag, saldo: over, automatisch: maandbedrag,
+      gestort: ditGestort, opgenomen: ditUit, maandenGevuld: 1,
+      deel: maandbedrag > 0 ? ditUit / maandbedrag : null,
+      ditUit, ditOver: over, verbruikt: false,
+    };
+  }
+
+  /* En een spaarpotje telt op vanaf de startmaand. */
+  const automatischAan = state.instellingen.potjesAutomatisch !== false && potje.actief !== false;
+  const start = potje.startMaand || maandNu();
+  const maanden = automatischAan ? Math.max(0, maandenTussen(start, totMaand) + 1) : 0;
+  const automatisch = maanden * maandbedrag;
   const saldo = automatisch + erbij - eraf;
+
   return {
-    saldo,
-    automatisch,
+    soort, maandbedrag, saldo, automatisch,
     gestort: erbij,
     opgenomen: eraf,
     maandenGevuld: maanden,
     deel: potje.doelBedrag > 0 ? saldo / potje.doelBedrag : null,
+    ditUit, ditOver: null, verbruikt: false,
   };
 }
 
@@ -278,6 +342,70 @@ export const potjesMetSaldo = (state, totMaand = maandNu()) =>
   state.potjes
     .map(p => ({ ...p, ...potSaldo(state, p, totMaand) }))
     .sort((a, b) => (a.volgorde ?? 99) - (b.volgorde ?? 99) || a.naam.localeCompare(b.naam));
+
+/* ---------------------------------------------------------------
+   De verdeling — het hart van het overzicht
+   ---------------------------------------------------------------
+   Eén vraag: er komt X binnen, waar gaat dat heen? Elk potje is een
+   stuk van de taart, en wat je niet hebt verdeeld blijft over.
+
+   Vaste lasten die je als aparte post hebt ingevoerd tellen als één
+   extra stuk mee. Zo klopt de taart ook als je beide manieren door
+   elkaar gebruikt, zonder iets dubbel te tellen — het zijn immers
+   verschillende dingen.
+   --------------------------------------------------------------- */
+export function verdeling(state, maand = maandNu()) {
+  const o = maandOverzicht(state, maand);
+  const inkomen = o.inkomsten + o.verwachtErin;
+
+  const potjes = state.potjes
+    .filter(p => p.actief !== false)
+    .map(p => {
+      const stand = potSaldo(state, p, maand);
+      return {
+        id: p.id,
+        potje: p,
+        naam: p.naam,
+        icoon: p.icoon || POTSOORTEN[stand.soort].icoon,
+        kleur: p.kleur || POTSOORTEN[stand.soort].kleur,
+        soort: stand.soort,
+        bedrag: stand.maandbedrag,
+        stand,
+      };
+    })
+    .sort((a, b) => b.bedrag - a.bedrag || a.naam.localeCompare(b.naam));
+
+  const posten = [...potjes];
+
+  /* Los ingevoerde vaste lasten als één stuk erbij. */
+  const losseVasteLasten = vasteLastenPerMaand(state);
+  if (losseVasteLasten > 0) {
+    posten.push({
+      id: "vaste-lasten",
+      naam: "Vaste lasten",
+      icoon: "🔁",
+      kleur: "var(--sparen)",
+      soort: "vast",
+      bedrag: losseVasteLasten,
+      route: "#/vast",
+    });
+  }
+
+  const somVan = soort => posten.filter(p => p.soort === soort).reduce((s, p) => s + p.bedrag, 0);
+  const verdeeld = posten.reduce((s, p) => s + p.bedrag, 0);
+
+  return {
+    maand, inkomen, posten, potjes,
+    vast: somVan("vast"),
+    sparen: somVan("sparen"),
+    vrij: somVan("vrij"),
+    verdeeld,
+    over: inkomen - verdeeld,
+    volledigVerdeeld: inkomen > 0 && Math.abs(inkomen - verdeeld) < 1,
+    teveel: verdeeld > inkomen,
+    gespaard: potjes.filter(p => p.soort === "sparen").reduce((s, p) => s + p.stand.saldo, 0),
+  };
+}
 
 /* ---------------------------------------------------------------
    Spaardoelen

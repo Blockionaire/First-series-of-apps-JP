@@ -158,15 +158,33 @@ export const bol = naam => `
   <span class="lid__bol" style="background:${kleurVoor(naam)}">${esc(initialen(naam))}</span>`;
 
 export function potKaart(pot) {
+  /* Wat er groot op de kaart staat verschilt per soort potje: bij
+     sparen het opgebouwde saldo, bij een vrij potje wat er deze maand
+     nog over is, en bij een vaste last simpelweg het maandbedrag —
+     daar valt immers niets op te bouwen. */
+  const soort = pot.soort || "sparen";
+  const maand = Number(pot.maandelijks) || 0;
+
+  const hoofd = soort === "vast" ? maand : soort === "vrij" ? pot.ditOver : pot.saldo;
+  const bij = soort === "vast" ? "per maand"
+            : soort === "vrij" ? `van ${geld(maand)} over`
+            : maand > 0 ? `${geld(maand)} per maand` : "handmatig";
+
   const doelBedrag = Number(pot.doelBedrag) || 0;
+  const balk = soort === "sparen" && doelBedrag > 0
+    ? voortgang(pot.saldo, doelBedrag, { kleur: pot.kleur, waarschuwVanaf: 2 })
+    : soort === "vrij" && maand > 0
+      ? voortgang(pot.ditUit || 0, maand)
+      : "";
+
   return `
     <button class="pot" data-potje="${esc(pot.id)}">
       <span class="pot__streep" style="background:${esc(pot.kleur || "var(--accent)")}"></span>
       <span class="pot__icoon">${esc(pot.icoon || "🫙")}</span>
       <span class="pot__naam">${esc(pot.naam)}</span>
-      <span class="pot__saldo" style="${pot.saldo < 0 ? "color:var(--uitgave)" : ""}">${geld(pot.saldo)}</span>
-      <span class="pot__bij">${pot.maandelijks > 0 ? `${geld(pot.maandelijks)} per maand` : "handmatig"}</span>
-      ${doelBedrag > 0 ? voortgang(pot.saldo, doelBedrag, { kleur: pot.kleur }) : ""}
+      <span class="pot__saldo" style="${hoofd < 0 ? "color:var(--uitgave)" : ""}">${geld(hoofd)}</span>
+      <span class="pot__bij">${esc(bij)}</span>
+      ${balk}
     </button>`;
 }
 

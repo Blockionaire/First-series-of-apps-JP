@@ -16,7 +16,7 @@
      een schrijfactie in de cache hangen.
    ===================================================================== */
 
-const CACHE = "geldzaken-v1";
+const CACHE = "geldzaken-v2";
 
 const SCHIL = [
   "./",
@@ -34,6 +34,9 @@ const SCHIL = [
   "js/views/onderdelen.js",
   "js/views/toegang.js",
   "js/views/dashboard.js",
+  "js/views/overzicht.js",
+  "js/views/verdelen.js",
+  "js/views/inkomen.js",
   "js/views/maand.js",
   "js/views/boeken.js",
   "js/views/vast.js",
