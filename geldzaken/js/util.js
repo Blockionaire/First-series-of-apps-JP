@@ -322,32 +322,52 @@ export function balken(items, { toonWaarde = v => geld(v), max = null } = {}) {
     </li>`).join("")}</ul>`;
 }
 
-/* Ringdiagram voor verdelingen. */
-export function ring(items, { grootte = 150, dikte = 20, midden = "" } = {}) {
+/* Ringdiagram voor verdelingen.
+
+   Geef je de items een `id` mee, dan zijn de schijven aan te tikken:
+   elke schijf krijgt `data-schijf` en de gekozen schijf schuift een
+   stukje naar buiten. Er blijft ruimte voor dat uitschuiven, anders zou
+   hij half buiten beeld vallen. */
+export function ring(items, { grootte = 150, dikte = 20, midden = "", gekozen = null, klikbaar = false } = {}) {
   const zichtbaar = items.filter(i => i.waarde > 0);
   const totaal = zichtbaar.reduce((s, i) => s + i.waarde, 0);
-  const straal = (grootte - dikte) / 2;
+  const uitsprong = klikbaar ? 9 : 0;
+  const straal = (grootte - dikte - uitsprong * 2) / 2;
   const omtrek = 2 * Math.PI * straal;
+  const mid = grootte / 2;
 
-  let segmenten = `<circle cx="${grootte / 2}" cy="${grootte / 2}" r="${straal}" fill="none"
+  let segmenten = `<circle cx="${mid}" cy="${mid}" r="${straal}" fill="none"
                      stroke="var(--rand-zacht)" stroke-width="${dikte}"/>`;
+
   if (totaal > 0) {
     let verschoven = 0;
     segmenten += zichtbaar.map(i => {
       const lengte = (i.waarde / totaal) * omtrek;
-      const cirkel = `<circle cx="${grootte / 2}" cy="${grootte / 2}" r="${straal}"
-        fill="none" stroke="${i.kleur || "var(--accent)"}" stroke-width="${dikte}"
+      const isGekozen = klikbaar && i.id != null && i.id === gekozen;
+
+      /* Het midden van de schijf, zodat hij recht naar buiten schuift.
+         De −90° komt overeen met de draaiing hieronder: zo begint de
+         eerste schijf bovenaan. */
+      const hoek = ((verschoven + lengte / 2) / omtrek) * 2 * Math.PI - Math.PI / 2;
+      const dx = isGekozen ? Math.cos(hoek) * uitsprong : 0;
+      const dy = isGekozen ? Math.sin(hoek) * uitsprong : 0;
+
+      const cirkel = `<circle class="ring__schijf ${isGekozen ? "is-gekozen" : ""}"
+        ${i.id != null ? `data-schijf="${esc(i.id)}"` : ""}
+        cx="${mid}" cy="${mid}" r="${straal}"
+        fill="none" stroke="${i.kleur || "var(--accent)"}" stroke-width="${isGekozen ? dikte + 4 : dikte}"
         stroke-dasharray="${lengte.toFixed(2)} ${(omtrek - lengte).toFixed(2)}"
         stroke-dashoffset="${(-verschoven).toFixed(2)}"
-        transform="rotate(-90 ${grootte / 2} ${grootte / 2})"><title>${esc(i.label)}</title></circle>`;
+        transform="translate(${dx.toFixed(2)} ${dy.toFixed(2)}) rotate(-90 ${mid} ${mid})"
+        ><title>${esc(i.label)}</title></circle>`;
       verschoven += lengte;
       return cirkel;
     }).join("");
   }
 
   return `<div class="ringhouder" style="width:${grootte}px;height:${grootte}px">
-      <svg class="ring" viewBox="0 0 ${grootte} ${grootte}" width="${grootte}" height="${grootte}"
-           role="img" aria-label="Verdeling">${segmenten}</svg>
+      <svg class="ring ${klikbaar ? "ring--klikbaar" : ""}" viewBox="0 0 ${grootte} ${grootte}"
+           width="${grootte}" height="${grootte}" role="img" aria-label="Verdeling">${segmenten}</svg>
       ${midden ? `<div class="ring__midden">${midden}</div>` : ""}
     </div>`;
 }

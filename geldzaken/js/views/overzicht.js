@@ -13,9 +13,16 @@
 import { esc, geld, procent, maandLabel, maandNu, maandPlus, ring, voortgang } from "../util.js";
 import { state, zetInstelling, meld, Sync, Koppeling } from "../store.js";
 import { verdeling, POTSOORTEN, maandOverzicht, externeUitgaven,
-         externeMaanden } from "../bereken.js";
+         externeMaanden, doelenMetStand } from "../bereken.js";
 import { maandkiezer, koppelMaandkiezer, leeg } from "./onderdelen.js";
 import { ga } from "../app.js";
+
+/* Welke schijf van de taart is aangetikt. Leeg betekent: geen. Blijft
+   staan zolang je op dit scherm bent, en gaat weg als je van maand
+   wisselt — dan slaat de selectie nergens meer op. */
+let gekozen = null;
+
+export function opBinnenkomst() { gekozen = null; }
 
 export const titel = () => state.instellingen.huisNaam || "Geldzaken";
 export const ondertitel = () => maandLabel(state.maand);
@@ -59,6 +66,7 @@ export function html() {
     ${boodschappenBlok()}
     ${potjesBlok(v)}
     ${spaarBlok(v)}
+    ${doelenBlok()}
     ${losseInkomsten()}
     ${meerBlok()}
   `;
@@ -137,41 +145,58 @@ function taart(v) {
       </div>`;
   }
 
-  const stukken = v.posten.filter(p => p.bedrag > 0).map(p => ({
-    label: `${p.naam}: ${geld(p.bedrag)}`,
-    waarde: p.bedrag,
-    kleur: p.kleur,
-  }));
-  if (v.over > 0.5) stukken.push({ label: "Nog te verdelen", waarde: v.over, kleur: "var(--rand)" });
+  const posten = v.posten.filter(p => p.bedrag > 0);
+  const stukken = posten.map(p => ({ id: p.id, label: `${p.naam}: ${geld(p.bedrag)}`, waarde: p.bedrag, kleur: p.kleur }));
+  if (v.over > 0.5) stukken.push({ id: "rest", label: "Nog te verdelen", waarde: v.over, kleur: "var(--rand)" });
 
-  const middenBedrag = v.over > 0.5 && v.inkomen > 0 ? v.over : v.verdeeld;
-  const middenLabel = v.over > 0.5 && v.inkomen > 0 ? "te verdelen" : "verdeeld";
+  /* Is er een schijf aangetikt, dan vertelt het midden waar je naar
+     kijkt. Anders staat er wat er nog te verdelen is. */
+  const gekozenPost = gekozen === "rest"
+    ? { naam: "Nog te verdelen", bedrag: v.over, icoon: "◻️" }
+    : posten.find(p => p.id === gekozen);
+
+  const midden = gekozenPost
+    ? `<div>
+         <span style="font-size:.95rem">${geld(gekozenPost.bedrag, { compact: true })}</span>
+         <small>${esc(gekozenPost.naam)}${v.inkomen > 0 ? ` · ${procent(gekozenPost.bedrag, v.inkomen)}` : ""}</small>
+       </div>`
+    : `<div>${geld(v.over > 0.5 && v.inkomen > 0 ? v.over : v.verdeeld, { compact: true })}<small>${v.over > 0.5 && v.inkomen > 0 ? "te verdelen" : "verdeeld"}</small></div>`;
+
+  const potje = gekozenPost && gekozen !== "rest" ? state.potjes.find(p => p.id === gekozen) : null;
 
   return `
     <div class="kaart">
       <div class="taart">
-        ${ring(stukken, {
-          grootte: 210, dikte: 30,
-          midden: `<div>${geld(middenBedrag, { compact: true })}<small>${middenLabel}</small></div>`,
-        })}
+        ${ring(stukken, { grootte: 210, dikte: 30, midden, gekozen, klikbaar: true })}
       </div>
 
       <ul class="taartlijst">
-        ${v.posten.filter(p => p.bedrag > 0).map(p => `
-          <li class="taartlijst__rij" ${p.potje ? `data-potje="${esc(p.id)}"` : p.route ? `data-route="${esc(p.route)}"` : ""}>
+        ${posten.map(p => `
+          <li class="taartlijst__rij ${gekozen === p.id ? "is-gekozen" : ""}" data-schijf="${esc(p.id)}">
             <span class="legenda__stip" style="background:${esc(p.kleur)}"></span>
             <span class="taartlijst__naam">${esc(p.icoon)} ${esc(p.naam)}</span>
             <span class="taartlijst__deel dof">${v.inkomen > 0 ? procent(p.bedrag, v.inkomen) : ""}</span>
             <span class="taartlijst__bedrag bedrag">${geld(p.bedrag)}</span>
           </li>`).join("")}
         ${v.over > 0.5 ? `
-          <li class="taartlijst__rij" data-route="#/verdelen">
+          <li class="taartlijst__rij ${gekozen === "rest" ? "is-gekozen" : ""}" data-schijf="rest">
             <span class="legenda__stip" style="background:var(--rand)"></span>
             <span class="taartlijst__naam dof">Nog te verdelen</span>
             <span class="taartlijst__deel dof">${procent(v.over, v.inkomen)}</span>
             <span class="taartlijst__bedrag bedrag dof">${geld(v.over)}</span>
           </li>` : ""}
       </ul>
+
+      ${gekozenPost ? `
+        <div class="knoprij knoprij--gelijk" style="margin-top:12px">
+          ${potje
+            ? `<button class="knop knop--klein" data-open-potje="${esc(potje.id)}">${esc(potje.icoon || "🫙")} ${esc(potje.naam)} openen</button>`
+            : gekozen === "rest"
+              ? `<a class="knop knop--klein knop--primair" href="#/verdelen">Restant verdelen</a>`
+              : `<a class="knop knop--klein" href="#/vast">Vaste lasten openen</a>`}
+          <button class="knop knop--klein knop--stil" data-schijf="">Loslaten</button>
+        </div>` : `
+        <div class="veld__hint" style="text-align:center;margin-top:10px">Tik op een schijf om hem eruit te lichten.</div>`}
     </div>`;
 }
 
@@ -322,6 +347,38 @@ function spaarBlok(v) {
     </a>`;
 }
 
+/* ---------------------------- Spaardoelen --------------------------- */
+/* Compact gehouden: alleen doelen die nog lopen, hoogstens drie. Voor
+   het hele verhaal is er een eigen scherm — dit is een geheugensteun,
+   geen tweede lijst. */
+function doelenBlok() {
+  const doelen = doelenMetStand(state).filter(d => !d.klaar).slice(0, 3);
+  if (!doelen.length) return "";
+
+  return `
+    <div class="sectiekop">
+      <h2>Spaardoelen</h2>
+      <a class="sectiekop__actie" href="#/doelen">Alles</a>
+    </div>
+    <div class="lijst lijst--los">
+      ${doelen.map(d => `
+        <button class="kaart kaart--knop" data-doel="${esc(d.id)}" style="margin:0">
+          <span style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+            <span style="font-weight:640">${esc(d.icoon)} ${esc(d.naam)}</span>
+            <span class="bedrag" style="font-weight:660">${geld(d.huidig)} <span class="dof">/ ${geld(d.doelBedrag)}</span></span>
+          </span>
+          ${voortgang(d.huidig, d.doelBedrag, { kleur: d.kleur, waarschuwVanaf: 2 })}
+          <span class="dof" style="display:block;font-size:.76rem;margin-top:7px">
+            ${d.perMaandNodig != null && d.maandenTeGaan > 0
+              ? `${geld(d.perMaandNodig)} per maand om het in ${d.maandenTeGaan} maanden te halen`
+              : d.verwachtKlaar
+                ? `Met dit tempo klaar rond ${maandLabel(d.verwachtKlaar)}`
+                : `Nog ${geld(d.teGaan)} te gaan`}
+          </span>
+        </button>`).join("")}
+    </div>`;
+}
+
 /* ------------------------- Losse inkomsten -------------------------- */
 function losseInkomsten() {
   const o = maandOverzicht(state, state.maand);
@@ -371,14 +428,15 @@ function meerBlok() {
           </span>
           <span class="rij__rechts dof">›</span>
         </a>` : ""}
-      <a class="rij" href="#/doelen">
-        <span class="rij__icoon">🎯</span>
-        <span class="rij__midden">
-          <span class="rij__titel">Spaardoelen</span>
-          <span class="rij__sub">${doelen ? `${doelen} ${doelen === 1 ? "doel" : "doelen"}` : "Sparen met een streefbedrag en een datum"}</span>
-        </span>
-        <span class="rij__rechts dof">›</span>
-      </a>
+      ${doelen ? "" : `
+        <a class="rij" href="#/doelen">
+          <span class="rij__icoon">🎯</span>
+          <span class="rij__midden">
+            <span class="rij__titel">Spaardoelen</span>
+            <span class="rij__sub">Sparen met een streefbedrag en een datum</span>
+          </span>
+          <span class="rij__rechts dof">›</span>
+        </a>`}
       <a class="rij" href="#/rekeningen">
         <span class="rij__icoon">🏦</span>
         <span class="rij__midden">
@@ -396,6 +454,7 @@ function meerBlok() {
 export function koppel(wortel) {
   koppelMaandkiezer(wortel, stap => {
     state.maand = maandPlus(state.maand, stap);
+    gekozen = null;
     meld();
   });
 
@@ -408,6 +467,21 @@ export function koppel(wortel) {
       state.maand = maandNu();
       return meld();
     }
+
+    /* Een schijf of zijn regel aantikken licht hem eruit; nog een keer
+       tikken laat hem weer los. */
+    const schijf = e.target.closest("[data-schijf]");
+    if (schijf) {
+      const id = schijf.dataset.schijf;
+      gekozen = (!id || gekozen === id) ? null : id;
+      return meld();
+    }
+
+    const doel = e.target.closest("[data-doel]");
+    if (doel) return ga(`#/doelen/${doel.dataset.doel}`);
+
+    const openPotje = e.target.closest("[data-open-potje]");
+    if (openPotje) return ga(`#/potjes/${openPotje.dataset.openPotje}`);
 
     const pot = e.target.closest("[data-potje]");
     if (pot) return ga(`#/potjes/${pot.dataset.potje}`);

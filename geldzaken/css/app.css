@@ -626,6 +626,11 @@ input[type="date"], input[type="month"] { min-height: 46px; }
 .balk__waarde { font-weight: 640; font-size: .82rem; text-align: right; }
 
 .ringhouder { position: relative; margin: 0 auto; }
+/* Klikbare schijven: de gekozen schijf schuift naar buiten en krijgt
+   een schaduwtje, zodat je ziet dat hij is opgetild. */
+.ring--klikbaar .ring__schijf { cursor: pointer; }
+.ring--klikbaar .ring__schijf.is-gekozen { filter: drop-shadow(0 2px 5px rgba(0, 0, 0, .35)); }
+
 .ring__midden {
   position: absolute; inset: 0; display: grid; place-items: center;
   text-align: center; font-weight: 700; font-size: 1.05rem; letter-spacing: -.02em;
@@ -859,7 +864,16 @@ hr.scheiding { border: 0; border-top: 1px solid var(--rand-zacht); margin: 18px 
   font-size: .88rem;
 }
 .taartlijst__rij:last-child { border-bottom: 0; }
-.taartlijst__rij[data-potje], .taartlijst__rij[data-route] { cursor: pointer; }
+.taartlijst__rij.is-gekozen {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 10px;
+  border-bottom-color: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  padding-left: 8px; padding-right: 8px;
+  margin: 0 -6px;
+}
+.taartlijst__rij.is-gekozen .taartlijst__naam { font-weight: 640; }
+.taartlijst__rij[data-schijf] { cursor: pointer; }
 .taartlijst__naam { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .taartlijst__deel { font-size: .76rem; min-width: 34px; text-align: right; }
 .taartlijst__bedrag { font-weight: 650; min-width: 68px; text-align: right; }
