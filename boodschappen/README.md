@@ -34,8 +34,9 @@ wie welke bon betaalde.
 - **Snelknoppen**: dingen die je vaker koopt staan als suggestie onder het invoerveld,
   met de winkel en categorie van de vorige keer er meteen bij.
 - **Spoed** ⚡ zet iets bovenaan de lijst.
-- **Afvinken** met één tik. Afgevinkte boodschappen zakken naar *In de kar*, met wie het
-  gehaald heeft en hoe laat. Per ongeluk afgevinkt? Nog een tik zet hem terug.
+- **Afvinken** met één tik: het bolletje loopt groen vol en de tekst wordt doorgestreept.
+  Afgevinkte boodschappen zakken naar *In de kar*, met wie het gehaald heeft en hoe laat.
+  Per ongeluk afgevinkt? Nog een tik zet hem terug.
 - **Opruimen** wist de kar in één keer, of alleen wat ouder is dan een week.
 - **Groeperen** op winkel (standaard) of op categorie.
 
@@ -51,6 +52,19 @@ grote vinkjes, op supermarktvolgorde gegroepeerd, met een voortgangsbalk (*7 van
 Je **scherm blijft aan** zolang je in dit scherm zit, en thuis ziet je huisgenoot live
 wat er al in de kar ligt. Onderin zit *Klaar met winkelen* — daar noteer je meteen
 wat je hebt uitgegeven, en zie je direct wat er van het maandbudget over is.
+
+- **Categorieën in- en uitklappen**: tik op een kop en de hele categorie vouwt dicht,
+  met *3/7* ernaast zodat je ziet hoeveel je daar al hebt. Handig om je door een
+  lange lijst heen te werken zonder eindeloos te scrollen.
+- **Niet nu halen** — ga je even snel avondeten halen, dan hoef je de weekboodschappen
+  niet mee te nemen. Tik het pijltje ⤓ naast een boodschap en hij zakt naar een apart
+  vakje *Niet nu* onderaan. Hij blijft gewoon op de lijst staan en telt niet mee in je
+  voortgang; met het pijltje omhoog haal je hem terug.
+- Voor een **snelle rit** zet je met één tik op *Alles niet nu* de hele lijst weg, en
+  tik je er daarna de twee of drie dingen uit die je wél komt halen.
+- Wat je wegzet is alleen van jou (je huisgenoot ziet zijn eigen lijstje) en blijft
+  8 uur bewaard, dus je mag de app tussendoor gerust afsluiten. Zodra je op
+  *Klaar met winkelen* tikt, begint de volgende keer weer met de hele lijst.
 
 ### Budget
 Het budgettabblad houdt jullie **maandbudget** bij — geen verrekening onderling,

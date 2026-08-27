@@ -223,8 +223,8 @@ button{border:none; background:none; padding:0; cursor:pointer;}
 }
 .vink:active{transform:scale(.85);}
 .vink svg{width:15px; height:15px; stroke-width:3; color:#fff; opacity:0; transform:scale(.5); transition:all var(--vt);}
-.item.af .vink{background:var(--groen); border-color:var(--groen);}
-.item.af .vink svg{opacity:1; transform:scale(1);}
+.item.af .vink, .wm-item.af .vink{background:var(--groen); border-color:var(--groen);}
+.item.af .vink svg, .wm-item.af .vink svg{opacity:1; transform:scale(1);}
 
 .item-mid{flex:1; min-width:0;}
 .item-titelrij{display:flex; align-items:baseline; gap:7px; flex-wrap:wrap;}
@@ -478,6 +478,46 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
 .wm-item .tk b{font-size:17px; font-weight:650; letter-spacing:-.01em; display:block;}
 .wm-item.af .tk b{text-decoration:line-through; color:var(--muted);}
 .wm-item .tk span{font-size:13px; color:var(--muted);}
+
+/* ---------- winkelmodus: groepen en "niet nu" ---------- */
+.groepkop{
+  width:100%; text-align:left; background:none; border:none;
+  display:flex; align-items:center; gap:9px; padding:0 4px 8px;
+}
+.groepkop h2{
+  margin:0; font-size:12px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--muted); display:flex; align-items:center; gap:7px;
+}
+.groepkop .lijn{flex:1; height:1px; background:var(--line);}
+.groepkop .teller{
+  font-size:11.5px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums;
+  background:var(--bg-2); padding:2px 8px; border-radius:999px; flex:none;
+}
+.groepkop .teller.klaar{background:var(--groen-zacht); color:var(--groen);}
+.groepkop .chev{display:grid; place-items:center; color:var(--line-2); flex:none;
+  transition:transform var(--vt);}
+.groepkop .chev svg{width:17px; height:17px; stroke-width:2.4;}
+.groepkop.open .chev{transform:rotate(90deg);}
+.groepkop:active{opacity:.6;}
+
+.wm-item .later{
+  width:32px; height:32px; border-radius:50%; flex:none;
+  display:grid; place-items:center; color:var(--muted); background:var(--bg-2);
+  transition:transform var(--vt), background var(--vt), color var(--vt);
+}
+.wm-item .later:active{transform:scale(.85); background:var(--line); color:var(--ink-2);}
+.wm-item .later svg{width:16px; height:16px; stroke-width:2.2;}
+.wm-item.overgeslagen{opacity:.66;}
+.wm-item.overgeslagen .tk b{font-weight:600; color:var(--ink-2);}
+.wm-item.overgeslagen .later{background:var(--accent-zacht); color:var(--accent);}
+.wm-actie{
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  width:100%; margin-top:13px; padding:10px; border-radius:var(--r-s);
+  font-size:13.5px; font-weight:650; color:var(--accent); background:var(--accent-zacht);
+  transition:transform var(--vt), opacity var(--vt);
+}
+.wm-actie:active{transform:scale(.98); opacity:.85;}
+.wm-actie svg{width:15px; height:15px; stroke-width:2.2; flex:none;}
 
 /* ---------- uitgaven ---------- */
 .saldo{
@@ -909,6 +949,8 @@ const IK = {
   waarsch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.2 2.6 17.5A1.9 1.9 0 0 0 4.3 20.4h15.4a1.9 1.9 0 0 0 1.7-2.9L13.7 4.2a1.9 1.9 0 0 0-3.4 0Z"/><path d="M12 9.5v4"/><circle cx="12" cy="16.8" r=".9" fill="currentColor"/></svg>',
   sorteer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15M7 19.5 4 16.5M7 19.5l3-3M17 19.5v-15M17 4.5l-3 3M17 4.5l3 3"/></svg>',
   bon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 3.5v17l2.2-1.4 2.1 1.4 2.2-1.4 2.1 1.4 2.2-1.4 2.2 1.4v-17z"/><path d="M8.8 8h6.4M8.8 12h6.4"/></svg>',
+  later:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v10.2"/><path d="m8.2 10.2 3.8 3.8 3.8-3.8"/><path d="M4.5 19.5h15"/></svg>',
+  omhoog:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5V10.3"/><path d="m8.2 14.1 3.8-3.8 3.8 3.8"/><path d="M4.5 4.5h15"/></svg>',
   vlam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c3.6 0 6.2-2.4 6.2-5.7 0-4.4-4.3-5.6-3.4-10.8C11.3 6 9 8.6 9.4 11.6c-1-.5-1.7-1.6-1.9-2.9-1.1 1.3-1.7 3.2-1.7 5.1C5.8 18 8.4 21 12 21Z"/></svg>'
 };
 
@@ -2172,23 +2214,59 @@ document.addEventListener("visibilitychange", () => {
   if(document.visibilityState === "visible" && S.tab === "winkelen" && S.winkelSessie) houdSchermAan(true);
 });
 
+/* ---------- de rit: wat sla je over, wat staat ingeklapt ----------
+   Dit is van jou alleen (je huisgenoot hoeft jouw ritje niet te zien) en
+   blijft 8 uur bewaard, zodat je de app tussendoor mag afsluiten. */
+const RIT = () => "boodschappen_rit_" + P;
+function ritLaden(wid){
+  const alles = LS.get(RIT(), {});
+  const r = alles[wid];
+  if(r && nu() - (r.tijd || 0) < 8 * 3600 * 1000) return r;
+  return null;
+}
+function ritBewaren(){
+  const s = S.winkelSessie; if(!s) return;
+  const alles = LS.get(RIT(), {});
+  alles[s.winkelId] = {over:s.over || [], handmatig:s.handmatig || {}, tijd:nu()};
+  LS.zet(RIT(), alles);
+}
+function ritWissen(wid){
+  const alles = LS.get(RIT(), {});
+  delete alles[wid]; LS.zet(RIT(), alles);
+}
+function startRit(wid){
+  const bewaard = ritLaden(wid) || {};
+  S.winkelSessie = {
+    winkelId: wid, gestart: nu(), gepakt: [],
+    over: bewaard.over || [], handmatig: bewaard.handmatig || {}
+  };
+}
+
 function schermWinkelen(){
   if(!S.winkelSessie) return schermWinkelKiezen();
 
-  const wid = S.winkelSessie.winkelId;
+  const sessie = S.winkelSessie;
+  const wid = sessie.winkelId;
   const w = wid === "alles" ? {id:"alles", naam:"Alle winkels", em:"🧺", kleur:"var(--accent)"} : winkelVan(wid);
-  const alle = S.items.filter(i => wid === "alles" ? true : (i.winkel||"nvt") === wid)
-                      .filter(i => !i.af || (S.winkelSessie.gepakt||[]).includes(i.id) || (i.afOp||0) >= S.winkelSessie.gestart);
-  const gedaan = alle.filter(i => i.af).length;
-  const pct = alle.length ? Math.round(gedaan / alle.length * 100) : 0;
+
+  const alleItems = S.items.filter(i => wid === "alles" ? true : (i.winkel||"nvt") === wid)
+    .filter(i => !i.af || (sessie.gepakt||[]).includes(i.id) || (i.afOp||0) >= sessie.gestart);
+  const overIds = new Set(sessie.over || []);
+  const actief = alleItems.filter(i => !overIds.has(i.id));
+  const later  = alleItems.filter(i => overIds.has(i.id));
+
+  const gedaan = actief.filter(i => i.af).length;
+  const pct = actief.length ? Math.round(gedaan / actief.length * 100) : 0;
+  const klaar = actief.length > 0 && gedaan === actief.length;
 
   const perCat = new Map();
-  sorteerItems(alle).forEach(i => {
+  sorteerItems(actief).forEach(i => {
     const c = catVan(i.cat);
     if(!perCat.has(c.id)) perCat.set(c.id, {c, items:[]});
     perCat.get(c.id).items.push(i);
   });
   const groepen = [...perCat.values()].sort((a,b) => catIndex(a.c.id) - catIndex(b.c.id));
+  const handmatig = sessie.handmatig || {};
 
   return `
   <div class="scherm">
@@ -2197,7 +2275,7 @@ function schermWinkelen(){
         <button class="ikoonknop" id="w-terug">${IK.terug}</button>
         <div class="kop-titel">
           <h1>${w.em} ${esc(w.naam)}</h1>
-          <div class="sub">${gedaan} van ${alle.length} in de kar</div>
+          <div class="sub">${gedaan} van ${actief.length} in de kar${later.length ? " · " + later.length + " niet nu" : ""}</div>
         </div>
         <button class="ikoonknop" id="w-plus">${IK.plus}</button>
       </div>
@@ -2207,49 +2285,84 @@ function schermWinkelen(){
         <div class="wm-kop">
           <div class="bovenrij">
             <div class="bol" style="width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:var(--bg-2)">${w.em}</div>
-            <h2>${pct}% gedaan</h2>
-            ${gedaan === alle.length && alle.length ? `<span style="font-size:26px">🎉</span>` : ""}
+            <h2>${actief.length ? pct + "% gedaan" : "Niets te pakken"}</h2>
+            ${klaar ? `<span style="font-size:26px">🎉</span>` : ""}
           </div>
           <div class="balk"><div style="width:${pct}%"></div></div>
           <div class="wm-tel">
-            <span>${alle.length - gedaan} nog te pakken</span>
-            <span>${gedaan}/${alle.length}</span>
+            <span>${actief.length - gedaan} nog te pakken</span>
+            <span>${gedaan}/${actief.length}</span>
           </div>
+          ${actief.filter(i => !i.af).length > 1
+            ? `<button class="wm-actie" id="w-allelater">${IK.later}<span>Alles niet nu</span></button>` : ""}
         </div>
 
-        ${alle.length === 0 ? `
+        ${alleItems.length === 0 ? `
           <div class="leeg fade"><span class="em">✨</span><h3>Niets te halen hier</h3>
           <p>Er staat op dit moment niets op de lijst voor deze winkel.</p></div>`
-        : groepen.map(g => `
-          <div class="sectie">
-            <div class="sectie-kop">
-              <h2><span style="font-size:14px">${g.c.em}</span>${esc(g.c.naam)}</h2>
-              <span class="telw">${g.items.filter(i=>!i.af).length}</span>
-              <span class="lijn"></span>
-            </div>
-            <div class="lijst">${g.items.map(wmItemHtml).join("")}</div>
-          </div>`).join("")}
+        : groepen.map(g => {
+            const gGedaan = g.items.filter(i => i.af).length;
+            const allesAf = g.items.length > 0 && gGedaan === g.items.length;
+            /* alleen inklappen als je er zelf op tikt — anders verdwijnt de
+               boodschap die je net afvinkt onder je handen vandaan */
+            const dicht = !!handmatig[g.c.id];
+            return `
+            <div class="sectie">
+              <button class="groepkop ${dicht?"":"open"}" data-groep="${esc(g.c.id)}">
+                <span class="chev">${IK.pijl}</span>
+                <h2><span style="font-size:14px">${g.c.em}</span>${esc(g.c.naam)}</h2>
+                <span class="teller ${allesAf?"klaar":""}">${gGedaan}/${g.items.length}</span>
+                <span class="lijn"></span>
+              </button>
+              ${dicht ? "" : `<div class="lijst fade">${g.items.map(i => wmItemHtml(i, false)).join("")}</div>`}
+            </div>`;
+          }).join("")}
 
-        ${alle.length ? `
-        <button class="knop ${gedaan===alle.length?"groen":"stil"} vol" id="w-klaar" style="margin-top:24px">
+        ${later.length ? `
+          <div class="sectie">
+            <button class="groepkop ${handmatig.__later ? "open" : ""}" data-groep="__later">
+              <span class="chev">${IK.pijl}</span>
+              <h2><span style="font-size:14px">⏭️</span>Niet nu</h2>
+              <span class="teller">${later.length}</span>
+              <span class="lijn"></span>
+            </button>
+            ${handmatig.__later ? `
+              <div class="lijst fade">${sorteerItems(later).map(i => wmItemHtml(i, true)).join("")}</div>
+              <button class="wm-actie" id="w-alleterug" style="margin-top:10px">
+                ${IK.omhoog}<span>Alles weer meenemen</span></button>`
+            : `<div class="hint" style="padding-left:4px">Tik erop om te zien wat je hebt weggezet.</div>`}
+          </div>` : ""}
+
+        ${actief.length && !later.length && !(sessie.over||[]).length ? `
+          <div class="hint" style="text-align:center; margin-top:16px; line-height:1.5">
+            Even snel iets halen? Tik ${IK.later.replace("<svg", '<svg style="width:13px;height:13px;vertical-align:-2px"')}
+            naast een boodschap om hem voor nu weg te zetten —<br>
+            of zet met <b>Alles niet nu</b> in één keer alles weg en tik eruit wat je wél haalt.
+          </div>` : ""}
+
+        ${alleItems.length ? `
+        <button class="knop ${klaar?"groen":"stil"} vol" id="w-klaar" style="margin-top:24px">
           ${IK.bon} Klaar met winkelen
         </button>
-        <div class="hint" style="text-align:center">Je kunt daarna meteen noteren wat je betaald hebt.</div>` : ""}
+        <div class="hint" style="text-align:center">Je kunt daarna meteen noteren wat je hebt uitgegeven.</div>` : ""}
       </div>
     </div>
   </div>`;
 }
 
-function wmItemHtml(i){
+function wmItemHtml(i, isLater){
   const lid = lidVan(i.door);
   return `
-  <div class="wm-item ${i.af?"af":""}" data-wmitem="${esc(i.id)}">
+  <div class="wm-item ${i.af?"af":""} ${isLater?"overgeslagen":""}" data-wmitem="${esc(i.id)}">
     <span class="vink">${IK.vink}</span>
     <div class="tk">
       <b>${i.hoeveelheid ? `<span class="item-hoev" style="font-size:13px;vertical-align:2px">${esc(i.hoeveelheid)}</span> ` : ""}${esc(i.tekst)}${i.urgent && !i.af ? ` <span class="vlag">spoed</span>`:""}</b>
       <span>${i.notitie ? esc(i.notitie) + " · " : ""}${lid ? esc(lid.naam.split(" ")[0]) : ""}</span>
     </div>
     ${i.fotoId ? `<img class="item-thumb laden" data-foto="${esc(i.fotoId)}_k" data-wmfoto="${esc(i.id)}" alt="">` : ""}
+    <button class="later" data-later="${esc(i.id)}"
+            aria-label="${isLater ? "Toch meenemen" : "Niet nu halen"}"
+            title="${isLater ? "Toch meenemen" : "Niet nu halen"}">${isLater ? IK.omhoog : IK.later}</button>
   </div>`;
 }
 
@@ -2303,11 +2416,49 @@ function bindWinkelen(){
   const p = $("#w-plus");
   if(p) p.onclick = () => sheetToevoegen({winkel: S.winkelSessie.winkelId === "alles" ? "nvt" : S.winkelSessie.winkelId});
   $$("[data-start]").forEach(b => b.onclick = () => {
-    S.winkelSessie = {winkelId:b.dataset.start, gestart:nu(), gepakt:[]};
+    startRit(b.dataset.start);
     tril(); houdSchermAan(true); tekenNu();
   });
+
+  /* categorie in- of uitklappen */
+  $$("[data-groep]").forEach(b => b.onclick = () => {
+    const cat = b.dataset.groep;
+    S.winkelSessie.handmatig ||= {};
+    S.winkelSessie.handmatig[cat] = b.classList.contains("open");
+    ritBewaren(); tril(6); tekenNu();
+  });
+
+  /* niet nu halen — of toch weer meenemen */
+  $$("[data-later]").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const id = b.dataset.later;
+    const over = S.winkelSessie.over ||= [];
+    const stond = over.includes(id);
+    S.winkelSessie.over = stond ? over.filter(x => x !== id) : [...over, id];
+    if(!stond) S.winkelSessie.handmatig = Object.assign({}, S.winkelSessie.handmatig, {__later:false});
+    ritBewaren(); tril(12); tekenNu();
+  });
+  const al = $("#w-allelater");
+  if(al) al.onclick = () => {
+    const wid = S.winkelSessie.winkelId;
+    const nietAf = S.items
+      .filter(i => wid === "alles" ? true : (i.winkel||"nvt") === wid)
+      .filter(i => !i.af)
+      .map(i => i.id);
+    S.winkelSessie.over = [...new Set([...(S.winkelSessie.over||[]), ...nietAf])];
+    S.winkelSessie.handmatig = Object.assign({}, S.winkelSessie.handmatig, {__later:true});
+    ritBewaren(); tril(14); tekenNu(); naarBoven();
+    toast("Tik aan wat je nu wél haalt", "⏭️");
+  };
+  const at = $("#w-alleterug");
+  if(at) at.onclick = () => {
+    S.winkelSessie.over = [];
+    ritBewaren(); tril(); tekenNu();
+    toast("Alles staat weer in je lijstje", "🧺");
+  };
+
   $$("[data-wmitem]").forEach(el => el.onclick = async e => {
-    if(e.target.closest("[data-wmfoto]")) return;
+    if(e.target.closest("[data-wmfoto]") || e.target.closest("[data-later]")) return;
     const it = S.items.find(x => x.id === el.dataset.wmitem);
     if(!it) return;
     tril(14);
@@ -2370,7 +2521,10 @@ function sheetAfrekenen(){
     };
     $("#a-fotoweg").onclick = () => { st.fotoFile = null; $("#a-fotovb").classList.add("verborgen");
       $("#a-foto").innerHTML = `${IK.camera}<span>Bon fotograferen</span>`; };
-    const stoppen = () => { S.winkelSessie = null; houdSchermAan(false); sluitSheet(); S.tab = "lijst"; tekenNu(); };
+    const stoppen = () => {
+      if(S.winkelSessie) ritWissen(S.winkelSessie.winkelId);
+      S.winkelSessie = null; houdSchermAan(false); sluitSheet(); S.tab = "lijst"; tekenNu();
+    };
     $("#a-over").onclick = stoppen;
     $("#a-klaar").onclick = async () => {
       const bedrag = Number(String(st.bedrag).replace(",", ".").replace(/[^0-9.]/g,"")) || 0;
@@ -2383,6 +2537,7 @@ function sheetAfrekenen(){
           await DB.voegToe(PAD.bonnen, {
             winkel: wid === "alles" ? "nvt" : wid, bedrag, omschrijving:"", door:S.ik.id, datum:nu(), fotoId
           });
+          if(S.winkelSessie) ritWissen(S.winkelSessie.winkelId);
           S.winkelSessie = null; houdSchermAan(false); sluitSheet();
           S.maand = maandSleutel(nu()); S.tab = "budget"; tekenNu();
           toast(euro(bedrag) + " genoteerd" + restTekst(), "🧾");
