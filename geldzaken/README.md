@@ -24,7 +24,11 @@ niet te boeken: de hypotheek is gewoon een stuk van de taart, want die gaat er t
 elke maand af.
 
 - **Overzicht** — je inkomen groot bovenaan, daaronder een cirkeldiagram met de
-  verdeling. Elk potje een stuk, en wat je niet hebt verdeeld blijft grijs.
+  verdeling. Elk potje een stuk, en wat je niet hebt verdeeld blijft grijs. Tik op een
+  schijf (of op zijn regel) en hij komt eruit: het midden van de cirkel vertelt dan om
+  welk potje het gaat en welk deel van je inkomen dat is. Nog een tik en hij zakt terug.
+- **Spaardoelen op je overzicht** — de doelen die nog lopen staan er compact onder, met
+  hun voortgang en wat er per maand bij moet.
 - **Verdelen** — alle potjes onder elkaar met een bedrag erachter. Bovenin staat
   live wat er nog te verdelen is, dus je hoeft nooit zelf te rekenen. Is er iets
   over, dan zet je dat met één knop in een potje.
