@@ -90,10 +90,14 @@ export function transactieLijst(transacties, { groepeer = true, leegTekst = "Nog
    --------------------------------------------------------------- */
 export function maandkiezer(maand, { maxMaand = null } = {}) {
   const vooruitMag = !maxMaand || maand < maxMaand;
+  const isNu = maand === maandNu();
   return `
     <div class="maandkiezer">
       <button data-maand-stap="-1" aria-label="Vorige maand">‹</button>
-      <span class="maandkiezer__nu">${esc(maandLabel(maand))}</span>
+      ${isNu
+        ? `<span class="maandkiezer__nu">${esc(maandLabel(maand))}</span>`
+        : `<button class="maandkiezer__nu" data-maand-nu
+                   title="Terug naar deze maand">${esc(maandLabel(maand))}</button>`}
       <button data-maand-stap="1" aria-label="Volgende maand" ${vooruitMag ? "" : "disabled"}>›</button>
     </div>`;
 }
@@ -101,6 +105,12 @@ export function maandkiezer(maand, { maxMaand = null } = {}) {
 export function koppelMaandkiezer(wortel, opWissel) {
   wortel.querySelectorAll("[data-maand-stap]").forEach(knop => {
     knop.addEventListener("click", () => opWissel(Number(knop.dataset.maandStap)));
+  });
+  /* Op de maandnaam tikken brengt je in één keer terug naar nu. Handig
+     als je een paar maanden hebt teruggebladerd. */
+  wortel.querySelector("[data-maand-nu]")?.addEventListener("click", () => {
+    state.maand = maandNu();
+    opWissel(0);
   });
 }
 

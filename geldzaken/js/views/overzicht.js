@@ -35,12 +35,22 @@ export function kopActies() {
 export function html() {
   const v = verdeling(state, state.maand);
 
-  if (!v.inkomen && !v.posten.length) return welkom();
-
-  return `
+  /* Is er überhaupt al iets ingesteld? Dat is iets anders dan of déze
+     maand gevuld is: blader je terug naar een maand van vóór je begon,
+     dan is die leeg terwijl de app allang is ingericht. Zonder dit
+     onderscheid kwam je in zo'n lege maand op het uitlegscherm terecht
+     — en dat had geen maandkiezer, dus je kwam er ook niet meer weg. */
+  const ingericht = state.terugkerend.some(p => p.soort === "inkomst") || state.potjes.length > 0;
+  const kiezer = `
     <div style="display:flex;justify-content:center;margin-bottom:14px">
       ${maandkiezer(state.maand, { maxMaand: maandPlus(maandNu(), 12) })}
-    </div>
+    </div>`;
+
+  if (!ingericht) return kiezer + welkom();
+  if (!v.inkomen && !v.posten.length) return kiezer + legeMaand();
+
+  return `
+    ${kiezer}
 
     ${inkomenBlok(v)}
     ${taart(v)}
@@ -50,6 +60,18 @@ export function html() {
     ${losseInkomsten()}
     ${meerBlok()}
   `;
+}
+
+/* Een maand van vóór je begon. Geen uitleg over hoe de app werkt — die
+   ken je dan al — maar wel een weg terug. */
+function legeMaand() {
+  return `
+    ${leeg({
+      icoon: "📭",
+      titel: `Niets in ${maandLabel(state.maand)}`,
+      tekst: "In deze maand stond er nog geen inkomen of potje ingesteld.",
+    })}
+    <button class="knop knop--primair knop--breed" data-nu>Terug naar deze maand</button>`;
 }
 
 /* ------------------------------ Welkom ------------------------------ */
@@ -317,6 +339,11 @@ export function koppel(wortel) {
   });
 
   wortel.addEventListener("click", e => {
+    if (e.target.closest("[data-nu]")) {
+      state.maand = maandNu();
+      return meld();
+    }
+
     const pot = e.target.closest("[data-potje]");
     if (pot) return ga(`#/potjes/${pot.dataset.potje}`);
 

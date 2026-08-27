@@ -358,8 +358,10 @@ export function verdeling(state, maand = maandNu()) {
   const o = maandOverzicht(state, maand);
   const inkomen = o.inkomsten + o.verwachtErin;
 
+  /* Een potje dat je pas in augustus hebt aangemaakt hoort niet in de
+     taart van juli te staan. */
   const potjes = state.potjes
-    .filter(p => p.actief !== false)
+    .filter(p => p.actief !== false && (p.startMaand || "2000-01") <= maand)
     .map(p => {
       const stand = potSaldo(state, p, maand);
       return {

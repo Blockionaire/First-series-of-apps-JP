@@ -320,7 +320,10 @@ td.bedrag, .staaf__waarde { font-variant-numeric: tabular-nums; }
 .maandkiezer__nu {
   min-width: 108px; text-align: center; font-weight: 650; font-size: .86rem;
   padding: 0 4px; text-transform: capitalize;
+  /* De maandnaam is een knop zodra je niet in de huidige maand kijkt. */
+  background: none; border: 0; color: inherit; line-height: 1.6;
 }
+button.maandkiezer__nu { color: var(--accent); }
 
 /* ------------------------------ Knoppen ----------------------------- */
 .knop {
