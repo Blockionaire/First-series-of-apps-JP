@@ -2318,20 +2318,27 @@ function schermWinkelen(){
             </div>`;
           }).join("")}
 
-        ${later.length ? `
+        ${later.length ? (() => {
+          /* net als bij de categorieën betekent true hier "ingeklapt". Heb je er
+             zelf nog niet op getikt, dan staat hij dicht — behalve als er verder
+             niets te pakken is, want dan is dit het enige wat er te zien valt. */
+          const laterDicht = (typeof handmatig.__later === "boolean")
+            ? handmatig.__later : actief.length > 0;
+          return `
           <div class="sectie">
-            <button class="groepkop ${handmatig.__later ? "open" : ""}" data-groep="__later">
+            <button class="groepkop ${laterDicht ? "" : "open"}" data-groep="__later">
               <span class="chev">${IK.pijl}</span>
               <h2><span style="font-size:14px">⏭️</span>Niet nu</h2>
               <span class="teller">${later.length}</span>
               <span class="lijn"></span>
             </button>
-            ${handmatig.__later ? `
-              <div class="lijst fade">${sorteerItems(later).map(i => wmItemHtml(i, true)).join("")}</div>
-              <button class="wm-actie" id="w-alleterug" style="margin-top:10px">
-                ${IK.omhoog}<span>Alles weer meenemen</span></button>`
-            : `<div class="hint" style="padding-left:4px">Tik erop om te zien wat je hebt weggezet.</div>`}
-          </div>` : ""}
+            ${laterDicht
+              ? `<div class="hint" style="padding-left:4px">Tik erop om te zien wat je hebt weggezet.</div>`
+              : `<div class="lijst fade">${sorteerItems(later).map(i => wmItemHtml(i, true)).join("")}</div>
+                 <button class="wm-actie" id="w-alleterug" style="margin-top:10px">
+                   ${IK.omhoog}<span>Alles weer meenemen</span></button>`}
+          </div>`;
+        })() : ""}
 
         ${actief.length && !later.length && !(sessie.over||[]).length ? `
           <div class="hint" style="text-align:center; margin-top:16px; line-height:1.5">
@@ -2435,7 +2442,6 @@ function bindWinkelen(){
     const over = S.winkelSessie.over ||= [];
     const stond = over.includes(id);
     S.winkelSessie.over = stond ? over.filter(x => x !== id) : [...over, id];
-    if(!stond) S.winkelSessie.handmatig = Object.assign({}, S.winkelSessie.handmatig, {__later:false});
     ritBewaren(); tril(12); tekenNu();
   });
   const al = $("#w-allelater");
@@ -2446,7 +2452,7 @@ function bindWinkelen(){
       .filter(i => !i.af)
       .map(i => i.id);
     S.winkelSessie.over = [...new Set([...(S.winkelSessie.over||[]), ...nietAf])];
-    S.winkelSessie.handmatig = Object.assign({}, S.winkelSessie.handmatig, {__later:true});
+    S.winkelSessie.handmatig = Object.assign({}, S.winkelSessie.handmatig, {__later:false});
     ritBewaren(); tril(14); tekenNu(); naarBoven();
     toast("Tik aan wat je nu wél haalt", "⏭️");
   };
