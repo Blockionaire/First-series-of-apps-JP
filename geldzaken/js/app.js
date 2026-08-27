@@ -151,6 +151,12 @@ function teken() {
 
   if (nieuwScherm && vorigeRoute) scrollGeheugen[vorigeRoute] = window.scrollY;
 
+  /* Een hertekening vervangt het hele scherm. Stond je in een veld te
+     typen, dan ben je zonder dit je cursor — en soms je halve zin —
+     kwijt. Bij een échte schermwissel doen we het niet: dan hoort de
+     focus juist weg te zijn. */
+  const focus = nieuwScherm ? null : bewaarFocus();
+
   opruimen?.();
   opruimen = null;
 
@@ -167,9 +173,28 @@ function teken() {
   if (nieuwScherm) {
     window.scrollTo(0, scrollGeheugen[routeSleutel] || 0);
     vorigeRoute = routeSleutel;
+  } else {
+    herstelFocus(focus);
   }
 
   document.title = (scherm.titel?.(params) || "Geldzaken") + " · Geldzaken";
+}
+
+function bewaarFocus() {
+  const el = document.activeElement;
+  if (!el || !el.id || !["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName)) return null;
+  const staat = { id: el.id, start: null, eind: null };
+  try { staat.start = el.selectionStart; staat.eind = el.selectionEnd; } catch { /* niet elk veld kan dat */ }
+  return staat;
+}
+
+function herstelFocus(staat) {
+  if (!staat) return;
+  const el = document.getElementById(staat.id);
+  if (!el) return;
+  el.focus({ preventScroll: true });
+  try { if (staat.start != null) el.setSelectionRange(staat.start, staat.eind); }
+  catch { /* een selectievak heeft geen cursorpositie */ }
 }
 
 function standaardKop(scherm, params) {

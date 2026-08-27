@@ -29,6 +29,7 @@ export const koppeling = {
   fout: null,
   bonnen: [],           // { id, datum (ISO), bedrag, omschrijving, winkel, door }
   winkels: new Map(),   // id → naam
+  aantalTotaal: 0,      // alle bonnen, ook die van vorige maanden
   laatst: 0,            // wanneer kwam er voor het laatst iets binnen
 };
 
@@ -97,6 +98,7 @@ export async function start({ onData } = {}) {
             door: b.door || "",
           };
         }).sort((a, b) => b.datum.localeCompare(a.datum));
+        koppeling.aantalTotaal = koppeling.bonnen.length;
         koppeling.laatst = Date.now();
         koppeling.actief = true;
         koppeling.bezig = false;
@@ -144,7 +146,26 @@ export function stop() {
   koppeling.bezig = false;
   koppeling.bonnen = [];
   koppeling.winkels = new Map();
+  koppeling.aantalTotaal = 0;
   opData();
+}
+
+/* ---------------------------------------------------------------
+   Eén keer kijken of het werkt
+   ---------------------------------------------------------------
+   Voor de knop "Nu ophalen" in de instellingen. Het live meeluisteren
+   zegt niets als er toevallig deze maand niets is afgerekend; dit
+   haalt alles op en vertelt precies wat het aantreft.
+   --------------------------------------------------------------- */
+export async function haalNu() {
+  const cfg = configuratie();
+  if (!cfg) throw new Error("Er is geen boodschappenapp ingesteld.");
+
+  await start();
+  if (!FB) throw new Error(koppeling.fout || "Verbinden lukte niet.");
+
+  const snap = await FB.db_.getDocs(FB.db_.collection(FB.db, `${cfg.ruimte || "ovs"}_bonnen`));
+  return snap.size;
 }
 
 /* De naam van de winkel, of anders de omschrijving. */

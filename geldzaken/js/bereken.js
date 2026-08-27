@@ -302,6 +302,19 @@ export function externeUitgaven(state, maand = maandNu()) {
   };
 }
 
+/* Per maand wat er in de andere app is afgerekend, nieuwste eerst.
+   Handig om te laten zien dát het werkt als deze maand nog leeg is. */
+export function externeMaanden(state) {
+  const per = new Map();
+  for (const b of state.extern?.bonnen || []) {
+    const maand = maandVan(b.datum);
+    per.set(maand, (per.get(maand) || 0) + (Number(b.bedrag) || 0));
+  }
+  return [...per.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([maand, totaal]) => ({ maand, totaal }));
+}
+
 /* Hoeveel van dat externe bedrag hoort bij dít potje? */
 function externVoorPotje(state, potjeId, maand) {
   const extern = externeUitgaven(state, maand);

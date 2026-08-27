@@ -8,12 +8,12 @@
    #/instellingen/categorieen opent het categorieënscherm.
    ===================================================================== */
 
-import { esc, geld, melding, bevestig, dialoog, downloadTekst,
-         kiesBestand, leesTekst, leesBedrag } from "../util.js";
+import { esc, geld, melding, bevestig, dialoog, downloadTekst, maandLabel,
+         kiesBestand, leesTekst, leesBedrag, debounce } from "../util.js";
 import { state, zetInstelling, zetKoppeling, Sync, Koppeling, magBewerken, isBeheerder,
          legeCategorie, bewaarCategorie, wisCategorie, alsBackup,
          herstelBackup, alsCSV, wisAlles, duwAllesOmhoog } from "../store.js";
-import { perCategorie, externeUitgaven } from "../bereken.js";
+import { perCategorie, externeUitgaven, externeMaanden } from "../bereken.js";
 import { ICONEN, KLEUREN } from "../data/standaard.js";
 import { potjeOpties } from "./onderdelen.js";
 import { ga, terug, eisBewerkrecht, pasThemaToe } from "../app.js";
@@ -204,6 +204,7 @@ function koppelingBlok() {
   const k = state.instellingen.koppeling || {};
   const stand = Koppeling.koppeling;
   const extern = externeUitgaven(state, state.maand);
+  const maanden = k.aan ? externeMaanden(state) : [];
 
   return `
     <div class="sectiekop"><h2>Koppelingen</h2></div>
@@ -233,13 +234,29 @@ function koppelingBlok() {
 
         <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-top:4px">
           <span class="dof">Status</span>
-          <strong>${stand.fout ? "probleem" : stand.actief ? "verbonden" : stand.bezig ? "verbinden…" : "uit"}</strong>
+          <strong>${stand.fout ? "probleem" : stand.aantalTotaal ? "verbonden" : stand.bezig ? "verbinden…" : "wachten op gegevens"}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.85rem">
+          <span class="dof">Gevonden</span>
+          <strong>${stand.aantalTotaal} ${stand.aantalTotaal === 1 ? "bon" : "bonnen"} in totaal</strong>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:.85rem">
           <span class="dof">Deze maand</span>
           <strong class="bedrag">${geld(extern.totaal)} in ${extern.aantal} ${extern.aantal === 1 ? "bon" : "bonnen"}</strong>
         </div>
         ${stand.fout ? `<div class="veld__fout">${esc(stand.fout)}</div>` : ""}
+
+        ${maanden.length ? `
+          <div class="kaart__voet">
+            <div class="veld__label">Per maand</div>
+            ${maanden.slice(0, 4).map(m => `
+              <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:5px">
+                <span style="text-transform:capitalize">${esc(maandLabel(m.maand))}</span>
+                <span class="bedrag">${geld(m.totaal)}</span>
+              </div>`).join("")}
+          </div>` : ""}
+
+        <button class="knop knop--rand knop--breed" data-koppeling-test style="margin-top:12px">Nu ophalen</button>
       ` : ""}
 
       <div class="veld__hint" style="margin-top:12px">
@@ -348,7 +365,16 @@ function categorieScherm() {
 export function koppel(wortel, params) {
   if (params[0] === "categorieen") return koppelCategorieen(wortel);
 
-  wortel.querySelector("#huisnaam")?.addEventListener("change", e => {
+  /* De naam slaan we op terwijl je typt, niet pas als je het veld
+     verlaat. Tik je meteen daarna op een tabblad, dan is je invoer
+     anders weg — het veld verdwijnt dan zonder dat de browser nog een
+     wijziging meldt. */
+  const naamVeld = wortel.querySelector("#huisnaam");
+  const bewaarNaam = debounce(waarde => {
+    zetInstelling({ huisNaam: waarde.trim() || "Mijn huishouden" });
+  }, 500);
+  naamVeld?.addEventListener("input", e => bewaarNaam(e.target.value));
+  naamVeld?.addEventListener("change", e => {
     zetInstelling({ huisNaam: e.target.value.trim() || "Mijn huishouden" });
   });
 
@@ -392,6 +418,18 @@ export function koppel(wortel, params) {
       if (!state.transacties.length) return melding("Er is nog niets te downloaden.", "fout");
       downloadTekst(`geldzaken-boekingen-${new Date().toISOString().slice(0, 10)}.csv`, alsCSV(), "text/csv");
       return melding("CSV gedownload.", "goed");
+    }
+
+    if (e.target.closest("[data-koppeling-test]")) {
+      try {
+        const aantal = await Koppeling.haalNu();
+        melding(aantal
+          ? `Verbonden. ${aantal} ${aantal === 1 ? "bon" : "bonnen"} gevonden.`
+          : "Verbonden, maar er staat nog geen enkele bon in die app.", "goed");
+      } catch (fout) {
+        melding(fout.message || "Ophalen lukte niet.", "fout");
+      }
+      return;
     }
 
     if (e.target.closest("[data-herstel]")) return herstel();

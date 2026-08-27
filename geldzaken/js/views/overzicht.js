@@ -12,7 +12,8 @@
 
 import { esc, geld, procent, maandLabel, maandNu, maandPlus, ring, voortgang } from "../util.js";
 import { state, zetInstelling, meld, Sync, Koppeling } from "../store.js";
-import { verdeling, POTSOORTEN, maandOverzicht, externeUitgaven } from "../bereken.js";
+import { verdeling, POTSOORTEN, maandOverzicht, externeUitgaven,
+         externeMaanden } from "../bereken.js";
 import { maandkiezer, koppelMaandkiezer, leeg } from "./onderdelen.js";
 import { ga } from "../app.js";
 
@@ -284,6 +285,15 @@ function boodschappenBlok() {
           Hang dit aan een potje onder ⚙️ → Koppelingen, dan zie je hier wat er nog over is.
         </div>`}
 
+      ${!extern.aantal && !k.fout ? `
+        <div class="veld__hint" style="margin-top:8px">
+          ${(() => {
+            const eerder = externeMaanden(state).filter(m => m.maand !== state.maand);
+            if (eerder.length) return `Deze maand is er nog niets afgerekend. In ${maandLabel(eerder[0].maand)} was dat ${geld(eerder[0].totaal)}.`;
+            return k.bezig ? "Even ophalen…" : "Er staan nog geen bonnen in de boodschappenapp.";
+          })()}
+        </div>` : ""}
+
       ${laatste.length ? `
         <div class="kaart__voet">
           ${laatste.map(b => `
@@ -294,10 +304,7 @@ function boodschappenBlok() {
               </span>
               <span class="bedrag">${geld(b.bedrag)}</span>
             </div>`).join("")}
-        </div>` : `
-        <div class="veld__hint" style="margin-top:8px">
-          ${k.bezig ? "Even ophalen…" : "Nog geen bonnen in deze maand."}
-        </div>`}
+        </div>` : ""}
     </div>`;
 }
 
