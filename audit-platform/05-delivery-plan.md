@@ -212,12 +212,133 @@ from week 3.
 plus ~€25k infrastructure and tooling, €15–25k penetration test, €25–40k ISO 27001
 preparation, €10–20k legal (DPA, DPIA, AI Act review). Materially lower if founders are
 unpaid; the pen test and the methodology SME are the two line items not to cut.
+**§5.8 re-costs this same plan for an AI-first build**, which is the way it should
+actually be run — roughly half to a third of the labour, with the assurance spend
+unchanged and therefore dominant.
 
 **Pricing sketch** (for the business case, not part of the MVP): per engagement-process
 (€250–500) or a per-engagement bundle covering all six processes (€1,500–3,000), plus a
 firm platform fee. Anchored on time saved, not on seats — audit firms buy hours.
 
-## 5.8 Risks
+## 5.8 Building it AI-first — the re-costed plan
+
+§5.7 costs this the conventional way: a team of six writing the code. Most of that code is
+greenfield TypeScript against a written specification — which is the case where an
+AI-assisted workflow (Claude Code driving the repo, with the plan documents as the spec)
+compresses hardest. This section re-costs the same twenty weeks on that basis, and is
+explicit about what does *not* compress, because in this product those parts carry the risk.
+
+### Where the 128 person-weeks actually sit
+
+| Work | Share | Compression | Why |
+|---|---|---|---|
+| Schema, migrations, RLS policies, tRPC procedures, CRUD, dashboard, portal, DOCX/XLSX export, IaC, test suites | ~55% | **3–5×** | Well-specified, conventional, heavily patterned. `06 §6.3` already contains the schemas the generator would work from |
+| Pipeline stages, prompts, retrieval, eval harness | ~15% | **2–3×** | The code is easy; deciding what good output *is* is not |
+| Realtime path — WebRTC, streaming ASR, diarisation, reconnect | ~10% | **1.5×** | Live audio is debugged empirically, against reality rather than a spec |
+| Review workspace and walkthrough cockpit | ~10% | **1.5–2×** | Quick to build, slow to get right; the iterations are human judgement |
+| Methodology content, SME review, design partners, golden-set labelling | ~10% | **≈1×** | Someone's expertise and someone's relationships |
+
+128 person-weeks → **45–60 person-weeks**.
+
+### Team shape
+
+| Role | Conventional | AI-first |
+|---|---|---|
+| Product lead / founder | 1.0 | 1.0 (also drives the build) |
+| Audit methodology SME | 0.5–1.0 | **0.5–1.0 — unchanged** |
+| Tech lead / architect | 1.0 | merged into the founder role, or 0.5 |
+| Full-stack engineers | 2.0 | 0.5–1.0 |
+| AI engineer | 1.0 | 0.5 |
+| Designer | 0.5 | 0.3 |
+| Security (fractional) + privacy counsel | 0.4 | **0.4 — unchanged** |
+| **Total** | **≈6.4 FTE** | **≈2.5–3.0 FTE** |
+
+### Re-costed to pilot-ready
+
+| Line | Conventional | AI-first |
+|---|---|---|
+| Engineering + product labour | €450–600k | **€175–270k** (€40–90k if founders are unpaid) |
+| Claude Code / API spend for development | — | **€3–8k** |
+| Penetration test | €15–25k | €15–25k |
+| ISO 27001 preparation | €25–40k | €25–40k |
+| Legal — DPA, DPIA, AI Act review | €10–20k | €10–20k |
+| Infrastructure and tooling | ~€25k | €15–25k |
+| **Total** | **€525–710k** | **€245–390k**, or **€110–190k** with unpaid founders |
+
+**Read the bottom row carefully.** At the low end, more than half the budget is penetration
+test, ISO preparation and legal. Those are the costs an AI workflow does not touch at all,
+and they are also the ones that get a firm's security officer to yes. The cheaper the build
+gets, the larger the share of the budget that must go to assurance — resist the instinct to
+scale them down in proportion.
+
+### What it does not buy
+
+- **Calendar.** Twenty weeks becomes perhaps sixteen to eighteen. Design-partner cycles,
+  the SME's review cadence, pen-test scheduling, ISO evidence periods and the shadow season
+  are calendar-bound, not effort-bound. **This approach cuts cost far more than it cuts time.**
+- **Review capacity.** The constraint moves from writing code to reviewing it. One person
+  reviews perhaps 800–1,500 lines of consequential code per day with real attention; in a
+  product where a gap in an RLS policy is a client-confidentiality breach, that ceiling is
+  the schedule. Plan the week around review capacity, not generation throughput.
+- **Judgement about the product.** Which follow-up question is worth asking, whether a
+  narrative reads like a working paper, whether a key control proposal is defensible — none
+  of that is generated. It is decided, by the SME and by the design partners.
+
+### Four things that do not ship on AI review alone
+
+1. **Tenant isolation.** Generated RLS policies look right and have real gaps — a table
+   without a policy, a worker path that sets the wrong context. The cross-tenant suite
+   (`E1`) is the mechanical defence and can itself be generated; the human security review
+   and the pen test are not optional on top of it.
+2. **The grounding validator.** The one component where a quiet bug defeats the product's
+   central promise while everything still looks fine. Property-based tests, adversarial
+   fixtures, hand-reviewed line by line.
+3. **Auth, sessions and key handling.** Use the IdP and the KMS primitives; never accept
+   bespoke generated token or crypto code.
+4. **The audit methodology itself.** Claude will draft a convincing Revenue template and
+   risk library, and it should — that is days of work saved. But AI-generated audit content
+   reviewed only by AI is precisely the failure mode this entire product exists to prevent.
+   The SME's signature on `02` is what the firm is buying.
+
+### The working method
+
+- **`CLAUDE.md` states the invariants as hard rules**, so they survive every session: every
+  finding carries resolvable `evidence_refs`; no query bypasses RLS; no model output reaches
+  the DOM or an export unescaped; no side-effecting tools in any stage that touches client
+  content; approved findings are immutable.
+- **Schemas first, hand-checked once.** The Zod schemas in `06 §6.3` get careful human eyes,
+  then everything downstream is generated from them. A wrong schema propagates; a wrong
+  component does not.
+- **Vertical slices, not layers.** One walkthrough → one narrative block → one approved
+  export, end to end, before any breadth. Integration pain surfaces in week 3 instead of
+  week 12.
+- **Tests as the contract.** Ask for the failing test first, then the implementation. This
+  is what converts "looks right" into "is right", and it is where AI-assisted code most
+  often goes wrong.
+- **Project skills for the repeated shapes**: *add a pipeline stage* (schema + validator +
+  provenance + eval fixture + cost logging), *add a tRPC procedure* (RLS context + audit
+  event + cross-tenant test). Each one makes the next twenty instances nearly free and
+  enforces the invariants structurally rather than by memory.
+- **The eval harness is the gate** for anything touching the pipeline (`06 §6.7`). It is
+  what makes it safe to accept a generated prompt or pack change without re-reading
+  everything by hand.
+- **Hooks over discipline**: pre-commit runs lint, typecheck and the cross-tenant suite, so
+  the invariants are enforced by the machine rather than by remembering.
+
+### What changes in the phase plan
+
+Nothing in §5.3 moves, but two gates get stricter, because they are now carrying more
+weight:
+
+- **P1 exit** additionally requires a human-read review of every RLS policy and of the
+  request-context plumbing — the one place where speed is not worth it.
+- **P3 exit** additionally requires the grounding validator to have property-based tests and
+  an adversarial fixture set, reviewed by someone other than whoever generated it.
+
+Both are cheap. They are the two places where a generated bug is indistinguishable from
+working software until a client or a regulator finds it.
+
+## 5.9 Risks
 
 | # | Risk | Impact | Mitigation |
 |---|---|---|---|
@@ -234,7 +355,7 @@ firm platform fee. Anchored on time saved, not on seats — audit firms buy hour
 | 11 | **Client-side adoption** (process owners won't talk to an AI) | Half the value proposition | Auditor-led-with-AI-listening is the default mode; AI-led is opt-in; questionnaire as the low-friction fallback |
 | 12 | **Prompt injection via client documents** | Manipulated audit conclusions | Untrusted-content handling (`03 §3.9`), no side-effecting tools in content-touching stages, egress allowlist, injection classifier flag |
 
-## 5.9 Post-MVP roadmap
+## 5.10 Post-MVP roadmap
 
 | Horizon | Content |
 |---|---|

@@ -23,7 +23,7 @@ auditor, with a full provenance trail back to the source.
 | 2 | [`02-audit-methodology.md`](02-audit-methodology.md) | Standards mapping, the Revenue template, coverage model, risk/control/RCM taxonomies |
 | 3 | [`03-architecture.md`](03-architecture.md) | Stack, services, data model, the staged AI pipeline, RAG, evals, exports |
 | 4 | [`04-security-privacy-compliance.md`](04-security-privacy-compliance.md) | Tenant isolation, crypto, GDPR/AI Act, LLM data boundary, certification roadmap |
-| 5 | [`05-delivery-plan.md`](05-delivery-plan.md) | Team, 5 phases over 20 weeks, backlog, gates, metrics, risks, cost model |
+| 5 | [`05-delivery-plan.md`](05-delivery-plan.md) | Team, 5 phases over 20 weeks, backlog, gates, metrics, risks, and two costings — conventional and AI-first (§5.8) |
 | 6 | [`06-ai-contracts.md`](06-ai-contracts.md) | JSON schemas, prompt structure, cache layout, concrete API calls, eval definitions |
 
 ## The MVP boundary
@@ -48,7 +48,7 @@ auditor, with a full provenance trail back to the source.
 - Firm-configurable methodology editor (v0.1 loads firm methodology as configuration + templates maintained by us with the design partner).
 - Mobile app, offline mode, real-time multi-auditor co-editing.
 
-## Ten decisions that shape everything else
+## Eleven decisions that shape everything else
 
 1. **Staged pipeline, not one big agent.** Each artefact (facts → narrative → risks → controls → RCM → tests) is produced by a separate, typed, individually evaluable stage. Reviewable, cacheable, cheap to re-run, and each stage can be regression-tested. See `03`.
 2. **No claim without a source.** Every generated object carries `evidence_refs` pointing at transcript spans or document chunks. Objects that fail the grounding validator are surfaced as *"needs source"* rather than silently shown. This is the single most important trust mechanism in the product.
@@ -58,8 +58,13 @@ auditor, with a full provenance trail back to the source.
 6. **EU-resident inference.** Recommended path: Claude on **Amazon Bedrock, `eu-central-1`** (Frankfurt) so model inference stays in the EU under an existing AWS DPA. Trade-off: Bedrock has no Message Batches or Files API — we implement our own batching queue and pass documents inline. Alternative path (first-party Claude API with a zero-data-retention agreement) is kept behind one config flag. See `04`.
 7. **Untrusted-by-default handling of client content.** Uploaded documents and transcripts are data, never instructions; prompt-injection defences and a strict tool allowlist are part of the pipeline design, not an afterthought.
 8. **Model routing by stage.** `claude-opus-5` for judgement-heavy stages (risks, controls, key-control selection), `claude-sonnet-5` for extraction and the low-latency live interview loop, `claude-haiku-4-5` for classification/redaction. See `06` for the cost model — a full revenue walkthrough lands around €4–9 in model spend.
-9. **Design partners from week 0.** Three audit firms (one Big-4 team, two mid-tier) commit to recording five real revenue walkthroughs and to piloting in the Sep–Dec interim season. The season is a hard deadline; the plan is built backwards from it.
-10. **Documentation says an AI helped.** The exported file records that the artefact was AI-assisted, which model version produced it, who reviewed it and when — because that is what ISA 230 documentation and the firm's quality management system will be asked for.
+9. **Built AI-first, reviewed human-first.** These documents are the specification, so
+   the build runs through Claude Code against them: ≈2.5–3.0 FTE instead of 6.4, and
+   €245–390k instead of €525–710k (`05 §5.8`). Four things never ship on AI review
+   alone — tenant isolation, the grounding validator, auth and crypto, and the audit
+   methodology itself.
+10. **Design partners from week 0.** Three audit firms (one Big-4 team, two mid-tier) commit to recording five real revenue walkthroughs and to piloting in the Sep–Dec interim season. The season is a hard deadline; the plan is built backwards from it.
+11. **Documentation says an AI helped.** The exported file records that the artefact was AI-assisted, which model version produced it, who reviewed it and when — because that is what ISA 230 documentation and the firm's quality management system will be asked for.
 
 ## One-paragraph pitch of the user experience
 
