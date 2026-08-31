@@ -51,7 +51,9 @@ Kies de winkel waar je bent en je krijgt een **groot afvinkscherm**: dikke regel
 grote vinkjes, op supermarktvolgorde gegroepeerd, met een voortgangsbalk (*7 van 12*).
 Je **scherm blijft aan** zolang je in dit scherm zit, en thuis ziet je huisgenoot live
 wat er al in de kar ligt. Onderin zit *Klaar met winkelen* — daar noteer je meteen
-wat je hebt uitgegeven, en zie je direct wat er van het maandbudget over is.
+wat je hebt uitgegeven en **bij welke winkel**, en zie je direct wat er van het
+maandbudget over is. Liep je alle winkels in één lijst af, dan raadt de app de winkel
+op basis van wat je zojuist hebt afgevinkt — één tik zet hem op een andere.
 
 - **Categorieën in- en uitklappen**: tik op een kop en de hele categorie vouwt dicht,
   met *3/7* ernaast zodat je ziet hoeveel je daar al hebt. Handig om je door een

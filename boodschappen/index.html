@@ -2482,14 +2482,26 @@ function bindWinkelen(){
   volgScroll();
 }
 
+/* welke winkel ligt het meest voor de hand? Bij "alle winkels" kijken we
+   waar de boodschappen vandaan komen die je zojuist hebt afgevinkt. */
+function winkelVoorstel(){
+  const sessie = S.winkelSessie;
+  if(!sessie) return "nvt";
+  if(sessie.winkelId !== "alles") return sessie.winkelId;
+  const tel = {};
+  S.items.filter(i => i.af && (i.afOp||0) >= sessie.gestart)
+         .forEach(i => { const w = i.winkel || "nvt"; tel[w] = (tel[w]||0) + 1; });
+  const beste = Object.entries(tel).filter(([w]) => w !== "nvt").sort((a,b) => b[1]-a[1])[0];
+  return beste ? beste[0] : "nvt";
+}
+
 function sheetAfrekenen(){
   const wid = S.winkelSessie ? S.winkelSessie.winkelId : "alles";
-  const w = wid === "alles" ? {naam:"Boodschappen", em:"🧺"} : winkelVan(wid);
-  const st = {bedrag:"", fotoFile:null};
+  const st = {bedrag:"", fotoFile:null, winkel: winkelVoorstel()};
   const body = `
     <p style="margin:0 0 16px; color:var(--ink-2); font-size:15px; line-height:1.5">
-      Wat heb je bij <b>${esc(w.naam)}</b> uitgegeven? Dan telt het meteen mee
-      in het budget van deze maand.${budgetVoor(maandSleutel(nu())) > 0
+      Wat heb je uitgegeven? Dan telt het meteen mee in het budget van deze
+      maand.${budgetVoor(maandSleutel(nu())) > 0
         ? " Er is nu nog <b>" + euro(Math.max(0, budgetVoor(maandSleutel(nu())) - bonnenVan(maandSleutel(nu())).reduce((s,b) => s + (Number(b.bedrag)||0), 0))) + "</b> over."
         : ""}
     </p>
@@ -2497,6 +2509,13 @@ function sheetAfrekenen(){
       <label>Bedrag</label>
       <input class="invoer" id="a-bedrag" inputmode="decimal" placeholder="0,00"
              style="font-size:26px; font-weight:700; text-align:center; letter-spacing:-.02em">
+    </div>
+    <div class="veld">
+      <label>Bij welke winkel</label>
+      ${keuzeChips("winkel", S.winkels.map(x => ({id:x.id, naam:x.naam, em:x.em})), st.winkel)}
+      ${wid === "alles" ? `<div class="hint">${st.winkel === "nvt"
+        ? "Je liep alle winkels in één lijst af — kies hier waar je hebt afgerekend."
+        : "Gekozen op basis van wat je zojuist hebt afgevinkt. Was het ergens anders? Tik een andere winkel aan."}</div>` : ""}
     </div>
     <div class="veld">
       <label>Foto van de bon <span style="text-transform:none;letter-spacing:0;font-weight:500">(mag ook later)</span></label>
@@ -2513,6 +2532,7 @@ function sheetAfrekenen(){
     const bi = $("#a-bedrag");
     setTimeout(() => bi.focus(), 250);
     bi.oninput = () => { st.bedrag = bi.value; };
+    bindKeuze("winkel", v => st.winkel = v);
     $("#a-foto").onclick = () => $("#a-bestand").click();
     $("#a-bestand").onchange = async e => {
       const file = e.target.files[0]; if(!file) return;
@@ -2541,7 +2561,7 @@ function sheetAfrekenen(){
           let fotoId = null;
           if(st.fotoFile) fotoId = await bewaarFoto(st.fotoFile);
           await DB.voegToe(PAD.bonnen, {
-            winkel: wid === "alles" ? "nvt" : wid, bedrag, omschrijving:"", door:S.ik.id, datum:nu(), fotoId
+            winkel: st.winkel || "nvt", bedrag, omschrijving:"", door:S.ik.id, datum:nu(), fotoId
           });
           if(S.winkelSessie) ritWissen(S.winkelSessie.winkelId);
           S.winkelSessie = null; houdSchermAan(false); sluitSheet();
