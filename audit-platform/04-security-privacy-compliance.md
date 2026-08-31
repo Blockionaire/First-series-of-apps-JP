@@ -1,5 +1,11 @@
 # 4. Security, Privacy and Compliance
 
+> **Revised for the phased plan.** Nothing here is withdrawn — but §4.12 now separates the
+> controls that *protect the data* from the controls that *prove assurance maturity to
+> procurement*, and phases them accordingly. The first category is not negotiable at any
+> budget. The second is deferred until customers pay for it. Where the revised sequencing
+> was wrong, §4.12 says so.
+
 The buyer is an audit firm bound by professional secrecy, supervised by a national
 regulator, and processing its clients' confidential financial data. The security review is
 not a formality that follows the sale — **it is the sale**. This document is written so it
@@ -218,3 +224,73 @@ practice.
 4. Nothing reaches your audit file without a named human approving it, and every sentence
    has a traceable source.
 5. Here is the DPA, the sub-processor list, the pen test report and the DPIA template.
+
+## 4.12 Security by capital phase
+
+The distinction that governs this section:
+
+> **Category B — protects the data.** Build before the relevant live pilot. Non-negotiable.
+> **Category C — proves maturity to procurement.** Build when traction justifies it.
+
+Deferring Category C is uncomfortable to write in a security document and correct in
+practice. Deferring Category B is not an option at any budget.
+
+### Category B — required before real client data (Phase C/D)
+
+| Control | Phase | Why it protects data, not just procurement |
+|---|---|---|
+| `tenant_id` + `engagement_id` on every table, RLS in the first migration | **B** | The one boundary whose failure is a confidentiality breach. Two days now; a migration and real risk later |
+| Server-side authorization, never frontend-trusted | **B** | — |
+| Managed authentication with secure sessions | **B** | Never build this yourself |
+| **MFA mandatory for auditor accounts** | **C** | A provider toggle. Account takeover on a live engagement is the same breach as cross-tenant leakage — the brief's "where easy to provide" is too soft |
+| Automated authorization + cross-tenant tests in CI | **B/C** | The only guarantee that isolation still holds after each AI-generated change |
+| Secrets in a managed store; environments separated; no production data locally | **B** | Cheap habit to form, expensive to retrofit |
+| TLS 1.3 and encryption at rest | **B** | Default on managed services |
+| **Basic append-only audit event log** | **B** | ISA 230 requires who prepared, who reviewed and when. Without it the output is not audit documentation. Half a day — this is *not* enterprise polish |
+| Short-TTL signed URLs; AV scan on client uploads | **C** | Third-party file upload is an untrusted input path |
+| Backups **with a performed restore test** | **C** | Managed PITR is free; an untested backup is a belief |
+| Logging, monitoring, alerting | **C** | You need to know before the customer tells you |
+| Engagement deletion + a written retention position | **C** | Every design partner asks what happens to their data |
+| EU hosting for stores and inference; no-training / zero-retention terms | **C** | Target market, and contractual work with lead time |
+| No standing staff access as a policy | **C** | Free while the team is one person; expensive after habits form |
+| Independent security code review; penetration test; DPA, DPIA, retention policy, IR process | **D** | Before money changes hands and real reliance begins |
+| Professional indemnity + cyber insurance | **D** | Procurement asks for certificates before signature; cover has lead time |
+
+### Category C — deferred to enterprise readiness (Phase F)
+
+| Control | Why deferring is genuinely safe | Cost of adding later |
+|---|---|---|
+| Per-tenant KMS / envelope encryption / CMEK | Managed encryption at rest plus RLS and least privilege already protect the data. Per-tenant keys defend against a *different* threat — proving cryptographic separation to a procurement questionnaire | Encryption-envelope change; medium, contained |
+| Hash-chained audit trail + daily WORM anchoring | Tamper-*evidence* is an assurance argument; tamper-*resistance* already comes from access control, managed backups and revoked UPDATE/DELETE | Insert-path change; medium |
+| Two-person break-glass infrastructure | Meaningless with a one-person team — the *policy* is what matters now | Low |
+| SAML / SCIM / directory synchronisation | A paid tier of the managed auth provider, bought when a customer requires it | Low |
+| Privileged-access management tooling | Same reasoning as break-glass | Low |
+| ISO 27001, ISAE 3402 Type II | Assurance maturity, financed by revenue. §4.10's timeline moves to Phase F | n/a |
+
+### What the revised sequencing got wrong
+
+Four corrections, restated here so this document is self-contained (full reasoning in
+`00 §0.7`):
+
+1. **The legal work starts in Phase 0, not Phase 3.** The evaluation corpus is a design
+   partner's historical working papers — their IP, covered by professional secrecy,
+   containing their client's confidential information and named individuals. Either the firm
+   anonymises before it leaves their environment (preferred, free) or there is a one-page
+   data-sharing and processing agreement stating evaluation-only use, no model training and
+   deletion on request. Nothing else in Phase 0 is legally interesting; this is.
+2. **RLS in the first migration**, not at first customer. The failure mode is a
+   half-tenancy filtered in application code.
+3. **The plain audit log is a methodology requirement**, not procurement polish.
+4. **MFA mandatory, not optional**, from first real data.
+
+### The LLM data boundary, by phase
+
+§4.7 stands as the Phase-2 target. Before then:
+
+| Phase | Data | Inference |
+|---|---|---|
+| **0–1** | Synthetic and firm-anonymised text only | First-party Claude API — no residency requirement yet, and the Batches API halves eval cost |
+| **2 onwards** | Real client data | EU-resident inference, no-training and retention terms agreed in writing before the first real engagement |
+
+The `LlmClient` abstraction makes this a configuration switch. Agreeing the provider terms
+has lead time, so start that conversation during Phase 1, not on the day Phase 2 begins.

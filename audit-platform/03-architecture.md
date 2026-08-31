@@ -1,5 +1,11 @@
 # 3. Technical Architecture
 
+> **Revised for the phased plan.** The shape of the system is unchanged — typed stages,
+> provenance as a data-model concern, isolation in the database. What changed is that
+> commodity infrastructure is now *bought*, the realtime services move to Product 3, and
+> Phase 0 runs as a headless package with no web application at all (§3.13). Phase map in
+> §3.14. Principle added to §3.1: **buy commodity infrastructure, build audit intelligence.**
+
 ## 3.1 Principles
 
 1. **Boring where it can be, novel only where it must be.** One Postgres, one queue, one
@@ -13,34 +19,45 @@
    application layer is a convenience, not the boundary.
 5. **Everything is versioned and append-only where it matters.** Findings are versioned;
    the audit trail is append-only and hash-chained.
-6. **Re-runnable.** Given the same inputs and pinned prompt/model versions, a stage can be
+6. **Buy commodity, build audit intelligence.** Authentication, Postgres, object storage,
+   queues, logging, backups, email and inference are bought from managed providers. Engineering
+   capacity goes into the methodology pack, the pipeline and the review workflow — the only
+   parts a competitor cannot also buy. A modular monolith until scale or risk forces a split.
+7. **Re-runnable.** Given the same inputs and pinned prompt/model versions, a stage can be
    re-run and diffed. That is how we regression-test methodology changes.
 
 ## 3.2 Stack
 
-| Layer | Choice | Why |
-|---|---|---|
-| Language | TypeScript end-to-end | One language for a small team; shared types between API, workers and UI |
-| Web app | Next.js (App Router) + React, TanStack Query, Tailwind, Radix primitives | Fast to build, good table/virtualisation ecosystem for the RCM grid |
-| API | Fastify + tRPC (typed RPC) with an OpenAPI edge for integrations | Type safety across the boundary; REST surface kept for future Caseware/portal integrations |
-| Realtime | WebSocket gateway (Fastify + `ws`), audio over WebRTC to the media service | Live transcript and insight push |
-| Jobs | BullMQ on Redis, with idempotent job keys | Simple, inspectable; Temporal considered and deferred (see §3.12) |
-| DB | PostgreSQL 16 + `pgvector` + `pg_trgm` | One store for relational data, embeddings and lexical search; RLS for tenancy |
-| Object storage | S3-compatible, EU region, versioning + object lock for final files | Recordings, uploads, exports |
-| Search | Postgres hybrid (pgvector cosine + `tsvector`/BM25-ish), reranked | Avoids a second datastore at MVP scale |
-| ASR | `whisper-large-v3` + diarisation, self-hosted on EU GPU; managed EU endpoint as fallback | Dutch/English/German quality and data residency (see §3.6) |
-| LLM | Claude via **Amazon Bedrock `eu-central-1`** (default) or first-party Claude API with ZDR (flag) | EU inference; see `04 §4.7` |
-| Auth | OIDC (Entra ID / Okta) for firms; separate realm for client portal; WebAuthn/TOTP MFA | Firms will not accept a bespoke identity system |
-| Exports | `docx` (OOXML) + `exceljs`, template-driven | Firm-styled Word/Excel without a headless Office dependency |
-| Infra | Docker, Terraform, EU-region managed Kubernetes or ECS; single-region + cross-AZ | Boring, auditable |
-| Observability | OpenTelemetry → Grafana/Tempo/Loki; Sentry (EU); per-stage LLM cost/latency metrics | Cost per walkthrough must be a dashboard number from week 3 |
+Managed-first. Every "build" line below is one a competitor cannot buy.
 
-Monorepo (`pnpm` + Turborepo):
+| Layer | Choice | Phase | Note |
+|---|---|---|---|
+| Language | TypeScript end-to-end | A | One language, shared types between pipeline, API and UI |
+| **Pipeline package** | Plain TS + Zod, runnable from a CLI, no web framework | **A** | The core IP. Must run headless — see §3.13 |
+| **Methodology packs** | Versioned YAML/JSON in the repo | **A** | The other half of the IP |
+| Web app | Next.js (App Router) + React, TanStack Query, Tailwind, Radix | B | The review workspace is the screen that matters |
+| API | Route handlers / tRPC inside the same deployment — a modular monolith | B | Split into services only when scale or risk demands it |
+| DB | **Managed** Postgres, EU region (Neon, Supabase or RDS) + `pgvector` + `pg_trgm` | B | RLS from the first migration; do not self-run Postgres |
+| Auth | **Managed** (Clerk, WorkOS or Auth0), EU | B | MFA mandatory for auditor accounts from Phase 2. SAML/SCIM is a provider tier, bought when a customer pays for it |
+| Jobs | `pg-boss` on the same Postgres | B | Avoids a Redis dependency entirely; BullMQ + Redis only if throughput demands it |
+| Object storage | S3-compatible, EU (R2, S3, Scaleway) | C | Short-TTL signed URLs; versioning |
+| Document ingestion | **Managed** OCR (Textract / Document Intelligence) + own chunker | C | Phase 0–1 run on plain text; PDFs arrive with real documents |
+| Search | Postgres hybrid: `pgvector` HNSW + `tsvector` | B | One datastore, one security review |
+| Observability | Sentry (EU) + managed logs, per-stage cost and latency metrics | C | Cost per walkthrough must be a dashboard number early |
+| Exports | `docx` + `exceljs`, template-driven | B | No headless Office dependency |
+| Hosting | One managed container/serverless platform, EU region | B | Terraform only when the surface justifies it |
+| **LLM** | First-party Claude API in Phase 0–1; **EU-resident inference from Phase 2** | A / C | Phase 0–1 use synthetic and anonymised data, so residency does not yet bind — and the first-party API gives the Message Batches API, which halves eval cost. One `LlmClient` interface, switched by configuration. See `06 §6.9` |
+| ASR | **Deferred to Product 3**, then bought | E | Phase 1 imports transcripts the firm's meeting platform already produces |
+| Realtime gateway | **Deferred to Product 3** | E | No WebRTC, no diarisation, no session state to keep alive |
+
+Monorepo:
 
 ```
-apps/    web · api · realtime-gateway · worker-ingest · worker-ai · worker-export
-packages/ domain (types + zod schemas) · ai (stages, prompts, clients) · db (schema, RLS, migrations)
-          methodology (process template packs, risk/control libraries) · ui · config
+packages/ domain (types + zod schemas) · methodology (packs, libraries) · ai (stages, prompts, clients)
+          evals (corpus, harness, metrics) · db (schema, RLS, migrations)      ← Phase 0 needs only these
+apps/     cli (run a stage, run the suite, render a report)                    ← Phase 0
+          web (review workspace, questionnaire, exports)                       ← Phase 1
+          worker (ingest, generation jobs)                                     ← Phase 1/2
 ```
 
 ## 3.3 Services
@@ -67,6 +84,11 @@ packages/ domain (types + zod schemas) · ai (stages, prompts, clients) · db (s
                                              │ KMS/CMK   │        │ eu-central-1)    │
                                              └───────────┘        └──────────────────┘
 ```
+
+> **Phase note.** The diagram above is the Product-3 target. Through Phase 2 there is no
+> `realtime-gw` and no ASR service: the pipeline is invoked from the CLI (Phase 0) or from a
+> job triggered by an upload or a completed questionnaire (Phase 1–2), and `api`, `worker`
+> and `web` are one deployment.
 
 `realtime-gw` is the only stateful service (a walkthrough session lives in memory with a
 Redis-backed snapshot every few seconds so a pod restart mid-meeting is survivable).
@@ -203,7 +225,7 @@ Every request opens a transaction that begins with
 from the job payload. A CI test suite ("cross-tenant fuzz") creates two tenants and asserts
 that every tRPC procedure returns 404/403 across the boundary — this suite is a merge gate.
 
-## 3.6 The live interview loop
+## 3.6 The live interview loop *(Product 3 — deferred)*
 
 ```
 mic ──WebRTC──▶ realtime-gw ──chunks──▶ ASR (streaming) ──partials──▶ transcript pane
@@ -334,7 +356,7 @@ temperature/effort settings, cost, latency}`. Consequences:
   integration path differs and the pilot must not be blocked on a third-party API. The
   canonical JSON is designed as the mapping source for that later work.
 
-## 3.12 Deliberate deferrals
+## 3.12 Deliberate deferrals (technical)
 
 | Deferred | Why | Trigger to revisit |
 |---|---|---|
@@ -343,3 +365,45 @@ temperature/effort settings, cost, latency}`. Consequences:
 | Microservice split of the API | Team of five | Team of fifteen |
 | Fine-tuning a model on firm content | Prohibited by our own data promises; prompt + templates + libraries get us further at MVP | Never, without explicit contractual change |
 | Multi-region deployment | EU-only is the requirement, not a limitation | Non-EU firms |
+
+## 3.13 Phase 0: the headless engine
+
+Phase 0 has no web application, no authentication, no tenancy runtime and no cloud
+infrastructure. It is a package and a command:
+
+```
+pnpm eval run --pack revenue@1.0.0 --corpus ./corpus --suite full
+pnpm pipeline run --input ./corpus/case-03/transcript.txt --out ./out/case-03
+pnpm report render ./out/case-03            # static HTML for the blind preference test
+```
+
+- Input: a plain-text transcript or note file, plus an optional client-profile file.
+- Output: JSON artefacts (facts, narrative, flow, risks, controls, gaps) with evidence
+  references, plus a static HTML render good enough to put in front of an auditor.
+- State: the filesystem. No database is required to answer the hypothesis.
+
+**Why this matters beyond Phase 0.** The same package is what CI runs on every prompt or
+pack change, forever, and what Product 3 will call from a different transport. Writing the
+pipeline inside web route handlers is the single most likely way this plan accidentally
+rebuilds itself in Phase 1 — see `00 §0.7` item 9.
+
+The one piece of Phase-1 architecture that must nevertheless be decided *before* Phase 1
+starts is the database schema, because provenance and tenancy are both structural: evidence
+references and `tenant_id` / `engagement_id` belong in the first migration, with RLS enabled
+from the start. Both are cheap now and expensive later (`00 §0.7` items 2 and 5).
+
+## 3.14 Phase map for this document
+
+| Section | Phase | Note |
+|---|---|---|
+| §3.1 Principles | **A** | Unchanged |
+| §3.2 Stack | **A/B** | Managed-first as revised above |
+| §3.3 Services | **B** | One deployment through Phase 2; the split is the Product-3 target |
+| §3.4 Data model | **A** for the artefact and evidence shapes, **B** for the schema itself | `findings` + `evidence_refs` are the structural core |
+| §3.5 RLS and tenant isolation | **B** — first migration | Retrofitting is the expensive case |
+| §3.6 Live interview loop | **E** | Product 3 |
+| §3.7 Generation pipeline | **A** for S3–S6; **B** for S8 RCM assembly; **E** for S1, S9, S10 | |
+| §3.8 Retrieval | **B** | Phase 0 has no corpus to retrieve from — the transcript is the input |
+| §3.9 Untrusted content | **A** | Prompt and code structure; near-zero cost now |
+| §3.10 Reproducibility and audit trail | **A** for per-object provenance and model/prompt recording; **B** for the append-only event log; **F** for hash chaining and WORM anchoring | The plain log is an ISA 230 requirement, not enterprise polish |
+| §3.11 Exports | **B** for Word/Excel/JSON; **E/F** for Caseware | |

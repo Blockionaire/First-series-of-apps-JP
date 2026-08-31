@@ -1,5 +1,10 @@
 # 1. Product & User Experience
 
+> **Revised scope.** This document describes the full product. `00-strategy-and-phasing.md`
+> decides what ships when. In short: the **review workspace (S5)** and the **input modes**
+> are Phase 1; the **live walkthrough cockpit (S3)** moves to Product 3 and is preserved
+> below as the target state, not as an early requirement. Section §1.7 maps every screen.
+
 ## 1.1 The problem, stated precisely
 
 The interim phase of a statutory audit is where the team builds its understanding of the
@@ -231,6 +236,40 @@ These are testable requirements, not slogans.
 8. **Speed is a feature of the meeting, not the report.** Sub-second transcript, ~15s
    insight refresh, and generation that runs after the call — never a user waiting on a
    model mid-conversation.
+
+## 1.7 What ships when
+
+| Screen | Phase | Early form |
+|---|---|---|
+| S1 Engagement dashboard | **C** | A list; the dashboard proper waits until there are many engagements |
+| S2 Walkthrough setup + knowledge panel | **B** | Process is fixed to Revenue; knowledge panel accepts transcripts and notes in Phase 1, documents in Phase 2 |
+| **S3 Live walkthrough cockpit** | **E** | **Deferred to Product 3.** Replaced in Phase 1 by the three input modes below |
+| S4 AI questionnaire (client) | **B/C** | Magic-link, one question at a time, coverage-driven follow-ups |
+| **S5 Review workspace** | **B** | **The make-or-break screen. Build it properly the first time.** In Phase 0 it is a read-only viewer, sufficient for the blind preference test |
+| S6 RCM editor | **B** | Deterministic assembly of existing risks and controls; a plain grid |
+| S7 Test plan | **E** | Not built |
+| S8 Client portal | **B/C** then **E** | Phase 1–2: invitation, questionnaire, answers, a small number of requested uploads, completion status. Nothing resembling a PBC platform until Product 4 |
+| S9 Prior-year comparison | **E** | Prior-year documents are ingested as *evidence* in Phase 2; the diff view waits |
+| S10 Export centre | **B** | Word and Excel from a template, plus canonical JSON |
+
+### The three Phase-1 input modes
+
+The cockpit's job — getting process information into the coverage model — is done in
+Phase 1 by three much cheaper channels:
+
+- **Import a transcript.** Teams, Zoom and Meet already produce them. Drop in a VTT or text
+  file and the full pipeline runs unattended. This is the highest value-per-day item in the
+  entire plan and should be treated as a first-class feature rather than a stopgap: many
+  firms will never adopt a new meeting tool, and this works with the one they have.
+- **AI questionnaire.** The client answers asynchronously; the coverage model decides the
+  follow-ups. Tests the interview intelligence without any real-time infrastructure.
+- **Structured notes.** The auditor conducts the walkthrough as they do today and enters
+  notes afterwards. Weakest of the three during the meeting — the auditor gains nothing
+  while typing — so the value must come from what happens after. Do not lead with it.
+
+What is genuinely lost by deferring the cockpit is the ability to *ask the follow-up question
+while the person is still in the room*. That is real, and it is the reason Product 3 exists.
+It is not a reason to build WebRTC before knowing the engine works.
 
 ## 1.6 What "done" feels like for the pilot
 

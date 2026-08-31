@@ -1,5 +1,9 @@
 # 6. AI Contracts — schemas, prompts, calls, evals
 
+> **Revised for the phased plan.** The schemas, prompt layout and grounding rules are
+> Phase 0 in full — they are the hypothesis. What changes is which *stages* run and where
+> inference happens: §6.9 defines the Phase-0 engine, its economics, and the provider path.
+
 This is the implementation-level appendix: the typed contracts every stage must honour,
 how the prompts are laid out for caching, what the actual API calls look like, and how the
 whole thing is evaluated. Written against the Claude API as of this plan's date — verify
@@ -382,3 +386,62 @@ Every review action is telemetry as well as workflow: `approved_unchanged`, `min
 the product metric in `05 §5.6`, prompt and pack improvement (the highest-`rewritten` block
 types are the backlog), and the post-market monitoring evidence in `04 §4.9`. Build it in
 P3, not later; retrofitting it means a season of lost signal.
+
+## 6.9 The Phase-0 engine: what runs, what it costs
+
+### Stages in scope
+
+| Stage | Phase 0 | Note |
+|---|---|---|
+| S0 ingest | ✗ | Phase 0 input is plain text; managed OCR arrives in Phase 2 |
+| S1 live tick | ✗ | Product 3 |
+| S2 normalise | ✓ (light) | Speaker resolution and entity tagging on an imported transcript |
+| S3 process facts | ✓ | The grounding backbone |
+| S4 narrative + flow | ✓ | |
+| S5 risks | ✓ | |
+| S6 controls + gaps | ✓ | |
+| S7 key controls | Phase 1 | Proposal with criterion assessment |
+| S8 RCM assembly | Phase 1 | Deterministic, no model |
+| S9 test procedures | Phase 4 | |
+| S10 prior-year diff | Phase 4 | |
+| S11 export | Phase 1 | Phase 0 renders static HTML only |
+
+### Provider path
+
+| Phase | Client | Why |
+|---|---|---|
+| **0–1** | First-party Claude API | Synthetic and anonymised data only, so residency does not bind. Gives the **Message Batches API** (50% cost reduction — material when eval runs are the dominant spend) and the Files API |
+| **2+** | EU-resident inference | Real client data. Batches unavailable there, so the eval suite either runs against the anonymised corpus on the first-party path or accepts full price |
+
+One `LlmClient` interface, chosen per tenant by configuration. Never inline a model ID at a
+call site — `packages/ai/models.ts` owns them, so a model change is a config change plus an
+eval run.
+
+### Eval economics — the number that decides the Phase-0 budget
+
+A full pipeline pass over one corpus case (S2→S6, Opus 5 at high effort for S4–S6, Sonnet 5
+for S2–S3) costs roughly **€1.20–1.80**. Therefore:
+
+| Activity | Cost |
+|---|---|
+| Full suite, 30 scenarios | ~€45 |
+| Smoke set, 6 scenarios — the iteration loop | ~€9 |
+| Same run via the Batch API | ~50% less |
+| Realistic Phase-0 total (smoke set many times, full suite at milestones) | **€800–2,500** |
+
+Three rules that keep this from running away:
+
+1. **Iterate on the smoke set, gate on the full suite.** Running 30 scenarios after every
+   prompt tweak is the fastest way to spend €3k learning nothing.
+2. **Batch everything that is not interactive.** Eval runs are the definition of
+   latency-tolerant.
+3. **Keep the cached prefix stable** (§6.4). In Phase 0 the pack and client profile are
+   identical across every case in a run; a cache hit rate below 90% on suite runs means a
+   silent invalidator, and it shows up directly in the phase budget.
+
+### What is not deferred, despite being cheap to defer
+
+The grounding validator, the evidence-reference schema, the injection defences and the
+per-object recording of `{stage, model, prompt_version, input_hash, cost}` all ship in
+Phase 0. Each is a day or less now. Each requires rewriting every prompt, schema, record and
+screen if added later — they are the highest-retrofit-cost items in the whole plan.

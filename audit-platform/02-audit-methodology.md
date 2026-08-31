@@ -1,5 +1,10 @@
 # 2. Audit Methodology — the content the product must be right about
 
+> **Unchanged in substance, and almost entirely Phase 0.** The methodology is the hypothesis,
+> not the packaging: §2.1–§2.7 and §2.9 are built first, before any authentication or
+> tenancy exists. Only §2.8 (test procedures) and §2.10 (prior-year comparison) move later.
+> Phase map in §2.12.
+
 This document is the specification the AI stages are held to. If the product is
 technically excellent and methodologically wrong, it is unsellable: the firm's quality
 department is the gatekeeper, and an oversight inspection (AFM, and equivalents elsewhere
@@ -273,3 +278,23 @@ one of the most-cited pain points from the design-partner interviews.
 | Reliance decisions are human | `is_key_control`, `design_effective`, `implemented`, `planned_response` are auditor fields, AI-proposed only |
 | Standard references are visible | Every template item carries its standard reference, shown on hover in review |
 | The file records AI assistance | Export footer + audit trail with model, version and prompt hash |
+
+## 2.12 Phase map
+
+| Section | Content | Phase |
+|---|---|---|
+| §2.1 | Standards mapping | **A** — shapes every schema and prompt |
+| §2.2–§2.3 | Assertion and inherent-risk-factor vocabularies | **A** — enums; changing them later rewrites every record |
+| §2.4 | Revenue template, 12 sub-processes, coverage items | **A** — the core IP |
+| §2.5 | Risk and control libraries | **A** — the main hallucination control |
+| §2.6 | RCM schema | **A** as a schema, **B** as an artefact (deterministic assembly) |
+| §2.7 | Key-control criteria | **B** — proposal with criterion-by-criterion assessment |
+| §2.8 | Test procedures and sample sizes | **E** — needs a paying firm's parameter table to mean anything |
+| §2.9 | Fraud, override, journals | **A** — mandatory items; omitting them makes the output professionally wrong, and it costs a day |
+| §2.10 | Prior-year comparison | **E** for the diff; **B** for ingesting prior-year documents as evidence |
+| §2.11 | Guardrails | **A** — all of them, they are prompt and code structure rather than infrastructure |
+
+Two things in this document are deliberately *not* deferred despite being cheap to defer:
+the ISA 240 mandatory items (§2.9), because their absence is a professional defect rather
+than a missing feature, and the guardrails (§2.11), because retrofitting them means
+re-validating every stage.
