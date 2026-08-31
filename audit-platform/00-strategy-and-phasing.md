@@ -1,6 +1,8 @@
 # 0. Strategy, Phasing and the Capital Register
 
-**This document now controls the other six.** Where `01`–`06` describe a capability, this
+**This document controls the others.** Phase 0 is now specified for execution in
+`07-phase-0-execution-plan.md`; where that document is more precise about Phase 0, it wins.
+ Where `01`–`06` describe a capability, this
 document says *when* it gets built and *what it costs*. Where they conflict, this wins.
 
 The change in direction is not a change in ambition or in standards. It is a change in
@@ -307,7 +309,7 @@ a rewrite.
 
 | Phase | Founder | Cash — likely | Cash — if things go badly | Dominant cost |
 |---|---|---|---|---|
-| **0 Engine validation** | 6–8 weeks | **€4–11k** | €15k | SME days; model spend for eval runs |
+| **0 Engine validation** | 6–8 weeks | **€1.5–6.7k** (SME on equity) · **€7–16k** (SME billing) | €18k | SME days — revised upward to 8 in `07 §7.11`; model spend for eval runs |
 | **1 Prototype** | 6–8 weeks | **+€2–5k** → €6–16k | €22k | Infrastructure, a little design help |
 | **2 Design-partner alpha** | 4–6 weeks | **+€8–14k** → €14–30k | €40k | Isolation review, data agreements, EU infra |
 | **3 Secure paid pilot** | 3–5 weeks | **+€18–30k** → €32–60k | €75k | Pen test, security review, privacy pack, insurance |
@@ -371,3 +373,43 @@ logic; the coverage models; the grounded data model and provenance; the human-re
 workflow; the proprietary evaluation corpus; the accumulated record of what auditors
 actually edited; firm methodology configuration; and the trust that follows from all of it.
 Phase 0 builds five of those eight for under €11k. The cockpit is a UX moat for later.
+
+## 0.12 Accepted refinements
+
+Recorded here so this stays the controlling document. All are reflected in
+`07-phase-0-execution-plan.md`.
+
+1. **Data classification, not phase number, triggers security requirements.** Four classes —
+   C0 synthetic, C1 anonymised historical, C2 firm-confidential, C3 audit-client confidential —
+   each with its own permitted processing configuration and storage rule. Phase 0 handles
+   C0/C1, plus C2 for the firm's own process walkthrough. C3 never leaves the Phase 2
+   platform. Table in `07 §7.2`, referenced from `04 §4.12`. The working preference order is
+   synthetic → heavily anonymised historical → identifiable, with anonymisation performed
+   before material leaves the firm wherever practical.
+2. **The blind test is a three-way comparison**: the firm's original working paper, the raw
+   engine output, and the auditor-reviewed engine output — scored on completeness, audit
+   relevance, clarity, conciseness, traceability and expected review effort. Full protocol,
+   including format blinding and the blinding-integrity check, in `07 §7.9`.
+3. **The engine stays headless** with the public surface named in `07 §7.1`; CLI, web app,
+   questionnaire, future cockpit and future integrations are all consumers of the same package.
+4. **The firm's own revenue process is an explicit test stage** between corpus evaluation and
+   real client engagements: real auditors, real meeting, real ERP terminology, at data class
+   C2 with no audit-client confidentiality. `07 §7.15`.
+5. **Three design partners**, ideally one smaller and nimble, one mid-tier close to the initial
+   ICP, and one larger or especially quality- and security-conscious. A Big-4 partner is useful
+   but is not a Phase 0 requirement, and a large firm's future procurement requirements must
+   not be allowed to distort the early roadmap.
+6. **Cash outlay and economic development cost are tracked separately.** Founder time is
+   valued at €0 for determining external capital required, and counted in days for assessing
+   development economics, hiring needs, whether the AI-native approach is genuinely
+   compressing effort, fundraising, and replacement cost. Phase 0 is ≈€2–7k cash against
+   ≈€36k of economic effort (`07 §7.13`). The €32–60k figure means *external cash required
+   under a founder-heavy, AI-native build* — never the economic cost of creating the software.
+7. **Audit logging early means the audit-documentation capability**: immutable records of who
+   generated, edited, reviewed and approved what, and when. Hash chaining, WORM anchoring and
+   tamper-evident assurance remain Phase F.
+8. **Correction carried from `07 §7.11`:** the SME estimate in §0.8 was 3–5 days and
+   under-counted corpus construction, labelling and the blind test. Eight days is realistic.
+   At day rates that alone would consume the Phase 0 budget, so the SME on equity or advisory
+   terms — or design-partner staff absorbing the labelling — is now a hard recommendation
+   rather than a preference.

@@ -9,6 +9,9 @@ flow, risks mapped to assertions, controls and gaps, and a draft Risk & Control 
 of it reviewable, editable and approvable by the auditor, with every claim traceable to its
 source.
 
+> **Start here:** `00-strategy-and-phasing.md` for the sequencing,
+> `07-phase-0-execution-plan.md` for what to build first.
+>
 > **Read `00-strategy-and-phasing.md` first.** It is the controlling document: it decides
 > what gets built in which phase and what each phase costs. Documents `01`–`06` describe the
 > full system; `00` sequences it.
@@ -24,6 +27,7 @@ source.
 | 4 | [`04-security-privacy-compliance.md`](04-security-privacy-compliance.md) | Isolation, crypto, GDPR, the LLM data boundary — and the protects-the-data vs proves-maturity split (§4.12) |
 | 5 | [`05-delivery-plan.md`](05-delivery-plan.md) | Staffing, design partners, the five gates, backlog by phase, metrics, risks |
 | 6 | [`06-ai-contracts.md`](06-ai-contracts.md) | Schemas, prompt and cache layout, API calls, eval harness — and Phase-0 engine economics (§6.9) |
+| **7** | [`07-phase-0-execution-plan.md`](07-phase-0-execution-plan.md) | **The build backlog for Phase 0: engine surface, schemas, methodology minimum, corpus construction, metrics and thresholds, the blind-test protocol, effort, cost, the seven-week sequence, and what must not be built** |
 
 ## The doctrine
 

@@ -283,6 +283,20 @@ Four corrections, restated here so this document is self-contained (full reasoni
 3. **The plain audit log is a methodology requirement**, not procurement polish.
 4. **MFA mandatory, not optional**, from first real data.
 
+### Data classification drives the requirements
+
+Security requirements attach to the **class of data being processed**, not to a phase number.
+The authoritative table is `07 §7.2`; in summary:
+
+| Class | What | Processing | Storage |
+|---|---|---|---|
+| **C0** Synthetic | Authored cases, no real entity | Any development configuration; batch processing | Repository |
+| **C1** Anonymised historical | Firm walkthroughs anonymised *before leaving the firm* | First-party API under a data-sharing agreement | Encrypted disk, gitignored, no consumer cloud sync |
+| **C2** Firm-confidential | The firm's own methodology and its own process walkthrough | No-training terms agreed in writing | Encrypted disk or the Phase 1 application |
+| **C3** Audit-client confidential | Any real engagement material | **EU-resident inference, production architecture, RLS, MFA, logging** | Only in the Phase 2 platform — never on a laptop |
+
+The phase table below is the consequence of this classification, not a separate rule.
+
 ### The LLM data boundary, by phase
 
 §4.7 stands as the Phase-2 target. Before then:
