@@ -1,0 +1,135 @@
+Auditor (audit senior): Thanks for making the time. I would like to walk through how a sale goes from a customer order all the way to the revenue line, and where the controls sit. Shall we start with how an order arrives?
+
+Controller (financial controller): Sure. Most of it comes in by email to the sales desk, and a few of the larger customers send EDI files. Everything gets keyed into Business Central, that is our ERP. The EDI ones drop in automatically.
+
+Auditor: For the ones that are keyed in by hand, how would you know if an order a customer sent never made it into the system?
+
+Controller: Honestly, we would find out when the customer chased the delivery. There is no report that reconciles emails to orders. It has not really been a problem.
+
+Auditor: Understood. And when the order is entered, where does the price come from?
+
+Controller: The system pulls it from the customer price list. Each trade customer has an agreed list, and there is a standard list for everyone else. That is maintained by the commercial director.
+
+Auditor: Can anyone change the price on the order once it is there?
+
+Controller: The sales people can override it, yes. It is not locked down.
+
+Auditor: Is that override approved by anybody, or logged?
+
+Controller: There is a field where they are supposed to put a reason, but nobody approves it beforehand. Business Central does record who changed it. I do not think anyone looks at that.
+
+Auditor: Is there a report of overrides?
+
+Controller: There is one you can run. I have run it maybe twice. It is not part of anyone's monthly routine.
+
+Auditor: What about discounts, is that the same mechanism?
+
+Controller: Discounts above ten per cent need the commercial director to approve, and the system blocks the order until he releases it. That one is a hard block.
+
+Auditor: Good. What happens after the order is accepted?
+
+Controller: It goes to the warehouse. Since March that is Van Dijk Logistics, we outsourced the whole warehouse to them. They pick and ship, and they send us a despatch confirmation file every evening which loads into Business Central.
+
+Auditor: So the delivery record in your system comes from their file. Does anyone check that file arrived and was complete?
+
+Controller: The system flags it if the file fails to load. If it loads but is short, I am not sure we would know.
+
+Auditor: And the invoice, when is that raised?
+
+Controller: Business Central raises it automatically overnight from the despatch record. Quantity comes from what they shipped, price from the order. Nobody re-keys anything.
+
+Auditor: Are there any invoices raised outside that flow?
+
+Controller: Occasionally, yes. If a customer wants a proforma or we are billing something that is not a physical delivery, like a tooling charge, we raise it manually. That is me or my assistant.
+
+Auditor: Does anyone approve those manual invoices?
+
+Controller: No, we just raise them. They are usually small.
+
+Auditor: How would you find something that was delivered but never invoiced?
+
+Controller: In theory the automatic run picks up everything. I do not run a report specifically for that.
+
+Auditor: Let me turn to credit. How are credit limits set?
+
+Controller: The commercial director sets them when the account is opened, based on a Graydon report. He can change them later too.
+
+Auditor: Can he raise a limit on his own?
+
+Controller: Yes, he can. It is his call.
+
+Auditor: And does the system block an order over the limit?
+
+Controller: It does, the order goes on hold. Credit control releases it, that is Marieke.
+
+Auditor: When Marieke releases a blocked order, is there a record of why?
+
+Controller: Business Central logs the release with her user id and a timestamp. There is no written reason.
+
+Auditor: How is the aged receivables list managed?
+
+Controller: I go through it every month with Marieke. Anything over ninety days we discuss and decide whether to chase harder or provide. I keep the notes in a spreadsheet.
+
+Auditor: Now revenue recognition. At what point does a sale hit the revenue line?
+
+Controller: When the goods are despatched. Terms are ex works from our warehouse, so control passes when Van Dijk hands it to the carrier.
+
+Auditor: And the posting to the general ledger?
+
+Controller: The invoice posts automatically to revenue and receivables. It is all inside Business Central, so there is no interface to another ledger.
+
+Auditor: Around month end, what do you do to make sure a sale lands in the right period?
+
+Controller: I look at the last few despatches before the cut-off and the first few after, and check the invoice dates line up. It is a review I do myself, on screen. I do not keep a record of it.
+
+Auditor: Are there any deferred revenue balances?
+
+Controller: Not really. We do occasionally invoice tooling in advance of production, and I hold that in a deferred account until the tooling is delivered.
+
+Auditor: Who decides when that deferral is released?
+
+Controller: I do.
+
+Auditor: Credit notes, next. Who can raise one?
+
+Controller: Sales can raise a credit note request, and the sales manager approves it in the system. Above five thousand euro it comes to me as well.
+
+Auditor: Does the system require it to be linked to the original invoice?
+
+Controller: For returns it does. For a goodwill credit it does not have to be.
+
+Auditor: Are there rebates or volume bonuses?
+
+Controller: Yes, several of the larger customers have an annual volume rebate. I accrue for it monthly based on their year-to-date volume against the tiers in the contract.
+
+Auditor: Who reviews that accrual?
+
+Controller: Nobody reviews it in detail. The finance director sees it in the management accounts.
+
+Auditor: Manual journals to revenue accounts, who can post those?
+
+Controller: Me and the finance director. He approves mine and I approve his, in theory. Business Central requires a second approver on journals above twenty-five thousand.
+
+Auditor: What kind of entries typically get made to revenue at period end?
+
+Controller: The rebate accrual, occasionally a reclassification between product groups, and once or twice a year a correction if something has been billed to the wrong entity.
+
+Auditor: Is there anything tied to the revenue number in terms of incentives?
+
+Controller: The sales team is on commission based on invoiced revenue, and the finance director has a bonus with a turnover component. There is also a covenant with the bank on EBITDA.
+
+Auditor: How does management review the revenue figures each month?
+
+Controller: The finance director compares revenue and gross margin against budget and against last year in the management pack. If margin moves more than a point he asks me about it.
+
+Auditor: Is that follow-up documented anywhere?
+
+Controller: Only in the sense that I answer his email.
+
+Auditor: Last area, access. Who can change prices in the price list, and who can change customer master data?
+
+Controller: The commercial director and his assistant for prices. For customer master data it is the sales desk, three or four people.
+
+Auditor: Does anyone review who has those rights?
+
+Controller: Not formally, no. IT set it up when we implemented and it has not changed much.

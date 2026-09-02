@@ -1,0 +1,202 @@
+# Revenue control library v0.1.0 — 33 entries.
+library: controls
+version: 0.1.0
+entries:
+  - id: CTL-REV-001
+    title: New customers are approved by someone independent of sales before the account is opened
+    controlType: preventive
+    controlNature: manual
+    frequency: event_driven
+    assertions: [occurrence]
+  - id: CTL-REV-002
+    title: Customer master data changes are restricted and reviewed against a change report
+    controlType: detective
+    controlNature: it_dependent_manual
+    frequency: monthly
+    assertions: [accuracy, occurrence]
+  - id: CTL-REV-003
+    title: Credit limits are set and changed only with approval outside the sales function
+    controlType: preventive
+    controlNature: manual
+    frequency: event_driven
+    assertions: [accuracy_valuation_allocation]
+  - id: CTL-REV-004
+    title: Non-standard contract clauses require legal or finance approval before signature
+    controlType: preventive
+    controlNature: manual
+    frequency: event_driven
+    assertions: [occurrence, cutoff]
+  - id: CTL-REV-005
+    title: Orders are entered only from an authorised customer order and are sequentially numbered
+    controlType: preventive
+    controlNature: automated
+    frequency: per_transaction
+    assertions: [completeness, occurrence]
+  - id: CTL-REV-006
+    title: An open-order report is reviewed for orders not converted to delivery
+    controlType: detective
+    controlNature: it_dependent_manual
+    frequency: weekly
+    assertions: [completeness]
+  - id: CTL-REV-007
+    title: The system derives price from the contract or approved price list and blocks manual entry
+    controlType: preventive
+    controlNature: automated
+    frequency: per_transaction
+    assertions: [accuracy]
+  - id: CTL-REV-008
+    title: Discounts above a defined threshold require approval one level above the salesperson
+    controlType: preventive
+    controlNature: it_dependent_manual
+    frequency: per_transaction
+    assertions: [accuracy]
+  - id: CTL-REV-009
+    title: Orders exceeding the credit limit are blocked by the system and released only by credit control
+    controlType: preventive
+    controlNature: automated
+    frequency: per_transaction
+    assertions: [accuracy_valuation_allocation]
+  - id: CTL-REV-010
+    title: Amendments to confirmed orders are logged and reviewed
+    controlType: detective
+    controlNature: it_dependent_manual
+    frequency: monthly
+    assertions: [accuracy, occurrence]
+  - id: CTL-REV-011
+    title: Credit limits are re-assessed at a defined frequency against current exposure
+    controlType: detective
+    controlNature: manual
+    frequency: annual
+    assertions: [accuracy_valuation_allocation]
+  - id: CTL-REV-012
+    title: The aged receivables listing is reviewed and overdue balances escalated with documented follow-up
+    controlType: detective
+    controlNature: it_dependent_manual
+    frequency: monthly
+    assertions: [accuracy_valuation_allocation]
+  - id: CTL-REV-013
+    title: Goods are despatched only against an approved order and proof of delivery is retained
+    controlType: preventive
+    controlNature: manual
+    frequency: per_transaction
+    assertions: [occurrence]
+  - id: CTL-REV-014
+    title: Third-party logistics despatch data is reconciled to internal delivery records
+    controlType: detective
+    controlNature: it_dependent_manual
+    frequency: monthly
+    assertions: [occurrence, completeness]
+  - id: CTL-REV-015
+    title: A delivered-not-invoiced report is reviewed and cleared
+    controlType: detective
+    controlNature: it_dependent_manual
+    frequency: weekly
+    assertions: [completeness]
+  - id: CTL-REV-016
+    title: Progress estimates for over-time revenue are reviewed and approved by someone independent of delivery
+    controlType: detective
+    controlNature: manual
+    frequency: monthly
+    assertions: [accuracy, occurrence]
+  - id: CTL-REV-017
+    title: Invoices are generated automatically from the delivery record without manual re-entry
+    controlType: preventive
+    controlNature: automated
+    frequency: per_transaction
+    assertions: [accuracy, occurrence]
+  - id: CTL-REV-018
+    title: The invoice sequence is checked for gaps and duplicates
+    controlType: detective
+    controlNature: it_dependent_manual
+    frequency: monthly
+    assertions: [completeness, occurrence]
+  - id: CTL-REV-019
+    title: Price overrides are blocked by configuration, or produce an exception report that is reviewed
+    controlType: detective
+    controlNature: it_dependent_manual
+    frequency: monthly
+    assertions: [accuracy, occurrence]
+  - id: CTL-REV-020
+    title: Manual invoices require approval by finance before despatch
+    controlType: preventive
+    controlNature: manual
+    frequency: per_transaction
+    assertions: [occurrence, accuracy]
+  - id: CTL-REV-021
+    title: The revenue recognition policy is documented and applied through system configuration per revenue stream
+    controlType: preventive
+    controlNature: automated
+    frequency: per_transaction
+    assertions: [occurrence, cutoff, accuracy]
+  - id: CTL-REV-022
+    title: The billing sub-ledger is reconciled to the general ledger revenue account
+    controlType: detective
+    controlNature: it_dependent_manual
+    frequency: monthly
+    assertions: [completeness, accuracy]
+  - id: CTL-REV-023
+    title: The deferred revenue schedule is prepared and reviewed at period end
+    controlType: detective
+    controlNature: manual
+    frequency: monthly
+    assertions: [cutoff, accuracy_valuation_allocation]
+  - id: CTL-REV-024
+    title: Manual journals to revenue require preparer and independent approver, and are reviewed at period end
+    controlType: preventive
+    controlNature: it_dependent_manual
+    frequency: event_driven
+    assertions: [occurrence, accuracy, cutoff]
+  - id: CTL-REV-025
+    title: Credit notes require approval by value and must reference the original invoice
+    controlType: preventive
+    controlNature: it_dependent_manual
+    frequency: per_transaction
+    assertions: [occurrence, cutoff]
+  - id: CTL-REV-026
+    title: Returns are matched to goods physically received before a credit is raised
+    controlType: preventive
+    controlNature: manual
+    frequency: per_transaction
+    assertions: [occurrence, completeness]
+  - id: CTL-REV-027
+    title: Rebate and bonus accruals are recalculated from contract terms and approved at period end
+    controlType: detective
+    controlNature: manual
+    frequency: monthly
+    assertions: [accuracy, cutoff]
+  - id: CTL-REV-028
+    title: Bank receipts are matched to invoices daily and unapplied cash is investigated
+    controlType: detective
+    controlNature: it_dependent_manual
+    frequency: daily
+    assertions: [existence, accuracy]
+  - id: CTL-REV-029
+    title: Receivable write-offs require approval above a defined threshold
+    controlType: preventive
+    controlNature: manual
+    frequency: event_driven
+    assertions: [existence, accuracy_valuation_allocation]
+  - id: CTL-REV-030
+    title: The expected credit loss calculation is reviewed and approved by the financial controller
+    controlType: detective
+    controlNature: manual
+    frequency: quarterly
+    assertions: [accuracy_valuation_allocation]
+  - id: CTL-REV-031
+    title: Period-end cut-off procedures compare despatch and invoice dates either side of the reporting date
+    controlType: detective
+    controlNature: manual
+    frequency: monthly
+    assertions: [cutoff, occurrence, completeness]
+  - id: CTL-REV-032
+    title: Privileged access to pricing and master data is reviewed periodically against a user listing
+    controlType: detective
+    controlNature: it_dependent_manual
+    frequency: quarterly
+    assertions: [accuracy, occurrence]
+  - id: CTL-REV-033
+    title: Management reviews revenue and margin against budget and prior period, investigating variances above a threshold
+    controlType: detective
+    controlNature: it_dependent_manual
+    frequency: monthly
+    assertions: [completeness, accuracy, occurrence]

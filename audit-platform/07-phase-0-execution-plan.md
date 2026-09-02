@@ -440,100 +440,224 @@ Therefore:
 
 ## 7.8 Metrics and thresholds
 
-### Automatic — run on every suite execution
+Six primary metrics, each with its own pass/fail. **They are never collapsed into one
+preference number.** The distinction that governs the whole protocol:
+
+> **B vs A tests the raw Audit Intelligence Engine. C vs A tests the commercial product
+> hypothesis.** Auditors preferring the existing working paper to raw AI output, while
+> preferring the reviewed AI output to the existing paper *and* spending materially less time
+> to get there, is a **strong product success** — not a mixed result.
+
+Notation: **A** = the firm's original working paper · **B** = raw engine output ·
+**C** = engine output after an auditor's review pass.
+
+### M1 — Raw AI quality (B vs A) · *diagnostic, not a gate*
+
+| | |
+|---|---|
+| **Measure** | Share of rater × case rankings in which **B is ranked at or above A** |
+| **Secondary** | Per-criterion mean scores for B against A: completeness, audit relevance, clarity, conciseness, traceability |
+| **Target** | ≥ 45% — good raw engine |
+| **Acceptable** | 25–45% — expected; a raw draft losing to a finished, reviewed working paper is the normal case |
+| **Concern threshold** | **< 20%** — the engine is a weak drafter. Not a stop on its own, but it makes M3 and M4 decisive |
+| **Never a gate** | A failing M1 with a passing M2 and M3 is a success, and the plan must not quietly treat it otherwise |
+
+### M2 — AI-assisted final quality (C vs A) · **the primary product gate**
+
+| | |
+|---|---|
+| **Measure** | Share of rater × case rankings in which **C is ranked at or above A** |
+| **Pass** | **≥ 70% at-or-above, and ≥ 50% strictly above** |
+| **Marginal** | 55–70% at-or-above — iterate, do not proceed to Phase 1 on this alone |
+| **Fail** | < 55% |
+| **Why both figures** | "At or above" alone can be met by C being merely inoffensive; "strictly above" is what makes the product worth paying for |
+
+### M3 — Editing time, B → C
+
+| | |
+|---|---|
+| **Measure** | Median wall-clock minutes for an auditor to make B file-ready, timed by the editor |
+| **Baseline** | The firm's own authoring-plus-review time for the same process, obtained from the design partner (typically 3–6 hours) |
+| **Pass** | **Median ≤ 45 minutes**, *and* ≤ 40% of the firm's baseline, *and* no single case above 90 minutes |
+| **Marginal** | Median 45–75 minutes |
+| **Fail** | Median > 75 minutes, or more than one case above 90 |
+| **Note** | Time is the commercial argument. A C that beats A but takes three hours to produce has no business case |
+
+### M4 — Nature and severity of B → C edits · *the polish-versus-broken diagnostic*
+
+Every edit made while producing C is classified. This is what tells you whether the engine
+needs polishing or is fundamentally wrong, and it is worth more than any single score.
+
+| Category | Meaning |
+|---|---|
+| `stylistic` | Wording, tone, house style. No change of meaning |
+| `conciseness` | Cutting redundancy or length |
+| `clarification` | Correct but ambiguous; made precise |
+| `structural` | Content moved between sections; order changed |
+| `missing_content_addition` | Auditor adds a risk, control, process step or fact the engine did not produce |
+| `risk_control_correction` | A risk or control misidentified, misclassified, or wrongly linked |
+| `methodology_correction` | Wrong assertion, wrong inherent-risk factor or rating, misapplied standard, wrong control nature or frequency |
+| `unsupported_claim_correction` | The document asserts something the source does not support, or misreads what it does say |
+| `deletion_irrelevant` | Generated content removed as not relevant to this engagement |
+
+Severity per edit: `trivial` · `moderate` · **`material`** — where *material* means it would
+have been a review point, or would have been an audit-quality issue if left in the file.
+
+| Threshold | Value |
+|---|---|
+| Material edits per case | **≤ 3** |
+| **Material `unsupported_claim_correction`** | **0 — hard fail** (see M5) |
+| Material `methodology_correction` + `risk_control_correction` | ≤ 2 per case |
+| **Polish signal** | `stylistic` + `conciseness` + `clarification` + `structural` ≥ **60%** of all edits → the engine is sound and needs tuning |
+| **Fundamental signal** | `methodology_correction` + `risk_control_correction` + `missing_content_addition` ≥ **40%** of all edits, or > 6 material edits per case → engine or pack defect. Do not proceed to Phase 1 until addressed; triage each one as pack gap or model failure per §7.3 |
+
+Recording: the editor works in `.docx` with tracked changes on and logs each change in a
+one-line CSV — `case, location, category, severity, note`. Roughly 15 minutes of logging per
+case, and it is the richest artefact Phase 0 produces.
+
+### M5 — Grounding and unsupported claims
+
+Two layers, because they catch different failures.
+
+| Layer | Measure | Threshold |
+|---|---|---|
+| **Automatic** (`validateGrounding`) | Refs resolve to a real span in this case; quote matches after normalisation; no ref points outside the case | **100% · cross-case leakage 0 · hard fail** |
+| **Automatic** | `needs_source` objects rendered as supported in the assembled paper | **0 · hard fail** |
+| **Human** (from M4) | Material `unsupported_claim_correction` edits | **0 · hard fail** |
+
+**Why the human layer is not redundant.** The validator proves a quote exists and was cited.
+It cannot prove the *inference drawn from that quote* is right — an object can be perfectly
+grounded to a real sentence and still misread it. Only an auditor catches that, which is why
+the M4 category exists and why its threshold is zero rather than low.
+
+### M6 — Coverage and risk/control recall · *automatic, every suite run*
 
 | Metric | Definition | Threshold |
 |---|---|---|
-| Schema validity | Objects passing their Zod schema | **100%** |
-| Grounding integrity | Refs resolving to a real span in this case, quote matching | **100%** |
-| Cross-case leakage | Refs pointing outside the case | **0 — hard fail** |
-| Unsupported claims in the assembled paper | `needs_source` objects rendered as supported | **0** |
-| Mandatory item completion | Mandatory coverage items resolved or explicitly recorded open | **100%** |
-| Coverage recall | Items the engine marked covered that the SME agrees are covered | **≥ 85%** |
-| Coverage precision | Items marked covered that the SME disputes | **≤ 10% disputed** |
-| Risk recall vs firm | Ground-truth risks from the firm's paper that the engine found | **≥ 85%** |
-| Risk recall vs expert-augmented | Including what the SME added | **≥ 75%** |
-| Risk precision | Generated risks the SME rates relevant | **≥ 75%** |
-| Control recall / false positives | Against the firm's paper plus SME additions | **≥ 80% / ≤ 20%** |
-| Assertion mapping accuracy | Exact-set match against SME labels | **≥ 85%** |
-| Missing-fact detection | Facts an experienced auditor would still need, that the engine flagged | **≥ 70%** |
-| Run-to-run variance | Standard deviation of risk recall over 3 runs of the same case | **≤ 5 pp** |
-| Cost per case | From the run manifest | **≤ €2** |
-| Wall-clock per case | Serial, all stages | **≤ 6 min** |
+| Schema validity | Objects passing their Zod schema | 100% |
+| Mandatory item completion | Mandatory coverage items resolved or explicitly recorded open | 100% |
+| Coverage recall | Items marked covered that the SME agrees are covered | ≥ 85% |
+| Coverage precision | Items marked covered that the SME disputes | ≤ 10% disputed |
+| Risk recall vs firm (A) | Ground-truth risks in the firm's paper that the engine found | ≥ 85% |
+| Risk recall vs expert-augmented | Including what the SME added to the firm's paper | ≥ 75% |
+| Risk precision | Generated risks the SME rates relevant | ≥ 75% |
+| Control recall / false positives | Against the firm's paper plus SME additions | ≥ 80% / ≤ 20% |
+| Assertion mapping accuracy | Exact-set match against SME labels | ≥ 85% |
+| Missing-fact detection | Facts an experienced auditor would still need, that the engine flagged | ≥ 70% |
+| Run-to-run variance | Standard deviation of risk recall over 3 runs of the same case | ≤ 5 pp |
+| Cost / wall-clock per case | From the run manifest | ≤ €2 · ≤ 6 min |
 
-**Variance is not optional.** With a threshold at 85%, a single run that scores 87% tells you
-very little if the run-to-run spread is 9 points. Run the dev set three times before trusting
-any number, and report means with spread throughout.
+**Variance is not optional.** With a threshold at 85%, a single run scoring 87% means little
+if the run-to-run spread is 9 points. Run the dev set three times before trusting any number,
+and report means with spread throughout.
 
-### Human — the gate itself
+### Gate decision
 
-| Metric | Threshold |
+**Hard fails — no discussion, regardless of every other result:**
+cross-case leakage > 0 · automatic grounding integrity < 100% · unsupported claims rendered as
+supported > 0 · material `unsupported_claim_correction` > 0 · blinding integrity ≥ 80%
+(§7.9 — above that, the preference numbers are unreliable and the test is re-run, not reported).
+
+**Gate passes** when: no hard fail, **M2 passes**, **M3 passes**, M4 shows the polish signal or
+better, and at least eight of the twelve M6 metrics are at threshold with the remainder within
+five points. **M1 does not gate.**
+
+### Stop rules — stated per comparison
+
+The earlier single "< 40% blind preference" rule was under-specified. It refers to **M2**:
+
+| Condition after three full iteration cycles (≈6 weeks of engine work) | Verdict |
 |---|---|
-| Blind preference: our document (raw or reviewed) preferred or judged equal to the firm's | **≥ 60%** of rater × case judgements |
-| Blind preference: **reviewed** version vs the firm's | **> 50% preferred** — if the reviewed version cannot beat the firm's own paper, the workflow does not work |
-| Expected review effort: reviewed version vs authoring from scratch | **≥ 40% lower**, self-reported and, where possible, timed |
-| Blinding integrity | Raters correctly identify the AI document **< 80%** of the time — above that, the format blinding failed and the preference numbers are unreliable |
+| **M2 (C vs A) at-or-above < 40%** | **Stop.** The product hypothesis has failed: even with an auditor's review pass, the output is not competitive with what the firm already produces. Reconsider the product, not the prompts |
+| M2 40–55% **and** M4 shows the fundamental signal | **Iterate on methodology, not prompts.** The pack is the likely defect |
+| M2 ≥ 70% but **M1 < 20%** and **M3 median > 60 min** | **Continue** — the workflow works and the drafter is weak. Phase 1 emphasis shifts to review ergonomics rather than generation quality |
+| M2 ≥ 70% and M3 passes, M1 anywhere | **Proceed to Phase 1.** This is the success case, including when raw output loses to the firm's paper |
+| Material methodology or risk/control edits > 6 per case | **Do not proceed** regardless of M2 — fix the pack or the stage first |
 
-### Pass / fail logic
-
-- **Hard fails, no discussion:** cross-case leakage > 0; grounding integrity < 100%;
-  unsupported claims in an assembled paper > 0; blinding integrity ≥ 80%.
-- **Gate passes** when: all hard checks clean, **and** the blind preference thresholds are met,
-  **and** at least seven of the nine automatic quality metrics are at threshold with the
-  remainder within five points.
-- **Stop rule.** If after three full iteration cycles (roughly six weeks of engine work) blind
-  preference is below 40%, stop and reconsider the product rather than grinding on prompts.
-  Write down now what you would do in that case; deciding it in advance is what makes the stop
-  rule real.
+Write the stop rule down before running the test. Deciding it in advance is what makes it
+real, and it is the single hardest commitment to keep once results start arriving.
 
 ---
 
 ## 7.9 The blind preference test protocol
 
-The most important experiment in the phase. Design it once, properly.
+The most important experiment in the phase. Designed once, properly, and locked before the
+first document is rendered.
 
 **Materials.** For each of 6 real (C1) cases, three documents:
 
 - **A** — the firm's original working paper.
 - **B** — raw engine output, unedited.
-- **C** — engine output after an auditor's review pass (see below).
+- **C** — engine output after an auditor's review pass.
 
 All rendered in the neutral template (§7.7), entity names pseudonymised consistently across
 all three, labelled only `Document 1 / 2 / 3` with the mapping randomised per rater per case.
 
-**Producing variant C without building a review workspace.** Export B to `.docx`, hand it to
-an auditor who is *not* one of the raters, and ask them to make it file-ready. Time the edit.
-This gives variant C and the review-effort measurement in one step — and it is the reason a
-review UI is not needed in Phase 0.
+**Producing C, and measuring M3 and M4 at the same time.** Export B to `.docx` with tracked
+changes on, hand it to an auditor who is *not* one of the raters, and ask them to make it
+file-ready in a single pass. Time the edit (**M3**) and have them log each change with its
+category and severity (**M4**). This produces variant C, the time measurement and the edit
+taxonomy in one step — and it is the reason a review workspace is not needed in Phase 0.
+Time-box the pass at 90 minutes; if they run out, record it as an overrun rather than letting
+the edit become a rewrite.
 
-**Raters.** 6–9 experienced auditors (senior to manager level) across the three design
-partners. Each rater scores 3 cases × 3 documents ≈ 9 documents ≈ 2 hours. Six raters × 3
-cases gives three independent ratings per case. **No rater scores a case from their own firm** —
-they would recognise their own working paper, and the blinding collapses.
+**Raters.** **Six** independent experienced auditors (senior to manager level) across the three
+design partners. Each rates 3 cases × 3 documents ≈ 9 documents ≈ 2 hours, giving three
+independent ratings per case and 18 rater × case judgements per comparison.
 
-**Instructions to raters.** "These working papers were prepared by different teams. Score each
-on the criteria below, then answer the preference question." Nothing about AI until the final
-question.
+> **Six is sufficient, and the result is directional product evidence — not statistical
+> proof.** Eighteen judgements around a 70% result carry a confidence interval of roughly
+> ±20 points. Report it as a direction with its spread, never with a p-value that implies more
+> than is there. **Do not expand the sample at the expense of speed**; a larger study that
+> lands three weeks later is worse than a directional answer now, because the decision it
+> informs is "build the prototype or not", not "publish".
 
-**Scoring, 1–7 per criterion:** completeness · audit relevance · clarity · conciseness ·
-traceability of conclusions to source · *expected review effort* (asked as: "how many minutes
-of your time to make this file-ready?" — a number, not a scale).
+**Rater assignment.** No rater scores a case from their own firm — they would recognise their
+own working paper and the blinding collapses. Cross-assign across the three partners.
 
-**Then, per case:** "Which document would you rather start from?" (forced choice) and
-"What is missing from your preferred document?" (free text — this is the richest output of the
-whole experiment and the best backlog you will get).
+**The rating task**, per case:
 
-**Finally, once, at the very end:** "Do you think any of these were AI-generated? Which?" —
-the blinding integrity check. Ask it last so it cannot contaminate the scoring.
+1. **Rank all three documents 1–3** on "which would you rather start from". The ranking is
+   what yields both primary comparisons: M1 is derived from B's position relative to A, M2
+   from C's position relative to A. A single three-way forced choice would not.
+2. **Score each document 1–7** on: completeness · audit relevance · clarity · conciseness ·
+   traceability of conclusions to source.
+3. **Estimate review effort** for each document as a number: "how many minutes of your time to
+   make this file-ready?" — a figure, not a scale. This is the rater-estimated counterpart to
+   the measured M3.
+4. **Free text:** "What is missing from your top-ranked document?" This produces the richest
+   output of the whole experiment and the best Phase 1 backlog you will get.
 
-**Analysis.** Primary endpoint: proportion of rater × case judgements where B or C is preferred
-or equal to A. Secondary: mean review-effort minutes by document type; per-criterion means;
-the free-text themes. Report spread, not just means — with six raters this is a directional
-experiment, and saying so plainly is what makes it credible rather than overclaimed.
+**Instructions to raters.** "These working papers were prepared by different teams." Nothing
+about AI until the very end.
 
-**Known confound, stated in the write-up:** whoever produced C has seen B, so C inherits B's
-framing. Mitigate by using a different auditor for the edit than for the rating, and time-box
-the edit to 45 minutes so C is a realistic review rather than a rewrite.
+**Blinding integrity check — asked once, last.** "Do you think any of these were
+AI-generated? Which?" If raters identify the AI documents in **≥ 80%** of cases, the format
+blinding failed: the preference numbers are unreliable, and the correct response is to fix the
+rendering and re-run rather than to report the result with a caveat.
+
+**Analysis.**
+
+| Output | Derived from |
+|---|---|
+| M1 — B at or above A | Rankings, share across 18 rater × case judgements |
+| M2 — C at or above A, and C strictly above A | Rankings, same denominator |
+| M3 — median edit minutes, and ratio to the firm's baseline | The editor's timing |
+| M4 — edit distribution by category and severity | The editor's change log |
+| Per-criterion profile | Mean 1–7 scores by document type, with spread |
+| Rater-estimated review effort | Question 3, by document type |
+| Blinding integrity | The final question |
+
+Report means **with spread**, and state the sample size beside every percentage.
+
+**Known confounds, stated in the write-up rather than hidden:**
+
+- Whoever produced C has seen B, so C inherits B's framing and structure. Mitigated by using a
+  different auditor for the edit than for the ratings, and by the 90-minute time-box.
+- A is a finished, reviewed, filed document; B is a first draft. That asymmetry is the whole
+  point of separating M1 from M2 — and it is why M1 is diagnostic rather than a gate.
+- Synthetic cases are excluded from the blind test entirely. Only real (C1) cases with a
+  genuine firm working paper are used, because A must be authentic.
 
 ---
 

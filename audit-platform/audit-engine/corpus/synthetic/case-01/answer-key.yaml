@@ -1,0 +1,108 @@
+# Ground truth for case-01. The engine never sees this file.
+# Sources: "planted" = deliberately built into the transcript when authored.
+# In real cases, "firm_working_paper" = what the firm's own paper contained,
+# "sme_addition" = what the SME says a competent auditor should also have found.
+risks:
+  - libraryRef: RSK-REV-021
+    title: Unauthorised price overrides by sales, with no approval and no review of the override report
+    assertions: [accuracy, occurrence]
+    source: planted
+  - libraryRef: RSK-REV-007
+    title: Goods despatched by the logistics provider are not invoiced and not recorded
+    assertions: [completeness]
+    source: planted
+  - libraryRef: RSK-REV-008
+    title: Emailed orders are not captured in the ERP and the sale is never recorded
+    assertions: [completeness]
+    source: planted
+  - libraryRef: RSK-REV-043
+    title: The third-party logistics despatch file is incomplete and the shortfall is not detected
+    assertions: [completeness, occurrence]
+    source: planted
+  - libraryRef: RSK-REV-024
+    title: The commercial director can raise credit limits unilaterally
+    assertions: [accuracy_valuation_allocation]
+    source: planted
+  - libraryRef: RSK-REV-006
+    title: Cut-off review at period end is undocumented and performed by one person
+    assertions: [cutoff]
+    source: planted
+  - libraryRef: RSK-REV-033
+    title: Goodwill credit notes need not reference an original invoice
+    assertions: [occurrence, cutoff]
+    source: planted
+  - libraryRef: RSK-REV-029
+    title: The volume rebate accrual is prepared and released by one person with no review
+    assertions: [accuracy, cutoff]
+    source: planted
+  - libraryRef: RSK-REV-030
+    title: Manual journals to revenue are prepared and approved reciprocally by two people
+    assertions: [occurrence, accuracy, cutoff]
+    source: planted
+  - libraryRef: RSK-REV-026
+    title: Commission on invoiced revenue, a turnover-linked bonus and an EBITDA covenant create incentive pressure
+    assertions: [occurrence, cutoff]
+    source: planted
+  - libraryRef: RSK-REV-042
+    title: Price list and customer master data access is unreviewed
+    assertions: [accuracy, occurrence]
+    source: planted
+  - libraryRef: RSK-REV-002
+    title: Deferred tooling revenue is released at the controller's own discretion
+    assertions: [occurrence, cutoff]
+    source: planted
+controls:
+  - libraryRef: CTL-REV-008
+    title: Discounts above ten per cent are blocked by the system until the commercial director releases them
+    source: planted
+  - libraryRef: CTL-REV-009
+    title: Orders exceeding the credit limit are blocked and released only by credit control
+    source: planted
+  - libraryRef: CTL-REV-017
+    title: Invoices are generated automatically overnight from the despatch record with no re-keying
+    source: planted
+  - libraryRef: CTL-REV-012
+    title: The aged receivables listing is reviewed monthly by the controller and credit control
+    source: planted
+  - libraryRef: CTL-REV-025
+    title: Credit notes are approved by the sales manager, and by the controller above five thousand euro
+    source: planted
+  - libraryRef: CTL-REV-024
+    title: Journals above twenty-five thousand euro require a second approver in the ERP
+    source: planted
+  - libraryRef: CTL-REV-033
+    title: The finance director reviews revenue and gross margin against budget and prior year monthly
+    source: planted
+coveredItems:
+  - R2.1
+  - R2.2
+  - R3.1
+  - R3.2
+  - R4.1
+  - R5.1
+  - R5.3
+  - R5.4
+  - R6.1
+  - R6.2
+  - R7.1
+  - R9.1
+  - R10.1
+  - R11.1
+  - R11.3
+  - R12.1
+expectedMissing:
+  # Facts an experienced auditor would still need after this conversation.
+  - R1.1::master_data_approval
+  - R1.3::unusual_terms_types
+  - R4.3::unbilled_delivery_report
+  - R5.3::exception_handling
+  - R10.2::interface_error_handling
+  - R10.4::privileged_access_review
+  - R10.5::assurance_report
+  - R12.1::review_precision
+notes: |
+  Deliberate omissions in the transcript: no ISAE 3402 / SOC 1 report is mentioned for the
+  logistics provider; nothing is said about bill-and-hold, consignment or rights of return;
+  no report reconciles emailed orders to entered orders; and there is no delivered-not-invoiced
+  report. A strong engine should raise all four as gaps or follow-up questions rather than
+  passing over them.

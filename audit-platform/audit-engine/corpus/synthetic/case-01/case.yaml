@@ -1,0 +1,18 @@
+caseId: case-01
+engagementId: eng-syn-01
+title: Product sales, single ERP, automated order-to-invoice
+set: dev
+origin: synthetic
+sourceClass: C0
+language: en
+stresses:
+  - baseline order-to-cash
+  - price override without approval
+  - no delivered-not-invoiced report
+  - third-party logistics
+  - month-end manual journal
+clientProfile: |
+  Manufacturer and wholesaler of industrial fasteners. Single Dutch entity, IFRS reporting.
+  Revenue approximately EUR 40m, entirely product sales to trade customers.
+  ERP: Microsoft Dynamics 365 Business Central (order, delivery, invoice, general ledger).
+  Warehousing and despatch outsourced to a third-party logistics provider since March.

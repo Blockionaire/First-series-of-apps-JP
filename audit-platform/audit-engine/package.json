@@ -1,0 +1,16 @@
+{
+  "name": "audit-engine",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run",
+    "engine": "tsx apps/cli/src/index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.23.13",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.11"
+  }
+}

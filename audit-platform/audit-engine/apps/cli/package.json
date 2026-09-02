@@ -1,0 +1,13 @@
+{
+  "name": "@audit/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@audit/domain": "workspace:*",
+    "@audit/engine": "workspace:*",
+    "@audit/evals": "workspace:*",
+    "@audit/methodology": "workspace:*",
+    "commander": "^15.0.0"
+  }
+}

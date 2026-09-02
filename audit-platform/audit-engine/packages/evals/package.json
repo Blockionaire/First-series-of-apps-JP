@@ -1,0 +1,15 @@
+{
+  "name": "@audit/evals",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@audit/domain": "workspace:*",
+    "@audit/engine": "workspace:*",
+    "@audit/methodology": "workspace:*",
+    "yaml": "^2.6.1",
+    "zod": "^4.1.12"
+  }
+}

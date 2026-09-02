@@ -1,0 +1,651 @@
+# Revenue / order-to-cash methodology pack — v0.1.0 (Phase 0 minimum, 07 §7.3)
+#
+# SME REVIEW FORMAT: mark each coverage item keep / reword / delete / missing.
+# Two sub-processes per hour is realistic once the format settles.
+#
+# 45 coverage items across 12 sub-processes. Target for v1.0 is 55-70; this is the
+# Phase 0 minimum, and any risk in a corpus working paper that no item here would
+# elicit is a PACK GAP, not a model failure (07 §7.3).
+pack: revenue
+version: 0.1.0
+frameworks: [ifrs15, nl_gaap_rj270]
+language: en
+
+subProcesses:
+  - id: R1
+    name: Customer and contract acceptance
+    applicability: always
+    coverageItems:
+      - id: R1.1
+        mandatory: false
+        questionIntent: "How does a new customer come into the system, and who controls the master data?"
+        mustKnowFacts: [customer_acceptance_owner, master_data_creator, master_data_approval, standing_data_change_control]
+        assertions: [occurrence, accuracy]
+        standardRef: "ISA 315R.25"
+        typicalRisks: [RSK-REV-001]
+        typicalControls: [CTL-REV-001, CTL-REV-002]
+        followUpTriggers:
+          - id: R1.1.T1
+            when: { missing: [customer_acceptance_owner] }
+            ask: "Who decides whether to take on a new customer, and what do they look at before saying yes?"
+            priority: high
+          - id: R1.1.T2
+            when: { present: [master_data_creator], missing: [master_data_approval] }
+            ask: "When someone creates or changes a customer record, does anyone else check or approve it?"
+            priority: high
+      - id: R1.2
+        mandatory: false
+        questionIntent: "How is customer creditworthiness assessed at onboarding?"
+        mustKnowFacts: [credit_assessment_basis, credit_limit_setter, limit_approval_threshold]
+        assertions: [accuracy_valuation_allocation]
+        standardRef: "ISA 315R.25"
+        typicalRisks: [RSK-REV-024]
+        typicalControls: [CTL-REV-003]
+        followUpTriggers:
+          - id: R1.2.T1
+            when: { missing: [credit_assessment_basis] }
+            ask: "What information do you use to judge whether a new customer will pay?"
+            priority: medium
+      - id: R1.3
+        mandatory: true
+        questionIntent: "What contract terms exist, and who approves anything non-standard?"
+        mustKnowFacts: [standard_terms_source, non_standard_clause_approver, unusual_terms_types]
+        assertions: [occurrence, cutoff, accuracy]
+        standardRef: "ISA 315R.25; ISA 240.26; IFRS 15.9"
+        typicalRisks: [RSK-REV-005, RSK-REV-026]
+        typicalControls: [CTL-REV-004]
+        followUpTriggers:
+          - id: R1.3.T1
+            when: { missing: [unusual_terms_types] }
+            ask: "Do any customers have arrangements outside the standard terms — bill-and-hold, consignment, a right of return, or side letters agreed by sales?"
+            priority: mandatory
+          - id: R1.3.T2
+            when: { present: [unusual_terms_types], missing: [non_standard_clause_approver] }
+            ask: "Who has to sign off before a non-standard clause is agreed with a customer?"
+            priority: mandatory
+      - id: R1.4
+        mandatory: false
+        questionIntent: "Which revenue streams exist and under which reporting framework are they recognised?"
+        mustKnowFacts: [revenue_streams, framework_applied]
+        assertions: [classification, presentation]
+        standardRef: "ISA 315R.19; IFRS 15"
+        typicalRisks: [RSK-REV-027]
+        typicalControls: []
+        followUpTriggers:
+          - id: R1.4.T1
+            when: { missing: [revenue_streams] }
+            ask: "What different kinds of revenue does the company have, and roughly how big is each?"
+            priority: high
+
+  - id: R2
+    name: Order entry
+    applicability: always
+    coverageItems:
+      - id: R2.1
+        mandatory: false
+        questionIntent: "Through which channels do orders arrive and where are they first recorded?"
+        mustKnowFacts: [order_channels, order_system, capture_completeness_control]
+        assertions: [completeness, occurrence]
+        standardRef: "ISA 315R.25"
+        typicalRisks: [RSK-REV-007]
+        typicalControls: [CTL-REV-005, CTL-REV-006]
+        followUpTriggers:
+          - id: R2.1.T1
+            when: { missing: [capture_completeness_control] }
+            ask: "How would you know if an order that a customer placed never made it into the system?"
+            priority: high
+      - id: R2.2
+        mandatory: false
+        questionIntent: "Where does the price on an order come from, and who may discount?"
+        mustKnowFacts: [price_source, discount_authority, discount_limits]
+        assertions: [accuracy]
+        standardRef: "ISA 315R.25"
+        typicalRisks: [RSK-REV-014, RSK-REV-021]
+        typicalControls: [CTL-REV-007, CTL-REV-008]
+        followUpTriggers:
+          - id: R2.2.T1
+            when: { missing: [price_source] }
+            ask: "Where does the system take the price from — the contract, a price list, or whatever is typed on the order?"
+            priority: high
+          - id: R2.2.T2
+            when: { present: [discount_authority], missing: [discount_limits] }
+            ask: "Is there a limit on the discount someone can give before it needs approval?"
+            priority: high
+      - id: R2.3
+        mandatory: false
+        questionIntent: "What stops an order being accepted, and who can release a blocked order?"
+        mustKnowFacts: [blocking_rules, block_release_authority]
+        assertions: [occurrence, accuracy_valuation_allocation]
+        standardRef: "ISA 315R.26"
+        typicalRisks: [RSK-REV-024]
+        typicalControls: [CTL-REV-009]
+        followUpTriggers:
+          - id: R2.3.T1
+            when: { present: [blocking_rules], missing: [block_release_authority] }
+            ask: "When an order is blocked, who can release it, and is that release recorded anywhere?"
+            priority: high
+      - id: R2.4
+        mandatory: false
+        questionIntent: "Can an order be changed after entry, and is that visible?"
+        mustKnowFacts: [order_amendment_control]
+        assertions: [accuracy, occurrence]
+        standardRef: "ISA 315R.26"
+        typicalRisks: [RSK-REV-021]
+        typicalControls: [CTL-REV-010]
+        followUpTriggers: []
+
+  - id: R3
+    name: Credit management
+    applicability: always
+    coverageItems:
+      - id: R3.1
+        mandatory: false
+        questionIntent: "Who maintains credit limits and how are changes controlled?"
+        mustKnowFacts: [limit_change_owner, limit_change_approval, limit_review_frequency]
+        assertions: [accuracy_valuation_allocation]
+        standardRef: "ISA 315R.26"
+        typicalRisks: [RSK-REV-024]
+        typicalControls: [CTL-REV-003, CTL-REV-011]
+        followUpTriggers:
+          - id: R3.1.T1
+            when: { present: [limit_change_owner], missing: [limit_change_approval] }
+            ask: "Can the person who sets a credit limit also raise it without anyone else approving?"
+            priority: high
+      - id: R3.2
+        mandatory: false
+        questionIntent: "Is credit blocking automated, and what evidence exists that releases are authorised?"
+        mustKnowFacts: [automatic_block_exists, release_authority, release_evidence]
+        assertions: [accuracy_valuation_allocation]
+        standardRef: "ISA 315R.26; ISA 500.9"
+        typicalRisks: [RSK-REV-024]
+        typicalControls: [CTL-REV-009]
+        followUpTriggers:
+          - id: R3.2.T1
+            when: { present: [release_authority], missing: [release_evidence] }
+            ask: "If I wanted to see that a particular credit release was properly authorised, what would you show me?"
+            priority: high
+      - id: R3.3
+        mandatory: false
+        questionIntent: "How are overdue balances monitored and escalated?"
+        mustKnowFacts: [overdue_report_owner, review_frequency, escalation]
+        assertions: [accuracy_valuation_allocation]
+        standardRef: "ISA 315R.26"
+        typicalRisks: [RSK-REV-025]
+        typicalControls: [CTL-REV-012]
+        followUpTriggers:
+          - id: R3.3.T1
+            when: { present: [overdue_report_owner], missing: [escalation] }
+            ask: "What actually happens when a balance appears on that overdue report — who does what, and is it written down?"
+            priority: medium
+
+  - id: R4
+    name: Delivery and performance of the obligation
+    applicability: always
+    coverageItems:
+      - id: R4.1
+        mandatory: true
+        questionIntent: "What does the company have to do before it has earned the revenue?"
+        mustKnowFacts: [delivery_type, performance_trigger]
+        assertions: [occurrence, cutoff]
+        standardRef: "IFRS 15.31; ISA 315R.25"
+        typicalRisks: [RSK-REV-002, RSK-REV-028]
+        typicalControls: [CTL-REV-013]
+        followUpTriggers:
+          - id: R4.1.T1
+            when: { missing: [performance_trigger] }
+            ask: "At what exact moment do you consider the goods delivered or the service performed?"
+            priority: mandatory
+      - id: R4.2
+        mandatory: false
+        questionIntent: "What proves that delivery or performance happened?"
+        mustKnowFacts: [pod_form, pod_system, third_party_logistics]
+        assertions: [occurrence]
+        standardRef: "ISA 500.6"
+        typicalRisks: [RSK-REV-003]
+        typicalControls: [CTL-REV-013, CTL-REV-014]
+        followUpTriggers:
+          - id: R4.2.T1
+            when: { present: [third_party_logistics], missing: [pod_form] }
+            ask: "When a third party ships for you, what do you get back that proves the customer received the goods?"
+            priority: high
+      - id: R4.3
+        mandatory: false
+        questionIntent: "How is a delivery connected to an invoice, and how would an unbilled delivery be found?"
+        mustKnowFacts: [delivery_invoice_link, unbilled_delivery_report]
+        assertions: [completeness]
+        standardRef: "ISA 315R.25"
+        typicalRisks: [RSK-REV-007]
+        typicalControls: [CTL-REV-015]
+        followUpTriggers:
+          - id: R4.3.T1
+            when: { missing: [unbilled_delivery_report] }
+            ask: "If something were delivered but never invoiced, how and when would that come to light?"
+            priority: high
+      - id: R4.4
+        mandatory: false
+        applicabilityWhen: { valueMatches: { delivery_type: "(?i)over.?time|service|project|contract" } }
+        questionIntent: "For over-time revenue, how is progress measured and who reviews the estimate?"
+        mustKnowFacts: [progress_method, progress_approver, estimate_review]
+        assertions: [occurrence, accuracy]
+        standardRef: "IFRS 15.39-45"
+        typicalRisks: [RSK-REV-028]
+        typicalControls: [CTL-REV-016]
+        followUpTriggers:
+          - id: R4.4.T1
+            when: { missing: [progress_method] }
+            ask: "How do you measure how far through a project or service period you are — hours, milestones, costs incurred?"
+            priority: high
+          - id: R4.4.T2
+            when: { present: [progress_method], missing: [estimate_review] }
+            ask: "Who challenges those estimates, and what would make them change one?"
+            priority: high
+
+  - id: R5
+    name: Invoicing
+    applicability: always
+    coverageItems:
+      - id: R5.1
+        mandatory: false
+        questionIntent: "How are invoices generated and how often?"
+        mustKnowFacts: [invoice_generation_mode, invoice_system, batch_frequency]
+        assertions: [occurrence, completeness]
+        standardRef: "ISA 315R.25"
+        typicalRisks: [RSK-REV-007]
+        typicalControls: [CTL-REV-017]
+        followUpTriggers: []
+      - id: R5.2
+        mandatory: false
+        questionIntent: "What ensures every invoice is recorded once and only once?"
+        mustKnowFacts: [sequence_control, unbilled_check]
+        assertions: [completeness, occurrence]
+        standardRef: "ISA 315R.25"
+        typicalRisks: [RSK-REV-007, RSK-REV-041]
+        typicalControls: [CTL-REV-018]
+        followUpTriggers:
+          - id: R5.2.T1
+            when: { missing: [sequence_control] }
+            ask: "Are invoice numbers sequential, and does anyone check for gaps or duplicates?"
+            priority: medium
+      - id: R5.3
+        mandatory: true
+        questionIntent: "How is the invoice amount derived, and what prevents it from being wrong?"
+        mustKnowFacts: [price_source, quantity_source, who_can_override_price, what_happens_on_override, exception_handling]
+        assertions: [accuracy, occurrence]
+        standardRef: "ISA 315R.25; ISA 500.9"
+        typicalRisks: [RSK-REV-014, RSK-REV-021]
+        typicalControls: [CTL-REV-007, CTL-REV-019]
+        followUpTriggers:
+          - id: R5.3.T1
+            when: { missing: [quantity_source] }
+            ask: "Where does the quantity on the invoice come from — the order, the delivery note, or something else?"
+            priority: mandatory
+          - id: R5.3.T2
+            when: { present: [who_can_override_price], missing: [what_happens_on_override] }
+            ask: "When someone overrides the price, is that approved or logged anywhere, and who looks at it afterwards?"
+            priority: mandatory
+          - id: R5.3.T3
+            when: { status: { price_source: contradictory } }
+            ask: "Earlier the price seemed to come from one place and later from another — can we pin down exactly which source the invoice uses?"
+            priority: high
+      - id: R5.4
+        mandatory: false
+        questionIntent: "Can invoices be raised outside the normal flow?"
+        mustKnowFacts: [manual_invoice_possible, manual_invoice_approver]
+        assertions: [occurrence, accuracy]
+        standardRef: "ISA 240.32"
+        typicalRisks: [RSK-REV-021, RSK-REV-030]
+        typicalControls: [CTL-REV-020]
+        followUpTriggers:
+          - id: R5.4.T1
+            when: { present: [manual_invoice_possible], missing: [manual_invoice_approver] }
+            ask: "Who can raise an invoice by hand, and does anybody approve it before it goes out?"
+            priority: high
+      - id: R5.5
+        mandatory: false
+        questionIntent: "How is VAT or sales tax determined on an invoice?"
+        mustKnowFacts: [tax_determination_source]
+        assertions: [accuracy, classification]
+        standardRef: "ISA 315R.25"
+        typicalRisks: [RSK-REV-015]
+        typicalControls: []
+        followUpTriggers: []
+
+  - id: R6
+    name: Revenue recognition
+    applicability: always
+    coverageItems:
+      - id: R6.1
+        mandatory: true
+        questionIntent: "When is revenue recognised, and against which performance obligation?"
+        mustKnowFacts: [framework, recognition_point, performance_obligation]
+        assertions: [occurrence, cutoff, accuracy]
+        standardRef: "IFRS 15.31-38; ISA 315R.19"
+        typicalRisks: [RSK-REV-002, RSK-REV-027]
+        typicalControls: [CTL-REV-021]
+        followUpTriggers:
+          - id: R6.1.T1
+            when: { missing: [recognition_point] }
+            ask: "At what point does a sale actually hit the revenue line — on despatch, on delivery, on invoice, or over the period?"
+            priority: mandatory
+      - id: R6.2
+        mandatory: false
+        questionIntent: "What triggers the posting to the general ledger, and is the interface reconciled?"
+        mustKnowFacts: [posting_trigger, posting_mode, interface_reconciliation]
+        assertions: [completeness, accuracy]
+        standardRef: "ISA 315R.26; ISA 315R.A173"
+        typicalRisks: [RSK-REV-041]
+        typicalControls: [CTL-REV-022]
+        followUpTriggers:
+          - id: R6.2.T1
+            when: { present: [posting_mode], missing: [interface_reconciliation] }
+            ask: "Does anyone reconcile what the billing system produced against what landed in the general ledger?"
+            priority: high
+      - id: R6.3
+        mandatory: false
+        questionIntent: "How is deferred or accrued revenue handled?"
+        mustKnowFacts: [deferral_mechanism, deferral_owner, deferral_review]
+        assertions: [cutoff, accuracy_valuation_allocation]
+        standardRef: "IFRS 15.105-109"
+        typicalRisks: [RSK-REV-002, RSK-REV-029]
+        typicalControls: [CTL-REV-023]
+        followUpTriggers: []
+      - id: R6.4
+        mandatory: false
+        questionIntent: "Is there variable consideration, and is the company principal or agent?"
+        mustKnowFacts: [variable_consideration_types, principal_agent_assessment]
+        assertions: [accuracy, presentation]
+        standardRef: "IFRS 15.50-58; IFRS 15.B34-B38"
+        typicalRisks: [RSK-REV-027, RSK-REV-029]
+        typicalControls: []
+        followUpTriggers:
+          - id: R6.4.T1
+            when: { missing: [variable_consideration_types] }
+            ask: "Are there any discounts, rebates, bonuses or penalties that depend on what happens later in the year?"
+            priority: high
+      - id: R6.5
+        mandatory: true
+        questionIntent: "Can revenue recognition be overridden manually, and by whom?"
+        mustKnowFacts: [manual_override_possible, override_approver]
+        assertions: [occurrence, cutoff]
+        standardRef: "ISA 240.31-32"
+        typicalRisks: [RSK-REV-030]
+        typicalControls: [CTL-REV-024]
+        followUpTriggers:
+          - id: R6.5.T1
+            when: { missing: [manual_override_possible] }
+            ask: "Is it possible for someone to change what has been recognised as revenue outside the normal system flow?"
+            priority: mandatory
+
+  - id: R7
+    name: Credit notes, returns and rebates
+    applicability: always
+    coverageItems:
+      - id: R7.1
+        mandatory: true
+        questionIntent: "Who can raise a credit note, with what approval, and is it linked to the original invoice?"
+        mustKnowFacts: [credit_note_initiator, approval_limits, link_to_original_invoice]
+        assertions: [occurrence, cutoff]
+        standardRef: "ISA 240.26; ISA 315R.26"
+        typicalRisks: [RSK-REV-033]
+        typicalControls: [CTL-REV-025]
+        followUpTriggers:
+          - id: R7.1.T1
+            when: { present: [credit_note_initiator], missing: [approval_limits] }
+            ask: "Is there a value above which a credit note needs someone else's approval, and who is that?"
+            priority: mandatory
+          - id: R7.1.T2
+            when: { missing: [link_to_original_invoice] }
+            ask: "Does the system force a credit note to be matched to the invoice it reverses?"
+            priority: high
+      - id: R7.2
+        mandatory: false
+        questionIntent: "How are returns processed and provided for?"
+        mustKnowFacts: [returns_process, returns_provision]
+        assertions: [completeness, accuracy_valuation_allocation]
+        standardRef: "IFRS 15.B20-B27"
+        typicalRisks: [RSK-REV-033]
+        typicalControls: [CTL-REV-026]
+        followUpTriggers: []
+      - id: R7.3
+        mandatory: false
+        questionIntent: "What rebates or bonuses exist, and how are they accrued?"
+        mustKnowFacts: [rebate_types, accrual_basis, accrual_approver]
+        assertions: [accuracy, cutoff]
+        standardRef: "IFRS 15.50-58"
+        typicalRisks: [RSK-REV-029]
+        typicalControls: [CTL-REV-027]
+        followUpTriggers:
+          - id: R7.3.T1
+            when: { present: [rebate_types], missing: [accrual_basis] }
+            ask: "How do you work out the rebate accrual at period end, and on what data?"
+            priority: high
+
+  - id: R8
+    name: Cash receipt and accounts receivable
+    applicability: always
+    coverageItems:
+      - id: R8.1
+        mandatory: false
+        questionIntent: "How is cash applied against receivables, and what happens to unapplied cash?"
+        mustKnowFacts: [bank_matching_mode, unapplied_cash_handling]
+        assertions: [existence, accuracy]
+        standardRef: "ISA 315R.25"
+        typicalRisks: [RSK-REV-034]
+        typicalControls: [CTL-REV-028]
+        followUpTriggers: []
+      - id: R8.2
+        mandatory: false
+        questionIntent: "Who can write off a receivable and within what limits?"
+        mustKnowFacts: [write_off_authority, write_off_limits]
+        assertions: [occurrence, accuracy_valuation_allocation]
+        standardRef: "ISA 240.32"
+        typicalRisks: [RSK-REV-034]
+        typicalControls: [CTL-REV-029]
+        followUpTriggers:
+          - id: R8.2.T1
+            when: { present: [write_off_authority], missing: [write_off_limits] }
+            ask: "Is there a ceiling on what that person can write off without escalation?"
+            priority: high
+      - id: R8.3
+        mandatory: false
+        questionIntent: "How is the ageing reviewed and the expected credit loss determined?"
+        mustKnowFacts: [ageing_review_owner, ecl_method, provision_approver]
+        assertions: [accuracy_valuation_allocation]
+        standardRef: "IFRS 9.5.5; ISA 540"
+        typicalRisks: [RSK-REV-025]
+        typicalControls: [CTL-REV-012, CTL-REV-030]
+        followUpTriggers: []
+
+  - id: R9
+    name: Cut-off
+    applicability: always
+    coverageItems:
+      - id: R9.1
+        mandatory: true
+        questionIntent: "What procedures ensure revenue falls in the right period?"
+        mustKnowFacts: [cutoff_procedure, cutoff_owner]
+        assertions: [cutoff, occurrence, completeness]
+        standardRef: "ISA 315R.25; ISA 240.26"
+        typicalRisks: [RSK-REV-002, RSK-REV-006]
+        typicalControls: [CTL-REV-031]
+        followUpTriggers:
+          - id: R9.1.T1
+            when: { missing: [cutoff_procedure] }
+            ask: "Around month end, what do you do to make sure a sale lands in the right period?"
+            priority: mandatory
+      - id: R9.2
+        mandatory: false
+        questionIntent: "What is the closing calendar and who controls late entries?"
+        mustKnowFacts: [close_calendar, close_owner, late_entry_control]
+        assertions: [cutoff]
+        standardRef: "ISA 315R.26"
+        typicalRisks: [RSK-REV-006, RSK-REV-030]
+        typicalControls: [CTL-REV-031]
+        followUpTriggers:
+          - id: R9.2.T1
+            when: { present: [close_calendar], missing: [late_entry_control] }
+            ask: "After the ledger is closed, can anyone still post into that period, and who would know?"
+            priority: high
+      - id: R9.3
+        mandatory: false
+        questionIntent: "How are undelivered orders and goods in transit treated at period end?"
+        mustKnowFacts: [undelivered_handling]
+        assertions: [cutoff, occurrence]
+        standardRef: "IFRS 15.31"
+        typicalRisks: [RSK-REV-002]
+        typicalControls: [CTL-REV-031]
+        followUpTriggers: []
+
+  - id: R10
+    name: IT environment and interfaces
+    applicability: always
+    coverageItems:
+      - id: R10.1
+        mandatory: false
+        questionIntent: "Which systems carry the revenue process and how are they hosted?"
+        mustKnowFacts: [erp_name, satellite_systems, hosting]
+        assertions: [completeness, accuracy]
+        standardRef: "ISA 315R.25(a); ISA 315R.A173"
+        typicalRisks: [RSK-REV-041]
+        typicalControls: []
+        followUpTriggers:
+          - id: R10.1.T1
+            when: { missing: [erp_name] }
+            ask: "Which system does the order, the delivery and the invoice actually live in?"
+            priority: high
+      - id: R10.2
+        mandatory: false
+        questionIntent: "How does data move between order, delivery, invoice and the ledger?"
+        mustKnowFacts: [interfaces, interface_monitoring, interface_error_handling]
+        assertions: [completeness, accuracy]
+        standardRef: "ISA 315R.26(a); ISA 315R.A173"
+        typicalRisks: [RSK-REV-041]
+        typicalControls: [CTL-REV-022]
+        followUpTriggers:
+          - id: R10.2.T1
+            when: { present: [interfaces], missing: [interface_error_handling] }
+            ask: "If a transaction failed to transfer between those systems, who would see the error and what would they do?"
+            priority: high
+      - id: R10.3
+        mandatory: false
+        questionIntent: "Which controls are automated, and who can change the configuration?"
+        mustKnowFacts: [automated_controls, config_change_authority]
+        assertions: [accuracy, occurrence]
+        standardRef: "ISA 315R.26; ISA 315R.A174"
+        typicalRisks: [RSK-REV-021, RSK-REV-042]
+        typicalControls: [CTL-REV-019]
+        followUpTriggers:
+          - id: R10.3.T1
+            when: { present: [automated_controls], missing: [config_change_authority] }
+            ask: "Who is able to change that setting in the system, and is a change recorded?"
+            priority: high
+      - id: R10.4
+        mandatory: false
+        questionIntent: "Who has access to change prices and customer master data?"
+        mustKnowFacts: [access_owner, privileged_access_review]
+        assertions: [accuracy, occurrence]
+        standardRef: "ISA 315R.26; ISA 315R.A174"
+        typicalRisks: [RSK-REV-042]
+        typicalControls: [CTL-REV-002, CTL-REV-032]
+        followUpTriggers:
+          - id: R10.4.T1
+            when: { missing: [privileged_access_review] }
+            ask: "Does anyone periodically review who has rights to change prices or customer data?"
+            priority: medium
+      - id: R10.5
+        mandatory: false
+        questionIntent: "Which parts of the process are performed by a service organisation?"
+        mustKnowFacts: [service_orgs, assurance_report]
+        assertions: [completeness, occurrence, accuracy]
+        standardRef: "ISA 402.9-12"
+        typicalRisks: [RSK-REV-043]
+        typicalControls: []
+        followUpTriggers:
+          - id: R10.5.T1
+            when: { present: [service_orgs], missing: [assurance_report] }
+            ask: "Do you receive an ISAE 3402 or SOC 1 report from that provider, and who reads it?"
+            priority: high
+
+  - id: R11
+    name: Manual journals and management override
+    applicability: always
+    coverageItems:
+      - id: R11.1
+        mandatory: true
+        questionIntent: "Who can post a manual journal to a revenue account, and what approval is required?"
+        mustKnowFacts: [journal_posters, approval_requirement]
+        assertions: [occurrence, accuracy]
+        standardRef: "ISA 240.31-33"
+        typicalRisks: [RSK-REV-030]
+        typicalControls: [CTL-REV-024]
+        followUpTriggers:
+          - id: R11.1.T1
+            when: { missing: [journal_posters] }
+            ask: "Who is able to post a journal straight to a revenue account, and does anyone approve it?"
+            priority: mandatory
+      - id: R11.2
+        mandatory: true
+        questionIntent: "What standing or top-side entries touch revenue, especially at period end?"
+        mustKnowFacts: [standing_entries, period_end_entries]
+        assertions: [occurrence, cutoff]
+        standardRef: "ISA 240.32"
+        typicalRisks: [RSK-REV-030, RSK-REV-006]
+        typicalControls: [CTL-REV-024]
+        followUpTriggers:
+          - id: R11.2.T1
+            when: { missing: [period_end_entries] }
+            ask: "In the last few days of the period, what entries typically get made to revenue, and by whom?"
+            priority: mandatory
+      - id: R11.3
+        mandatory: true
+        questionIntent: "What incentives or pressures relate to reported revenue?"
+        mustKnowFacts: [incentive_schemes, covenants]
+        assertions: [occurrence, cutoff]
+        standardRef: "ISA 240.24; ISA 315R.A65"
+        typicalRisks: [RSK-REV-026]
+        typicalControls: []
+        followUpTriggers:
+          - id: R11.3.T1
+            when: { missing: [incentive_schemes] }
+            ask: "Are bonuses, commissions or bank covenants tied to the revenue or margin figure?"
+            priority: mandatory
+
+  - id: R12
+    name: Monitoring and KPIs
+    applicability: always
+    coverageItems:
+      - id: R12.1
+        mandatory: false
+        questionIntent: "How does management review reported revenue, and how precisely?"
+        mustKnowFacts: [review_owner, review_frequency, review_precision]
+        assertions: [completeness, accuracy, occurrence]
+        standardRef: "ISA 315R.24(c); ISA 315R.A115"
+        typicalRisks: [RSK-REV-044]
+        typicalControls: [CTL-REV-033]
+        followUpTriggers:
+          - id: R12.1.T1
+            when: { present: [review_owner], missing: [review_precision] }
+            ask: "How big would a variance have to be before they questioned it, and what happens then?"
+            priority: high
+      - id: R12.2
+        mandatory: false
+        questionIntent: "Is budget-versus-actual or margin analysis performed, and is follow-up evidenced?"
+        mustKnowFacts: [analysis_performed, variance_threshold, follow_up_evidence]
+        assertions: [completeness, accuracy]
+        standardRef: "ISA 315R.A115; ISA 500.9"
+        typicalRisks: [RSK-REV-044]
+        typicalControls: [CTL-REV-033]
+        followUpTriggers: []
+      - id: R12.3
+        mandatory: false
+        questionIntent: "Where do the reported numbers come from, and how is that information's completeness and accuracy established?"
+        mustKnowFacts: [kpi_source, ipe_completeness_accuracy]
+        assertions: [accuracy, completeness]
+        standardRef: "ISA 500.9"
+        typicalRisks: [RSK-REV-045]
+        typicalControls: []
+        followUpTriggers:
+          - id: R12.3.T1
+            when: { present: [kpi_source], missing: [ipe_completeness_accuracy] }
+            ask: "How does the person reviewing that report know it is complete and accurate?"
+            priority: high

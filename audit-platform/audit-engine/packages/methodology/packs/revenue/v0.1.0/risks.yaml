@@ -1,0 +1,156 @@
+# Revenue risk library v0.1.0 — 30 entries.
+# Anchors generated output in a shared vocabulary and is the main hallucination control:
+# the engine's job becomes "map what was said onto these, and justify anything new".
+library: risks
+version: 0.1.0
+entries:
+  - id: RSK-REV-001
+    title: Fictitious or unauthorised customers are created and used to record sales
+    assertions: [occurrence]
+    inherentRiskFactors: [susceptibility_to_bias_or_fraud]
+    subProcess: R1
+  - id: RSK-REV-002
+    title: Revenue is recorded before the performance obligation is satisfied
+    assertions: [occurrence, cutoff]
+    inherentRiskFactors: [change, susceptibility_to_bias_or_fraud]
+    subProcess: R6
+  - id: RSK-REV-003
+    title: Revenue is recorded for goods or services that were never delivered
+    assertions: [occurrence]
+    inherentRiskFactors: [susceptibility_to_bias_or_fraud]
+    subProcess: R4
+  - id: RSK-REV-004
+    title: Sales are recorded to customers who have not agreed to the transaction
+    assertions: [occurrence, rights_and_obligations]
+    inherentRiskFactors: [susceptibility_to_bias_or_fraud]
+    subProcess: R2
+  - id: RSK-REV-005
+    title: Non-standard contract terms change the timing or amount of recognition and are not identified
+    assertions: [occurrence, cutoff, accuracy]
+    inherentRiskFactors: [complexity, susceptibility_to_bias_or_fraud]
+    subProcess: R1
+  - id: RSK-REV-006
+    title: Transactions are recorded in the wrong period around the reporting date
+    assertions: [cutoff]
+    inherentRiskFactors: [susceptibility_to_bias_or_fraud, change]
+    subProcess: R9
+  - id: RSK-REV-007
+    title: Goods or services delivered are not invoiced and not recorded
+    assertions: [completeness]
+    inherentRiskFactors: [complexity]
+    subProcess: R4
+  - id: RSK-REV-008
+    title: Orders received are not captured in the order system
+    assertions: [completeness]
+    inherentRiskFactors: [complexity]
+    subProcess: R2
+  - id: RSK-REV-009
+    title: Duplicate invoices are raised and recorded for the same delivery
+    assertions: [occurrence, accuracy]
+    inherentRiskFactors: [complexity]
+    subProcess: R5
+  - id: RSK-REV-010
+    title: Revenue is recorded gross where the entity acts as agent
+    assertions: [presentation, classification]
+    inherentRiskFactors: [complexity, subjectivity]
+    subProcess: R6
+  - id: RSK-REV-011
+    title: Revenue is classified to the wrong stream or segment
+    assertions: [classification]
+    inherentRiskFactors: [complexity]
+    subProcess: R6
+  - id: RSK-REV-014
+    title: Invoices are priced at other than the contractually agreed price
+    assertions: [accuracy]
+    inherentRiskFactors: [complexity]
+    subProcess: R5
+  - id: RSK-REV-015
+    title: VAT or sales tax is determined incorrectly, misstating recorded revenue
+    assertions: [accuracy, classification]
+    inherentRiskFactors: [complexity]
+    subProcess: R5
+  - id: RSK-REV-021
+    title: Unauthorised price or discount overrides inflate or deflate recorded revenue
+    assertions: [accuracy, occurrence]
+    inherentRiskFactors: [susceptibility_to_bias_or_fraud]
+    subProcess: R5
+  - id: RSK-REV-024
+    title: Sales are made to customers who cannot pay, because credit controls are absent or overridden
+    assertions: [accuracy_valuation_allocation]
+    inherentRiskFactors: [uncertainty]
+    subProcess: R3
+  - id: RSK-REV-025
+    title: The allowance for expected credit losses is understated
+    assertions: [accuracy_valuation_allocation]
+    inherentRiskFactors: [subjectivity, uncertainty, susceptibility_to_bias_or_fraud]
+    subProcess: R8
+  - id: RSK-REV-026
+    title: Incentives tied to revenue create pressure to record sales that do not qualify
+    assertions: [occurrence, cutoff]
+    inherentRiskFactors: [susceptibility_to_bias_or_fraud]
+    subProcess: R11
+  - id: RSK-REV-027
+    title: The revenue recognition policy applied does not reflect the substance of the arrangement
+    assertions: [occurrence, accuracy, presentation]
+    inherentRiskFactors: [complexity, subjectivity]
+    subProcess: R6
+  - id: RSK-REV-028
+    title: Revenue recognised over time uses unsupported or biased progress estimates
+    assertions: [accuracy, occurrence]
+    inherentRiskFactors: [subjectivity, uncertainty, susceptibility_to_bias_or_fraud]
+    subProcess: R4
+  - id: RSK-REV-029
+    title: Variable consideration, rebates or bonuses are not accrued, overstating revenue
+    assertions: [accuracy, cutoff]
+    inherentRiskFactors: [subjectivity, uncertainty]
+    subProcess: R7
+  - id: RSK-REV-030
+    title: Management overrides controls through manual journals to revenue accounts
+    assertions: [occurrence, accuracy, cutoff]
+    inherentRiskFactors: [susceptibility_to_bias_or_fraud]
+    subProcess: R11
+  - id: RSK-REV-031
+    title: Consignment or bill-and-hold arrangements are recognised as ordinary sales
+    assertions: [occurrence, cutoff]
+    inherentRiskFactors: [complexity, susceptibility_to_bias_or_fraud]
+    subProcess: R1
+  - id: RSK-REV-032
+    title: Long-standing unbilled or unapplied balances conceal misstatement of revenue
+    assertions: [completeness, existence]
+    inherentRiskFactors: [complexity]
+    subProcess: R8
+  - id: RSK-REV-033
+    title: Credit notes after period end reverse revenue that should not have been recorded
+    assertions: [occurrence, cutoff]
+    inherentRiskFactors: [susceptibility_to_bias_or_fraud]
+    subProcess: R7
+  - id: RSK-REV-034
+    title: Receivables are written off or misapplied to conceal irrecoverable or fictitious sales
+    assertions: [existence, accuracy_valuation_allocation]
+    inherentRiskFactors: [susceptibility_to_bias_or_fraud]
+    subProcess: R8
+  - id: RSK-REV-041
+    title: The interface between the billing system and the general ledger drops or duplicates transactions
+    assertions: [completeness, accuracy]
+    inherentRiskFactors: [complexity, change]
+    subProcess: R10
+  - id: RSK-REV-042
+    title: Excessive access rights allow prices or master data to be changed without detection
+    assertions: [accuracy, occurrence]
+    inherentRiskFactors: [susceptibility_to_bias_or_fraud, complexity]
+    subProcess: R10
+  - id: RSK-REV-043
+    title: Processing at a service organisation is not controlled and errors are not detected
+    assertions: [completeness, accuracy, occurrence]
+    inherentRiskFactors: [complexity]
+    subProcess: R10
+  - id: RSK-REV-044
+    title: Management review of revenue is insufficiently precise to detect a material misstatement
+    assertions: [completeness, accuracy, occurrence]
+    inherentRiskFactors: [subjectivity]
+    subProcess: R12
+  - id: RSK-REV-045
+    title: Reports used in controls over revenue are incomplete or inaccurate
+    assertions: [accuracy, completeness]
+    inherentRiskFactors: [complexity]
+    subProcess: R12

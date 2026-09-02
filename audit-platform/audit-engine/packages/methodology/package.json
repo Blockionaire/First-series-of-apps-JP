@@ -1,0 +1,9 @@
+{
+  "name": "@audit/methodology",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": { "@audit/domain": "workspace:*", "yaml": "^2.6.1", "zod": "^4.1.12" }
+}
