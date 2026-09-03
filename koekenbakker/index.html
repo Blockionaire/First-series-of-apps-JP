@@ -1,0 +1,1187 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>De Koekenbakker</title>
+<meta name="description" content="Verse chocoladekoekjes, met de hand gebakken door Zara. Elke week een nieuwe batch. Koop er 5, krijg de 6e gratis.">
+<meta name="theme-color" content="#241710">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Figtree:wght@300..800&display=swap">
+<style>
+/* ---------- tokens ---------- */
+:root{
+  color-scheme: light;
+  --cacao:#241710;
+  --espresso:#3B2519;
+  --koffie:#5A3B27;
+  --klei:#A98A6F;
+  --zand:#E8D9C3;
+  --room:#F6EEE2;
+  --papier:#FBF7F0;
+  --karamel:#D68A3C;
+  --karamel-diep:#B96F27;
+  --olijf:#7E8A55;
+  --inkt:#2E1D14;
+  --zacht:#7A6250;
+  --lijn:#D9C7AE;
+
+  --display:"Bagel Fat One", "Trebuchet MS", system-ui, sans-serif;
+  --kop:"Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+  --tekst:"Figtree", "Helvetica Neue", Arial, sans-serif;
+
+  --max:1180px;
+  --r:18px;
+  --schaduw:4px 4px 0 var(--inkt);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--room);
+  color:var(--inkt);
+  font-family:var(--tekst);
+  font-size:17px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+img,svg{max-width:100%}
+h1,h2,h3,h4{font-family:var(--kop);font-weight:800;line-height:1.02;text-wrap:balance;margin:0}
+p{margin:0}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--karamel);outline-offset:3px;border-radius:6px}
+
+/* papierkorrel */
+.korrel{
+  position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.5;
+  mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+}
+
+/* ---------- bouwstenen ---------- */
+.wrap{width:min(100% - 40px, var(--max));margin-inline:auto}
+.band{padding:clamp(56px,9vw,110px) 0;position:relative}
+.band--donker{background:var(--cacao);color:var(--room)}
+.band--zand{background:var(--zand)}
+.band--papier{background:var(--papier)}
+
+.eyebrow{
+  font-family:var(--kop);font-weight:700;font-size:.76rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--karamel-diep);display:inline-flex;align-items:center;gap:9px;
+}
+.band--donker .eyebrow{color:var(--karamel)}
+.eyebrow::before{content:"";width:26px;height:2px;background:currentColor;display:block}
+
+.titel{font-size:clamp(2rem,5.2vw,3.5rem);letter-spacing:-.025em}
+.lead{max-width:56ch;color:var(--zacht);font-size:1.06rem}
+.band--donker .lead{color:#D9C6B2}
+
+.knop{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:var(--kop);font-weight:700;font-size:1rem;
+  padding:14px 26px;border-radius:999px;border:2px solid var(--inkt);
+  background:var(--karamel);color:var(--inkt);cursor:pointer;text-decoration:none;
+  box-shadow:var(--schaduw);transition:transform .16s cubic-bezier(.3,1.4,.5,1), box-shadow .16s;
+}
+.knop:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 var(--inkt)}
+.knop:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--inkt)}
+.knop--stil{background:transparent;color:inherit;border-color:currentColor;box-shadow:none}
+.knop--stil:hover{background:rgba(214,138,60,.16);box-shadow:none;transform:translateY(-2px)}
+.knop--vol{width:100%;justify-content:center}
+.knop[disabled]{opacity:.45;cursor:not-allowed;transform:none;box-shadow:var(--schaduw)}
+
+.sticker{
+  font-family:var(--kop);font-weight:700;font-size:.8rem;letter-spacing:.02em;
+  background:var(--room);color:var(--inkt);border:2px solid var(--inkt);
+  padding:7px 14px;border-radius:999px;display:inline-block;box-shadow:3px 3px 0 rgba(36,23,16,.55);
+}
+.sticker--olijf{background:var(--olijf);color:#F7F4E9}
+.sticker--karamel{background:var(--karamel)}
+
+/* ---------- laadscherm ---------- */
+#laden{
+  position:fixed;inset:0;z-index:100;background:var(--cacao);color:var(--room);
+  display:grid;place-items:center;gap:0;transition:transform .7s cubic-bezier(.7,0,.2,1);
+}
+#laden.weg{transform:translateY(-101%)}
+.laad-in{display:grid;justify-items:center;gap:20px;text-align:center}
+.laad-koek{width:112px;height:112px;animation:bakken 1.5s ease-in-out infinite alternate}
+@keyframes bakken{from{transform:rotate(-8deg) scale(.94)}to{transform:rotate(8deg) scale(1.04)}}
+.laad-tekst{font-family:var(--kop);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:.78rem;color:var(--karamel)}
+.laad-merk{font-family:var(--display);font-size:clamp(2rem,7vw,3rem);color:var(--room)}
+.laad-balk{width:180px;height:6px;border-radius:99px;background:rgba(246,238,226,.18);overflow:hidden}
+.laad-balk i{display:block;height:100%;width:0;background:var(--karamel);animation:vullen 1.6s ease-out forwards}
+@keyframes vullen{to{width:100%}}
+
+/* ---------- cursor ---------- */
+.cursor-aan{cursor:none}
+.cursor-aan input,.cursor-aan textarea,.cursor-aan select{cursor:auto}
+#cursor{position:fixed;top:0;left:0;width:34px;height:34px;z-index:90;pointer-events:none;
+  transform:translate(-50%,-50%);transition:width .15s,height .15s;will-change:transform;display:none}
+#cursor.leeft{display:block}
+#cursor.groot{width:52px;height:52px}
+.kruimel{position:fixed;width:5px;height:5px;border-radius:2px;background:var(--koffie);z-index:89;
+  pointer-events:none;animation:kruimelen .7s ease-out forwards}
+@keyframes kruimelen{to{transform:translate(var(--dx),22px) rotate(90deg);opacity:0}}
+
+/* ---------- header ---------- */
+.top{position:sticky;top:0;z-index:50;background:rgba(36,23,16,.94);backdrop-filter:blur(8px);
+  border-bottom:1px solid rgba(246,238,226,.14);color:var(--room)}
+.top-in{display:flex;align-items:center;gap:18px;padding:12px 0}
+.merk{font-family:var(--display);font-size:1.3rem;letter-spacing:.01em;text-decoration:none;display:flex;align-items:center;gap:10px}
+.merk svg{width:30px;height:30px}
+.nav{display:flex;gap:22px;margin-left:auto;font-family:var(--kop);font-weight:600;font-size:.95rem}
+.nav a{text-decoration:none;opacity:.82;padding:4px 0;border-bottom:2px solid transparent}
+.nav a:hover{opacity:1;border-color:var(--karamel)}
+.mandje-knop{margin-left:auto;display:inline-flex;align-items:center;gap:9px;background:var(--karamel);
+  color:var(--inkt);border:2px solid var(--inkt);border-radius:999px;padding:9px 16px;cursor:pointer;
+  font-family:var(--kop);font-weight:700;box-shadow:3px 3px 0 rgba(0,0,0,.45)}
+.nav + .mandje-knop{margin-left:0}
+.mandje-knop b{background:var(--inkt);color:var(--karamel);border-radius:99px;min-width:22px;
+  text-align:center;font-size:.82rem;padding:1px 6px;font-variant-numeric:tabular-nums}
+@media(max-width:860px){.nav{display:none}}
+
+/* ---------- hero ---------- */
+.hero{background:var(--cacao);color:var(--room);position:relative;overflow:hidden;
+  padding:clamp(48px,7vw,84px) 0 clamp(56px,8vw,96px)}
+.hero::after{content:"";position:absolute;inset:auto -20% -60% -20%;height:70%;
+  background:radial-gradient(60% 100% at 50% 0%, rgba(214,138,60,.28), transparent 70%);pointer-events:none}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(24px,4vw,56px);align-items:center;position:relative;z-index:1}
+.hero h1{font-size:clamp(2.9rem,7.6vw,5.4rem);letter-spacing:-.035em;margin:16px 0 0}
+.hero h1 .fat{font-family:var(--display);font-weight:400;color:var(--karamel);letter-spacing:0}
+.hero h1 .fat em{font-style:normal;display:inline-block;animation:wiebel 4s ease-in-out infinite}
+@keyframes wiebel{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+.hero-p{margin-top:20px;color:#D9C6B2;max-width:44ch;font-size:1.1rem}
+.hero-acties{display:flex;flex-wrap:wrap;gap:14px;margin-top:30px}
+.hero-stickers{display:flex;flex-wrap:wrap;gap:10px;margin-top:34px}
+.hero-stickers .sticker:nth-child(2){transform:rotate(-2.5deg)}
+.hero-stickers .sticker:nth-child(3){transform:rotate(2deg)}
+
+.podium{position:relative;display:grid;place-items:center;min-height:340px}
+.podium-schijf{position:absolute;width:min(84%,380px);aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle at 50% 45%, rgba(214,138,60,.34), rgba(214,138,60,0) 62%)}
+.hoofdkoek{width:min(78%,330px);animation:draai 26s linear infinite;filter:drop-shadow(0 26px 30px rgba(0,0,0,.45))}
+@keyframes draai{to{transform:rotate(360deg)}}
+.baan{position:absolute;inset:0;animation:draai 18s linear infinite}
+.baan--traag{animation-duration:30s;animation-direction:reverse}
+.baan span{position:absolute;width:60px;height:60px;display:block;animation:draai 9s linear infinite reverse}
+.baan span:nth-child(1){top:2%;left:44%}
+.baan span:nth-child(2){bottom:6%;left:6%;width:46px;height:46px}
+.baan span:nth-child(3){top:34%;right:0%;width:38px;height:38px}
+@media(max-width:860px){
+  .hero-grid{grid-template-columns:1fr;gap:8px}
+  .podium{order:-1;min-height:270px}
+}
+
+/* ---------- marquee ---------- */
+.loper{background:var(--karamel);border-block:2px solid var(--inkt);overflow:hidden;padding:12px 0}
+.loper-rij{display:flex;gap:34px;width:max-content;animation:schuif 26s linear infinite}
+.loper span{font-family:var(--kop);font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+  font-size:1rem;white-space:nowrap;display:flex;align-items:center;gap:34px;color:var(--inkt)}
+.loper span::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--inkt);display:block}
+@keyframes schuif{to{transform:translateX(-50%)}}
+
+/* ---------- kop van sectie ---------- */
+.sectiekop{display:flex;flex-wrap:wrap;align-items:flex-end;gap:18px 40px;justify-content:space-between;margin-bottom:clamp(28px,4vw,46px)}
+.sectiekop .tekstkant{display:grid;gap:14px;max-width:62ch}
+
+/* ---------- assortiment ---------- */
+.koekjes{display:grid;grid-template-columns:repeat(6,1fr);gap:clamp(16px,2vw,24px)}
+.kaart{grid-column:span 2;background:var(--papier);border:2px solid var(--inkt);border-radius:var(--r);
+  padding:22px;display:flex;flex-direction:column;gap:14px;position:relative;
+  box-shadow:5px 5px 0 rgba(36,23,16,.16);transition:transform .2s, box-shadow .2s}
+.kaart:hover{transform:translate(-3px,-3px);box-shadow:9px 9px 0 rgba(36,23,16,.22)}
+.kaart:nth-child(4),.kaart:nth-child(5){grid-column:span 3;display:grid;
+  grid-template-columns:180px 1fr;align-items:start;column-gap:24px;row-gap:16px}
+.kaart:nth-child(4) .kaart-tekst,.kaart:nth-child(5) .kaart-tekst{grid-column:2}
+.kaart:nth-child(4) .kaart-voet,.kaart:nth-child(5) .kaart-voet{grid-column:2}
+.koek-slot{background:var(--zand);border-radius:14px;display:grid;place-items:center;padding:14px;
+  border:1px solid var(--lijn);cursor:pointer;position:relative}
+.kaart:nth-child(4) .koek-slot,.kaart:nth-child(5) .koek-slot{grid-row:1 / span 2;align-self:stretch;width:auto}
+.koek-slot svg{width:100%;max-width:190px;transition:transform .4s cubic-bezier(.3,1.3,.5,1)}
+.koek-slot:hover svg{transform:rotate(14deg) scale(1.05)}
+.hap-hint{position:absolute;bottom:8px;right:10px;font-size:.68rem;font-family:var(--kop);font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--zacht);opacity:0;transition:opacity .2s}
+.koek-slot:hover .hap-hint{opacity:1}
+.kaart-tekst{display:flex;flex-direction:column;gap:10px}
+.kaart h3{font-size:1.42rem;letter-spacing:-.02em}
+.kaart .omschrijving{color:var(--zacht);font-size:.97rem}
+.meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:var(--kop);font-size:.74rem;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--zacht)}
+.meta i{font-style:normal;border:1px solid var(--lijn);border-radius:99px;padding:3px 9px}
+.smaak{display:grid;gap:6px;margin-top:2px}
+.smaak-rij{display:grid;grid-template-columns:78px 1fr;align-items:center;gap:10px;
+  font-family:var(--kop);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--zacht)}
+.bolletjes{display:flex;gap:5px}
+.bolletjes b{width:9px;height:9px;border-radius:50%;background:var(--lijn);display:block}
+.bolletjes b.aan{background:var(--karamel-diep)}
+.kaart-voet{margin-top:auto;display:flex;align-items:center;gap:12px;justify-content:space-between;padding-top:6px}
+.prijs{font-family:var(--kop);font-weight:800;font-size:1.5rem;font-variant-numeric:tabular-nums}
+.prijs small{font-weight:600;font-size:.72rem;color:var(--zacht);letter-spacing:.06em;text-transform:uppercase;display:block}
+.toevoeg{border:2px solid var(--inkt);background:var(--inkt);color:var(--room);border-radius:999px;
+  padding:11px 18px;cursor:pointer;font-family:var(--kop);font-weight:700;font-size:.92rem;
+  display:inline-flex;align-items:center;gap:8px;transition:background .15s,transform .15s}
+.toevoeg:hover{background:var(--karamel-diep);border-color:var(--karamel-diep);transform:translateY(-2px)}
+.toevoeg.gelukt{background:var(--olijf);border-color:var(--olijf)}
+@media(max-width:880px){
+  .koekjes{grid-template-columns:1fr}
+  .kaart,.kaart:nth-child(4),.kaart:nth-child(5){grid-column:span 1}
+  .kaart:nth-child(4),.kaart:nth-child(5){grid-template-columns:1fr}
+  .kaart:nth-child(4) .kaart-tekst,.kaart:nth-child(5) .kaart-tekst,
+  .kaart:nth-child(4) .kaart-voet,.kaart:nth-child(5) .kaart-voet{grid-column:1}
+  .kaart:nth-child(4) .koek-slot,.kaart:nth-child(5) .koek-slot{grid-row:auto;width:auto}
+}
+
+/* ---------- 5+1 ---------- */
+.deal{display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,5vw,64px);align-items:center}
+.deal-rij{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+.gleuf{width:74px;height:74px;border-radius:50%;border:2px dashed var(--klei);display:grid;place-items:center;
+  position:relative;background:rgba(255,255,255,.35);transition:transform .3s}
+.gleuf svg{width:84%;opacity:0;transform:scale(.4);transition:opacity .3s, transform .35s cubic-bezier(.3,1.5,.5,1)}
+.gleuf.vol svg{opacity:1;transform:scale(1)}
+.gleuf.vol{border-style:solid;border-color:var(--inkt)}
+.gleuf--gratis{border-color:var(--olijf);background:rgba(126,138,85,.12)}
+.gleuf--gratis::after{content:"gratis";position:absolute;bottom:-11px;font-family:var(--kop);font-weight:800;
+  font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;background:var(--olijf);color:#F7F4E9;
+  padding:2px 8px;border-radius:99px}
+.gleuf.vol.gleuf--gratis{animation:plop .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes plop{0%{transform:scale(.6) rotate(-20deg)}60%{transform:scale(1.15) rotate(8deg)}100%{transform:scale(1)}}
+@media(max-width:880px){.deal{grid-template-columns:1fr}}
+
+/* ---------- bakagenda ---------- */
+.agenda{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(28px,4vw,56px);align-items:center}
+.klok{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+.klok div{background:var(--cacao);color:var(--room);border-radius:14px;padding:14px 18px;min-width:82px;text-align:center;
+  border:2px solid var(--inkt)}
+.klok b{display:block;font-family:var(--kop);font-weight:800;font-size:2rem;font-variant-numeric:tabular-nums;line-height:1}
+.klok span{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--karamel);font-family:var(--kop);font-weight:700}
+.stappen{display:grid;gap:14px;counter-reset:s}
+.stap{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start;background:var(--papier);color:var(--inkt);
+  border:2px solid var(--inkt);border-radius:var(--r);padding:18px 20px;box-shadow:4px 4px 0 rgba(36,23,16,.14)}
+.stap::before{counter-increment:s;content:counter(s,decimal-leading-zero);font-family:var(--kop);font-weight:800;
+  color:var(--karamel-diep);font-size:1.05rem;letter-spacing:.04em;padding-top:2px}
+.stap h4{font-size:1.05rem;margin-bottom:3px}
+.stap p{color:var(--zacht);font-size:.95rem}
+@media(max-width:880px){.agenda{grid-template-columns:1fr}}
+
+/* ---------- quiz ---------- */
+.quiz{background:var(--cacao);color:var(--room);border-radius:26px;padding:clamp(26px,4vw,46px);
+  border:2px solid var(--inkt);box-shadow:8px 8px 0 rgba(36,23,16,.22);position:relative;overflow:hidden}
+.quiz::before{content:"";position:absolute;top:-40%;right:-14%;width:52%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle, rgba(214,138,60,.24), transparent 68%)}
+.quiz-in{position:relative;display:grid;gap:22px;max-width:640px}
+.quiz h3{font-size:clamp(1.5rem,3.4vw,2.1rem)}
+.opties{display:flex;flex-wrap:wrap;gap:12px}
+.optie{background:transparent;border:2px solid rgba(246,238,226,.4);color:var(--room);border-radius:999px;
+  padding:11px 20px;cursor:pointer;font-family:var(--kop);font-weight:600;transition:.16s}
+.optie:hover{background:var(--karamel);border-color:var(--karamel);color:var(--inkt);transform:translateY(-2px)}
+.voortgang{height:5px;background:rgba(246,238,226,.2);border-radius:99px;overflow:hidden;max-width:260px}
+.voortgang i{display:block;height:100%;background:var(--karamel);transition:width .35s}
+.uitslag{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center}
+.uitslag svg{width:120px}
+@media(max-width:620px){.uitslag{grid-template-columns:1fr}}
+
+/* ---------- Zara ---------- */
+.overzara{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(28px,5vw,64px);align-items:center}
+.polaroid{background:var(--papier);border:2px solid var(--inkt);border-radius:6px;padding:16px 16px 22px;
+  transform:rotate(-3deg);box-shadow:10px 10px 0 rgba(36,23,16,.18);max-width:360px;margin-inline:auto}
+.polaroid-vlak{aspect-ratio:4/5;background:linear-gradient(160deg,var(--zand),#D6BF9F);border-radius:3px;
+  display:grid;place-items:center;position:relative;overflow:hidden}
+.polaroid-vlak .monogram{font-family:var(--display);font-size:5.5rem;color:rgba(36,23,16,.16)}
+.polaroid-vlak svg{position:absolute;width:88px;bottom:12px;right:12px;transform:rotate(-12deg)}
+.polaroid figcaption{font-family:var(--kop);font-weight:600;font-size:.9rem;color:var(--zacht);
+  margin-top:12px;text-align:center}
+.cijfers{display:flex;flex-wrap:wrap;gap:14px;margin-top:26px}
+.cijfer{border:2px solid var(--inkt);border-radius:14px;padding:12px 18px;background:var(--papier)}
+.cijfer b{display:block;font-family:var(--kop);font-weight:800;font-size:1.6rem;line-height:1;font-variant-numeric:tabular-nums}
+.cijfer span{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--zacht);font-family:var(--kop);font-weight:700}
+.citaat{font-family:var(--kop);font-weight:600;font-size:clamp(1.15rem,2.4vw,1.5rem);line-height:1.35;
+  border-left:4px solid var(--karamel);padding-left:18px;margin-top:26px}
+@media(max-width:880px){.overzara{grid-template-columns:1fr}}
+
+/* ---------- reviews ---------- */
+.briefjes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.briefje{background:var(--papier);border:2px solid var(--inkt);border-radius:var(--r);padding:22px;
+  box-shadow:5px 5px 0 rgba(36,23,16,.16)}
+.briefje:nth-child(1){transform:rotate(-1.4deg)}
+.briefje:nth-child(3){transform:rotate(1.4deg)}
+.briefje p{font-size:1.02rem}
+.briefje footer{margin-top:14px;font-family:var(--kop);font-weight:700;font-size:.85rem;color:var(--zacht)}
+.sterren{color:var(--karamel-diep);letter-spacing:.14em;font-size:.9rem;margin-bottom:8px}
+
+/* ---------- FAQ ---------- */
+.faq{display:grid;gap:12px;max-width:820px}
+.faq details{background:var(--papier);border:2px solid var(--inkt);border-radius:var(--r);overflow:hidden}
+.faq summary{cursor:pointer;padding:17px 22px;font-family:var(--kop);font-weight:700;font-size:1.03rem;
+  list-style:none;display:flex;justify-content:space-between;gap:16px;align-items:center}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-size:1.4rem;color:var(--karamel-diep);line-height:1}
+.faq details[open] summary::after{content:"–"}
+.faq p{padding:0 22px 20px;color:var(--zacht);max-width:62ch}
+
+/* ---------- mandje ---------- */
+.sluier{position:fixed;inset:0;background:rgba(36,23,16,.55);z-index:70;opacity:0;pointer-events:none;transition:opacity .25s}
+.sluier.open{opacity:1;pointer-events:auto}
+.lade{position:fixed;top:0;right:0;height:100dvh;width:min(430px,100%);background:var(--room);z-index:80;
+  transform:translateX(101%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;
+  border-left:2px solid var(--inkt)}
+.lade.open{transform:none}
+.lade-kop{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px;border-bottom:2px solid var(--inkt)}
+.lade-kop h3{font-size:1.3rem}
+.dicht{background:none;border:2px solid var(--inkt);border-radius:999px;width:38px;height:38px;cursor:pointer;
+  font-size:1.1rem;line-height:1;display:grid;place-items:center}
+.lade-body{overflow-y:auto;padding:20px;display:grid;gap:16px;align-content:start;flex:1}
+.regel{display:grid;grid-template-columns:54px 1fr auto;gap:12px;align-items:center}
+.regel svg{width:54px}
+.regel h4{font-size:1rem}
+.regel .r-prijs{font-family:var(--kop);font-weight:800;font-variant-numeric:tabular-nums}
+.aantal{display:inline-flex;align-items:center;gap:2px;border:2px solid var(--inkt);border-radius:999px;overflow:hidden;margin-top:6px}
+.aantal button{width:28px;height:28px;background:transparent;border:0;cursor:pointer;font-family:var(--kop);font-weight:800;line-height:1}
+.aantal button:hover{background:var(--zand)}
+.aantal span{min-width:26px;text-align:center;font-family:var(--kop);font-weight:700;font-variant-numeric:tabular-nums;font-size:.95rem}
+.regel--gratis{background:rgba(126,138,85,.14);border:2px dashed var(--olijf);border-radius:14px;padding:12px;
+  grid-template-columns:54px 1fr}
+.regel--gratis select{width:100%;margin-top:6px;padding:7px 9px;border-radius:10px;border:2px solid var(--olijf);
+  background:var(--papier);font-family:var(--tekst);font-size:.9rem}
+.leeg{text-align:center;color:var(--zacht);display:grid;gap:16px;justify-items:center;padding:34px 0}
+.leeg svg{width:96px;opacity:.75}
+.spaarbalk{padding:14px 20px;background:var(--zand);border-block:2px solid var(--inkt);display:grid;gap:8px}
+.spaarbalk p{font-family:var(--kop);font-weight:700;font-size:.9rem}
+.spaarbalk .baan-bar{height:9px;background:rgba(36,23,16,.14);border-radius:99px;overflow:hidden}
+.spaarbalk .baan-bar i{display:block;height:100%;background:var(--olijf);transition:width .35s}
+.lade-voet{padding:20px;border-top:2px solid var(--inkt);display:grid;gap:14px;background:var(--papier)}
+.totaal{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--kop);font-weight:800;font-size:1.25rem}
+.totaal small{font-weight:600;font-size:.78rem;color:var(--zacht)}
+.veld{display:grid;gap:5px}
+.veld label{font-family:var(--kop);font-weight:700;font-size:.76rem;letter-spacing:.08em;text-transform:uppercase;color:var(--zacht)}
+.veld input,.veld textarea,.veld select{padding:11px 13px;border:2px solid var(--inkt);border-radius:12px;
+  background:var(--room);font-family:var(--tekst);font-size:.97rem;width:100%}
+.veld textarea{min-height:64px;resize:vertical}
+.keuzes{display:flex;gap:8px}
+.keuzes button{flex:1;padding:10px;border:2px solid var(--inkt);background:var(--room);border-radius:12px;cursor:pointer;
+  font-family:var(--kop);font-weight:700;font-size:.9rem}
+.keuzes button.aan{background:var(--inkt);color:var(--room)}
+.mini{font-size:.8rem;color:var(--zacht);text-align:center}
+
+/* ---------- balk onderaan (mobiel) ---------- */
+.balk{position:fixed;left:0;right:0;bottom:0;z-index:45;background:var(--cacao);color:var(--room);
+  border-top:2px solid var(--inkt);padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+  display:none;align-items:center;justify-content:space-between;gap:12px}
+.balk b{font-family:var(--kop);font-variant-numeric:tabular-nums}
+.balk span{font-size:.78rem;color:#D9C6B2;display:block}
+@media(max-width:860px){.balk{display:flex}body{padding-bottom:74px}}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,140%);z-index:95;background:var(--inkt);
+  color:var(--room);padding:13px 22px;border-radius:999px;font-family:var(--kop);font-weight:700;font-size:.92rem;
+  transition:transform .35s cubic-bezier(.3,1.4,.5,1);box-shadow:0 10px 24px rgba(36,23,16,.35);max-width:88vw;text-align:center}
+#toast.zien{transform:translate(-50%,0)}
+@media(max-width:860px){#toast{bottom:90px}}
+
+/* ---------- footer ---------- */
+.voet{background:var(--cacao);color:var(--room);padding:clamp(46px,6vw,72px) 0 30px}
+.voet-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:32px}
+.voet h4{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--karamel);margin-bottom:12px}
+.voet ul{list-style:none;padding:0;margin:0;display:grid;gap:8px;font-size:.95rem;color:#D9C6B2}
+.voet a{text-decoration:none;border-bottom:1px solid transparent}
+.voet a:hover{border-color:var(--karamel)}
+.voet-merk{font-family:var(--display);font-size:2rem}
+.voet-onder{margin-top:36px;padding-top:20px;border-top:1px solid rgba(246,238,226,.16);display:flex;
+  flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:.82rem;color:#B39C86}
+.schakel{background:none;border:1px solid rgba(246,238,226,.4);color:inherit;border-radius:999px;
+  padding:6px 14px;cursor:pointer;font-family:var(--kop);font-weight:600;font-size:.8rem}
+@media(max-width:760px){.voet-grid{grid-template-columns:1fr}}
+
+/* ---------- reveal ---------- */
+.js-anim .toon{opacity:0;transform:translateY(16px)}
+.js-anim .toon.in{opacity:1;transform:none;transition:opacity .6s ease, transform .6s cubic-bezier(.2,.8,.3,1)}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  html{scroll-behavior:auto}
+  .js-anim .toon{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div class="korrel" aria-hidden="true"></div>
+
+<div id="laden" role="status" aria-live="polite">
+  <div class="laad-in">
+    <div class="laad-koek" id="laadKoek" aria-hidden="true"></div>
+    <div class="laad-merk">De Koekenbakker</div>
+    <div class="laad-tekst">De oven warmt op…</div>
+    <div class="laad-balk"><i></i></div>
+  </div>
+</div>
+
+<div id="cursor" aria-hidden="true"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="merk" href="#top"><span id="merkKoek" aria-hidden="true"></span> De Koekenbakker</a>
+    <nav class="nav" aria-label="Hoofdmenu">
+      <a href="#assortiment">Koekjes</a>
+      <a href="#bakdag">Bakdag</a>
+      <a href="#zara">Over Zara</a>
+      <a href="#vragen">Vragen</a>
+    </nav>
+    <button class="mandje-knop" id="mandjeKnop" aria-haspopup="dialog">Mandje <b id="mandjeTeller">0</b></button>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow">Vers gebakken · elke vrijdag</span>
+        <h1>Warme koekjes,<br><span class="fat"><em>rechtstreeks</em></span><br>uit Zara's oven.</h1>
+        <p class="hero-p">Vijf chocoladekoekjes, met de hand gedraaid, dezelfde dag gebakken en bij je thuis bezorgd. Nog een beetje zacht vanbinnen — precies zoals het hoort.</p>
+        <div class="hero-acties">
+          <a class="knop" href="#assortiment">Bekijk de koekjes</a>
+          <button class="knop knop--stil" id="verrasMij" type="button">Verras me met een box</button>
+        </div>
+        <div class="hero-stickers">
+          <span class="sticker sticker--olijf">Koop er 5, de 6e is gratis</span>
+          <span class="sticker">Zelf gebakken door Zara (16)</span>
+          <span class="sticker sticker--karamel">Ø 10 cm · 95 gram</span>
+        </div>
+      </div>
+      <div class="podium">
+        <div class="podium-schijf" aria-hidden="true"></div>
+        <div class="hoofdkoek" id="heroKoek" aria-hidden="true"></div>
+        <div class="baan" aria-hidden="true"><span id="orbit1"></span><span id="orbit2"></span></div>
+        <div class="baan baan--traag" aria-hidden="true"><span></span><span></span><span id="orbit3"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="loper" aria-hidden="true">
+    <div class="loper-rij" id="loper"></div>
+  </div>
+
+  <section class="band band--zand" id="assortiment">
+    <div class="wrap">
+      <div class="sectiekop toon">
+        <div class="tekstkant">
+          <span class="eyebrow">Het assortiment</span>
+          <h2 class="titel">Vijf keer chocolade,<br>vijf keer anders.</h2>
+          <p class="lead">Alles wordt gebakken op bestelling — geen voorraad, geen dag-oude koekjes. Tik op een koekje om er een hap uit te nemen (niet opeten, hè).</p>
+        </div>
+        <span class="sticker sticker--karamel">Deze week vers</span>
+      </div>
+      <div class="koekjes" id="koekjes"></div>
+    </div>
+  </section>
+
+  <section class="band band--papier">
+    <div class="wrap deal">
+      <div class="toon">
+        <span class="eyebrow">De spaarregel</span>
+        <h2 class="titel">Vijf in je mandje?<br>De zesde bakt ze erbij.</h2>
+        <p class="lead" style="margin-top:14px">Bij elke vijf koekjes doet Zara er gratis eentje bij in de doos. Je kiest zelf welke smaak — of je laat je verrassen met wat er die dag het lekkerst uit de oven komt.</p>
+        <div class="hero-acties" style="margin-top:26px">
+          <button class="knop" id="dealKnop" type="button">Stel je box samen</button>
+        </div>
+      </div>
+      <div class="toon">
+        <p class="eyebrow">Zo telt het op</p>
+        <div class="deal-rij" id="dealRij" aria-hidden="true"></div>
+        <p class="mini" style="text-align:left;margin-top:22px" id="dealTekst">Nog 5 koekjes tot je gratis koekje.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--donker" id="bakdag">
+    <div class="wrap agenda">
+      <div class="toon">
+        <span class="eyebrow">Bakdag</span>
+        <h2 class="titel">De oven gaat vrijdag om 16:00 aan.</h2>
+        <p class="lead" style="margin-top:14px">Zara bakt één keer per week, in kleine batches naast school. Bestel je vóór donderdagavond 20:00, dan zit je in de batch van vrijdag.</p>
+        <div class="klok" id="klok" role="timer" aria-label="Tijd tot de volgende bakdag">
+          <div><b id="kD">0</b><span>dagen</span></div>
+          <div><b id="kU">0</b><span>uur</span></div>
+          <div><b id="kM">0</b><span>min</span></div>
+          <div><b id="kS">0</b><span>sec</span></div>
+        </div>
+      </div>
+      <div class="stappen toon">
+        <div class="stap"><div><h4>Kies je koekjes</h4><p>Vijf smaken, los te combineren. Vanaf 3 koekjes bestel je al.</p></div></div>
+        <div class="stap"><div><h4>Stuur je bestelling</h4><p>Eén tik en je mandje staat als berichtje klaar. Zara bevestigt persoonlijk.</p></div></div>
+        <div class="stap"><div><h4>Vrijdag warm in de doos</h4><p>Afhalen of bezorgd binnen de stad — dezelfde middag nog.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--zand">
+    <div class="wrap">
+      <div class="quiz toon" id="quiz">
+        <div class="quiz-in" id="quizIn"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--papier" id="zara">
+    <div class="wrap overzara">
+      <figure class="polaroid toon">
+        <div class="polaroid-vlak">
+          <span class="monogram">Z</span>
+          <span id="polaroidKoek" aria-hidden="true"></span>
+        </div>
+        <figcaption>Zara, zaterdagochtend, batch nummer 63</figcaption>
+      </figure>
+      <div class="toon">
+        <span class="eyebrow">Over de bakker</span>
+        <h2 class="titel">Hoi, ik ben Zara.</h2>
+        <p class="lead" style="margin-top:16px">Ik ben 16 en ik bak sinds mijn twaalfde. Wat begon als een zaterdag met mijn oma's mixer is uitgegroeid tot een oven die elke vrijdag drie keer achter elkaar aan moet. Ik draai elk bolletje met de hand, weeg alles op de gram en haal de koekjes er expres net iets te vroeg uit — dan blijft het midden zacht.</p>
+        <p class="lead" style="margin-top:14px">Geen bakmix, geen palmvet, geen doos die drie dagen in een magazijn heeft gestaan. Gewoon roomboter, Belgische chocolade en een oven die om vier uur aangaat.</p>
+        <blockquote class="citaat">"Als het koekje niet warm is als je 'm openbreekt, heb ik iets fout gedaan."</blockquote>
+        <div class="cijfers">
+          <div class="cijfer"><b>16</b><span>jaar</span></div>
+          <div class="cijfer"><b>5</b><span>smaken</span></div>
+          <div class="cijfer"><b>48 u</b><span>gerijpt deeg</span></div>
+          <div class="cijfer"><b>1×</b><span>bakdag per week</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--zand">
+    <div class="wrap">
+      <div class="sectiekop toon">
+        <div class="tekstkant">
+          <span class="eyebrow">Van de klanten</span>
+          <h2 class="titel">Wat er terugkomt in de app.</h2>
+        </div>
+      </div>
+      <div class="briefjes toon">
+        <div class="briefje">
+          <div class="sterren" aria-label="5 van de 5 sterren">★★★★★</div>
+          <p>"Besteld voor een verjaardag, binnen tien minuten was de hele doos leeg. De Karamelbom is echt gevaarlijk lekker."</p>
+          <footer>Fenna · buurvrouw en vaste klant</footer>
+        </div>
+        <div class="briefje">
+          <div class="sterren" aria-label="5 van de 5 sterren">★★★★★</div>
+          <p>"Nog warm bezorgd op de fiets. Dat is gewoon een ander koekje dan uit de supermarkt, sorry."</p>
+          <footer>Sem · uit de klas</footer>
+        </div>
+        <div class="briefje">
+          <div class="sterren" aria-label="5 van de 5 sterren">★★★★★</div>
+          <p>"Wij nemen elke vrijdag zes stuks voor kantoor. De gratis zesde is inmiddels traditie."</p>
+          <footer>Team Nieuwstraat</footer>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--papier" id="vragen">
+    <div class="wrap">
+      <div class="sectiekop toon">
+        <div class="tekstkant">
+          <span class="eyebrow">Praktisch</span>
+          <h2 class="titel">Even snel de vragen.</h2>
+        </div>
+      </div>
+      <div class="faq toon">
+        <details open><summary>Hoe werkt "koop er 5, krijg de 6e gratis"?</summary><p>Zodra er vijf koekjes in je mandje liggen, verschijnt er automatisch een gratis koekje. Bij tien krijg je er twee, en zo door. Je kiest zelf de smaak van elk gratis koekje, of je laat het aan Zara over.</p></details>
+        <details><summary>Wanneer worden mijn koekjes gebakken?</summary><p>Elke vrijdagmiddag. Bestel je vóór donderdag 20:00, dan zit je in de batch van diezelfde week. Daarna schuif je door naar de vrijdag erop.</p></details>
+        <details><summary>Bezorgen of afhalen?</summary><p>Afhalen kan vrijdag tussen 17:00 en 19:00. Bezorgen doet Zara zelf op de fiets binnen de stad, vanaf zes koekjes gratis. Daaronder rekent ze € 2,50.</p></details>
+        <details><summary>Hoe lang blijven ze goed?</summary><p>Op hun best zijn ze de dag zelf. Daarna nog drie dagen prima in een afgesloten trommel — tien seconden in de magnetron en ze zijn weer als nieuw. Invriezen kan tot drie maanden.</p></details>
+        <details><summary>Allergenen</summary><p>Alle koekjes bevatten tarwe (gluten), ei, melk en soja. De Nootje Noir en Witte Wolk bevatten noten, en alles wordt gebakken in een keuken waar noten aanwezig zijn. Laat het weten bij je bestelling als er iets speelt.</p></details>
+        <details><summary>Kan ik een grotere bestelling doen voor een feest?</summary><p>Ja. Vanaf 24 koekjes maakt Zara een aparte planning en kun je smaken laten mixen. Stuur een berichtje met de datum, dan hoor je snel of het past.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="voet">
+  <div class="wrap">
+    <div class="voet-grid">
+      <div>
+        <div class="voet-merk">De Koekenbakker</div>
+        <p class="lead" style="max-width:34ch;margin-top:10px">Verse chocoladekoekjes, met de hand gebakken door Zara. Eén bakdag per week, en dan is het op.</p>
+      </div>
+      <div>
+        <h4>Bestellen</h4>
+        <ul>
+          <li><a href="#assortiment">Het assortiment</a></li>
+          <li><a href="#bakdag">Bakdag en bezorging</a></li>
+          <li><a href="#vragen">Veelgestelde vragen</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Volgen</h4>
+        <ul>
+          <li><a href="#" data-social="Instagram">Instagram @dekoekenbakker</a></li>
+          <li><a href="#" data-social="TikTok">TikTok @dekoekenbakker</a></li>
+          <li><a href="#" data-social="E-mail">hoi@dekoekenbakker.nl</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="voet-onder">
+      <span>© <span id="jaar">2026</span> De Koekenbakker · gemaakt in de keuken</span>
+      <button class="schakel" id="cursorSchakel" type="button">Koekjescursor: aan</button>
+    </div>
+  </div>
+</footer>
+
+<div class="balk" id="balk">
+  <div><b id="balkTotaal">€ 0,00</b><span id="balkTekst">Nog geen koekjes gekozen</span></div>
+  <button class="knop" id="balkKnop" type="button" style="padding:11px 20px">Naar het mandje</button>
+</div>
+
+<div class="sluier" id="sluier"></div>
+<aside class="lade" id="lade" role="dialog" aria-modal="true" aria-label="Je mandje" aria-hidden="true">
+  <div class="lade-kop">
+    <h3>Je mandje</h3>
+    <button class="dicht" id="ladeDicht" aria-label="Mandje sluiten">✕</button>
+  </div>
+  <div class="spaarbalk">
+    <p id="spaarTekst">Nog 5 koekjes tot een gratis koekje.</p>
+    <div class="baan-bar"><i id="spaarBalk" style="width:0%"></i></div>
+  </div>
+  <div class="lade-body" id="ladeBody"></div>
+  <div class="lade-voet">
+    <div class="totaal"><span>Totaal</span><span><span id="totaalPrijs">€ 0,00</span><small id="totaalUitleg"></small></span></div>
+    <div class="veld"><label for="vNaam">Je naam</label><input id="vNaam" type="text" autocomplete="name" placeholder="Bijv. Joost"></div>
+    <div class="veld"><label for="vContact">Telefoon of e-mail</label><input id="vContact" type="text" autocomplete="tel" placeholder="06 – …"></div>
+    <div class="veld">
+      <label>Afhalen of bezorgen</label>
+      <div class="keuzes" id="keuzes">
+        <button type="button" data-lever="Afhalen" class="aan">Afhalen</button>
+        <button type="button" data-lever="Bezorgen">Bezorgen</button>
+      </div>
+    </div>
+    <div class="veld" id="adresVeld" hidden><label for="vAdres">Bezorgadres</label><input id="vAdres" type="text" autocomplete="street-address" placeholder="Straat en huisnummer"></div>
+    <div class="veld"><label for="vNotitie">Iets doorgeven?</label><textarea id="vNotitie" placeholder="Allergieën, cadeauverpakking, ander bezorgmoment…"></textarea></div>
+    <button class="knop knop--vol" id="bestelKnop" type="button">Bestelling versturen</button>
+    <p class="mini">Je bestelling gaat als berichtje naar Zara. Betalen doe je bij het afhalen of bezorgen.</p>
+  </div>
+</aside>
+
+<script>
+(function(){
+"use strict";
+
+/* =====================================================================
+   Instellingen — pas dit blok aan als de gegevens van Zara veranderen.
+   ===================================================================== */
+const CONFIG = {
+  whatsapp: "",                       // bijv. "31612345678" (landcode, geen + of spaties)
+  email: "hoi@dekoekenbakker.nl",
+  stad: "de stad",
+  bezorgkosten: 2.50,
+  gratisBezorgenVanaf: 6,
+  bakdag: 5,                          // 5 = vrijdag
+  bakuur: 16
+};
+
+/* ---------- kleine hulpjes ---------- */
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+const euro = n => "€ " + n.toLocaleString("nl-NL", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const bewaar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const lees = (k, standaard) => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : standaard; } catch (e) { return standaard; } };
+const rustig = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function melding(tekst){
+  const t = $("#toast");
+  t.textContent = tekst;
+  t.classList.add("zien");
+  clearTimeout(melding._t);
+  melding._t = setTimeout(() => t.classList.remove("zien"), 2600);
+}
+
+/* ---------- koekjes tekenen ---------- */
+function rng(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+function randPad(cx, cy, r, r2){
+  const punten = 22, p = [];
+  for (let i = 0; i < punten; i++){
+    const a = (i / punten) * Math.PI * 2;
+    const rr = r * (0.955 + r2() * 0.09);
+    p.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]);
+  }
+  let d = "M" + p[0][0].toFixed(1) + "," + p[0][1].toFixed(1);
+  for (let i = 0; i < p.length; i++){
+    const a = p[i], b = p[(i + 1) % p.length], c = p[(i + 2) % p.length];
+    d += " Q" + b[0].toFixed(1) + "," + b[1].toFixed(1) + " " + ((b[0] + c[0]) / 2).toFixed(1) + "," + ((b[1] + c[1]) / 2).toFixed(1);
+  }
+  return d + "Z";
+}
+
+let uid = 0;
+function koekSVG(k, opties){
+  opties = opties || {};
+  const happen = opties.happen || [];
+  const id = "k" + (++uid);
+  const r2 = rng(k.seed);
+  const rand = rng(k.seed + 77);
+  const deeg = k.deeg, korst = k.korst, brokken = k.brokken;
+  let s = '<svg viewBox="0 0 200 200" role="img" aria-label="Koekje ' + k.naam + '" xmlns="http://www.w3.org/2000/svg">';
+  s += '<defs><radialGradient id="g' + id + '" cx="42%" cy="36%" r="72%">'
+     + '<stop offset="0%" stop-color="' + deeg[0] + '"/><stop offset="70%" stop-color="' + deeg[1] + '"/>'
+     + '<stop offset="100%" stop-color="' + korst + '"/></radialGradient>';
+  s += '<mask id="m' + id + '"><rect x="0" y="0" width="200" height="200" fill="#fff"/>';
+  happen.forEach(function(a){
+    s += '<circle cx="' + (100 + Math.cos(a) * 92).toFixed(1) + '" cy="' + (100 + Math.sin(a) * 92).toFixed(1) + '" r="30" fill="#000"/>';
+  });
+  s += '</mask></defs>';
+  s += '<g mask="url(#m' + id + ')">';
+  s += '<path d="' + randPad(100, 100, 88, r2) + '" fill="url(#g' + id + ')"/>';
+  s += '<path d="' + randPad(100, 100, 72, rng(k.seed + 5)) + '" fill="' + deeg[0] + '" opacity=".32"/>';
+  for (let i = 0; i < 26; i++){
+    const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * 78;
+    s += '<circle cx="' + (100 + Math.cos(a) * d).toFixed(1) + '" cy="' + (100 + Math.sin(a) * d).toFixed(1)
+       + '" r="' + (1 + rand() * 1.8).toFixed(1) + '" fill="' + korst + '" opacity=".45"/>';
+  }
+  for (let i = 0; i < 11; i++){
+    const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * 66;
+    const x = 100 + Math.cos(a) * d, y = 100 + Math.sin(a) * d;
+    const w = 15 + rand() * 13, h = 11 + rand() * 9, rot = rand() * 90 - 45;
+    const kleur = brokken[i % brokken.length];
+    s += '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + rot.toFixed(1) + ')">'
+       + '<rect x="' + (-w / 2) + '" y="' + (-h / 2) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="4" fill="' + kleur + '"/>'
+       + '<rect x="' + (-w / 2) + '" y="' + (-h / 2) + '" width="' + w.toFixed(1) + '" height="' + (h * 0.34).toFixed(1) + '" rx="3" fill="#fff" opacity=".22"/>'
+       + '</g>';
+  }
+  s += '<path d="' + randPad(100, 100, 88, rng(k.seed)) + '" fill="none" stroke="' + korst + '" stroke-opacity=".55" stroke-width="3"/>';
+  s += '</g></svg>';
+  return s;
+}
+
+/* ---------- het assortiment ---------- */
+const KOEKJES = [
+  { id: "klassieker", naam: "De Klassieker", prijs: 2.75, gram: 95,
+    kort: "Melkchocolade in grove brokken, roomboterdeeg dat 48 uur heeft gerust, en een vlokje zeezout er bovenop.",
+    tags: ["Melkchocolade", "Zeezout", "Bestseller"],
+    smaak: {Choco: 3, Zoet: 4, Zout: 2},
+    seed: 11, deeg: ["#E7BE85", "#D3A165"], korst: "#A9743C",
+    brokken: ["#6B4423", "#7C4F2A", "#5A3517"] },
+  { id: "nachtdonker", naam: "Nachtdonker", prijs: 3.00, gram: 95,
+    kort: "Cacaodeeg met 70% pure chocolade. Bijna zwart, nauwelijks zoet, van binnen nog vloeibaar.",
+    tags: ["70% puur", "Dubbel cacao"],
+    smaak: {Choco: 5, Zoet: 2, Zout: 2},
+    seed: 23, deeg: ["#5B3A2A", "#42281C"], korst: "#2C1A12",
+    brokken: ["#1E1210", "#33201A", "#120B09"] },
+  { id: "wittewolk", naam: "Witte Wolk", prijs: 3.00, gram: 95,
+    kort: "Witte chocolade met geroosterde macadamia. Zacht, romig en gevaarlijk makkelijk weg te eten.",
+    tags: ["Witte chocolade", "Macadamia", "Noten"],
+    smaak: {Choco: 2, Zoet: 5, Zout: 1},
+    seed: 41, deeg: ["#F0DCB4", "#E2C795"], korst: "#C29A62",
+    brokken: ["#FAF0DC", "#F3E4C6", "#E8D3AC"] },
+  { id: "karamelbom", naam: "Karamelbom", prijs: 3.25, gram: 110,
+    kort: "Een kern van zeezoutkaramel die eruit loopt zodra je 'm openbreekt, verpakt in melkchocoladedeeg. Warm eten.",
+    tags: ["Gevuld", "Zeezoutkaramel", "110 gram"],
+    smaak: {Choco: 3, Zoet: 5, Zout: 4},
+    seed: 67, deeg: ["#E8B472", "#CF9450"], korst: "#9C6427",
+    brokken: ["#C9721F", "#E39A3C", "#6B4423"] },
+  { id: "nootjenoir", naam: "Nootje Noir", prijs: 3.25, gram: 95,
+    kort: "Pure chocolade met een laag hazelnootcrunch, gebakken op een deeg met geroosterde hazelnoot.",
+    tags: ["Puur", "Hazelnoot", "Noten"],
+    smaak: {Choco: 4, Zoet: 3, Zout: 2},
+    seed: 89, deeg: ["#C99862", "#A97742"], korst: "#7A5024",
+    brokken: ["#3A2318", "#8B5A2B", "#241611"] }
+];
+const vind = id => KOEKJES.filter(k => k.id === id)[0];
+
+/* ---------- kaarten ---------- */
+const happenPer = {};
+function bolletjes(n){
+  let s = '<span class="bolletjes" aria-hidden="true">';
+  for (let i = 1; i <= 5; i++) s += '<b class="' + (i <= n ? "aan" : "") + '"></b>';
+  return s + '</span>';
+}
+function tekenKaarten(){
+  $("#koekjes").innerHTML = KOEKJES.map(function(k){
+    const smaakRijen = Object.keys(k.smaak).map(function(naam){
+      return '<div class="smaak-rij"><span>' + naam + '</span>' + bolletjes(k.smaak[naam]) + '</div>';
+    }).join("");
+    return '<article class="kaart toon">'
+      + '<div class="koek-slot" data-hap="' + k.id + '" role="button" tabindex="0" aria-label="Neem een hap uit ' + k.naam + '">'
+      +   '<span class="koek-plek" data-koek="' + k.id + '"></span><span class="hap-hint">tik voor een hap</span>'
+      + '</div>'
+      + '<div class="kaart-tekst">'
+      +   '<h3>' + k.naam + '</h3>'
+      +   '<p class="omschrijving">' + k.kort + '</p>'
+      +   '<div class="meta">' + k.tags.map(t => "<i>" + t + "</i>").join("") + '</div>'
+      +   '<div class="smaak">' + smaakRijen + '</div>'
+      + '</div>'
+      + '<div class="kaart-voet">'
+      +   '<span class="prijs">' + euro(k.prijs) + '<small>' + k.gram + ' g · Ø 10 cm</small></span>'
+      +   '<button class="toevoeg" type="button" data-add="' + k.id + '">In mandje</button>'
+      + '</div>'
+      + '</article>';
+  }).join("");
+  $$(".koek-plek").forEach(function(el){
+    const k = vind(el.dataset.koek);
+    el.innerHTML = koekSVG(k, {happen: happenPer[k.id] || []});
+  });
+}
+
+function neemHap(id, bron){
+  const lijst = happenPer[id] || (happenPer[id] = []);
+  if (lijst.length >= 3){
+    lijst.length = 0;
+    melding("Hé! Niet opeten — bestel er gewoon een 😄");
+  } else {
+    lijst.push(Math.random() * Math.PI * 2);
+  }
+  const plek = $(".koek-plek", bron);
+  plek.innerHTML = koekSVG(vind(id), {happen: lijst});
+  kruimelBij(bron);
+}
+
+/* ---------- het mandje ---------- */
+let mandje = lees("kb-mandje", {});
+let gratisKeuze = lees("kb-gratis", []);
+let lever = lees("kb-lever", "Afhalen");
+
+const aantalBetaald = () => Object.keys(mandje).reduce((n, id) => n + mandje[id], 0);
+const aantalGratis = () => Math.floor(aantalBetaald() / 5);
+const subtotaal = () => Object.keys(mandje).reduce((n, id) => n + mandje[id] * vind(id).prijs, 0);
+
+function inMandje(id, aantal){
+  aantal = aantal || 1;
+  mandje[id] = (mandje[id] || 0) + aantal;
+  if (mandje[id] <= 0) delete mandje[id];
+  const gratis = aantalGratis();
+  while (gratisKeuze.length < gratis) gratisKeuze.push("verrassing");
+  gratisKeuze.length = gratis;
+  bewaar("kb-mandje", mandje);
+  bewaar("kb-gratis", gratisKeuze);
+  ververs();
+}
+
+function ververs(){
+  const betaald = aantalBetaald(), gratis = aantalGratis(), sub = subtotaal();
+  $("#mandjeTeller").textContent = betaald + gratis;
+  $("#balkTotaal").textContent = euro(sub);
+  $("#balkTekst").textContent = betaald === 0
+    ? "Nog geen koekjes gekozen"
+    : betaald + " koekje" + (betaald === 1 ? "" : "s") + (gratis ? " + " + gratis + " gratis" : "");
+
+  const tot5 = betaald === 0 ? 5 : (5 - (betaald % 5)) % 5;
+  const spaar = tot5 === 0 && betaald > 0
+    ? "Gratis koekje verdiend — kies je smaak hieronder."
+    : "Nog " + tot5 + " koekje" + (tot5 === 1 ? "" : "s") + " tot " + (gratis ? "het volgende" : "je") + " gratis koekje.";
+  $("#spaarTekst").textContent = spaar;
+  $("#dealTekst").textContent = spaar;
+  $("#spaarBalk").style.width = (betaald === 0 ? 0 : ((betaald % 5 === 0 ? 5 : betaald % 5) / 5) * 100) + "%";
+
+  $$("#dealRij .gleuf").forEach(function(g, i){
+    const vol = i < 5 ? (betaald % 5 === 0 ? (betaald > 0 ? 5 : 0) : betaald % 5) > i : gratis > 0;
+    g.classList.toggle("vol", vol);
+  });
+
+  // regels in de lade
+  const body = $("#ladeBody");
+  const ids = Object.keys(mandje);
+  if (ids.length === 0){
+    body.innerHTML = '<div class="leeg"><span class="koek-plek" data-koek="klassieker"></span>'
+      + '<p>Je mandje is nog leeg. Vijf koekjes en de zesde krijg je erbij.</p>'
+      + '<button class="knop" type="button" data-sluit-naar="#assortiment">Kies je koekjes</button></div>';
+  } else {
+    body.innerHTML = ids.map(function(id){
+      const k = vind(id);
+      return '<div class="regel"><span class="koek-plek" data-koek="' + id + '"></span>'
+        + '<div><h4>' + k.naam + '</h4>'
+        + '<div class="aantal"><button type="button" data-min="' + id + '" aria-label="Eén minder">–</button>'
+        + '<span>' + mandje[id] + '</span>'
+        + '<button type="button" data-plus="' + id + '" aria-label="Eén meer">+</button></div></div>'
+        + '<span class="r-prijs">' + euro(mandje[id] * k.prijs) + '</span></div>';
+    }).join("") + gratisKeuze.map(function(keuze, i){
+      const opties = '<option value="verrassing"' + (keuze === "verrassing" ? " selected" : "") + '>Verras me (keuze van Zara)</option>'
+        + KOEKJES.map(k => '<option value="' + k.id + '"' + (keuze === k.id ? " selected" : "") + '>' + k.naam + '</option>').join("");
+      return '<div class="regel regel--gratis"><span class="koek-plek" data-koek="' + (keuze === "verrassing" ? "karamelbom" : keuze) + '"></span>'
+        + '<div><h4>Gratis koekje ' + (gratisKeuze.length > 1 ? "#" + (i + 1) : "") + '</h4>'
+        + '<select data-gratis="' + i + '" aria-label="Smaak van je gratis koekje">' + opties + '</select></div></div>';
+    }).join("");
+  }
+  $$(".koek-plek", body).forEach(function(el){ el.innerHTML = koekSVG(vind(el.dataset.koek)); });
+
+  const bezorgen = lever === "Bezorgen" && (betaald + gratis) < CONFIG.gratisBezorgenVanaf && betaald > 0;
+  const totaal = sub + (bezorgen ? CONFIG.bezorgkosten : 0);
+  $("#totaalPrijs").textContent = euro(totaal);
+  $("#totaalUitleg").textContent = betaald === 0 ? ""
+    : (bezorgen ? "incl. " + euro(CONFIG.bezorgkosten) + " bezorging" : (lever === "Bezorgen" ? "gratis bezorgd" : "afhalen"));
+  $("#adresVeld").hidden = lever !== "Bezorgen";
+}
+
+function openLade(open){
+  $("#lade").classList.toggle("open", open);
+  $("#sluier").classList.toggle("open", open);
+  $("#lade").setAttribute("aria-hidden", open ? "false" : "true");
+  document.body.style.overflow = open ? "hidden" : "";
+  if (open) setTimeout(() => $("#ladeDicht").focus(), 60);
+}
+
+/* ---------- bestelling ---------- */
+function bestelTekst(){
+  const regels = Object.keys(mandje).map(id => "• " + mandje[id] + "× " + vind(id).naam + " — " + euro(mandje[id] * vind(id).prijs));
+  gratisKeuze.forEach(function(keuze){
+    regels.push("• 1× " + (keuze === "verrassing" ? "Gratis koekje (verrassing)" : "Gratis koekje: " + vind(keuze).naam) + " — gratis");
+  });
+  const betaald = aantalBetaald(), gratis = aantalGratis();
+  const bezorgen = lever === "Bezorgen" && (betaald + gratis) < CONFIG.gratisBezorgenVanaf;
+  const totaal = subtotaal() + (bezorgen ? CONFIG.bezorgkosten : 0);
+  let t = "Hoi Zara! Ik wil graag bestellen bij De Koekenbakker:\n\n" + regels.join("\n");
+  t += "\n\nTotaal: " + euro(totaal) + (bezorgen ? " (incl. bezorging)" : "");
+  t += "\n" + lever + (lever === "Bezorgen" ? " — " + ($("#vAdres").value.trim() || "adres volgt") : "");
+  t += "\n\nNaam: " + $("#vNaam").value.trim();
+  t += "\nContact: " + $("#vContact").value.trim();
+  const notitie = $("#vNotitie").value.trim();
+  if (notitie) t += "\nOpmerking: " + notitie;
+  return t;
+}
+
+function versturen(){
+  if (aantalBetaald() === 0){ melding("Je mandje is nog leeg."); return; }
+  if (!$("#vNaam").value.trim()){ melding("Vul even je naam in."); $("#vNaam").focus(); return; }
+  if (!$("#vContact").value.trim()){ melding("Hoe kan Zara je bereiken?"); $("#vContact").focus(); return; }
+  if (lever === "Bezorgen" && !$("#vAdres").value.trim()){ melding("Vul je bezorgadres in."); $("#vAdres").focus(); return; }
+  const tekst = bestelTekst();
+  if (navigator.clipboard) navigator.clipboard.writeText(tekst).catch(function(){});
+  if (CONFIG.whatsapp){
+    window.open("https://wa.me/" + CONFIG.whatsapp + "?text=" + encodeURIComponent(tekst), "_blank", "noopener");
+    melding("Je bestelling staat klaar in WhatsApp.");
+  } else {
+    window.location.href = "mailto:" + CONFIG.email + "?subject=" + encodeURIComponent("Bestelling De Koekenbakker") + "&body=" + encodeURIComponent(tekst);
+    melding("Bestelling gekopieerd en klaargezet in je mail.");
+  }
+}
+
+/* ---------- quiz: welk koekje ben jij? ---------- */
+const VRAGEN = [
+  { v: "Het is vrijdagmiddag. Wat staat er naast je?",
+    o: [ {t: "Zwarte koffie", p: {nachtdonker: 2, nootjenoir: 1}},
+         {t: "Thee met melk", p: {klassieker: 2, wittewolk: 1}},
+         {t: "Warme chocolademelk", p: {wittewolk: 2, karamelbom: 1}},
+         {t: "IJskoude cola", p: {karamelbom: 2, klassieker: 1}} ] },
+  { v: "Hoe donker mag chocolade van jou zijn?",
+    o: [ {t: "Hoe puurder hoe beter", p: {nachtdonker: 3, nootjenoir: 2}},
+         {t: "Gewoon melk, klaar", p: {klassieker: 3}},
+         {t: "Wit telt ook als chocolade", p: {wittewolk: 3}},
+         {t: "Als er maar iets uitloopt", p: {karamelbom: 3}} ] },
+  { v: "Wat is een koekje voor jou?",
+    o: [ {t: "Iets voor bij het leren", p: {klassieker: 2, nootjenoir: 2}},
+         {t: "Een dessert op zich", p: {karamelbom: 2, nachtdonker: 1}},
+         {t: "Iets om te delen", p: {wittewolk: 2, klassieker: 1}},
+         {t: "Een beloning na een lange dag", p: {nachtdonker: 2, karamelbom: 1}} ] }
+];
+let qIndex = 0, qScore = {};
+
+function tekenQuiz(){
+  const box = $("#quizIn");
+  if (qIndex < VRAGEN.length){
+    const vraag = VRAGEN[qIndex];
+    box.innerHTML = '<span class="eyebrow">Welk koekje ben jij?</span>'
+      + '<h3>' + vraag.v + '</h3>'
+      + '<div class="opties">' + vraag.o.map((o, i) => '<button class="optie" type="button" data-optie="' + i + '">' + o.t + '</button>').join("") + '</div>'
+      + '<div class="voortgang"><i style="width:' + ((qIndex / VRAGEN.length) * 100) + '%"></i></div>';
+  } else {
+    let beste = KOEKJES[0].id, hoog = -1;
+    KOEKJES.forEach(function(k){ const s = qScore[k.id] || 0; if (s > hoog){ hoog = s; beste = k.id; } });
+    const k = vind(beste);
+    box.innerHTML = '<span class="eyebrow">Jouw match</span>'
+      + '<div class="uitslag"><span class="koek-plek" data-koek="' + k.id + '"></span>'
+      + '<div><h3>' + k.naam + '</h3><p class="lead" style="margin-top:8px">' + k.kort + '</p>'
+      + '<div class="hero-acties" style="margin-top:20px">'
+      + '<button class="knop" type="button" data-add="' + k.id + '">Doe maar in mijn mandje</button>'
+      + '<button class="knop knop--stil" type="button" id="quizOpnieuw">Opnieuw</button>'
+      + '</div></div></div>';
+    $(".koek-plek", box).innerHTML = koekSVG(k);
+  }
+}
+
+/* ---------- aftellen naar de bakdag ---------- */
+function volgendeBakdag(){
+  const nu = new Date();
+  const d = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate(), CONFIG.bakuur, 0, 0, 0);
+  let dagen = (CONFIG.bakdag - d.getDay() + 7) % 7;
+  if (dagen === 0 && nu > d) dagen = 7;
+  d.setDate(d.getDate() + dagen);
+  return d;
+}
+function tikTak(){
+  const over = Math.max(0, volgendeBakdag() - new Date());
+  const s = Math.floor(over / 1000);
+  $("#kD").textContent = Math.floor(s / 86400);
+  $("#kU").textContent = String(Math.floor(s / 3600) % 24).padStart(2, "0");
+  $("#kM").textContent = String(Math.floor(s / 60) % 60).padStart(2, "0");
+  $("#kS").textContent = String(s % 60).padStart(2, "0");
+}
+
+/* ---------- koekjescursor ---------- */
+let cursorAan = lees("kb-cursor", true);
+const fijn = window.matchMedia("(pointer: fine)").matches;
+function cursorInstellen(){
+  const aan = cursorAan && fijn;
+  document.documentElement.classList.toggle("cursor-aan", aan);
+  $("#cursor").classList.toggle("leeft", aan);
+  $("#cursorSchakel").textContent = "Koekjescursor: " + (cursorAan ? "aan" : "uit");
+  $("#cursorSchakel").hidden = !fijn;
+}
+let laatsteKruimel = 0;
+function kruimelBij(el){
+  if (rustig) return;
+  const r = el.getBoundingClientRect();
+  for (let i = 0; i < 6; i++) kruimel(r.left + r.width / 2 + (Math.random() - .5) * r.width * .7, r.top + r.height / 2);
+}
+function kruimel(x, y){
+  const c = document.createElement("span");
+  c.className = "kruimel";
+  c.style.left = x + "px";
+  c.style.top = y + "px";
+  c.style.setProperty("--dx", ((Math.random() - .5) * 40).toFixed(0) + "px");
+  c.style.opacity = (.5 + Math.random() * .5).toFixed(2);
+  document.body.appendChild(c);
+  setTimeout(() => c.remove(), 720);
+}
+
+/* ---------- opstarten ---------- */
+function start(){
+  // vaste koekjes tekenen
+  const klein = koekSVG(KOEKJES[0]);
+  $("#laadKoek").innerHTML = koekSVG(KOEKJES[3]);
+  $("#merkKoek").innerHTML = klein;
+  $("#heroKoek").innerHTML = koekSVG(KOEKJES[0]);
+  $("#cursor").innerHTML = koekSVG(KOEKJES[1]);
+  $("#polaroidKoek").innerHTML = koekSVG(KOEKJES[2]);
+  ["#orbit1", "#orbit2", "#orbit3"].forEach(function(sel, i){ $(sel).innerHTML = koekSVG(KOEKJES[i + 1]); });
+  $$(".baan span:empty").forEach(function(el, i){ el.innerHTML = koekSVG(KOEKJES[(i + 3) % 5]); });
+
+  // loper
+  const woorden = ["Vers gebakken", "Koop er 5 · de 6e gratis", "Elke vrijdag een nieuwe batch", "48 uur gerijpt deeg", "Bezorgd in " + CONFIG.stad, "Gebakken door Zara (16)"];
+  $("#loper").innerHTML = (woorden.concat(woorden)).map(w => "<span>" + w + "</span>").join("");
+
+  // spaarrij
+  $("#dealRij").innerHTML = [0,1,2,3,4,5].map(function(i){
+    return '<div class="gleuf' + (i === 5 ? " gleuf--gratis" : "") + '">' + koekSVG(KOEKJES[i % 5]) + '</div>';
+  }).join("");
+
+  tekenKaarten();
+  tekenQuiz();
+  ververs();
+  tikTak();
+  setInterval(tikTak, 1000);
+  cursorInstellen();
+  $("#jaar").textContent = new Date().getFullYear();
+  $$("#keuzes button").forEach(b => b.classList.toggle("aan", b.dataset.lever === lever));
+
+  // in beeld schuiven
+  if ("IntersectionObserver" in window && !rustig){
+    document.documentElement.classList.add("js-anim");
+    const io = new IntersectionObserver(function(rijen){
+      rijen.forEach(function(r){ if (r.isIntersecting){ r.target.classList.add("in"); io.unobserve(r.target); } });
+    }, {rootMargin: "0px 0px -8% 0px"});
+    $$(".toon").forEach(el => io.observe(el));
+    setTimeout(() => $$(".toon").forEach(el => el.classList.add("in")), 3500);
+  }
+}
+
+/* ---------- klikken en typen ---------- */
+document.addEventListener("click", function(e){
+  const add = e.target.closest("[data-add]");
+  if (add){
+    inMandje(add.dataset.add, 1);
+    kruimelBij(add);
+    if (add.classList.contains("toevoeg")){
+      add.textContent = "Toegevoegd";
+      add.classList.add("gelukt");
+      setTimeout(function(){ add.textContent = "In mandje"; add.classList.remove("gelukt"); }, 1100);
+    } else {
+      melding(vind(add.dataset.add).naam + " zit in je mandje.");
+    }
+    return;
+  }
+  const hap = e.target.closest("[data-hap]");
+  if (hap){ neemHap(hap.dataset.hap, hap); return; }
+  const min = e.target.closest("[data-min]");
+  if (min){ inMandje(min.dataset.min, -1); return; }
+  const plus = e.target.closest("[data-plus]");
+  if (plus){ inMandje(plus.dataset.plus, 1); return; }
+  const naar = e.target.closest("[data-sluit-naar]");
+  if (naar){ openLade(false); document.querySelector(naar.dataset.sluitNaar).scrollIntoView({behavior: rustig ? "auto" : "smooth"}); return; }
+  const optie = e.target.closest("[data-optie]");
+  if (optie){
+    const punten = VRAGEN[qIndex].o[+optie.dataset.optie].p;
+    Object.keys(punten).forEach(id => qScore[id] = (qScore[id] || 0) + punten[id]);
+    qIndex++;
+    tekenQuiz();
+    return;
+  }
+  if (e.target.id === "quizOpnieuw"){ qIndex = 0; qScore = {}; tekenQuiz(); return; }
+  const lev = e.target.closest("[data-lever]");
+  if (lev){
+    lever = lev.dataset.lever;
+    bewaar("kb-lever", lever);
+    $$("#keuzes button").forEach(b => b.classList.toggle("aan", b === lev));
+    ververs();
+    return;
+  }
+  const soc = e.target.closest("[data-social]");
+  if (soc && soc.getAttribute("href") === "#"){
+    e.preventDefault();
+    melding(soc.dataset.social + " komt eraan — volg 'm binnenkort.");
+    return;
+  }
+  if (e.target.closest("#mandjeKnop, #balkKnop")){ openLade(true); return; }
+  if (e.target.closest("#dealKnop")){ $("#assortiment").scrollIntoView({behavior: rustig ? "auto" : "smooth"}); return; }
+  if (e.target.closest("#ladeDicht, #sluier")){ openLade(false); return; }
+  if (e.target.closest("#cursorSchakel")){ cursorAan = !cursorAan; bewaar("kb-cursor", cursorAan); cursorInstellen(); return; }
+  if (e.target.closest("#verrasMij")){
+    const keuze = KOEKJES.slice().sort(() => Math.random() - .5).slice(0, 3);
+    inMandje(keuze[0].id, 2); inMandje(keuze[1].id, 2); inMandje(keuze[2].id, 1);
+    openLade(true);
+    melding("Boxje samengesteld — inclusief je gratis koekje.");
+    return;
+  }
+});
+
+document.addEventListener("keydown", function(e){
+  if (e.key === "Escape") openLade(false);
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-hap]")){ e.preventDefault(); neemHap(e.target.dataset.hap, e.target); }
+});
+
+document.addEventListener("change", function(e){
+  const g = e.target.closest("[data-gratis]");
+  if (g){ gratisKeuze[+g.dataset.gratis] = g.value; bewaar("kb-gratis", gratisKeuze); ververs(); }
+});
+
+$("#bestelKnop").addEventListener("click", versturen);
+
+document.addEventListener("mousemove", function(e){
+  if (!cursorAan || !fijn) return;
+  const c = $("#cursor");
+  c.style.transform = "translate(" + e.clientX + "px," + e.clientY + "px) translate(-50%,-50%)";
+  c.classList.toggle("groot", !!e.target.closest("button, a, .koek-slot, summary"));
+  const nu = Date.now();
+  if (!rustig && nu - laatsteKruimel > 90){ laatsteKruimel = nu; kruimel(e.clientX + (Math.random() - .5) * 10, e.clientY + 8); }
+});
+
+/* ---------- laadscherm ---------- */
+const gestart = Date.now();
+let opgeruimd = false;
+function weg(){
+  if (opgeruimd) return;
+  opgeruimd = true;
+  const wacht = Math.max(0, (rustig ? 250 : 1300) - (Date.now() - gestart));
+  setTimeout(function(){
+    const l = $("#laden");
+    if (!l) return;
+    l.classList.add("weg");
+    setTimeout(function(){ if (l.parentNode) l.remove(); }, 900);
+  }, wacht);
+}
+setTimeout(weg, 3000);                      // het scherm gaat altijd weg, ook als er iets misgaat
+try { start(); } catch (fout) { console.error(fout); }
+if (document.readyState === "complete") weg(); else window.addEventListener("load", weg);
+})();
+</script>
+</body>
+</html>
