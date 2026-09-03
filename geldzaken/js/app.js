@@ -114,6 +114,7 @@ export function terug(standaard = "#/start") {
 let vorigeRoute = "";
 let vorigSchermNaam = null;
 let vorigePoort = null;
+let laatsteHtml = null;      // wat er nu op het scherm staat
 const scrollGeheugen = {};
 let opruimen = null;
 
@@ -127,6 +128,7 @@ function teken() {
     if (poort !== vorigePoort) {
       opruimen?.(); opruimen = null;
       app.innerHTML = Toegang.html(poort);
+      laatsteHtml = null;
       opruimen = Toegang.koppel(app, poort) || null;
       vorigePoort = poort;
       vorigSchermNaam = null;
@@ -151,6 +153,19 @@ function teken() {
 
   if (nieuwScherm && vorigeRoute) scrollGeheugen[vorigeRoute] = window.scrollY;
 
+  const html = `
+    ${scherm.kop ? scherm.kop(params) : standaardKop(scherm, params)}
+    <main class="scherm" id="scherm">${scherm.html(params)}</main>
+    ${tabbalk(naam)}`;
+
+  /* Verandert er niets aan wat er te zien is, dan blijft het scherm
+     staan zoals het staat. Dat scheelt niet alleen werk: elke
+     hertekening gooit de knop weg waar je vinger op onderweg is, en
+     dan komt je tik nergens aan. Precies dat gebeurde als er nog een
+     opslagje van een halve seconde geleden binnenkwam terwijl jij een
+     schakelaar aantikte. */
+  if (!nieuwScherm && html === laatsteHtml) return;
+
   /* Een hertekening vervangt het hele scherm. Stond je in een veld te
      typen, dan ben je zonder dit je cursor — en soms je halve zin —
      kwijt. Bij een échte schermwissel doen we het niet: dan hoort de
@@ -160,10 +175,8 @@ function teken() {
   opruimen?.();
   opruimen = null;
 
-  app.innerHTML = `
-    ${scherm.kop ? scherm.kop(params) : standaardKop(scherm, params)}
-    <main class="scherm" id="scherm">${scherm.html(params)}</main>
-    ${tabbalk(naam)}`;
+  app.innerHTML = html;
+  laatsteHtml = html;
 
   const wortel = $("#scherm", app);
   opruimen = scherm.koppel?.(wortel, params) || null;

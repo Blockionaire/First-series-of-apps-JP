@@ -165,9 +165,14 @@ export function dagenTot(iso) {
 export const normaliseer = s =>
   String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+/* Wacht tot het even stil is voor je iets doet. `annuleer()` gooit een
+   nog wachtende ronde weg — nodig als er intussen iets definitiefs is
+   gebeurd, anders overschrijft die oude ronde dat alsnog. */
 export function debounce(fn, ms = 250) {
   let t;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  const uitgesteld = (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  uitgesteld.annuleer = () => clearTimeout(t);
+  return uitgesteld;
 }
 
 /* Altijd dezelfde kleur bij dezelfde naam — handig voor personen. */

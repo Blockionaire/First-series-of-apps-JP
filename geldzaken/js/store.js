@@ -268,9 +268,14 @@ async function wis(collectie, id) {
 /* ---------------------------------------------------------------
    Instellingen
    --------------------------------------------------------------- */
-export async function zetInstelling(velden) {
+/* `hertekenen: false` slaat op zonder het scherm opnieuw te tekenen.
+   Dat is voor instellingen die je al ziet terwijl je ze invoert — de
+   naam van je huishouden bijvoorbeeld. Zou de app daar wél voor
+   hertekenen, dan wordt het veld waar je in staat vervangen door een
+   nieuw exemplaar, en gaat er een tik of een letter verloren. */
+export async function zetInstelling(velden, { hertekenen = true } = {}) {
   state.instellingen = { ...state.instellingen, ...velden, bijgewerkt: nu() };
-  meld();
+  if (hertekenen) meld();
   if (opslagWerkt) await dbZet("instellingen", state.instellingen);
   Sync.zetRemote("instellingen", state.instellingen);
 }

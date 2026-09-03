@@ -381,21 +381,29 @@ export function koppel(wortel, params) {
      wijziging meldt.
 
      Tijdens het typen bewaren we letterlijk wat er staat: geen trim en
-     geen standaardnaam. Elk opslaan tekent het scherm opnieuw, dus zou
-     een trim hier de spatie wissen die je net tikte ("Ons " wordt weer
-     "Ons") en zou een lege naam meteen in "Mijn huishouden" veranderen.
-     Netjes maken doen we pas als je klaar bent — bij `change`, dus als
-     je het veld verlaat. Niet bij `blur`: het hertekenen haalt dit veld
-     weg, en dat geeft een blur die opnieuw opslaat, wat opnieuw
-     hertekent. Daar komt de browser niet meer uit. */
+     geen standaardnaam. Netjes maken gebeurt bij `change`, dus als je
+     het veld verlaat — anders zou een trim de spatie wissen die je net
+     tikte ("Ons " wordt weer "Ons") en zou een leeg veld op slag "Mijn
+     huishouden" worden.
+
+     En tijdens het typen tekenen we het scherm niet opnieuw. Je ziet
+     immers al wat je intikt. Deed de app dat wél, dan werd elk knopje
+     op dit scherm een halve seconde na je laatste letter vervangen
+     door een nieuw exemplaar — en tikte je op zo'n moment een
+     schakelaar aan, dan kwam die tik nergens meer aan. */
   const naamVeld = wortel.querySelector("#huisnaam");
-  const bewaarNaam = debounce(waarde => zetInstelling({ huisNaam: waarde }), 500);
+  const bewaarNaam = debounce(waarde => zetInstelling({ huisNaam: waarde }, { hertekenen: false }), 500);
 
   naamVeld?.addEventListener("input", e => bewaarNaam(e.target.value));
   naamVeld?.addEventListener("change", e => {
+    /* Eerst de wachtende ronde van het typen wegstrepen: die zou een
+       tel later de opgeschoonde naam weer overschrijven met de ruwe.
+       En ook hier niet hertekenen — `change` komt juist op het moment
+       dat je het veld verlaat, meestal doordat je iets anders aantikt. */
+    bewaarNaam.annuleer();
     const netjes = e.target.value.trim();
     if (netjes !== e.target.value) e.target.value = netjes;
-    zetInstelling({ huisNaam: netjes || "Mijn huishouden" });
+    zetInstelling({ huisNaam: netjes || "Mijn huishouden" }, { hertekenen: false });
   });
 
   wortel.addEventListener("change", e => {
