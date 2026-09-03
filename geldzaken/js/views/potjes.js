@@ -10,11 +10,12 @@
    van deze maand: dat geld had je in eerdere maanden al gereserveerd.
    ===================================================================== */
 
-import { esc, geld, maandLabel, maandNu, melding, bevestig, dialoog,
+import { esc, geld, maandLabel, maandNu, datumNL, melding, bevestig, dialoog,
          leesBedrag, voortgang, procent } from "../util.js";
-import { state, legPotje, legSubpotje, bewaarPotje, wisPotje, zetInstelling } from "../store.js";
+import { state, legPotje, legSubpotje, bewaarPotje, wisPotje, zetInstelling, meld } from "../store.js";
 import { potjesMetSaldo, potSaldo, POTSOORTEN, potSoort,
-         subpotjesVan, heeftSubpotjes, subpotjesTotaal } from "../bereken.js";
+         subpotjesVan, heeftSubpotjes, subpotjesTotaal,
+         potGeschiedenis, potMaandDetail } from "../bereken.js";
 import { transactieLijst, leeg, potKaart } from "./onderdelen.js";
 import { POTJE_SUGGESTIES, ICONEN, KLEUREN } from "../data/standaard.js";
 import { ga, terug, eisBewerkrecht } from "../app.js";
@@ -25,6 +26,11 @@ export const titel = params => params[0]
 
 export const ondertitel = params => params[0] ? "" : "Geld met een bestemming";
 export const terugknop = false;
+
+/* Welke maand in de geschiedenis staat open? Alleen iets van het
+   scherm, dus het hoort niet in de opslag thuis. */
+let openMaand = null;
+export function opBinnenkomst() { openMaand = null; }
 
 export function kopActies(params) {
   if (params[0]) return `<button class="icoonknop" data-bewerk-potje aria-label="Potje aanpassen">✏️</button>`;
@@ -161,7 +167,14 @@ function detail(id) {
         <a class="knop knop--primair" href="#/boeken/nieuw/uitgave/${esc(id)}">Uitgave</a>
       </div>`}
 
-    ${subpotjesBlok(potje, stand)}
+    ${/* Bestaat het potje uit onderdelen, dan verklaren die het bedrag
+          hierboven en horen ze er meteen onder. Zijn ze er niet, dan is
+          de uitnodiging om ze te maken minder interessant dan wat er de
+          afgelopen maanden werkelijk uitging — die gaat dus naar
+          onderen. */
+      heeftSubpotjes(potje)
+        ? subpotjesBlok(potje, stand) + geschiedenisBlok(potje, stand)
+        : geschiedenisBlok(potje, stand) + subpotjesBlok(potje, stand)}
 
     ${stand.soort === "sparen" ? `
       <div class="cijferrij" style="margin-top:14px">
@@ -180,7 +193,10 @@ function detail(id) {
         </div>
       </div>` : ""}
 
-    ${stand.soort === "vast" ? "" : `
+    ${/* De lege staat alleen tonen als er verder niets te zien is —
+          staat de maandlijst er al, dan is "nog niets geboekt" geen
+          nieuws meer maar ruis. */
+      stand.soort === "vast" || (!mutaties.length && potGeschiedenis(state, potje).length) ? "" : `
       <div class="sectiekop"><h2>Wat er in en uit ging</h2></div>
       ${mutaties.length
         ? transactieLijst(mutaties, { groepeer: false })
@@ -194,6 +210,95 @@ function detail(id) {
 
     ${stand.soort === "vast" ? "" : `
       <button class="knop knop--rand knop--breed" data-bewerk-potje style="margin-top:16px">Potje aanpassen</button>`}`;
+}
+
+/* ---------------------------------------------------------------
+   Wat er per maand uit het potje ging
+   ---------------------------------------------------------------
+   Een maandbedrag zegt pas iets als je ernaast ziet wat er echt
+   uitging. Elke maand een balkje, met de lengte ten opzichte van de
+   duurste maand, en het bedrag erachter. Tik een maand aan en je ziet
+   waar het heen ging — bij boodschappen per winkel, want dat weet de
+   andere app.
+
+   Een potje "vaste last" slaan we over: dat bedrag gaat er per definitie
+   elke maand af, daar valt geen geschiedenis over te vertellen.
+   --------------------------------------------------------------- */
+function geschiedenisBlok(potje, stand) {
+  if (stand.soort === "vast") return "";
+
+  const rijen = potGeschiedenis(state, potje);
+  if (!rijen.length) return "";
+
+  const top = Math.max(...rijen.map(r => r.totaal), 1);
+  const budget = stand.maandbedrag;
+  const gemiddeld = rijen.reduce((s, r) => s + r.totaal, 0) / rijen.length;
+
+  /* Het jaar erbij zetten heeft alleen zin als het niet overal
+     hetzelfde is — anders kost het twee regels voor niets. */
+  const ditJaar = maandNu().slice(0, 4);
+  const jaarErbij = rijen.some(r => r.maand.slice(0, 4) !== ditJaar);
+
+  return `
+    <div class="sectiekop"><h2>Per maand eruit</h2></div>
+    <div class="kaart">
+      <div class="maandlijst">
+        ${rijen.map(r => `
+          <button class="maandbalk ${openMaand === r.maand ? "is-open" : ""}" data-maandbalk="${esc(r.maand)}"
+                  aria-expanded="${openMaand === r.maand}">
+            <span class="maandbalk__naam">${esc(maandLabel(r.maand, { kort: true, jaar: jaarErbij }))}</span>
+            <span class="maandbalk__spoor">
+              <span class="maandbalk__vulling ${budget > 0 && r.totaal > budget ? "is-over" : ""}"
+                    style="width:${((r.totaal / top) * 100).toFixed(1)}%;${budget > 0 && r.totaal > budget ? "" : `background:${esc(potje.kleur || "var(--accent)")}`}"></span>
+              ${budget > 0 && budget < top ? `<span class="maandbalk__streep" style="left:${((budget / top) * 100).toFixed(1)}%"></span>` : ""}
+            </span>
+            <span class="maandbalk__bedrag">${geld(r.totaal)}</span>
+            <span class="maandbalk__pijl dof" aria-hidden="true">${openMaand === r.maand ? "▾" : "›"}</span>
+          </button>
+          ${openMaand === r.maand ? maandDetail(potje, r) : ""}`).join("")}
+      </div>
+
+      <div class="deelsom">
+        <span>Gemiddeld per maand</span>
+        <span class="bedrag">${geld(gemiddeld)}</span>
+      </div>
+      <div class="veld__hint" style="margin-top:8px">
+        ${budget > 0
+          ? `Er gaat ${geld(budget)} per maand in dit potje — dat is het streepje in de balk.`
+          : `Er staat geen maandbedrag op dit potje, dus er is niets om tegen af te zetten.`}
+        Tik een maand aan om te zien waar het heen ging.
+      </div>
+    </div>`;
+}
+
+function maandDetail(potje, rij) {
+  const d = potMaandDetail(state, potje, rij.maand);
+  const regels = [
+    ...d.winkels.map(w => ({
+      naam: w.naam,
+      bij: `${w.aantal} ${w.aantal === 1 ? "bon" : "bonnen"}`,
+      bedrag: w.bedrag,
+    })),
+    ...d.boekingen.map(t => ({
+      naam: t.omschrijving || "Boeking",
+      bij: datumNL(t.datum, { kort: true, metJaar: false }),
+      bedrag: Number(t.bedrag) || 0,
+    })),
+  ];
+
+  if (!regels.length) {
+    return `<div class="maanddetail"><span class="dof">Geen uitsplitsing bekend voor deze maand.</span></div>`;
+  }
+
+  return `
+    <div class="maanddetail">
+      ${regels.map(r => `
+        <div class="maanddetail__rij">
+          <span class="maanddetail__naam">${esc(r.naam)}</span>
+          <span class="maanddetail__bij dof">${esc(r.bij)}</span>
+          <span class="maanddetail__bedrag bedrag">${geld(r.bedrag)}</span>
+        </div>`).join("")}
+    </div>`;
 }
 
 /* ---------------------------------------------------------------
@@ -214,8 +319,11 @@ function subpotjesBlok(potje, stand) {
       <div class="kaart">
         <p style="font-size:.86rem;color:var(--tekst-zacht);margin:0 0 12px">
           Je kunt ${geld(stand.maandbedrag)} opsplitsen in onderdelen — bijvoorbeeld
-          hypotheek, energie en verzekering. Het potje toont dan nog steeds het totaal,
-          maar je ziet hier waar het uit is opgebouwd.
+          ${stand.soort === "vast" ? "hypotheek, energie en verzekering"
+            : stand.soort === "sparen" ? "vakantie, onderhoud en een buffer"
+            : "dagelijkse boodschappen en een keer uit eten"}.
+          Het potje toont dan nog steeds het totaal, maar je ziet hier waar het uit
+          is opgebouwd.
         </p>
         <button class="knop knop--rand knop--breed" data-subpotje-nieuw>Onderdeel toevoegen</button>
       </div>`;
@@ -274,6 +382,12 @@ export function koppel(wortel, params) {
   wortel.addEventListener("click", async e => {
     if (e.target.closest("[data-nieuw]")) return bewerkPotje(null);
     if (e.target.closest("[data-bewerk-potje]")) return bewerkPotje(state.potjes.find(p => p.id === params[0]));
+
+    const maandbalk = e.target.closest("[data-maandbalk]");
+    if (maandbalk) {
+      openMaand = openMaand === maandbalk.dataset.maandbalk ? null : maandbalk.dataset.maandbalk;
+      return meld();
+    }
 
     if (e.target.closest("[data-subpotje-nieuw]")) {
       return bewerkSubpotje(state.potjes.find(p => p.id === params[0]), null);

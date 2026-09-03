@@ -407,6 +407,92 @@ export function potSaldo(state, potje, totMaand = maandNu()) {
   };
 }
 
+/* ---------------------------------------------------------------
+   De geschiedenis van een potje
+   ---------------------------------------------------------------
+   Wat ging er elke maand uit dit potje? Twee bronnen die bij elkaar
+   opgeteld worden:
+
+     - boekingen die je zelf aan het potje hebt gehangen
+     - bonnen uit de gekoppelde app, als dít het potje is waaraan je
+       die hebt gehangen
+
+   Bij een potje "vaste last" heeft dit geen betekenis: dat bedrag gaat
+   er elke maand af, punt. Voor boodschappen juist wel — daar wil je
+   zien of die 600 per maand een beetje klopt.
+   --------------------------------------------------------------- */
+export function potGeschiedenis(state, potje, { maanden = 12, totMaand = maandNu() } = {}) {
+  if (!potje) return [];
+  const koppeling = state.instellingen.koppeling || {};
+  const hoortErbij = koppeling.aan && koppeling.potje === potje.id;
+
+  const per = new Map();
+  const vak = maand => {
+    if (!per.has(maand)) per.set(maand, { maand, eigen: 0, extern: 0, aantal: 0 });
+    return per.get(maand);
+  };
+
+  for (const t of state.transacties) {
+    if (t.potje !== potje.id) continue;
+    if (t.soort !== "uitgave" && t.soort !== "opname") continue;
+    const v = vak(maandVan(t.datum));
+    v.eigen += Number(t.bedrag) || 0;
+    v.aantal += 1;
+  }
+
+  if (hoortErbij) {
+    for (const b of state.extern?.bonnen || []) {
+      const v = vak(maandVan(b.datum));
+      v.extern += Number(b.bedrag) || 0;
+      v.aantal += 1;
+    }
+  }
+
+  /* Het maandbedrag van het potje is de meetlat: gaf je meer uit dan
+     erin ging, dan wil je dat zien. */
+  const budget = maandBedragVan(potje);
+
+  return [...per.values()]
+    .filter(v => v.maand <= totMaand && (v.eigen > 0 || v.extern > 0))
+    .map(v => ({ ...v, totaal: v.eigen + v.extern, budget, over: budget - (v.eigen + v.extern) }))
+    .sort((a, b) => b.maand.localeCompare(a.maand))
+    .slice(0, maanden);
+}
+
+/* Eén maand uitgesplitst: per winkel, en de eigen boekingen erbij. */
+export function potMaandDetail(state, potje, maand) {
+  const koppeling = state.instellingen.koppeling || {};
+  const hoortErbij = koppeling.aan && koppeling.potje === potje.id;
+  const namen = state.extern?.winkels;
+
+  const perWinkel = new Map();
+  if (hoortErbij) {
+    for (const b of state.extern?.bonnen || []) {
+      if (maandVan(b.datum) !== maand) continue;
+      /* Geen winkel bekend? Dan telt de omschrijving, en anders komt
+         het samen onder één noemer te staan. */
+      const sleutel = b.winkel || b.omschrijving || "onbekend";
+      const naam = (b.winkel && namen?.get?.(b.winkel)) || b.omschrijving || "Zonder winkel";
+      if (!perWinkel.has(sleutel)) perWinkel.set(sleutel, { sleutel, naam, bedrag: 0, aantal: 0 });
+      const w = perWinkel.get(sleutel);
+      w.bedrag += Number(b.bedrag) || 0;
+      w.aantal += 1;
+    }
+  }
+
+  const boekingen = state.transacties
+    .filter(t => t.potje === potje.id && maandVan(t.datum) === maand &&
+                 (t.soort === "uitgave" || t.soort === "opname"))
+    .sort((a, b) => b.datum.localeCompare(a.datum));
+
+  const winkels = [...perWinkel.values()].sort((a, b) => b.bedrag - a.bedrag);
+  return {
+    maand, winkels, boekingen,
+    totaal: winkels.reduce((s, w) => s + w.bedrag, 0) +
+            boekingen.reduce((s, t) => s + (Number(t.bedrag) || 0), 0),
+  };
+}
+
 export const potjesMetSaldo = (state, totMaand = maandNu()) =>
   state.potjes
     .map(p => ({ ...p, ...potSaldo(state, p, totMaand) }))

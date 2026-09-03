@@ -46,6 +46,12 @@ elke maand af.
   het potje ís die som, dus je vult nooit twee getallen in die uit elkaar kunnen lopen.
   Op het overzicht verschijnt de opbouw zodra je de schijf van dat potje aantikt.
 
+- **Per maand eruit** — open een potje en je ziet onder elkaar wat er de afgelopen
+  maanden werkelijk uitging, met een streepje in de balk waar je maandbedrag zit:
+  boven het streepje was het duurder dan bedoeld. Tik een maand aan en hij klapt open
+  met de uitsplitsing — bij het gekoppelde potje Boodschappen per winkel, want dat
+  weet de boodschappenapp.
+
 - **Inkomen** — salaris, toeslagen, het inkomen van je partner. Eén keer instellen,
   daarna rekent de app er elke maand mee. Een bonus of teruggave boek je los.
 - **Cijfers** — hoe je maanden zich tot elkaar verhouden.

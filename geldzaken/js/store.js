@@ -52,7 +52,7 @@ export const state = {
 
   /* Wat er uit een andere app binnenkomt. Leest alleen mee; het staat
      bewust niet in de database van Geldzaken zelf. */
-  extern: { bonnen: [] },
+  extern: { bonnen: [], winkels: new Map() },
 
   /* Wordt door de schermen gebruikt om te weten wat er te zien is. */
   maand: maandNu(),
@@ -151,12 +151,14 @@ export function stemKoppelingAf() {
     Koppeling.start({
       onData: () => {
         state.extern.bonnen = Koppeling.koppeling.bonnen;
+        state.extern.winkels = Koppeling.koppeling.winkels;
         meld();
       },
     });
   } else if (Koppeling.koppeling.actief || Koppeling.koppeling.bonnen.length) {
     Koppeling.stop();
     state.extern.bonnen = [];
+    state.extern.winkels = new Map();
     meld();
   }
 }

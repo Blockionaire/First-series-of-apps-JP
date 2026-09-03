@@ -640,6 +640,48 @@ input[type="date"], input[type="month"] { min-height: 46px; }
   font-weight: 700; font-variant-numeric: tabular-nums;
 }
 
+/* ------------------ Wat er per maand uit een potje ging ------------------ */
+.maandlijst { display: flex; flex-direction: column; }
+.maandbalk {
+  display: grid; grid-template-columns: 4.4em 1fr auto 1em;
+  align-items: center; gap: 9px; width: 100%;
+  padding: 9px 2px; text-align: left; color: inherit;
+  background: none; border: 0; border-radius: 8px;
+}
+.maandbalk:active { opacity: .6; }
+.maandbalk.is-open { background: var(--vlak-diep); }
+.maandbalk__naam { font-size: .82rem; text-transform: capitalize; color: var(--tekst-zacht); }
+.maandbalk__spoor {
+  position: relative; height: 9px; border-radius: 999px;
+  background: var(--vlak-diep); overflow: hidden;
+}
+.maandbalk.is-open .maandbalk__spoor { background: var(--vlak); }
+.maandbalk__vulling {
+  display: block; height: 100%; border-radius: 999px;
+  background: var(--accent); transition: width .4s ease;
+}
+.maandbalk__vulling.is-over { background: var(--uitgave); }
+/* Het maandbedrag van het potje, als merkteken in de balk: erboven is
+   duurder dan bedoeld. */
+.maandbalk__streep {
+  position: absolute; top: -2px; bottom: -2px; width: 2px;
+  background: var(--tekst-dof); opacity: .65;
+}
+.maandbalk__bedrag { font-size: .84rem; font-weight: 640; font-variant-numeric: tabular-nums; }
+.maandbalk__pijl { font-size: .8rem; text-align: right; }
+
+.maanddetail {
+  padding: 2px 2px 12px calc(4.4em + 9px);
+  font-size: .84rem;
+}
+.maanddetail__rij {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 4px 0;
+}
+.maanddetail__naam { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.maanddetail__bij { font-size: .74rem; flex: none; }
+.maanddetail__bedrag { font-weight: 620; flex: none; font-variant-numeric: tabular-nums; }
+
 .voortgang {
   display: block; height: 7px; border-radius: 999px;
   background: var(--vlak-diep); overflow: hidden; margin: 9px 0 0;
