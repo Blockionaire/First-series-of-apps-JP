@@ -319,14 +319,20 @@ async function maakReservePotje() {
   if (!eisBewerkrecht()) return;
   const { totaal, posten } = reserveringPerMaand(state);
   const bestaat = state.potjes.find(p => p.naam === "Jaarrekeningen");
+
+  /* Had je dat potje zelf in onderdelen verdeeld, dan is het maandbedrag
+     de som daarvan. Dit bedrag zetten we er dus alleen in als we die
+     verdeling loslaten — en dat vragen we eerst. */
+  const heeftDelen = (bestaat?.subpotjes || []).length > 0;
   const zeker = await bevestig(
-    `Er komt een potje "Jaarrekeningen" met ${geld(Math.ceil(totaal))} per maand, genoeg voor ${posten.length} ${posten.length === 1 ? "post" : "posten"}.`,
+    `Er komt een potje "Jaarrekeningen" met ${geld(Math.ceil(totaal))} per maand, genoeg voor ${posten.length} ${posten.length === 1 ? "post" : "posten"}.` +
+    (heeftDelen ? ` De ${bestaat.subpotjes.length} onderdelen die er nu in staan vervallen daarmee.` : ""),
     { titel: bestaat ? "Potje bijwerken" : "Potje aanmaken", bevestigLabel: bestaat ? "Bijwerken" : "Aanmaken" });
   if (!zeker) return;
 
   const { legPotje, bewaarPotje } = await import("../store.js");
   const potje = bestaat
-    ? { ...bestaat, maandelijks: Math.ceil(totaal) }
+    ? { ...bestaat, subpotjes: [], maandelijks: Math.ceil(totaal) }
     : legPotje({ naam: "Jaarrekeningen", icoon: "🧾", kleur: "#f5a524", maandelijks: Math.ceil(totaal) });
   await bewaarPotje(potje);
   melding("Potje klaargezet.", "goed");

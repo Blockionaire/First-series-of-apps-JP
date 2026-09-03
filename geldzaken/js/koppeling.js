@@ -39,6 +39,8 @@ export const koppeling = {
 let opData = () => {};
 let klok = null;
 let luistertOpTerugkeer = false;
+let aan = false;        // staat de koppeling aan? bepaalt of we mogen ophalen
+let bezigMet = null;    // de lopende ophaalronde, zodat er nooit twee tegelijk zijn
 
 /* ---------------------------------------------------------------
    Configuratie
@@ -122,6 +124,16 @@ export async function ververs() {
   koppeling.beschikbaar = !!cfg;
   if (!cfg) return false;
 
+  /* Loopt er al een ronde, sluit dan daarbij aan. Anders zouden een
+     tikje op "Nu ophalen", de klok en het terugkeren in de app elkaar
+     kunnen overlappen en om de beurt een ouder antwoord neerzetten. */
+  if (bezigMet) return bezigMet;
+
+  bezigMet = haalOp(cfg).finally(() => { bezigMet = null; });
+  return bezigMet;
+}
+
+async function haalOp(cfg) {
   koppeling.bezig = true;
   opData();
 
@@ -140,7 +152,9 @@ export async function ververs() {
     koppeling.fout = null;
     return true;
   } catch (e) {
-    console.error("koppeling", e);
+    /* Geen bereik is geen ramp — een waarschuwing volstaat, met de
+       oorzaak erbij voor als er wél iets aan de hand is. */
+    console.warn("koppeling: ophalen lukte niet —", e.status || e.message);
     koppeling.fout = e.status === 403 || e.status === 401
       ? "De boodschappenapp laat niet toe dat er wordt meegelezen."
       : e.status === 404
@@ -160,22 +174,31 @@ export async function start({ onData } = {}) {
   koppeling.beschikbaar = !!cfg;
   if (!cfg) return false;
 
-  if (!klok) klok = setInterval(() => ververs(), HERHAAL);
+  const wasAl = aan;
+  aan = true;
+
+  if (!klok) klok = setInterval(() => { if (aan) ververs(); }, HERHAAL);
 
   /* Kom je terug in de app, dan wil je meteen de laatste stand zien —
      en niet tot de volgende ronde wachten. */
   if (!luistertOpTerugkeer) {
     luistertOpTerugkeer = true;
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible" && koppeling.beschikbaar &&
+      if (aan && document.visibilityState === "visible" &&
           Date.now() - koppeling.laatst > 60000) ververs();
     });
   }
+
+  /* Stond hij al aan en zijn de bonnen nog vers, dan hoeft er niets:
+     start() wordt ook aangeroepen als er alleen een andere instelling
+     verandert, en dan is opnieuw ophalen zonde. */
+  if (wasAl && koppeling.actief && Date.now() - koppeling.laatst < 60000) return true;
 
   return ververs();
 }
 
 export function stop() {
+  aan = false;
   if (klok) { clearInterval(klok); klok = null; }
   koppeling.actief = false;
   koppeling.bezig = false;
@@ -183,6 +206,7 @@ export function stop() {
   koppeling.bonnen = [];
   koppeling.winkels = new Map();
   koppeling.aantalTotaal = 0;
+  koppeling.laatst = 0;
   opData();
 }
 

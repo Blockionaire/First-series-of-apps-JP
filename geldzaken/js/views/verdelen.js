@@ -230,12 +230,20 @@ async function restantToewijzen() {
   const v = verdeling(state, state.maand);
   if (v.over <= 0) return;
 
+  /* Potjes die uit onderdelen bestaan slaan we over: hun maandbedrag is
+     de som van die onderdelen, dus daar hoort dit bedrag bij één van de
+     onderdelen thuis — dat doe je bij het potje zelf. */
+  const kandidaten = state.potjes.filter(p => p.actief !== false && !heeftSubpotjes(p));
+  if (!kandidaten.length) {
+    return melding("Al je potjes bestaan uit onderdelen. Zet het restant bij één van die onderdelen.", "fout");
+  }
+
   const keuze = await dialoog({
     titel: `${geld(v.over)} toewijzen`,
     inhoud: `
       <p class="dialoog__vraag">In welk potje gaat het restant?</p>
       <div class="lijst">
-        ${state.potjes.filter(p => p.actief !== false && !heeftSubpotjes(p)).map(p => `
+        ${kandidaten.map(p => `
           <button class="rij" data-kies="${esc(p.id)}">
             <span class="rij__icoon">${esc(p.icoon || "🫙")}</span>
             <span class="rij__midden">

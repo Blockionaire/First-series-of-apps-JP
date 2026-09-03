@@ -277,6 +277,14 @@ gaat er elke maand af en telt mee in je verdeling, meer valt er niet over te
 zeggen. Wil je het toch volgen, zet het potje dan op *sparen* of *vrij te
 besteden*.
 
+**Ik zie een oude versie van de app.**
+Dat hoort niet meer te gebeuren. Staat de app op je beginscherm, dan sluit je hem
+nooit echt af, en dan bleef de oude versie draaien tot de browser toevallig besloot
+opnieuw te kijken. De app vraagt nu bij elke start én zodra je terugkomt of er een
+nieuwe versie klaarstaat, en ververst dan één keer vanzelf. Zit je toch vast: sluit
+de app helemaal af en open hem opnieuw. Op de iPhone veeg je hem daarvoor weg uit
+de appwisselaar.
+
 **Ik heb per ongeluk alles gewist.**
 Als je een back-up hebt (⚙️ → Back-up downloaden) zet je die terug met
 *Terugzetten*. Zonder back-up en met synchronisatie aan staat het meestal nog op

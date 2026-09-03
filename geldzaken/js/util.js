@@ -331,8 +331,12 @@ export function balken(items, { toonWaarde = v => geld(v), max = null } = {}) {
 export function ring(items, { grootte = 150, dikte = 20, midden = "", gekozen = null, klikbaar = false } = {}) {
   const zichtbaar = items.filter(i => i.waarde > 0);
   const totaal = zichtbaar.reduce((s, i) => s + i.waarde, 0);
+  /* Een gekozen schijf schuift `uitsprong` naar buiten én wordt 4px
+     dikker; beide moeten binnen het vak passen, anders wordt de rand
+     van juist die schijf afgesneden. */
   const uitsprong = klikbaar ? 9 : 0;
-  const straal = (grootte - dikte - uitsprong * 2) / 2;
+  const extraDikte = klikbaar ? 4 : 0;
+  const straal = (grootte - dikte - extraDikte - uitsprong * 2) / 2;
   const omtrek = 2 * Math.PI * straal;
   const mid = grootte / 2;
 

@@ -298,10 +298,49 @@ async function opstarten() {
   if (!location.hash) ga("#/start", { vervang: true });
   teken();
 
-  /* Service worker: installeerbaar maken en offline laten werken. */
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js").catch(() => { /* niet erg */ });
-  }
+  regelServiceWorker();
+}
+
+/* ---------------------------------------------------------------
+   Service worker: installeerbaar maken, offline laten werken — en
+   zichzelf op tijd vervangen
+   ---------------------------------------------------------------
+   Dat laatste is het lastige stuk. Staat de app op je beginscherm, dan
+   sluit je hem nooit echt af, en dan blijft de oude versie draaien:
+   je ziet een nieuwe versie pas als de browser toevallig besluit
+   sw.js opnieuw op te halen. Daarom drie dingen:
+
+   - `updateViaCache: "none"` — sw.js zelf nooit uit de browsercache
+     halen, anders kijk je naar een oude wegwijzer.
+   - bij elke start én zodra je terugkomt in de app even navragen of er
+     een nieuwe versie klaarstaat.
+   - neemt die het over, dan één keer herladen, zodat je meteen de
+     nieuwe code draait in plaats van bij de volgende keer pas.
+   --------------------------------------------------------------- */
+function regelServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+
+  /* Eén keer herladen, nooit twee keer: anders blijft de app in een
+     kringetje verversen. Bij de allereerste installatie hoeft het niet,
+     want dan draai je die code al. */
+  let herlaadt = false;
+  const hadAlEenVersie = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (herlaadt || !hadAlEenVersie) return;
+    herlaadt = true;
+    location.reload();
+  });
+
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+    .then(registratie => {
+      registratie.update().catch(() => { /* dan de volgende keer */ });
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          registratie.update().catch(() => { /* geen bereik, geeft niet */ });
+        }
+      });
+    })
+    .catch(() => { /* zonder servicewerker werkt de app ook */ });
 }
 
 export { Sync };
