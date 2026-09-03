@@ -1,0 +1,5 @@
+{
+  "_comment": "minutesPerCase is the measured B to C edit time. firmBaselineMinutes is the firm's own authoring-plus-review time for the same process; ask the design partner for it.",
+  "minutesPerCase": [38, 44, 31, 52, 40, 36],
+  "firmBaselineMinutes": 240
+}

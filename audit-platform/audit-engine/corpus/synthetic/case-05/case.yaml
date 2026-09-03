@@ -1,0 +1,20 @@
+caseId: case-05
+engagementId: eng-syn-05
+title: Outsourced billing and a payment service provider
+set: dev
+origin: synthetic
+sourceClass: C0
+language: en
+stresses:
+  - service organisations under ISA 402
+  - an assurance report obtained but not read
+  - settlement reconciliation and gross versus net
+  - refunds and chargebacks initiated outside the entity
+  - completeness of revenue the entity never touches
+  - subscription revenue recognised over time
+clientProfile: |
+  Subscription software company selling to small businesses. Single Dutch entity, IFRS
+  reporting. Revenue approximately EUR 12m, of which about 90 per cent is monthly and annual
+  subscriptions. Billing and dunning are operated by an external provider (Recurly).
+  Payments are collected by a payment service provider (Mollie) which settles net of fees.
+  The general ledger is Exact Online.

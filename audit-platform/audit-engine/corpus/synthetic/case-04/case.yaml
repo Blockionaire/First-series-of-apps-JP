@@ -1,0 +1,19 @@
+caseId: case-04
+engagementId: eng-syn-04
+title: ERP migration mid-year, two control environments in one financial year
+set: dev
+origin: synthetic
+sourceClass: C0
+language: en
+stresses:
+  - the change inherent risk factor
+  - two control environments in one period
+  - data migration and opening balances
+  - automated controls that changed at cutover
+  - elevated access during and after cutover
+  - interface reconciliation broken and reinstated
+clientProfile: |
+  Distributor of medical consumables. Single Dutch entity, IFRS reporting. Revenue
+  approximately EUR 55m. Migrated from a legacy system (Navision 2013) to SAP Business
+  ByDesign on 1 July, mid financial year. Order entry, delivery, invoicing and the general
+  ledger all moved. The finance team is unchanged.

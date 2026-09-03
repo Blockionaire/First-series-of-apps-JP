@@ -419,6 +419,12 @@ Per case, per run:
 | `workingpaper.html` / `.docx` | Rendered document | **The blind test material** |
 | `run.json` | Manifest | Model, prompt versions, hashes, cost, latency |
 
+> **The HTML-and-Word route is a Phase 0 expedient, not the export architecture.** It exists
+> because the blind test needs one neutral template and an editable document, and because it
+> costs nothing. The production export path — firm Word templates with styles and sign-off
+> blocks, Excel for the RCM, canonical JSON for integrations (`03 §3.11`) — is Phase 1 work
+> and should be designed then, not extrapolated from this.
+
 ### Format blinding — a requirement, not a nicety
 
 The blind test compares our document with the firm's own. If ours looks different, auditors

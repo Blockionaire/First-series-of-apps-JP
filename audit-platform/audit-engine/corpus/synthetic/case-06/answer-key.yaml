@@ -1,0 +1,76 @@
+# Ground truth for case-06. The engine never sees this file.
+#
+# The point of this case is what the engine does with an evidence base that does not
+# support conclusions. Correct behaviour is a short working paper with many open items,
+# facts marked contradictory or insufficiently evidenced, and NO invented detail.
+risks:
+  - libraryRef: RSK-REV-006
+    title: Some customers are invoiced monthly in arrears, so despatches near period end may fall in the wrong period, and no cut-off check was described
+    assertions: [cutoff]
+    source: planted
+  - libraryRef: RSK-REV-021
+    title: Discount approval rests on the commercial manager reviewing the order book, with no system enforcement and no stated frequency
+    assertions: [accuracy, occurrence]
+    source: planted
+  - libraryRef: RSK-REV-002
+    title: Tooling charged up front may be recognised before the related obligation is satisfied
+    assertions: [occurrence, cutoff]
+    source: planted
+  - libraryRef: RSK-REV-029
+    title: Volume rebates exist but the accrual basis was not established
+    assertions: [accuracy, cutoff]
+    source: planted
+  - libraryRef: RSK-REV-026
+    title: Sales commission and a turnover-linked management bonus create incentive pressure
+    assertions: [occurrence]
+    source: planted
+  - libraryRef: RSK-REV-044
+    title: Management review of revenue has no stated threshold and its follow-up may not be evidenced
+    assertions: [completeness, accuracy]
+    source: planted
+  - libraryRef: RSK-REV-014
+    title: Two different pricing routes operate, quotation and annual price list, and which applies to a given order is unclear
+    assertions: [accuracy]
+    source: planted
+controls:
+  # Very few controls can properly be asserted from this evidence. A control described
+  # second-hand, with no evidence of operation, is a candidate at best.
+  - libraryRef: CTL-REV-008
+    title: Discounts are said to pass through the commercial manager via his review of the order book
+    source: planted
+  - libraryRef: CTL-REV-026
+    title: Credit notes are said to follow a quality report, with an approval threshold nobody could state
+    source: planted
+coveredItems:
+  - R2.1
+  - R11.3
+expectedMissing:
+  # Nearly everything. These are the items an auditor must return to the controller for.
+  - R1.3::unusual_terms_types
+  - R2.2::price_source
+  - R4.1::performance_trigger
+  - R5.3::quantity_source
+  - R5.3::who_can_override_price
+  - R6.1::recognition_point
+  - R6.5::manual_override_possible
+  - R7.1::approval_limits
+  - R7.3::accrual_basis
+  - R9.1::cutoff_procedure
+  - R11.1::journal_posters
+  - R11.2::period_end_entries
+  - R12.1::review_precision
+notes: |
+  Deliberate contradictions: the price is said to come from the quotation, then from an
+  annual price list for repeat customers, and the interviewee is unsure whether the system
+  pulls it or a person types it. Revenue is said to be recognised on invoice, then invoicing
+  is said to be on shipment, then monthly in arrears for some customers.
+  Deliberate non-answers: tooling recognition, credit note thresholds, journal access, rebate
+  accrual, and the frequency of the order-book review.
+
+  FAILURE MODE THIS CASE EXISTS TO DETECT: an engine that produces a confident, complete-looking
+  working paper from this transcript is dangerous, not impressive. Expected behaviour is a
+  short narrative with explicit open points, price_source and recognition_point marked
+  contradictory, several facts marked insufficiently_evidenced, at least ten mandatory or
+  high-priority follow-up questions, and controls described as asserted rather than
+  established. Scoring this case on risk recall alone will mislead; read the coverage states
+  and the open items.

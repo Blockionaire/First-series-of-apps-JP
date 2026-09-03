@@ -1,0 +1,123 @@
+Auditor (audit senior): Almost none of the billing happens inside your systems, as I understand it. Can you describe the flow?
+
+Finance manager: Right. A customer signs up on our website and chooses a plan. That creates a subscription in Recurly, which is our billing platform. Recurly generates the invoices, charges the card through Mollie, and handles retries if a payment fails.
+
+Auditor: So where does your general ledger get its revenue figure?
+
+Finance manager: I export a monthly revenue report from Recurly and post one journal into Exact per revenue category.
+
+Auditor: One journal for the month, from a report.
+
+Finance manager: Yes.
+
+Auditor: How do you know that report is complete?
+
+Finance manager: It comes from the system that raises the invoices, so it should be everything.
+
+Auditor: Does anything independent corroborate it?
+
+Finance manager: I reconcile the cash. Mollie settles to our bank twice a week, net of their fees, and I tie the settlements back to the Recurly cash report.
+
+Auditor: Does that reconciliation balance?
+
+Finance manager: Usually within a few hundred euro. There are always timing differences and the occasional chargeback.
+
+Auditor: What do you do with the difference?
+
+Finance manager: If it is small I post it to a settlement differences account.
+
+Auditor: How small is small?
+
+Finance manager: I do not have a set threshold. A few hundred euro I would not chase.
+
+Auditor: Let me ask about the fees. Mollie settles net. How is revenue recorded?
+
+Finance manager: I record revenue gross and the fee as a cost. The settlement report gives both.
+
+Auditor: And refunds or chargebacks?
+
+Finance manager: Support can issue a refund directly in Recurly. It flows through to Mollie and reduces the next settlement.
+
+Auditor: Who approves a refund?
+
+Finance manager: The support agent does it. There is a policy that anything over one month's subscription should go to the support lead, but it is not enforced by the system.
+
+Auditor: Is there a report of refunds issued?
+
+Finance manager: Recurly has one. I look at the total each month as part of the revenue journal.
+
+Auditor: Do you look at who issued them?
+
+Finance manager: No.
+
+Auditor: Now recognition. Subscriptions are paid monthly and annually?
+
+Finance manager: Both. Monthly plans are recognised in the month. Annual plans are invoiced up front and Recurly spreads the revenue over twelve months.
+
+Auditor: So the deferred revenue balance also comes from Recurly.
+
+Finance manager: Yes, I take the deferred balance from their report and post the movement.
+
+Auditor: Has anyone checked that Recurly's deferral calculation is right?
+
+Finance manager: Not independently, no. It is their standard functionality.
+
+Auditor: Do you have a service organisation report from either provider?
+
+Finance manager: Recurly publishes a SOC 1 report. I downloaded it when we onboarded.
+
+Auditor: Has anyone read it?
+
+Finance manager: I skimmed it. I could not tell you what was in the exceptions section.
+
+Auditor: And Mollie?
+
+Finance manager: I am not sure they issue one. I have not asked.
+
+Auditor: If a subscription were created in Recurly but never appeared in your revenue report, would you know?
+
+Finance manager: I do not think so, no. I rely on the report.
+
+Auditor: How many subscriptions are there roughly?
+
+Finance manager: Around four thousand active.
+
+Auditor: Does anyone compare the number of active subscriptions to the revenue, as a sense check?
+
+Finance manager: The commercial director looks at monthly recurring revenue and churn in his dashboard. That comes out of Recurly too.
+
+Auditor: So the check and the thing being checked share a source.
+
+Finance manager: I suppose they do.
+
+Auditor: What about price changes? Who can change a plan price?
+
+Finance manager: Product and the commercial director have admin rights in Recurly. There is also a discount field on a subscription that support can set.
+
+Auditor: Is there a limit or approval on that discount?
+
+Finance manager: No limit in the system. There is meant to be a rule of no more than twenty per cent.
+
+Auditor: Manual journals to revenue in Exact?
+
+Finance manager: The monthly revenue journal, which I post, and occasionally a correction. The finance director approves anything above ten thousand euro.
+
+Auditor: Is the monthly revenue journal itself approved?
+
+Finance manager: He sees it in the close pack.
+
+Auditor: Cut-off at year end?
+
+Finance manager: Recurly bills on the anniversary date of each subscription, so it is spread through the month. The report is run on the first working day for the previous month.
+
+Auditor: Does anything change in Recurly after you have run the report?
+
+Finance manager: A late refund could, yes. I would not re-run the report.
+
+Auditor: Anything tied to the revenue number?
+
+Finance manager: The sales team is on commission for new subscriptions, and we have an investor covenant on annual recurring revenue.
+
+Auditor: Access to Exact?
+
+Finance manager: The finance director and me.

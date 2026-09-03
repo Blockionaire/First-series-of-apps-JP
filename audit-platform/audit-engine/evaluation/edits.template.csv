@@ -1,0 +1,3 @@
+caseId,location,category,severity,note
+real-01,3.1 narrative invoicing,stylistic,trivial,house style
+real-01,4 controls table,risk_control_correction,material,described a monthly review as preventive

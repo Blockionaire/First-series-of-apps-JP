@@ -21,8 +21,8 @@ Decide now?**
 
 | Tool | Purpose | Required in | Free/Paid | Phase 0–3 cost | Alternative | Switch | Lock-in | Decide now |
 |---|---|---|---|---|---|---|---|---|
-| **Claude Code** | The implementation environment: writes, edits and reviews the code, drafts the methodology pack and corpus with the SME | **P0**, and every phase after | Paid subscription | **€100–200/mo × ~9 months ≈ €900–1,800** | Cursor, Copilot, Codex CLI | Low | No — it produces ordinary source in your repo | **Yes** |
-| **Anthropic Console + API key** | Model access for the engine itself, billed separately from the subscription | **P0** | Pay-as-you-go | Model spend, see §B | — | Low | No | **Yes** |
+| **Claude Code** | The implementation environment: writes, edits and reviews the code, drafts the methodology pack and corpus with the SME | **P0**, and every phase after | Paid subscription — **already held: Claude Pro at $20/mo** | **$20/mo on Pro ≈ $180 over 9 months.** Budget $100–200/mo only if Pro's usage limits start throttling long sessions | Cursor, Copilot, Codex CLI | Low | No — it produces ordinary source in your repo | **Already in place** |
+| **Anthropic Console + API key** | Model access for the engine itself | **P0, at the API gate — see §G** | Pay-as-you-go, **billed separately from the Claude Pro subscription** | Model spend, see §B | — | Low | No | **Not yet** |
 | **VS Code** | Editor, terminal, diff review, Claude Code extension | **P0** | Free | €0 | JetBrains, Zed, Neovim | Low | No | **Yes** (trivial) |
 | **Node 22 LTS + pnpm** | Runtime and package manager | **P0** | Free | €0 | Bun, npm | Low | No | **Yes** |
 | **Git + GitHub (private repo)** | Version control, history, later CI and PR review | **P0** | Free tier is sufficient | €0 | GitLab, Codeberg | Low — git history is portable | No | **Yes** |
@@ -140,10 +140,11 @@ cloud provider or a framework, which is what keeps the Phase 1 architecture genu
 
 Install, subscribe to, configure or create an account for exactly this. Nothing else.
 
-**Accounts and subscriptions (3)**
-1. **Claude Code subscription** — €100–200/month.
-2. **Anthropic Console account + API key** — pay-as-you-go, budget **€1.2–3k** for Phase 0.
-3. **GitHub account with a private repository** — free.
+**Accounts and subscriptions (2 now, 1 at the API gate)**
+1. **Claude Code** — already held on Claude Pro, $20/month. Upgrade only if usage limits throttle.
+2. **GitHub account with a private repository** — free.
+3. **Anthropic Console account + API key** — **not yet.** Needed at the API gate (§G),
+   with an initial credit of **$20–25**, not more.
 
 **Installed locally (4)**
 4. **Node 22 LTS** (includes native TypeScript execution).
@@ -161,9 +162,89 @@ Install, subscribe to, configure or create an account for exactly this. Nothing 
 12. The **corpus** (`corpus/synthetic/`, and `corpus/real/` when the agreement is in place).
 13. The **decision log** and the **rater scoring sheet** (a spreadsheet).
 
-**Total new cash commitment to start Phase 0: the Claude Code subscription plus metered API
-usage.** Everything else is free, already owned, or a file.
+**Total new cash commitment to start Phase 0: nothing.** The Claude Code subscription is
+already held; everything else is free, already owned, or a file. The first new spend is the
+$20–25 of API credit at the gate in §G.
 
 **Not now:** database, authentication, hosting, object storage, CI, linter, observability,
 OCR, email, EU inference infrastructure, speech recognition, SSO, containers, an
 LLM-evaluation platform, a second AI coding tool, and a `.docx` library.
+
+
+---
+
+## G. The API gate — when a key becomes necessary
+
+**A Claude Pro or Max subscription does not include API access.** They are separately
+billed products: the subscription pays for Claude Code, the Console pays for the engine's own
+model calls. Nothing built so far needs the second one.
+
+### What runs today with no key at all
+
+Everything deterministic, which is most of Phase 0's engineering:
+
+- the methodology pack, its loader and its consistency validation;
+- the coverage engine, the deterministic follow-up triggers and the mandatory-item logic;
+- the grounding validator and output assembly;
+- the neutral working-paper renderer;
+- the corpus, answer keys and the metrics harness;
+- the blind-test assignment, randomisation, scoring sheets, edit taxonomy and gate report;
+- the full unit-test suite and `engine run --mock`, which exercises ingest → coverage →
+  follow-ups → assemble → render end to end.
+
+### The gate: the first real generation run
+
+A key becomes necessary at exactly one moment — **when the engine must produce actual audit
+content from a transcript.** Concretely, when any of these is needed:
+
+1. **Confirming the one unverified integration point** — `messages.parse` with
+   `output_config.format`. It is isolated in `packages/engine/src/llm.ts` and cannot be
+   proved by a mock.
+2. **Any M6 number that is not zero.** Coverage recall, risk recall, control recall and
+   grounding rates all require real extraction. Under the mock they read 0% by construction.
+3. **Producing variant B** for the blind test. There is no blind test without it, and no
+   variant C either, since C is B after an auditor's edit.
+
+In the §7.15 sequence that is **the start of week 3**, when the first end-to-end run is
+scheduled. It cannot be deferred past week 4 without the phase stalling: the SME labelling in
+week 5 and the blind test in week 7 both depend on real output existing.
+
+**Not blocked by the gate:** cases 04–06 (done), the SME pack review, the SME realism pass on
+the corpus, the corpus data-sharing agreement, recruiting the raters, and the firm's own
+baseline authoring time for M3. Do all of that first — most of it has a longer lead time than
+the key does.
+
+### Setup checklist, at the gate
+
+1. **Create the Console account** at `console.anthropic.com`, using the same work email as
+   the rest of the venture. It is a separate account from the Claude Pro subscription.
+2. **Add credit: $20–25.** No more. A full 6-case smoke run costs roughly €7, so that covers
+   about fifteen of them — comfortably enough to confirm the seam and take the first real
+   measurements. Top up when the numbers justify it, not in advance.
+3. **Set a spend limit and an email alert** in the Console billing settings, at or just above
+   the credit added. This is the cheapest protection against a loop that retries forever.
+4. **Create a dedicated API key** named for the project (e.g. `audit-engine-phase0`), not a
+   personal scratch key. One key, one purpose, revocable without collateral damage.
+5. **Store it in the password manager first**, then export it into the shell only where it is
+   needed:
+   ```bash
+   export ANTHROPIC_API_KEY="sk-ant-..."   # in the shell profile, never in the repo
+   ```
+   The repository already gitignores `.env`. The key must never appear in a file that git
+   tracks, in a commit message, or in a screenshot shared with a design partner.
+6. **First command, one case, watching the cost:**
+   ```bash
+   node apps/cli/src/index.ts run corpus/synthetic/case-01
+   node apps/cli/src/index.ts costs
+   ```
+   Expect roughly €0.90–1.60 for the case. If the first run costs materially more, stop and
+   look at the manifest before running the suite.
+7. **From that run onward, cost is tracked per stage and per case** by `engine costs`, from
+   the run manifests. Watch the cache hit rate: below 90% on suite runs means a silent prefix
+   invalidator, and it shows up directly in the phase budget.
+
+### Data classification at the gate
+
+The first live runs use **C0 synthetic** cases only. Anonymised **C1** material may be sent
+once the data-sharing agreement is in place. **C3 audit-client data never goes near this
+setup** — that requires EU-resident inference and the Phase 2 platform (`07 §7.2`).

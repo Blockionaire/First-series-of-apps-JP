@@ -1,0 +1,119 @@
+Auditor (audit senior): You went live with the new system on the first of July, so we have half a year on each. Can you take me through how order to cash worked before, and what changed?
+
+Financial controller: Before July everything was in Navision. Orders were entered by customer service, the warehouse confirmed the despatch, and invoicing ran nightly. Since July it is all in ByDesign, and the flow is broadly the same but the controls are configured differently.
+
+Auditor: Let us take the price first. In Navision, where did the price come from?
+
+Financial controller: From the customer price list, and sales could not change it on the order. It was locked.
+
+Auditor: And in ByDesign?
+
+Financial controller: It is also driven by the price list, but during implementation the consultants left the manual price field open. We only noticed in September.
+
+Auditor: So between July and September, could an order be priced manually?
+
+Financial controller: Yes. We ran a report afterwards and there were about forty orders where the price differed from the list.
+
+Auditor: What did you do about those?
+
+Financial controller: I reviewed them and most were legitimate, agreed discounts that had not been loaded. Two were errors and we credited them.
+
+Auditor: Is that review documented?
+
+Financial controller: I have the spreadsheet with my notes. It was not signed off by anyone else.
+
+Auditor: Is the field locked now?
+
+Financial controller: Since the end of September, yes. Now it needs the commercial manager to approve a deviation.
+
+Auditor: What about credit limits and blocking?
+
+Financial controller: In Navision the block was hard, the order simply could not proceed. In ByDesign the block was configured as a warning at first, so people could click through it.
+
+Auditor: When was that changed?
+
+Financial controller: In August, after we saw two orders ship to a customer who was over the limit.
+
+Auditor: How did you find those?
+
+Financial controller: Credit control noticed when chasing the balance.
+
+Auditor: Let me ask about the migration itself. What came across?
+
+Financial controller: Open orders, open receivables, customer master data and the price lists. Historic invoices stayed in Navision, we kept it read only.
+
+Auditor: How was the migrated data checked?
+
+Financial controller: The consultants ran a reconciliation of the receivables balance and the number of open orders, and I signed that off. Customer master data was a sample check, maybe thirty accounts.
+
+Auditor: Were the price lists checked?
+
+Financial controller: Not line by line, no. There are eleven thousand lines. We checked the top customers.
+
+Auditor: Is there a possibility a price came across wrong?
+
+Financial controller: It is possible. That is partly why the manual field being open mattered, people were correcting prices they thought were wrong.
+
+Auditor: And revenue recognition, did the point of recognition change?
+
+Financial controller: No. Delivery, ex works, same as before. The configuration in ByDesign posts revenue on goods issue.
+
+Auditor: How is the posting to the general ledger handled?
+
+Financial controller: In Navision it was one system, so it just posted. In ByDesign it is also one system for us, but the warehouse now runs a separate scanning application that feeds goods issues in.
+
+Auditor: Is that feed reconciled?
+
+Financial controller: It is now. For the first two months there was no reconciliation at all, and in September we found sixty goods issues that had not created an invoice.
+
+Auditor: What was the value?
+
+Financial controller: About ninety thousand euro. We invoiced them in September.
+
+Auditor: So revenue for July and August was understated at the time.
+
+Financial controller: Yes, and we corrected it in September rather than restating the months.
+
+Auditor: Who reconciles the feed now?
+
+Financial controller: My assistant does it weekly and I review it monthly.
+
+Auditor: Access. During the cutover, who had elevated rights?
+
+Financial controller: The consultants had full administrator access, and two of our IT people. The consultants' accounts were meant to be closed at go live plus one month.
+
+Auditor: Were they?
+
+Financial controller: One was closed in August. I would have to check the other.
+
+Auditor: Does anyone review who has access to change prices or master data?
+
+Financial controller: Not yet. It is on the list for the new year.
+
+Auditor: Manual journals to revenue, in both halves of the year?
+
+Financial controller: In Navision only I could post them. In ByDesign the finance director and I can, and there is an approval workflow above twenty thousand euro.
+
+Auditor: Were there unusual entries around the migration?
+
+Financial controller: There was a set of conversion entries at the end of June to clear the Navision balances, and the September correction I mentioned.
+
+Auditor: Who approved the conversion entries?
+
+Financial controller: The finance director reviewed the total. Individually, no.
+
+Auditor: What about cut-off at 30 June, given the switchover?
+
+Financial controller: We stopped despatching on the twenty-eighth and did not ship again until the second of July. That gave us a clean break.
+
+Auditor: How do you know nothing was invoiced in the wrong system?
+
+Financial controller: Because Navision was closed to new invoices from the thirtieth.
+
+Auditor: How does management review revenue given the two systems?
+
+Financial controller: The finance director compares the month against budget and prior year. For July and August the numbers looked low and we put it down to holidays. It turned out to be the missing invoices.
+
+Auditor: So the review did not detect it.
+
+Financial controller: Not at the time, no.

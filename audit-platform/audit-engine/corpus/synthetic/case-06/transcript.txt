@@ -1,0 +1,135 @@
+Auditor (audit senior): Thanks for stepping in. Could you talk me through how an order becomes revenue?
+
+Commercial manager: Sure, broadly. A customer sends a purchase order, we put it in Infor, we make the parts, we ship them, and then it gets invoiced. Standard stuff really.
+
+Auditor: Who enters the order?
+
+Commercial manager: Someone in the office. Depends who is around.
+
+Auditor: Is there a particular team?
+
+Commercial manager: Customer service normally. Sometimes sales do it if it is urgent.
+
+Auditor: Where does the price on the order come from?
+
+Commercial manager: From the quotation. Every job is quoted.
+
+Auditor: So the system pulls the price from the quotation?
+
+Commercial manager: I think so. Or the person types it from the quote. One of the two. Karin would know.
+
+Auditor: Can the price be changed after the order is entered?
+
+Commercial manager: It should not be.
+
+Auditor: Is it prevented by the system, or is it a rule?
+
+Commercial manager: It is how we work.
+
+Auditor: Earlier you said the price comes from the quotation. Are there customers on a standing price list rather than a quote?
+
+Commercial manager: Yes, the repeat customers have annual pricing. That is in the system.
+
+Auditor: So for those, the price comes from a price list rather than a quotation.
+
+Commercial manager: For those, yes.
+
+Auditor: When is revenue recognised?
+
+Commercial manager: When we invoice.
+
+Auditor: And when do you invoice?
+
+Commercial manager: When it ships. Well, mostly. Some customers we invoice at the end of the month for everything that went out.
+
+Auditor: So for those, goods shipped near month end might be invoiced in the following month?
+
+Commercial manager: It could happen. I would not have thought so, but it could.
+
+Auditor: Is there a check at month end comparing despatches to invoices?
+
+Commercial manager: Finance do the closing. I am not across the detail.
+
+Auditor: Are there tooling charges, or anything invoiced before production?
+
+Commercial manager: Yes, we charge for tooling up front on new parts.
+
+Auditor: How is that treated?
+
+Commercial manager: It goes on an invoice.
+
+Auditor: Recognised immediately, or held until the tooling is delivered?
+
+Commercial manager: I would have to ask Karin.
+
+Auditor: Who can approve a discount?
+
+Commercial manager: Discounts go through me.
+
+Auditor: Is that enforced in the system, or is it an understanding?
+
+Commercial manager: I would see it because I look at the order book.
+
+Auditor: How often do you look at the order book?
+
+Commercial manager: Regularly.
+
+Auditor: Weekly, daily?
+
+Commercial manager: When I need to.
+
+Auditor: Let us talk about credit notes. Who raises one?
+
+Commercial manager: If a customer rejects a batch, quality raise a report and then we credit it.
+
+Auditor: Who approves the credit?
+
+Commercial manager: It depends on the size.
+
+Auditor: Is there a threshold?
+
+Commercial manager: There is a policy somewhere. I do not know the number offhand.
+
+Auditor: You mentioned a quality report. Is the credit note linked to that report in the system?
+
+Commercial manager: I believe so.
+
+Auditor: Have you seen that linkage yourself?
+
+Commercial manager: Not personally, no.
+
+Auditor: Are there any arrangements where goods sit at the customer and are invoiced later, or where a customer can return unsold stock?
+
+Commercial manager: Not that I am aware of.
+
+Auditor: Any side agreements on payment terms or rebates?
+
+Commercial manager: A couple of the big ones have a volume rebate.
+
+Auditor: How is that accrued?
+
+Commercial manager: Finance handle it.
+
+Auditor: Who can post a journal to a revenue account?
+
+Commercial manager: I would not know. Finance.
+
+Auditor: Is anyone's pay linked to the revenue figure?
+
+Commercial manager: Sales are on commission. I have a bonus, partly on turnover.
+
+Auditor: How does management review the revenue number each month?
+
+Commercial manager: We have a management meeting and go through the figures.
+
+Auditor: What would prompt a question?
+
+Commercial manager: If something looked wrong.
+
+Auditor: Is there a threshold, or a comparison against budget?
+
+Commercial manager: We compare against budget, yes. If it is materially different somebody would say something.
+
+Auditor: Is that discussion minuted?
+
+Commercial manager: There are minutes of the management meeting. Whether that level of detail is in them, I could not say.

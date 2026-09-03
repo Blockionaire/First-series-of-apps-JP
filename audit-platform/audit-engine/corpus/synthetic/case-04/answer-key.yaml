@@ -1,0 +1,92 @@
+# Ground truth for case-04. The engine never sees this file.
+risks:
+  - libraryRef: RSK-REV-021
+    title: The manual price field was left open at cutover, allowing unapproved pricing for three months
+    assertions: [accuracy, occurrence]
+    source: planted
+  - libraryRef: RSK-REV-041
+    title: The goods-issue feed was unreconciled for two months and sixty deliveries went uninvoiced
+    assertions: [completeness]
+    source: planted
+  - libraryRef: RSK-REV-006
+    title: Revenue understated in July and August was corrected in September rather than in the correct periods
+    assertions: [cutoff, completeness]
+    source: planted
+  - libraryRef: RSK-REV-024
+    title: The credit block was configured as a warning rather than a hard block after go-live
+    assertions: [accuracy_valuation_allocation]
+    source: planted
+  - libraryRef: RSK-REV-014
+    title: Migrated price lists were not verified line by line, so invoices may be priced from incorrect master data
+    assertions: [accuracy]
+    source: planted
+  - libraryRef: RSK-REV-042
+    title: Consultant administrator accounts may remain open after cutover and access is not reviewed
+    assertions: [accuracy, occurrence]
+    source: planted
+  - libraryRef: RSK-REV-030
+    title: Conversion journals at 30 June were approved only in total
+    assertions: [occurrence, accuracy, cutoff]
+    source: planted
+  - libraryRef: RSK-REV-002
+    title: Two different control environments operate in one financial year, so controls tested in one half do not evidence the other
+    assertions: [occurrence, accuracy, completeness]
+    source: planted
+  - libraryRef: RSK-REV-044
+    title: Management review did not detect a ninety thousand euro understatement, indicating insufficient precision
+    assertions: [completeness, accuracy]
+    source: planted
+  - libraryRef: RSK-REV-007
+    title: Goods issues from the separate scanning application may not create an invoice
+    assertions: [completeness]
+    source: planted
+controls:
+  - libraryRef: CTL-REV-007
+    title: The price list drives the invoice price and manual entry is blocked, reinstated from the end of September
+    source: planted
+  - libraryRef: CTL-REV-009
+    title: Orders over the credit limit are hard-blocked, reinstated in August
+    source: planted
+  - libraryRef: CTL-REV-022
+    title: The goods-issue feed is reconciled weekly by the assistant and reviewed monthly by the controller, from September
+    source: planted
+  - libraryRef: CTL-REV-024
+    title: Journals above twenty thousand euro require approval in the workflow
+    source: planted
+  - libraryRef: CTL-REV-031
+    title: Despatch was halted either side of the migration date to create a clean cut-off
+    source: planted
+  - libraryRef: CTL-REV-033
+    title: The finance director compares monthly revenue against budget and prior year
+    source: planted
+coveredItems:
+  - R2.2
+  - R3.2
+  - R4.1
+  - R5.1
+  - R5.3
+  - R6.1
+  - R6.2
+  - R9.1
+  - R10.1
+  - R10.2
+  - R10.3
+  - R11.1
+  - R11.2
+  - R12.1
+expectedMissing:
+  - R1.3::unusual_terms_types
+  - R5.3::exception_handling
+  - R7.1::credit_note_initiator
+  - R8.1::bank_matching_mode
+  - R10.4::privileged_access_review
+  - R10.5::service_orgs
+  - R11.3::incentive_schemes
+  - R12.1::review_precision
+notes: |
+  The dominant point is that controls differ before and after 1 July, so any control tested
+  in one half says nothing about the other. A strong engine states that explicitly rather than
+  describing a single control environment. The three configuration defects at cutover
+  (open price field, soft credit block, unreconciled feed) are each a separate risk with a
+  dated period of exposure. Deliberate omissions: nothing about contract terms, nothing about
+  cash application, and no answer on whether the second consultant account was closed.

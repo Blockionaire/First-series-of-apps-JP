@@ -9,9 +9,17 @@ pnpm install
 pnpm test                                              # 30 unit tests, no API key needed
 pnpm engine pack                                       # validate the methodology pack
 pnpm engine run corpus/synthetic/case-01 --mock        # plumbing only, no model call
-ANTHROPIC_API_KEY=... pnpm engine run corpus/synthetic/case-01
-ANTHROPIC_API_KEY=... pnpm engine eval --set dev       # score against the answer keys
+node apps/cli/src/index.ts blind --config evaluation/blind-test-config.json
+node apps/cli/src/index.ts report --mock               # gate report; "incomplete" until humans rate
+
+# From the API gate onward (see ../08 §G) — not yet:
+ANTHROPIC_API_KEY=... node apps/cli/src/index.ts run corpus/synthetic/case-01
+ANTHROPIC_API_KEY=... node apps/cli/src/index.ts eval --set dev
+ANTHROPIC_API_KEY=... node apps/cli/src/index.ts costs  # cost per stage and per case
 ```
+
+**No API key is needed for anything above the gate line.** A Claude Pro subscription does not
+include API access; the Console account is created at the API gate and not before.
 
 ## Layout
 
@@ -21,7 +29,8 @@ ANTHROPIC_API_KEY=... pnpm engine eval --set dev       # score against the answe
 | `packages/methodology` | The Revenue pack (YAML, SME-reviewable) plus its loader and consistency validator |
 | `packages/engine` | The ten-function engine surface, prompts, the deterministic coverage engine and grounding validator |
 | `packages/evals` | Corpus loader, M6 metrics, and the M4 edit taxonomy |
-| `apps/cli` | `pack`, `run`, `eval` |
+| `apps/cli` | `pack`, `run`, `eval`, `blind`, `report`, `costs` |
+| `evaluation/` | Blind-test config, edit-log and timings templates, and the protocol to run them |
 | `corpus/synthetic` | Class C0 cases, committed. `corpus/real/` (C1) is gitignored and never committed |
 
 ## What is deliberately deterministic

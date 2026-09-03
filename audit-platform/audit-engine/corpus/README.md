@@ -15,7 +15,7 @@ answer-key.yaml   ground truth the engine NEVER sees
 
 ## The six-case smoke set (07 §7.5) — development set, iterate freely
 
-**Status: 3 of 6 drafted, all awaiting the SME realism pass.** No case counts as ready until
+**Status: 6 of 6 drafted, all awaiting the SME realism pass.** No case counts as ready until
 an auditor has edited it and planted two surprises the drafter did not know about.
 
 | # | Case | Stresses | Status |
@@ -23,9 +23,9 @@ an auditor has edited it and planted two surprises the drafter did not know abou
 | 01 | Product sales, one ERP, automated order-to-invoice | The baseline | **drafted** |
 | 02 | Services recognised over time, progress estimates | Subjectivity, IFRS 15 judgement | **drafted** |
 | 03 | Manual SME, spreadsheet pricing, owner approves everything | Override risk, weak segregation | **drafted** |
-| 04 | ERP migration mid-year | The `change` factor, two control environments | to author |
-| 05 | Outsourced invoicing and a payment service provider | ISA 402, interface completeness | to author |
-| 06 | Vague, partly contradictory interviewee | `contradictory` and `insufficiently_evidenced` states | to author |
+| 04 | ERP migration mid-year | The `change` factor, two control environments | **drafted** |
+| 05 | Outsourced invoicing and a payment service provider | ISA 402, interface completeness | **drafted** |
+| 06 | Vague, partly contradictory interviewee | `contradictory` and `insufficiently_evidenced` states | **drafted** |
 
 **Authoring loop, 2–4 hours per case:** SME sketches the process in 15–20 minutes → draft a
 realistic transcript with a planted set of risks, controls, gaps and at least three

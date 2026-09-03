@@ -1,0 +1,94 @@
+# Ground truth for case-05. The engine never sees this file.
+risks:
+  - libraryRef: RSK-REV-043
+    title: Revenue is recorded from a single service-organisation report with no independent corroboration of completeness
+    assertions: [completeness, occurrence]
+    source: planted
+  - libraryRef: RSK-REV-043
+    title: The SOC 1 report for the billing provider was obtained but never read, so exceptions are unknown
+    assertions: [completeness, accuracy, occurrence]
+    source: planted
+  - libraryRef: RSK-REV-043
+    title: No assurance report has been sought from the payment service provider
+    assertions: [existence, completeness]
+    source: planted
+  - libraryRef: RSK-REV-044
+    title: The management review of recurring revenue draws on the same source as the figure it checks
+    assertions: [completeness, accuracy]
+    source: planted
+  - libraryRef: RSK-REV-033
+    title: Support agents issue refunds with no system-enforced approval and no review of who issued them
+    assertions: [occurrence, cutoff]
+    source: planted
+  - libraryRef: RSK-REV-021
+    title: Subscription discounts can be set without limit or approval
+    assertions: [accuracy]
+    source: planted
+  - libraryRef: RSK-REV-027
+    title: The deferral of annual subscriptions relies on the provider's calculation, never independently verified
+    assertions: [cutoff, accuracy]
+    source: planted
+  - libraryRef: RSK-REV-032
+    title: Settlement differences are written off without a defined threshold or approval
+    assertions: [existence, accuracy]
+    source: planted
+  - libraryRef: RSK-REV-006
+    title: Late refunds after the monthly report is run are not reflected, and the report is not re-run
+    assertions: [cutoff]
+    source: planted
+  - libraryRef: RSK-REV-030
+    title: The monthly revenue journal is prepared by one person and only observed in the close pack
+    assertions: [occurrence, accuracy]
+    source: planted
+  - libraryRef: RSK-REV-026
+    title: New-subscription commission and an investor covenant on annual recurring revenue create incentive pressure
+    assertions: [occurrence, cutoff]
+    source: planted
+  - libraryRef: RSK-REV-045
+    title: The revenue and deferred revenue reports are information produced by a third party whose accuracy and completeness is unestablished
+    assertions: [accuracy, completeness]
+    source: planted
+controls:
+  - libraryRef: CTL-REV-028
+    title: Payment service provider settlements are reconciled twice weekly to the billing platform cash report
+    source: planted
+  - libraryRef: CTL-REV-024
+    title: Journals above ten thousand euro are approved by the finance director
+    source: planted
+  - libraryRef: CTL-REV-033
+    title: The commercial director reviews monthly recurring revenue and churn
+    source: planted
+coveredItems:
+  - R1.4
+  - R2.2
+  - R5.1
+  - R6.1
+  - R6.2
+  - R6.3
+  - R7.1
+  - R8.1
+  - R9.1
+  - R10.1
+  - R10.5
+  - R11.1
+  - R11.3
+  - R12.1
+  - R12.3
+expectedMissing:
+  - R1.1::customer_acceptance_owner
+  - R3.1::limit_change_owner
+  - R4.1::performance_trigger
+  - R5.2::sequence_control
+  - R10.2::interface_error_handling
+  - R10.4::privileged_access_review
+  - R10.5::assurance_report
+  - R12.3::ipe_completeness_accuracy
+notes: |
+  The defining feature is that the entity never touches most of its own revenue process: the
+  invoice, the collection, the deferral and the reporting all happen at two service
+  organisations. The strongest single observation available is that the management review and
+  the figure it checks share one source, so it provides no independent assurance over
+  completeness. A weak engine will describe the reconciliation as a completeness control; it
+  is a cash control and does not address unrecorded subscriptions.
+  Deliberate omissions: nothing about how a customer is accepted, nothing about credit, and
+  no statement of when the performance obligation is satisfied for a monthly plan.

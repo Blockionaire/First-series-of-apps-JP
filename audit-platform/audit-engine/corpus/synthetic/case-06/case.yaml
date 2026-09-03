@@ -1,0 +1,18 @@
+caseId: case-06
+engagementId: eng-syn-06
+title: Vague and partly contradictory interviewee
+set: dev
+origin: synthetic
+sourceClass: C0
+language: en
+stresses:
+  - contradictory fact status
+  - insufficiently evidenced fact status
+  - deflection and non-answers
+  - a control described that turns out not to operate
+  - mandatory items left genuinely unresolved
+  - the engine must not fill gaps with plausible detail
+clientProfile: |
+  Contract manufacturer of packaging components. Single Dutch entity, Dutch GAAP.
+  Revenue approximately EUR 18m. ERP is Infor. The interviewee is a commercial manager
+  standing in for the financial controller, who was unavailable.

@@ -1,0 +1,21 @@
+{
+  "seed": "phase0",
+  "casesPerRater": 3,
+  "_comment": "Real (C1) cases only — variant A must be a genuine firm working paper. Fill in when the corpus and raters exist; no rater is ever assigned a case from their own firm.",
+  "cases": [
+    { "caseId": "real-01", "firm": "alpha" },
+    { "caseId": "real-02", "firm": "alpha" },
+    { "caseId": "real-03", "firm": "beta" },
+    { "caseId": "real-04", "firm": "beta" },
+    { "caseId": "real-05", "firm": "gamma" },
+    { "caseId": "real-06", "firm": "gamma" }
+  ],
+  "raters": [
+    { "raterId": "a1", "firm": "alpha", "level": "manager" },
+    { "raterId": "a2", "firm": "alpha", "level": "senior" },
+    { "raterId": "b1", "firm": "beta", "level": "manager" },
+    { "raterId": "b2", "firm": "beta", "level": "senior" },
+    { "raterId": "g1", "firm": "gamma", "level": "manager" },
+    { "raterId": "g2", "firm": "gamma", "level": "senior" }
+  ]
+}
