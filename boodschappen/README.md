@@ -31,6 +31,10 @@ wie welke bon betaalde.
   notitie en een **foto** — handig om het juiste merk of de verpakking te laten zien.
 - De app **raadt de categorie** zelf zodra je begint te typen. "Tomaten" wordt Groente & fruit,
   "Afwasmiddel" wordt Huishouden. Kloppen doet hij het niet? Tik gewoon een andere aan.
+- **En hij onthoudt je correcties.** Zet je een boodschap zelf in een andere categorie, dan
+  weet de app dat de volgende keer meteen — ook als je huisgenoot hem invoert. Hoofdletters,
+  leestekens en meervoud maken niet uit: leer je *bloempot*, dan gaat *Bloempotten* ook goed.
+  In *Meer → Wat de app onthoudt* zie je alle lessen staan en kun je er een weghalen.
 - **Snelknoppen**: dingen die je vaker koopt staan als suggestie onder het invoerveld,
   met de winkel en categorie van de vorige keer er meteen bij.
 - **Spoed** ⚡ zet iets bovenaan de lijst.
@@ -91,6 +95,8 @@ gewoon: hoeveel is er deze maand nog over?
 ### Meer
 - **Vaste boodschappen** — de dingen die jullie elke week nodig hebben. Eén tik zet er
   eentje op de lijst, of zet ze allemaal in één keer klaar.
+- **Wat de app onthoudt** — de categorieën die jullie zelf hebben rechtgezet, met de
+  mogelijkheid om er een te vergeten.
 - **Winkels** toevoegen, verwijderen en op volgorde zetten (de volgorde bepaalt hoe de
   lijst gegroepeerd staat).
 - **Lijst delen** als bericht, bijvoorbeeld via WhatsApp.
@@ -130,6 +136,7 @@ ovs_winkels  de winkels
 ovs_vast     de vaste boodschappen
 ovs_bonnen   de uitgaven
 ovs_meta     instellingen, waaronder het maandbudget
+ovs_geleerd  categorieën die jullie zelf hebben rechtgezet (id = de naam)
 ```
 
 De Geheime Dienst-app gebruikt andere collecties, dus de twee apps zitten elkaar niet

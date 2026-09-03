@@ -775,6 +775,7 @@ const PAD = {
   fotos:  P+"_fotos",
   winkels:P+"_winkels",
   vast:   P+"_vast",
+  geleerd:P+"_geleerd",   // categorieën die jullie zelf hebben rechtgezet
   bonnen: P+"_bonnen",
   meta:   P+"_meta"
 };
@@ -844,7 +845,41 @@ for(const [cat, woorden] of Object.entries(RAAD)){
     }
   }
 }
+/* sleutel waaronder een boodschap in de database staat: kleine letters,
+   zonder accenten en leestekens, zodat "Kleine tomaatjes!" altijd op
+   hetzelfde plekje uitkomt */
+function leerSleutel(tekst){
+  return String(tekst||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
+}
+
+/* Heeft iemand deze boodschap ooit zelf in een andere categorie gezet?
+   Dan telt die keuze, ook als de woordenlijst er anders over denkt. */
+function geleerdeCategorie(tekst){
+  const sleutel = leerSleutel(tekst);
+  if(!sleutel || !S.geleerd.length) return null;
+  const zelfde = S.geleerd.find(g => g.id === sleutel);
+  if(zelfde) return zelfde.cat;
+  const st = stam(tekst);
+  if(st.length < 3) return null;
+  const viaStam = S.geleerd.find(g => stam(g.tekst || "") === st);
+  return viaStam ? viaStam.cat : null;
+}
+
+/* onthoud een verbetering, voor jullie allebei */
+async function leerCategorie(tekst, cat){
+  const sleutel = leerSleutel(tekst);
+  if(!sleutel || !cat) return;
+  try{
+    await DB.zet(PAD.geleerd + "/" + sleutel, {
+      tekst: String(tekst).trim(), cat, door: S.ik ? S.ik.id : null, laatst: nu()
+    });
+  }catch(e){ console.error("leren", e); }
+}
+
 function raadCategorie(tekst){
+  const geleerd = geleerdeCategorie(tekst);
+  if(geleerd) return geleerd;
   const t = String(tekst||"").toLowerCase().trim();
   if(!t) return null;
   const heel = stam(t);
@@ -1050,7 +1085,7 @@ function toonSyncFout(e){
    ===================================================================== */
 const S = {
   ik:null,                 // {id, naam}
-  leden:[], items:[], winkels:[], vast:[], bonnen:[],
+  leden:[], items:[], winkels:[], vast:[], bonnen:[], geleerd:[],
   geladen:false,
   tab:"lijst",
   syncFout:null,
@@ -1833,6 +1868,7 @@ function sheetToevoegen(voorinvul){
     <div class="veld">
       <label>Categorie</label>
       ${keuzeChips("cat", CATS.map(c => ({id:c.id, naam:c.naam, em:c.em})), f.cat, "grijs")}
+      <div class="hint verborgen" id="f-geleerd">${IK.ster} Onthouden van de vorige keer.</div>
     </div>
     <div class="veld">
       <label>Foto <span style="text-transform:none; letter-spacing:0; font-weight:500">(bijv. het merk of de verpakking)</span></label>
@@ -1878,6 +1914,10 @@ function sheetToevoegen(voorinvul){
     };
     tekenSugg();
 
+    const toonGeleerd = tekst => {
+      const vak = $("#f-geleerd");
+      if(vak) vak.classList.toggle("verborgen", !geleerdeCategorie(tekst));
+    };
     ti.oninput = () => {
       f.tekst = ti.value;
       tekenSugg();
@@ -1885,6 +1925,7 @@ function sheetToevoegen(voorinvul){
         const geraden = raadCategorie(ti.value);
         if(geraden && geraden !== f.cat){ f.cat = geraden; zetKeuze("cat", geraden); }
       }
+      toonGeleerd(ti.value);
     };
     ti.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); $("#f-hoev").focus(); } };
     $("#f-hoev").oninput = e => f.hoeveelheid = e.target.value;
@@ -1894,7 +1935,10 @@ function sheetToevoegen(voorinvul){
       $("#f-urgent .tuimel").classList.toggle("aan", f.urgent);
     };
     bindKeuze("winkel", v => f.winkel = v);
-    bindKeuze("cat", v => { f.cat = v; f.catHandmatig = true; });
+    bindKeuze("cat", v => {
+      f.cat = v; f.catHandmatig = true;
+      const vak = $("#f-geleerd"); if(vak) vak.classList.add("verborgen");
+    });
 
     $("#f-foto").onclick = () => $("#f-bestand").click();
     $("#f-bestand").onchange = async e => {
@@ -1927,12 +1971,17 @@ function sheetToevoegen(voorinvul){
       try{
         let fotoId = null;
         if(f.fotoFile) fotoId = await bewaarFoto(f.fotoFile);
+        const zouRaden = raadCategorie(tekst) || "overig";
+        const zelfGekozen = f.catHandmatig && f.cat !== zouRaden;
         await nieuwItem({
           tekst, hoeveelheid:f.hoeveelheid.trim(), winkel:f.winkel, cat:f.cat,
           notitie:f.notitie.trim(), urgent:f.urgent, fotoId
         });
+        if(zelfGekozen) await leerCategorie(tekst, f.cat);
         sluitSheet();
-        toast(tekst + " staat op de lijst", "✓");
+        toast(zelfGekozen ? "Onthouden: " + tekst + " is " + catVan(f.cat).naam.toLowerCase()
+                          : tekst + " staat op de lijst",
+              zelfGekozen ? "⭐" : "✓");
         tril(14);
       }catch(e){
         console.error(e); toast("Opslaan lukte niet");
@@ -2094,7 +2143,11 @@ function sheetBewerk(item){
         if(f.fotoFile){ await wisFoto(item.fotoId); wijz.fotoId = await bewaarFoto(f.fotoFile); }
         else if(f.fotoWeg && item.fotoId){ await wisFoto(item.fotoId); wijz.fotoId = null; }
         await DB.zet(PAD.items + "/" + item.id, wijz);
-        sluitSheet(); toast("Aangepast", "✓");
+        const catGewijzigd = f.cat !== (item.cat || "overig");
+        if(catGewijzigd) await leerCategorie(tekst, f.cat);
+        sluitSheet();
+        toast(catGewijzigd ? "Onthouden: " + tekst + " is " + catVan(f.cat).naam.toLowerCase() : "Aangepast",
+              catGewijzigd ? "⭐" : "✓");
       }catch(e){ console.error(e); toast("Opslaan lukte niet"); knop.disabled = false; knop.innerHTML = "Opslaan"; }
     };
   }});
@@ -3120,6 +3173,11 @@ function schermMeer(){
               <div class="tk"><b>Vaste boodschappen</b><span>wat je elke week nodig hebt, met één tik erop</span></div>
               <span class="na">${S.vast.length}${IK.pijl}</span>
             </button>
+            <button class="rij" id="m-geleerd">
+              <span class="ik" style="background:var(--accent-zacht); color:var(--accent)">${IK.ster}</span>
+              <div class="tk"><b>Wat de app onthoudt</b><span>categorieën die jullie zelf hebben rechtgezet</span></div>
+              <span class="na">${S.geleerd.length}${IK.pijl}</span>
+            </button>
             <button class="rij" id="m-winkels">
               <span class="ik">${IK.winkel}</span>
               <div class="tk"><b>Winkels</b><span>toevoegen, hernoemen en op volgorde zetten</span></div>
@@ -3179,6 +3237,7 @@ function bindMeer(){
   $("#m-uitloggen").onclick = () => { if(confirm("Uitloggen van dit apparaat?")) uitloggen(); };
   $("#m-vast").onclick = sheetVast;
   $("#m-winkels").onclick = sheetWinkels;
+  $("#m-geleerd").onclick = sheetGeleerd;
   $("#m-delen").onclick = deelLijst;
   $("#m-thema").onclick = sheetThema;
   $("#m-over").onclick = sheetOver;
@@ -3250,6 +3309,43 @@ function sheetVast(){
       sluitSheet(); S.tab = "lijst"; tekenNu();
       toast(n ? n + " boodschappen toegevoegd" : "Ze stonden er al", "⭐");
     };
+  }});
+}
+
+/* ---------- wat de app onthoudt ---------- */
+function sheetGeleerd(){
+  const lijst = [...S.geleerd].sort((a,b) => (b.laatst||0) - (a.laatst||0));
+  const body = `
+    <p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+      Zet je een boodschap zelf in een andere categorie, dan onthoudt de app dat.
+      De volgende keer dat een van jullie hem op de lijst zet, staat hij er meteen goed op.
+    </p>
+    ${lijst.length === 0 ? `
+      <div class="leeg" style="padding:30px 10px"><span class="em">⭐</span><h3>Nog niets geleerd</h3>
+      <p>Verzet bij een boodschap de categorie en hij komt hier te staan.</p></div>`
+    : `<div class="lijst">
+      ${lijst.map(g => {
+        const c = catVan(g.cat);
+        const lid = lidVan(g.door);
+        return `<div class="rij">
+          <span class="ik" style="font-size:17px">${c.em}</span>
+          <div class="tk"><b>${esc(g.tekst || g.id)}</b>
+            <span>${esc(c.naam)}${lid ? " · door " + esc(lid.naam.split(" ")[0]) : ""}</span></div>
+          <button class="ikoonknop" data-vergeet="${esc(g.id)}"
+                  style="width:32px;height:32px;color:var(--muted)">${IK.prul}</button>
+        </div>`;
+      }).join("")}
+    </div>
+    <div class="hint" style="margin-top:12px">
+      Klopt er iets niet? Verwijder het hier, of zet de boodschap gewoon nog een keer
+      in de juiste categorie — dan overschrijft de app zichzelf.
+    </div>`}`;
+  sheet({titel:"Wat de app onthoudt", body, naTeken:() => {
+    $$("[data-vergeet]").forEach(b => b.onclick = async () => {
+      await DB.wis(PAD.geleerd + "/" + b.dataset.vergeet);
+      S.geleerd = S.geleerd.filter(g => g.id !== b.dataset.vergeet);
+      tril(); setTimeout(sheetGeleerd, 120);
+    });
   }});
 }
 
@@ -3584,6 +3680,7 @@ function startLuisteren(){
     if(S.geladen) tekenNu();
   });
   DB.luister(PAD.vast,   l => { S.vast = l;   if(S.geladen && S.tab === "meer") tekenNu(); });
+  DB.luister(PAD.geleerd, l => { S.geleerd = l; });
   DB.luister(PAD.bonnen, l => { S.bonnen = l; if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu(); });
   DB.luister(PAD.meta, l => {
     const b = l.find(x => x.id === "budget");
@@ -3632,6 +3729,7 @@ async function start(){
   try{ S.items  = await metGrens(DB.haalAlles(PAD.items), []); eersteItems = false; }catch(e){}
   try{ S.bonnen = await metGrens(DB.haalAlles(PAD.bonnen), []); }catch(e){}
   try{ S.vast   = await metGrens(DB.haalAlles(PAD.vast), []); }catch(e){}
+  try{ S.geleerd = await metGrens(DB.haalAlles(PAD.geleerd), []); }catch(e){}
 
   const bewaard = LS.get("boodschappen_ik_" + P, null);
   if(bewaard && S.leden.some(l => l.id === bewaard.id)){
