@@ -84,7 +84,7 @@ export async function runCase(input: RawInput, ctx: EngineContext): Promise<Work
 
 export { EngineContext } from "./context.ts";
 export { renderSourceForPrompt } from "./ingest.ts";
-export { renderWorkingPaper } from "./render.ts";
+export { renderWorkingPaper, renderNeutralDocument, scanForTells, SHELL, type Tell } from "./render.ts";
 export { validateGrounding, normalise, type GroundableEntry } from "./grounding.ts";
 export { evaluateCoverage, identifyMissingFacts, evaluatePredicate } from "./coverage.ts";
 export { assembleOutputs, unresolved, type EnginePartials } from "./assemble.ts";

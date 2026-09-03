@@ -10,7 +10,8 @@ of it reviewable, editable and approvable by the auditor, with every claim trace
 source.
 
 > **Start here:** `00-strategy-and-phasing.md` for the sequencing,
-> `07-phase-0-execution-plan.md` for what to build first.
+> `07-phase-0-execution-plan.md` for what to build first, and
+> `09-founder-critical-path.md` for what is waiting on you personally.
 >
 > **Read `00-strategy-and-phasing.md` first.** It is the controlling document: it decides
 > what gets built in which phase and what each phase costs. Documents `01`–`06` describe the
@@ -27,6 +28,8 @@ source.
 | 4 | [`04-security-privacy-compliance.md`](04-security-privacy-compliance.md) | Isolation, crypto, GDPR, the LLM data boundary — and the protects-the-data vs proves-maturity split (§4.12) |
 | 5 | [`05-delivery-plan.md`](05-delivery-plan.md) | Staffing, design partners, the five gates, backlog by phase, metrics, risks |
 | 6 | [`06-ai-contracts.md`](06-ai-contracts.md) | Schemas, prompt and cache layout, API calls, eval harness — and Phase-0 engine economics (§6.9) |
+| **9** | [`09-founder-critical-path.md`](09-founder-critical-path.md) | **The living checklist of what only you can do — SME, design partners, paired cases, data agreement, raters. The engineering track is ahead of the human track; this is the critical path** |
+| 8 | [`08-tooling-and-development-stack.md`](08-tooling-and-development-stack.md) | The frozen Phase 0 toolchain, costs per tool, and the API gate (§G) |
 | **7** | [`07-phase-0-execution-plan.md`](07-phase-0-execution-plan.md) | **The build backlog for Phase 0: engine surface, schemas, methodology minimum, corpus construction, metrics and thresholds, the blind-test protocol, effort, cost, the seven-week sequence, and what must not be built** |
 
 ## The doctrine

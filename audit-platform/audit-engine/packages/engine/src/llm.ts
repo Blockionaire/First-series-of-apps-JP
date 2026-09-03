@@ -79,6 +79,15 @@ export class AnthropicLlmClient implements LlmClient {
   }
 
   async generate<T extends z.ZodTypeAny>(opts: GenerateOptions<T>): Promise<LlmResult<z.infer<T>>> {
+    if (!this.apiKey) {
+      throw new Error(
+        "ANTHROPIC_API_KEY is not set.\n" +
+          "  Phase 0 runs without it: add --mock for the deterministic path.\n" +
+          "  At the API gate (08 §G): cp .env.example .env.local, paste the key from your\n" +
+          "  password manager, and run via `pnpm engine ...`, which loads .env.local for that\n" +
+          "  one command. Do not export it from a shell profile.",
+      );
+    }
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
     const { zodOutputFormat } = await import("@anthropic-ai/sdk/helpers/zod");
     const client = new Anthropic(this.apiKey ? { apiKey: this.apiKey } : {});

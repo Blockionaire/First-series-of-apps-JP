@@ -144,7 +144,8 @@ Install, subscribe to, configure or create an account for exactly this. Nothing 
 1. **Claude Code** — already held on Claude Pro, $20/month. Upgrade only if usage limits throttle.
 2. **GitHub account with a private repository** — free.
 3. **Anthropic Console account + API key** — **not yet.** Needed at the API gate (§G),
-   with an initial credit of **$20–25**, not more.
+   opened with a **$25 safety ceiling**, not a budget: enough to confirm the seam and take
+   the first measurements, then topped up deliberately.
 
 **Installed locally (4)**
 4. **Node 22 LTS** (includes native TypeScript execution).
@@ -218,27 +219,54 @@ the key does.
 
 1. **Create the Console account** at `console.anthropic.com`, using the same work email as
    the rest of the venture. It is a separate account from the Claude Pro subscription.
-2. **Add credit: $20–25.** No more. A full 6-case smoke run costs roughly €7, so that covers
-   about fifteen of them — comfortably enough to confirm the seam and take the first real
-   measurements. Top up when the numbers justify it, not in advance.
+2. **Add credit: $25.** Keep the two units of cost distinct, because they differ by a factor
+   of six:
+
+   | Unit | Cost | What $25 (≈ €23) buys |
+   |---|---|---|
+   | **One case** — a single transcript through all stages | **€0.90–1.60**, typically €1.20 | ≈ **19 single-case runs** |
+   | **One smoke-suite run** — all six dev cases | **≈ €7** | ≈ **3 suite runs** |
+
+   A realistic first week is one case to confirm the seam, five or six single-case runs while
+   the prompts settle, then two suite runs — roughly €15–20, so the initial credit is nearly
+   spent by the end of it. **Expect to top up during week 3 or 4.**
+
+   The $25 is a **safety ceiling while the pipeline is unproven**, not the phase budget. The
+   Phase 0 model budget remains **€1.2–3k** (§B); it arrives in deliberate top-ups rather than
+   sitting in the account where a retry loop could reach it.
 3. **Set a spend limit and an email alert** in the Console billing settings, at or just above
    the credit added. This is the cheapest protection against a loop that retries forever.
 4. **Create a dedicated API key** named for the project (e.g. `audit-engine-phase0`), not a
    personal scratch key. One key, one purpose, revocable without collateral damage.
-5. **Store it in the password manager first**, then export it into the shell only where it is
-   needed:
+5. **The password manager is the source of truth for the key. It is never written to a shell
+   profile**, where it would sit in plaintext and be injected into the environment of every
+   process you run, including anything you install later.
+
+   Two acceptable local approaches, in order of preference:
+
    ```bash
-   export ANTHROPIC_API_KEY="sk-ant-..."   # in the shell profile, never in the repo
+   # Best — the key never touches disk; it exists for the life of one command.
+   ANTHROPIC_API_KEY="$(pass show audit-engine/api-key)" pnpm engine run corpus/synthetic/case-01
+   op run --env-file=.env.tpl -- pnpm engine run corpus/synthetic/case-01     # 1Password
+
+   # Acceptable — a gitignored working copy, loaded per invocation, not exported globally.
+   cp .env.example .env.local     # paste the key from the password manager
+   pnpm engine run corpus/synthetic/case-01
    ```
-   The repository already gitignores `.env`. The key must never appear in a file that git
-   tracks, in a commit message, or in a screenshot shared with a design partner.
+
+   `pnpm engine` runs `node --env-file-if-exists=.env.local`, so `.env.local` is read for that
+   single command and nothing else. The repository gitignores `.env`, `.env.*` and keeps only
+   `.env.example`. The key must never appear in a tracked file, a commit message, a terminal
+   recording, or a screenshot shared with a design partner. **Rotate it in the Console the
+   moment you suspect it has leaked** — it costs nothing and takes a minute.
 6. **First command, one case, watching the cost:**
    ```bash
-   node apps/cli/src/index.ts run corpus/synthetic/case-01
-   node apps/cli/src/index.ts costs
+   pnpm engine run corpus/synthetic/case-01     # ONE case, not the suite
+   pnpm engine costs
    ```
-   Expect roughly €0.90–1.60 for the case. If the first run costs materially more, stop and
-   look at the manifest before running the suite.
+   Expect **€0.90–1.60 for the case**. If the first run costs materially more, stop and read
+   the manifest before going anywhere near the suite — six times the unit cost is six times
+   the mistake.
 7. **From that run onward, cost is tracked per stage and per case** by `engine costs`, from
    the run manifests. Watch the cache hit rate: below 90% on suite runs means a silent prefix
    invalidator, and it shows up directly in the phase budget.

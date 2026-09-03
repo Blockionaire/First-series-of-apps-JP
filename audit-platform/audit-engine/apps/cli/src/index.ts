@@ -10,7 +10,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { loadPack, packStats, REVENUE_PACK_DIR } from "@audit/methodology";
-import { EngineContext, runCase, renderWorkingPaper, AnthropicLlmClient, MockLlmClient } from "@audit/engine";
+import {
+  EngineContext, runCase, renderWorkingPaper, renderNeutralDocument, scanForTells,
+  AnthropicLlmClient, MockLlmClient,
+} from "@audit/engine";
 import {
   loadCase, loadCorpus, scoreCase, summarise, hardFails,
   assignRaters, m1, m2, blindingIntegrity, criterionProfile,
@@ -43,6 +46,14 @@ const USAGE = `engine — Revenue Audit Intelligence Engine (Phase 0)
 
   engine costs [--out <dir>]
       Model cost per pipeline stage and per complete case, from the run manifests.
+
+  engine render-a --input <file.md> [--label "Document 2"] [--out <dir>]
+      Re-render the firm's own working paper through the SAME neutral shell as the
+      engine's output. Format blinding is a requirement, not a nicety (07 §7.7).
+
+  engine check-blinding <file.html> [<file.html> ...]
+      Scan rendered documents for anything that reveals their origin, before raters
+      ever see them.
 `;
 
 const { values, positionals } = parseArgs({
@@ -53,6 +64,8 @@ const { values, positionals } = parseArgs({
     pack: { type: "string", default: REVENUE_PACK_DIR },
     corpus: { type: "string", default: "corpus/synthetic" },
     config: { type: "string" },
+    input: { type: "string" },
+    label: { type: "string" },
     evaluation: { type: "string", default: "evaluation" },
     set: { type: "string", default: "dev" },
     help: { type: "boolean", short: "h", default: false },
@@ -254,6 +267,45 @@ switch (command) {
     }
     console.log("\nPer stage:"); console.table(r.byStage);
     console.log("Per case:"); console.table(r.byCase);
+    break;
+  }
+
+  case "render-a": {
+    if (!values.input) { console.error("engine render-a --input <file.md>"); process.exit(1); }
+    const src = readFileSync(resolve(values.input), "utf8");
+    const html = renderNeutralDocument(src, { documentLabel: values.label ?? "Working paper" });
+    const dir = resolve(values.out, "blind", "documents");
+    mkdirSync(dir, { recursive: true });
+    const name = resolve(values.input).split("/").pop()!.replace(/\.[^.]+$/, "") + ".html";
+    writeFileSync(join(dir, name), html);
+    const tells = scanForTells(html);
+    console.log(`Rendered ${join(dir, name)}`);
+    if (tells.length) {
+      console.log("\n! origin tells found — fix before the blind test:");
+      for (const t of tells) console.log(`   ${t.why}: ...${t.excerpt}...`);
+      process.exitCode = 1;
+    } else console.log("No origin tells found.");
+    break;
+  }
+
+  case "check-blinding": {
+    const files = positionals.slice(1);
+    if (files.length === 0) { console.error("engine check-blinding <file.html> ..."); process.exit(1); }
+    let bad = 0;
+    for (const f of files) {
+      const tells = scanForTells(readFileSync(resolve(f), "utf8"));
+      if (tells.length === 0) console.log(`ok    ${f}`);
+      else {
+        bad++;
+        console.log(`TELLS ${f}`);
+        for (const t of tells) console.log(`        ${t.why}: ...${t.excerpt}...`);
+      }
+    }
+    console.log(`\n${files.length - bad}/${files.length} documents clean.`);
+    if (bad) {
+      console.log("A document a rater can identify makes the preference numbers unreliable (07 §7.9).");
+      process.exitCode = 1;
+    }
     break;
   }
 

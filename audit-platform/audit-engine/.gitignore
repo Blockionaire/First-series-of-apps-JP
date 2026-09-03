@@ -1,6 +1,8 @@
 node_modules/
 out/
 .env
+.env.*
+!.env.example
 # Real and anonymised corpus material (data class C1/C2) never enters the repository.
 corpus/real/
 *.docx

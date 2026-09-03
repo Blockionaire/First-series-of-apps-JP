@@ -12,11 +12,29 @@ node apps/cli/src/index.ts blind --config evaluation/blind-test-config.json
 Writes `out/blind/assignments.json` and one empty `scoring-<rater>.csv` per rater.
 **Never send `assignments.json` to a rater** — it is the de-blinding key.
 
-Then, per case, produce three documents rendered through the *same* neutral template:
+Then, per case, produce three documents rendered through the *same* neutral shell:
 
-- **A** the firm's original working paper, re-rendered — never their own file as-is;
+- **A** the firm's original working paper, **re-rendered** — never their own file as-is;
 - **B** the raw engine output;
 - **C** B after an auditor's review pass.
+
+For variant A, paste the firm's paper into a markdown-lite file (`## Heading`, paragraphs,
+simple `| pipe | tables |`) and run it through the same shell the engine's output uses:
+
+```bash
+node apps/cli/src/index.ts render-a --input real-01-firm.md --label "Document 2"
+```
+
+Then check every document for anything that reveals its origin, before a rater sees it:
+
+```bash
+node apps/cli/src/index.ts check-blinding out/blind/documents/*.html
+```
+
+The scanner catches named vendors, "generated", confidence language, assistant and hedging
+register, and implementation vocabulary. It is deliberately quiet about ordinary audit words —
+"the IFRS 15 five-step model" and "the expected credit loss model" are legitimate — because a
+noisy check gets ignored.
 
 Name the files by label, not by variant: `real-01-document-1.html` and so on, using the
 mapping in `assignments.json` for that rater.

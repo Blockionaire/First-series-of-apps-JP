@@ -5,7 +5,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "engine": "node apps/cli/src/index.ts"
+    "engine": "node --env-file-if-exists=.env.local apps/cli/src/index.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
