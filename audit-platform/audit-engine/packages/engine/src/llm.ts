@@ -73,7 +73,10 @@ export function costOf(model: string, usage: Usage): number {
  * signature differs in the installed SDK, this is the only file that changes.
  */
 export class AnthropicLlmClient implements LlmClient {
-  constructor(private readonly apiKey: string | undefined = process.env["ANTHROPIC_API_KEY"]) {}
+  private readonly apiKey: string | undefined;
+  constructor(apiKey: string | undefined = process.env["ANTHROPIC_API_KEY"]) {
+    this.apiKey = apiKey;
+  }
 
   async generate<T extends z.ZodTypeAny>(opts: GenerateOptions<T>): Promise<LlmResult<z.infer<T>>> {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
@@ -128,8 +131,11 @@ export class AnthropicLlmClient implements LlmClient {
 /* ── Mock, for tests and dry runs ─────────────────────────────────────────── */
 
 export class MockLlmClient implements LlmClient {
-  public readonly calls: GenerateOptions<z.ZodTypeAny>[] = [];
-  constructor(private readonly responder: (opts: GenerateOptions<z.ZodTypeAny>) => unknown) {}
+  readonly calls: GenerateOptions<z.ZodTypeAny>[] = [];
+  private readonly responder: (opts: GenerateOptions<z.ZodTypeAny>) => unknown;
+  constructor(responder: (opts: GenerateOptions<z.ZodTypeAny>) => unknown) {
+    this.responder = responder;
+  }
 
   async generate<T extends z.ZodTypeAny>(opts: GenerateOptions<T>): Promise<LlmResult<z.infer<T>>> {
     this.calls.push(opts as GenerateOptions<z.ZodTypeAny>);

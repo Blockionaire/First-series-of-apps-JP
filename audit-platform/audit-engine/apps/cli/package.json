@@ -7,7 +7,6 @@
     "@audit/domain": "workspace:*",
     "@audit/engine": "workspace:*",
     "@audit/evals": "workspace:*",
-    "@audit/methodology": "workspace:*",
-    "commander": "^15.0.0"
+    "@audit/methodology": "workspace:*"
   }
 }

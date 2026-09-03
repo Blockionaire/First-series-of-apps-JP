@@ -1,0 +1,19 @@
+caseId: case-02
+engagementId: eng-syn-02
+title: Engineering services recognised over time, with progress estimates
+set: dev
+origin: synthetic
+sourceClass: C0
+language: en
+stresses:
+  - over-time recognition and progress measurement
+  - unreviewed estimates
+  - accrued and deferred contract balances
+  - contract modifications and variation orders
+  - subcontractors and principal versus agent
+  - milestone invoicing in arrears
+clientProfile: |
+  Engineering consultancy delivering fixed-price design projects, typically six to eighteen
+  months. Single Dutch entity, IFRS reporting. Revenue approximately EUR 22m.
+  Systems: project time recorded in Timewax, invoicing and general ledger in AFAS.
+  Projects are priced fixed-fee; some work is subcontracted to specialist firms.

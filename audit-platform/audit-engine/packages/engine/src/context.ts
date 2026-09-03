@@ -23,14 +23,27 @@ export class EngineContext {
   readonly startedAt: string;
   private readonly stages: StageRecord[] = [];
 
+  readonly pack: MethodologyPack;
+  readonly llm: LlmClient;
+  readonly caseId: string;
+  readonly engagementId: string;
+  readonly sourceClass: DataClass;
+  readonly clientProfile: string | null;
+
   constructor(
-    readonly pack: MethodologyPack,
-    readonly llm: LlmClient,
-    readonly caseId: string,
-    readonly engagementId: string,
-    readonly sourceClass: DataClass,
-    readonly clientProfile: string | null,
+    pack: MethodologyPack,
+    llm: LlmClient,
+    caseId: string,
+    engagementId: string,
+    sourceClass: DataClass,
+    clientProfile: string | null,
   ) {
+    this.pack = pack;
+    this.llm = llm;
+    this.caseId = caseId;
+    this.engagementId = engagementId;
+    this.sourceClass = sourceClass;
+    this.clientProfile = clientProfile;
     this.runId = `run_${new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)}_${randomUUID().slice(0, 8)}`;
     this.startedAt = new Date().toISOString();
   }

@@ -1,0 +1,20 @@
+caseId: case-03
+engagementId: eng-syn-03
+title: Owner-managed wholesaler with spreadsheet pricing and no segregation of duties
+set: dev
+origin: synthetic
+sourceClass: C0
+language: en
+stresses:
+  - management override in a small entity
+  - no segregation of duties
+  - pricing outside the system
+  - informal credit and cash sales
+  - manual invoicing in an accounting package
+  - controls that exist only in one person's head
+clientProfile: |
+  Family-owned wholesaler of garden and outdoor equipment. Single Dutch entity, Dutch GAAP
+  (RJ 270). Revenue approximately EUR 6m. Eleven employees.
+  Systems: Exact Online for invoicing and the general ledger. Prices and customer discounts
+  are maintained in an Excel workbook on the shared drive. The owner is also the sales
+  director and signs the accounts.

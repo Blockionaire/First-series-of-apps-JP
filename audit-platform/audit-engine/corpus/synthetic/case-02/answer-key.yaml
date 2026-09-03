@@ -1,0 +1,91 @@
+# Ground truth for case-02. The engine never sees this file.
+risks:
+  - libraryRef: RSK-REV-028
+    title: Progress estimates are set by the project lead who is bonused on project margin, and are not independently reviewed
+    assertions: [accuracy, occurrence]
+    source: planted
+  - libraryRef: RSK-REV-028
+    title: Estimates to complete are updated irregularly, so percentage completion is stale between quarters
+    assertions: [accuracy, cutoff]
+    source: planted
+  - libraryRef: RSK-REV-005
+    title: Variation orders are recognised on the basis of an email trail rather than an approved contract modification
+    assertions: [occurrence, accuracy]
+    source: planted
+  - libraryRef: RSK-REV-010
+    title: Subcontracted work is presented gross with no documented principal versus agent assessment
+    assertions: [presentation, classification]
+    source: planted
+  - libraryRef: RSK-REV-006
+    title: Timesheet periods remain open after month end, so hours driving recognised revenue can change retrospectively
+    assertions: [cutoff, accuracy]
+    source: planted
+  - libraryRef: RSK-REV-002
+    title: Accrued and deferred contract balances are prepared and effectively self-reviewed by one person
+    assertions: [cutoff, accuracy_valuation_allocation]
+    source: planted
+  - libraryRef: RSK-REV-027
+    title: Hours may be booked to the wrong project, moving revenue between contracts
+    assertions: [accuracy, classification]
+    source: planted
+  - libraryRef: RSK-REV-026
+    title: Project-margin and profit-related bonuses create pressure on estimates and on recognised revenue
+    assertions: [occurrence, accuracy]
+    source: planted
+  - libraryRef: RSK-REV-030
+    title: Manual journals to revenue below the fifty thousand euro threshold need no second approval
+    assertions: [occurrence, accuracy, cutoff]
+    source: planted
+  - libraryRef: RSK-REV-044
+    title: Management review of project revenue is not evidenced beyond email
+    assertions: [completeness, accuracy, occurrence]
+    source: planted
+controls:
+  - libraryRef: CTL-REV-016
+    title: The project lead approves weekly timesheets before they feed into the revenue calculation
+    source: planted
+  - libraryRef: CTL-REV-030
+    title: The finance director reviews the loss-making project list line by line each month
+    source: planted
+  - libraryRef: CTL-REV-023
+    title: The finance director signs off the accrued and deferred revenue schedule at close
+    source: planted
+  - libraryRef: CTL-REV-024
+    title: Journals above fifty thousand euro require a second approval in AFAS
+    source: planted
+  - libraryRef: CTL-REV-033
+    title: The finance director reviews revenue by project against forecast in the monthly pack
+    source: planted
+  - libraryRef: CTL-REV-032
+    title: Only the project controller and finance director can change contract value or budget hours
+    source: planted
+coveredItems:
+  - R1.4
+  - R4.1
+  - R4.4
+  - R5.1
+  - R6.1
+  - R6.2
+  - R6.3
+  - R6.4
+  - R10.1
+  - R11.1
+  - R11.2
+  - R11.3
+  - R12.1
+expectedMissing:
+  - R1.3::unusual_terms_types
+  - R3.1::limit_change_owner
+  - R4.4::estimate_review
+  - R7.1::credit_note_initiator
+  - R8.1::bank_matching_mode
+  - R9.1::cutoff_procedure
+  - R10.2::interface_error_handling
+  - R10.4::privileged_access_review
+  - R12.1::review_precision
+notes: |
+  The estimate-to-complete conversation is the heart of this case: the person who sets the
+  estimate is bonused on the margin the estimate drives, and nobody reviews it. A weak engine
+  will report generic over-time revenue risk; a strong one will name that specific driver.
+  Deliberate omissions: nothing is said about credit control, cash application, cut-off
+  procedures at period end, or the completeness of the Timewax to AFAS feed.

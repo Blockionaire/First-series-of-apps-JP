@@ -1,0 +1,143 @@
+Auditor (audit senior): Thank you for the time. Can you describe how a sale happens here, from the customer calling to the invoice going out?
+
+Bookkeeper: Most customers phone or email Jan, that is the owner, or one of the two sales people. They write the order on a pad or send it to me by email, and I put it into Exact.
+
+Auditor: Is there an order document in the system before the invoice?
+
+Bookkeeper: No. I create the invoice directly. There is no order in Exact, only the invoice.
+
+Auditor: So if an order were forgotten, what would catch it?
+
+Bookkeeper: The customer would call. That does happen a couple of times a year.
+
+Auditor: Where do the prices come from?
+
+Bookkeeper: There is a spreadsheet on the shared drive with the list prices and the discount each customer gets. I look it up when I type the invoice.
+
+Auditor: Who maintains that spreadsheet?
+
+Bookkeeper: Jan does. He updates it when supplier prices change or when he agrees something with a customer.
+
+Auditor: Can anyone else edit it?
+
+Bookkeeper: Everyone on the network can open it. I do not think anyone else changes it, but nothing stops them. There is no password on it.
+
+Auditor: Is there a record of what changed and when?
+
+Bookkeeper: No. It is just the file. Sometimes Jan saves a copy with the date in the name.
+
+Auditor: When you type an invoice, does anything check the price against that spreadsheet?
+
+Bookkeeper: Only me. I compare it to the sheet as I type.
+
+Auditor: Does anyone review the invoices before they are sent?
+
+Bookkeeper: Jan sees them. I print the day's invoices and put them on his desk, and he looks through them.
+
+Auditor: Does he sign them, or mark them in any way?
+
+Bookkeeper: No, he just looks. If something is wrong he tells me and I credit it.
+
+Auditor: Let me ask about deliveries. How do you know the goods went out?
+
+Bookkeeper: The warehouse writes the delivery on a paper note, and the driver brings the signed copy back. I file them by month.
+
+Auditor: Is the invoice raised from that signed note?
+
+Bookkeeper: Usually the same day, sometimes the next. I take the notes from the tray and invoice them.
+
+Auditor: What if a note stayed in the tray?
+
+Bookkeeper: It would sit there. At the end of the month I check the tray is empty.
+
+Auditor: Is that check recorded?
+
+Bookkeeper: No, I just do it.
+
+Auditor: How is revenue recognised, at what point?
+
+Bookkeeper: When I raise the invoice, which is when the goods have gone.
+
+Auditor: Do you have any arrangements where goods sit at a customer and are only paid when sold?
+
+Bookkeeper: A few of the garden centres have stock on consignment over the winter. We invoice them when they report what they sold in the spring.
+
+Auditor: How do you keep track of what is out on consignment?
+
+Bookkeeper: Jan knows which customers have it. There is a note in his diary.
+
+Auditor: Is that stock still on your balance sheet?
+
+Bookkeeper: I would have to check. I think it is in the stock count if the warehouse remembers to include it.
+
+Auditor: Credit. How do you decide whether a customer can buy on account?
+
+Bookkeeper: Jan decides. He knows them all.
+
+Auditor: Is there a credit limit in Exact?
+
+Bookkeeper: There is a field but we do not fill it in.
+
+Auditor: How do you follow up on overdue accounts?
+
+Bookkeeper: I send reminders at thirty and sixty days, and after that I tell Jan and he phones them.
+
+Auditor: Are any receivables written off?
+
+Bookkeeper: Once or twice a year. Jan tells me to write it off and I post it.
+
+Auditor: Does anyone approve that other than Jan?
+
+Bookkeeper: No, he is the owner.
+
+Auditor: Credit notes, who raises those?
+
+Bookkeeper: I do, when a customer complains or returns something. Jan usually knows about it.
+
+Auditor: Is a credit note linked to the original invoice in Exact?
+
+Bookkeeper: I can link it, but I do not always. If it is a goodwill discount I just raise a credit.
+
+Auditor: Cash. Do you have counter sales?
+
+Bookkeeper: Yes, a small amount. People come to the yard, mostly trade customers picking up. Some pay cash.
+
+Auditor: How is that recorded?
+
+Bookkeeper: There is a receipt book. I enter the cash sales into Exact weekly from the book and bank the money.
+
+Auditor: Who counts the cash?
+
+Bookkeeper: I do.
+
+Auditor: Does anyone reconcile the receipt book to what is banked?
+
+Bookkeeper: I do that myself when I make the deposit.
+
+Auditor: Manual journals to revenue accounts, who can post them?
+
+Bookkeeper: Only me. Jan does not use Exact.
+
+Auditor: Does anyone review the journals you post?
+
+Bookkeeper: The accountant looks at everything when he prepares the year-end figures.
+
+Auditor: At month end, what do you do about cut-off?
+
+Bookkeeper: Nothing formal. I invoice from the delivery notes, so it follows the deliveries.
+
+Auditor: Is there anything tied to the revenue figure? A bonus, a bank covenant?
+
+Bookkeeper: The bank has a covenant on the equity ratio, I know that from the accountant. The two sales people get commission on what they sell.
+
+Auditor: How does Jan monitor the business month to month?
+
+Bookkeeper: I print the profit and loss and the debtors list, and we go through it. He knows what the number should be, and if it is off he asks why.
+
+Auditor: What is "off" for him?
+
+Bookkeeper: If turnover is a few thousand different from what he expects, he will ask.
+
+Auditor: And who can change customer master data in Exact?
+
+Bookkeeper: Me. I am the only one who uses it properly.

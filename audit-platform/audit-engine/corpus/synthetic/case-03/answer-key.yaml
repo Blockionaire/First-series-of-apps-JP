@@ -1,0 +1,96 @@
+# Ground truth for case-03. The engine never sees this file.
+risks:
+  - libraryRef: RSK-REV-030
+    title: The owner directs write-offs, prices and credit decisions with no independent approval
+    assertions: [occurrence, accuracy, accuracy_valuation_allocation]
+    source: planted
+  - libraryRef: RSK-REV-014
+    title: Prices are taken from an unprotected spreadsheet with no change history and no system check
+    assertions: [accuracy]
+    source: planted
+  - libraryRef: RSK-REV-042
+    title: The pricing spreadsheet is editable by every network user
+    assertions: [accuracy, occurrence]
+    source: planted
+  - libraryRef: RSK-REV-007
+    title: Delivery notes may remain uninvoiced; the only check is an informal look at the tray
+    assertions: [completeness]
+    source: planted
+  - libraryRef: RSK-REV-008
+    title: Orders are taken verbally with no order record, so an unrecorded sale would surface only through a customer complaint
+    assertions: [completeness]
+    source: planted
+  - libraryRef: RSK-REV-031
+    title: Consignment stock is tracked in the owner's diary and may be recognised or counted incorrectly
+    assertions: [occurrence, cutoff, existence]
+    source: planted
+  - libraryRef: RSK-REV-034
+    title: The bookkeeper records cash sales, counts the cash and reconciles the banking alone
+    assertions: [completeness, existence]
+    source: planted
+  - libraryRef: RSK-REV-033
+    title: Goodwill credit notes are raised without a link to the original invoice
+    assertions: [occurrence, cutoff]
+    source: planted
+  - libraryRef: RSK-REV-024
+    title: No credit limits are recorded and credit is granted on the owner's judgement alone
+    assertions: [accuracy_valuation_allocation]
+    source: planted
+  - libraryRef: RSK-REV-006
+    title: There is no period-end cut-off procedure beyond the ordinary invoicing routine
+    assertions: [cutoff]
+    source: planted
+  - libraryRef: RSK-REV-026
+    title: Sales commission and a bank covenant on the equity ratio create incentive pressure
+    assertions: [occurrence]
+    source: planted
+  - libraryRef: RSK-REV-044
+    title: Management review is an informal comparison against the owner's expectation, imprecise relative to materiality
+    assertions: [completeness, accuracy, occurrence]
+    source: planted
+  - libraryRef: RSK-REV-042
+    title: One person creates invoices, maintains customer master data and posts all journals
+    assertions: [accuracy, occurrence]
+    source: planted
+controls:
+  - libraryRef: CTL-REV-013
+    title: Goods are despatched against a paper delivery note and the signed copy is returned and filed
+    source: planted
+  - libraryRef: CTL-REV-012
+    title: Reminders are sent at thirty and sixty days and overdue accounts are escalated to the owner
+    source: planted
+  - libraryRef: CTL-REV-033
+    title: The owner reviews the profit and loss and the debtors list monthly against his expectation
+    source: planted
+coveredItems:
+  - R2.1
+  - R2.2
+  - R4.2
+  - R5.1
+  - R5.3
+  - R6.1
+  - R7.1
+  - R8.2
+  - R10.1
+  - R11.1
+  - R11.3
+  - R12.1
+expectedMissing:
+  - R1.1::master_data_approval
+  - R2.3::blocking_rules
+  - R3.2::automatic_block_exists
+  - R4.3::unbilled_delivery_report
+  - R5.2::sequence_control
+  - R6.2::interface_reconciliation
+  - R9.1::cutoff_procedure
+  - R10.3::automated_controls
+  - R10.4::privileged_access_review
+  - R12.1::review_precision
+notes: |
+  The point of this case is that almost nothing here is a control in the audit sense: the
+  owner "looking through" invoices leaves no evidence, the tray check is unrecorded, and one
+  person performs every step. A weak engine will list these as controls. A strong one will
+  classify them as controls without evidence of operation, or as gaps, and will raise
+  segregation of duties and management override as the dominant risks.
+  Deliberate omissions: nothing about invoice sequence, nothing about how the consignment
+  stock is valued, and no cut-off procedure at all.

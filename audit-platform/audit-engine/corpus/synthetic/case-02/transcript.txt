@@ -1,0 +1,123 @@
+Auditor (audit senior): I would like to understand how a project turns into revenue. Could you start with how a project is won and set up?
+
+Project controller: A client accepts our fixed-fee proposal, and the commercial director signs it. Then I open the project in AFAS with the contract value and the budget hours agreed with the project lead.
+
+Auditor: Who sets those budget hours?
+
+Project controller: The project lead does, and I sanity-check them against the proposal.
+
+Auditor: How is revenue recognised on a project?
+
+Project controller: Over time, on percentage of completion. We take hours spent against the total budgeted hours and apply that to the contract value.
+
+Auditor: So the numerator is hours booked. Where do those come from?
+
+Project controller: Timewax. Everyone books their hours weekly and the project lead approves them. That feed comes into AFAS every Monday.
+
+Auditor: And the denominator, the total budgeted hours. Does that change during a project?
+
+Project controller: Yes, that is the part that moves. If the project lead thinks the job will take longer, he updates the estimate to complete and I put the new total in.
+
+Auditor: Who reviews that new estimate before it goes in?
+
+Project controller: Nobody formally. I would question it if it looked strange, but the project lead knows the job better than I do.
+
+Auditor: How often are the estimates updated?
+
+Project controller: Monthly in theory. In practice some leads update every month and some only when I chase them at quarter end.
+
+Auditor: What happens to revenue if a lead increases the estimate to complete?
+
+Project controller: The percentage drops, so we reverse some revenue that month. It happens.
+
+Auditor: Is there a report showing which estimates changed and by how much?
+
+Project controller: AFAS keeps the history, but I do not produce a report of it and nobody asks for one.
+
+Auditor: Let me ask about the projects that are running at a loss.
+
+Project controller: If the forecast cost exceeds the contract value we take the loss immediately. The finance director looks at that list each month.
+
+Auditor: How would a loss-making project be identified?
+
+Project controller: The margin report flags anything below zero. That one is reviewed properly, the finance director goes through it line by line.
+
+Auditor: Now invoicing. When do you invoice a client?
+
+Project controller: On the milestones in the contract. Typically thirty per cent on signature, then payments at design freeze and at delivery. So the invoice does not follow the revenue.
+
+Auditor: Which means you have contract assets and liabilities.
+
+Project controller: Yes. Where we have recognised more than we have invoiced it sits in accrued revenue, and where we have invoiced ahead it sits in deferred income. I prepare that schedule monthly.
+
+Auditor: Who reviews that schedule?
+
+Project controller: The finance director signs it off as part of the close.
+
+Auditor: How thoroughly?
+
+Project controller: He looks at the total and the biggest few projects. I would not say he reviews every line.
+
+Auditor: What about variation orders, when the client asks for extra scope?
+
+Project controller: The project lead agrees it with the client and sends me the email. I increase the contract value in AFAS from that.
+
+Auditor: From an email. Is there a signed variation?
+
+Project controller: Sometimes. For the bigger ones yes, there is a signed change order. For smaller extras it is often just the email trail.
+
+Auditor: And you would recognise revenue on that increased contract value straight away?
+
+Project controller: Once the contract value goes up, yes, the percentage applies to the new value.
+
+Auditor: Let me turn to subcontractors. You said some work is subcontracted.
+
+Project controller: About fifteen per cent of the work. Specialist structural calculations mostly. We contract with them, they invoice us, and we bill the client the full fee.
+
+Auditor: Is that presented gross in revenue?
+
+Project controller: Yes, gross. The subcontractor cost sits in cost of sales.
+
+Auditor: Has anyone documented why gross rather than net?
+
+Project controller: Not that I have seen. It has always been that way.
+
+Auditor: How are the hours themselves controlled? Could someone book hours to the wrong project?
+
+Project controller: They could, and it happens by accident. The project lead approves the weekly timesheets, which catches most of it.
+
+Auditor: If hours moved from one project to another after the month end, would revenue change?
+
+Project controller: Yes, it would move between projects. We do not lock the periods in Timewax until the quarter closes.
+
+Auditor: So there is a window where prior-month hours can still be edited.
+
+Project controller: There is, yes.
+
+Auditor: Manual journals to revenue. Who can post those?
+
+Project controller: I can, and the finance director can. Above fifty thousand euro AFAS requires a second approval.
+
+Auditor: What kind of entries touch revenue at period end?
+
+Project controller: The accrued and deferred movement, mostly. Occasionally a correction if a project was set up with the wrong contract value.
+
+Auditor: Is anything tied to the reported result?
+
+Project controller: The project leads have a bonus on project margin. The finance director and the commercial director have a profit-related bonus.
+
+Auditor: How does management review revenue each month?
+
+Project controller: The finance director reviews revenue by project against the forecast in the monthly pack, and the board see the total.
+
+Auditor: What would make him challenge a number?
+
+Project controller: A project where the percentage complete jumps a lot in one month, or where margin moves. He asks me and I explain it.
+
+Auditor: Is that exchange recorded anywhere?
+
+Project controller: In email only.
+
+Auditor: Last one, access. Who can change the contract value or the budget hours in AFAS?
+
+Project controller: I can, and the finance director. Project leads cannot, they can only submit the estimate to complete.

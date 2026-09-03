@@ -106,9 +106,11 @@ export interface MethodologyPack {
 /* ── Loading ──────────────────────────────────────────────────────────────── */
 
 export class PackValidationError extends Error {
-  constructor(public readonly problems: string[]) {
+  readonly problems: string[];
+  constructor(problems: string[]) {
     super(`Pack failed validation:\n  - ${problems.join("\n  - ")}`);
     this.name = "PackValidationError";
+    this.problems = problems;
   }
 }
 
