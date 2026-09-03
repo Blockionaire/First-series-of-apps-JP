@@ -280,6 +280,31 @@ export const POTSOORTEN = {
 export const potSoort = potje => POTSOORTEN[potje?.soort] ? potje.soort : "sparen";
 
 /* ---------------------------------------------------------------
+   Subpotjes: waaruit een potje is opgebouwd
+   ---------------------------------------------------------------
+   Eén potje "Vaste lasten" van € 500 zegt weinig; € 500 opgebouwd uit
+   hypotheek, energie en verzekering wél. Daarom mag elk potje een
+   lijstje delen hebben. Het maandbedrag van het potje is dan de som
+   daarvan — je vult niet allebei in, want dan zouden ze uit elkaar
+   kunnen lopen en is niet duidelijk welk getal telt.
+
+   Voor de rest van de app verandert er niets: die kijkt naar
+   `maandelijks`, en dat blijft het bedrag dat er per maand in gaat.
+   --------------------------------------------------------------- */
+export const subpotjesVan = potje =>
+  (potje?.subpotjes || []).filter(s => s && s.naam !== undefined);
+
+export const heeftSubpotjes = potje => subpotjesVan(potje).length > 0;
+
+export const subpotjesTotaal = potje =>
+  subpotjesVan(potje).reduce((s, d) => s + (Number(d.bedrag) || 0), 0);
+
+/* Het maandbedrag zoals het hoort te zijn: de som van de delen, of
+   wat je zelf hebt ingevuld als het potje geen delen heeft. */
+export const maandBedragVan = potje =>
+  heeftSubpotjes(potje) ? subpotjesTotaal(potje) : (Number(potje?.maandelijks) || 0);
+
+/* ---------------------------------------------------------------
    Wat er uit de boodschappenapp binnenkomt
    ---------------------------------------------------------------
    Een spiegel, geen kopie: deze bedragen staan niet als boeking in
@@ -323,7 +348,7 @@ function externVoorPotje(state, potjeId, maand) {
 
 export function potSaldo(state, potje, totMaand = maandNu()) {
   const soort = potSoort(potje);
-  const maandbedrag = Number(potje.maandelijks) || 0;
+  const maandbedrag = maandBedragVan(potje);
   const extern = externVoorPotje(state, potje.id, totMaand);
 
   /* Wat er in deze ene maand aan dit potje geboekt is. */

@@ -13,7 +13,7 @@
 import { esc, geld, procent, maandLabel, maandNu, maandPlus, ring, voortgang } from "../util.js";
 import { state, zetInstelling, meld, Sync, Koppeling } from "../store.js";
 import { verdeling, POTSOORTEN, maandOverzicht, externeUitgaven,
-         externeMaanden, doelenMetStand } from "../bereken.js";
+         externeMaanden, doelenMetStand, heeftSubpotjes, subpotjesVan } from "../bereken.js";
 import { maandkiezer, koppelMaandkiezer, leeg } from "./onderdelen.js";
 import { ga } from "../app.js";
 
@@ -186,6 +186,16 @@ function taart(v) {
             <span class="taartlijst__bedrag bedrag dof">${geld(v.over)}</span>
           </li>` : ""}
       </ul>
+
+      ${potje && heeftSubpotjes(potje) ? `
+        <div class="kaart__voet">
+          <div class="veld__label">Waaruit ${esc(potje.naam)} bestaat</div>
+          ${subpotjesVan(potje).map(d => `
+            <div style="display:flex;justify-content:space-between;gap:10px;font-size:.85rem;margin-bottom:5px">
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.naam || "Naamloos")}</span>
+              <span class="bedrag">${geld(d.bedrag)}</span>
+            </div>`).join("")}
+        </div>` : ""}
 
       ${gekozenPost ? `
         <div class="knoprij knoprij--gelijk" style="margin-top:12px">

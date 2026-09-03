@@ -12,8 +12,9 @@
 
 import { esc, geld, maandLabel, maandNu, melding, bevestig, dialoog,
          leesBedrag, voortgang, procent } from "../util.js";
-import { state, legPotje, bewaarPotje, wisPotje, zetInstelling } from "../store.js";
-import { potjesMetSaldo, potSaldo, POTSOORTEN, potSoort } from "../bereken.js";
+import { state, legPotje, legSubpotje, bewaarPotje, wisPotje, zetInstelling } from "../store.js";
+import { potjesMetSaldo, potSaldo, POTSOORTEN, potSoort,
+         subpotjesVan, heeftSubpotjes, subpotjesTotaal } from "../bereken.js";
 import { transactieLijst, leeg, potKaart } from "./onderdelen.js";
 import { POTJE_SUGGESTIES, ICONEN, KLEUREN } from "../data/standaard.js";
 import { ga, terug, eisBewerkrecht } from "../app.js";
@@ -123,8 +124,8 @@ function detail(id) {
     ? "Gaat er elke maand af."
     : stand.soort === "vrij"
       ? `Van ${geld(stand.maandbedrag)} deze maand${stand.ditUit > 0 ? ` · ${geld(stand.ditUit)} uitgegeven` : ""}`
-      : potje.maandelijks > 0
-        ? `${geld(potje.maandelijks)} per maand sinds ${maandLabel(potje.startMaand || maandNu())}`
+      : stand.maandbedrag > 0
+        ? `${geld(stand.maandbedrag)} per maand sinds ${maandLabel(potje.startMaand || maandNu())}`
         : "Dit potje vul je met de hand.";
 
   return `
@@ -149,7 +150,9 @@ function detail(id) {
         </span>
       </div>
       <div class="knoprij knoprij--gelijk">
-        <a class="knop" href="#/verdelen">Bedrag aanpassen</a>
+        ${heeftSubpotjes(potje)
+          ? `<button class="knop" data-subpotje-nieuw>Onderdeel erbij</button>`
+          : `<a class="knop" href="#/verdelen">Bedrag aanpassen</a>`}
         <button class="knop knop--rand" data-bewerk-potje>Potje aanpassen</button>
       </div>` : `
       <div class="knoprij knoprij--gelijk">
@@ -157,6 +160,8 @@ function detail(id) {
         <a class="knop" href="#/boeken/nieuw/opname/${esc(id)}">Opnemen</a>
         <a class="knop knop--primair" href="#/boeken/nieuw/uitgave/${esc(id)}">Uitgave</a>
       </div>`}
+
+    ${subpotjesBlok(potje, stand)}
 
     ${stand.soort === "sparen" ? `
       <div class="cijferrij" style="margin-top:14px">
@@ -192,6 +197,65 @@ function detail(id) {
 }
 
 /* ---------------------------------------------------------------
+   Waaruit een potje bestaat
+   ---------------------------------------------------------------
+   "Vaste lasten € 500" zegt niets; hypotheek, energie en verzekering
+   samen € 500 wel. Je kunt elk potje daarom openbreken in onderdelen.
+   Het maandbedrag van het potje is dan de som daarvan — de app rekent
+   dat bij het opslaan uit, zodat de twee niet uit elkaar lopen.
+   --------------------------------------------------------------- */
+function subpotjesBlok(potje, stand) {
+  const delen = subpotjesVan(potje);
+  const kleur = potje.kleur || "var(--accent)";
+
+  if (!delen.length) {
+    return `
+      <div class="sectiekop"><h2>Waaruit bestaat dit?</h2></div>
+      <div class="kaart">
+        <p style="font-size:.86rem;color:var(--tekst-zacht);margin:0 0 12px">
+          Je kunt ${geld(stand.maandbedrag)} opsplitsen in onderdelen — bijvoorbeeld
+          hypotheek, energie en verzekering. Het potje toont dan nog steeds het totaal,
+          maar je ziet hier waar het uit is opgebouwd.
+        </p>
+        <button class="knop knop--rand knop--breed" data-subpotje-nieuw>Onderdeel toevoegen</button>
+      </div>`;
+  }
+
+  const som = subpotjesTotaal(potje);
+
+  return `
+    <div class="sectiekop">
+      <h2>Waaruit bestaat dit?</h2>
+      <button class="sectiekop__actie" data-subpotje-nieuw>Erbij</button>
+    </div>
+    <div class="kaart">
+      <div class="deelbalk" aria-hidden="true">
+        ${delen.map((d, i) => {
+          const deel = som > 0 ? ((Number(d.bedrag) || 0) / som) * 100 : 100 / delen.length;
+          return `<span class="deelbalk__stuk" style="width:${deel.toFixed(2)}%;background:${esc(kleur)};opacity:${(1 - i * 0.13).toFixed(2)}"></span>`;
+        }).join("")}
+      </div>
+
+      ${delen.map(d => `
+        <button class="deelrij" data-subpotje="${esc(d.id)}">
+          <span class="deelrij__naam">${esc(d.naam || "Naamloos")}</span>
+          <span class="deelrij__deel">${som > 0 ? procent(Number(d.bedrag) || 0, som) : "—"}</span>
+          <span class="deelrij__bedrag">${geld(d.bedrag)}</span>
+          <span class="dof">›</span>
+        </button>`).join("")}
+
+      <div class="deelsom">
+        <span>Samen</span>
+        <span class="bedrag">${geld(som)}</span>
+      </div>
+      <div class="veld__hint" style="margin-top:8px">
+        Dit is meteen het maandbedrag van dit potje. Pas je een onderdeel aan,
+        dan verandert het totaal mee.
+      </div>
+    </div>`;
+}
+
+/* ---------------------------------------------------------------
    Koppelen
    --------------------------------------------------------------- */
 export function koppel(wortel, params) {
@@ -211,6 +275,15 @@ export function koppel(wortel, params) {
     if (e.target.closest("[data-nieuw]")) return bewerkPotje(null);
     if (e.target.closest("[data-bewerk-potje]")) return bewerkPotje(state.potjes.find(p => p.id === params[0]));
 
+    if (e.target.closest("[data-subpotje-nieuw]")) {
+      return bewerkSubpotje(state.potjes.find(p => p.id === params[0]), null);
+    }
+    const deel = e.target.closest("[data-subpotje]");
+    if (deel) {
+      const potje = state.potjes.find(p => p.id === params[0]);
+      return bewerkSubpotje(potje, subpotjesVan(potje).find(d => d.id === deel.dataset.subpotje));
+    }
+
     const pot = e.target.closest("[data-potje]");
     if (pot) return ga(`#/potjes/${pot.dataset.potje}`);
 
@@ -225,6 +298,69 @@ export function koppel(wortel, params) {
       melding(`${s.naam} toegevoegd. Vul het bedrag in bij Verdelen.`, "goed");
     }
   });
+}
+
+/* ---------------------------------------------------------------
+   Een onderdeel toevoegen of aanpassen
+   --------------------------------------------------------------- */
+async function bewerkSubpotje(potje, bestaand) {
+  if (!potje || !eisBewerkrecht()) return;
+  const nieuw = !bestaand;
+  const d = bestaand ? { ...bestaand } : legSubpotje();
+  const anderen = subpotjesVan(potje).filter(x => x.id !== d.id);
+
+  /* Het eerste onderdeel neemt het huidige maandbedrag als voorstel
+     over: meestal splits je een bestaand bedrag op, en dan wil je dat
+     het totaal niet ineens verspringt. */
+  const voorstel = nieuw && !anderen.length ? (Number(potje.maandelijks) || 0) : (Number(d.bedrag) || 0);
+
+  const uitkomst = await dialoog({
+    titel: nieuw ? "Onderdeel toevoegen" : d.naam || "Onderdeel",
+    onderaan: true,
+    inhoud: `
+      <div class="veld">
+        <label for="dnaam">Waarvoor is dit?</label>
+        <input type="text" id="dnaam" value="${esc(d.naam)}" placeholder="Hypotheek, energie, verzekering…">
+      </div>
+      <div class="veld">
+        <label for="dbedrag">Per maand</label>
+        <input type="text" id="dbedrag" inputmode="decimal" value="${voorstel ? String(voorstel).replace(".", ",") : ""}" placeholder="0,00">
+        <div class="veld__hint">
+          ${anderen.length
+            ? `De andere onderdelen zijn samen ${geld(anderen.reduce((s, x) => s + (Number(x.bedrag) || 0), 0))}.`
+            : `Het potje krijgt de som van alle onderdelen als maandbedrag.`}
+        </div>
+      </div>
+      ${nieuw ? "" : `
+        <button class="knop knop--rand knop--breed" data-verwijder style="margin-top:12px">Onderdeel verwijderen</button>`}`,
+    knoppen: [
+      { label: "Annuleren", waarde: null },
+      {
+        label: "Opslaan", soort: "primair",
+        waardeUit: laag => {
+          const naam = laag.querySelector("#dnaam").value.trim();
+          if (!naam) { melding("Geef het onderdeel een naam.", "fout"); return undefined; }
+          return { ...d, naam, bedrag: leesBedrag(laag.querySelector("#dbedrag").value) || 0 };
+        },
+      },
+    ],
+    opOpenen: (laag, sluit) => {
+      laag.querySelector("[data-verwijder]")?.addEventListener("click", async () => {
+        await bewaarPotje({ ...potje, subpotjes: anderen });
+        melding("Onderdeel verwijderd.");
+        sluit(null);
+      });
+      setTimeout(() => laag.querySelector(nieuw ? "#dnaam" : "#dbedrag")?.focus(), 60);
+    },
+  });
+
+  if (!uitkomst) return;
+  const delen = subpotjesVan(potje);
+  const bij = nieuw
+    ? [...delen, uitkomst]
+    : delen.map(x => (x.id === uitkomst.id ? uitkomst : x));
+  await bewaarPotje({ ...potje, subpotjes: bij });
+  melding(nieuw ? "Onderdeel toegevoegd." : "Opgeslagen.", "goed");
 }
 
 /* ---------------------------------------------------------------
@@ -259,7 +395,9 @@ async function bewerkPotje(bestaand) {
       <div class="veldrij">
         <div class="veld">
           <label for="kmaand">Per maand</label>
-          <input type="text" id="kmaand" inputmode="decimal" value="${p.maandelijks ? String(p.maandelijks).replace(".", ",") : ""}" placeholder="0,00">
+          <input type="text" id="kmaand" inputmode="decimal" value="${p.maandelijks ? String(p.maandelijks).replace(".", ",") : ""}"
+                 placeholder="0,00" ${heeftSubpotjes(p) ? "disabled" : ""}>
+          ${heeftSubpotjes(p) ? `<div class="veld__hint">Volgt uit de ${subpotjesVan(p).length} onderdelen samen.</div>` : ""}
         </div>
         <div class="veld">
           <label for="kdoel">Streefbedrag</label>

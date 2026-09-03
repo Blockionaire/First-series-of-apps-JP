@@ -12,7 +12,7 @@
 
 import { esc, geld, procent, maandLabel, melding, dialoog, leesBedrag } from "../util.js";
 import { state, legPotje, bewaarPotje, meld } from "../store.js";
-import { verdeling, POTSOORTEN, potSoort } from "../bereken.js";
+import { verdeling, POTSOORTEN, potSoort, heeftSubpotjes, subpotjesVan } from "../bereken.js";
 import { leeg } from "./onderdelen.js";
 import { raadIcoon } from "../data/standaard.js";
 import { ga, eisBewerkrecht } from "../app.js";
@@ -94,11 +94,16 @@ function groep(soort) {
               ${esc(p.naam)}
               <span class="verdeelrij__deel dof" data-deel="${esc(p.id)}"></span>
             </label>
-            <span class="verdeelrij__invoer">
-              <span class="dof">€</span>
-              <input type="text" inputmode="decimal" id="pot-${esc(p.id)}" data-bedrag="${esc(p.id)}"
-                     value="${p.maandelijks ? String(p.maandelijks).replace(".", ",") : ""}" placeholder="0">
-            </span>
+            ${heeftSubpotjes(p) ? `
+              <button class="verdeelrij__vast" data-open="${esc(p.id)}"
+                      title="Opgebouwd uit ${subpotjesVan(p).length} onderdelen">
+                ${geld(p.maandelijks)} <span class="dof">▦</span>
+              </button>` : `
+              <span class="verdeelrij__invoer">
+                <span class="dof">€</span>
+                <input type="text" inputmode="decimal" id="pot-${esc(p.id)}" data-bedrag="${esc(p.id)}"
+                       value="${p.maandelijks ? String(p.maandelijks).replace(".", ",") : ""}" placeholder="0">
+              </span>`}
           </div>`).join("")}
       </div>` : `
       <div class="kaart" style="padding:14px">
@@ -120,11 +125,17 @@ export function koppel(wortel) {
      dan zou je halverwege een bedrag je invoerveld kwijt zijn. */
   const hertel = () => {
     const v = verdeling(state, state.maand);
-    let verdeeld = 0;
+    const bedragen = new Map();
 
     wortel.querySelectorAll("[data-bedrag]").forEach(veld => {
-      verdeeld += leesBedrag(veld.value) || 0;
+      bedragen.set(veld.dataset.bedrag, leesBedrag(veld.value) || 0);
     });
+    /* Potjes die uit onderdelen bestaan hebben hier geen invoerveld;
+       hun bedrag staat vast en komt uit de opgeslagen som. */
+    state.potjes.filter(p => p.actief !== false && heeftSubpotjes(p))
+      .forEach(p => bedragen.set(p.id, Number(p.maandelijks) || 0));
+
+    let verdeeld = [...bedragen.values()].reduce((s, b) => s + b, 0);
     /* Los ingevoerde vaste lasten tellen ook mee in de taart. */
     verdeeld += v.posten.filter(p => !p.potje).reduce((s, p) => s + p.bedrag, 0);
 
@@ -134,11 +145,10 @@ export function koppel(wortel) {
     overVeld.textContent = geld(over);
     overVeld.className = `verdeelkop__waarde ${over < 0 ? "af" : over > 0 ? "op" : "dof"}`;
 
-    wortel.querySelectorAll("[data-bedrag]").forEach(veld => {
-      const deel = wortel.querySelector(`[data-deel="${veld.dataset.bedrag}"]`);
-      const bedrag = leesBedrag(veld.value) || 0;
+    for (const [id, bedrag] of bedragen) {
+      const deel = wortel.querySelector(`[data-deel="${id}"]`);
       if (deel) deel.textContent = v.inkomen > 0 && bedrag > 0 ? procent(bedrag, v.inkomen) : "";
-    });
+    }
   };
 
   hertel();
@@ -225,7 +235,7 @@ async function restantToewijzen() {
     inhoud: `
       <p class="dialoog__vraag">In welk potje gaat het restant?</p>
       <div class="lijst">
-        ${state.potjes.filter(p => p.actief !== false).map(p => `
+        ${state.potjes.filter(p => p.actief !== false && !heeftSubpotjes(p)).map(p => `
           <button class="rij" data-kies="${esc(p.id)}">
             <span class="rij__icoon">${esc(p.icoon || "🫙")}</span>
             <span class="rij__midden">

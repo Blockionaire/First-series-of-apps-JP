@@ -244,6 +244,11 @@ function koppelingBlok() {
           <span class="dof">Deze maand</span>
           <strong class="bedrag">${geld(extern.totaal)} in ${extern.aantal} ${extern.aantal === 1 ? "bon" : "bonnen"}</strong>
         </div>
+        ${stand.laatst ? `
+          <div style="display:flex;justify-content:space-between;font-size:.85rem">
+            <span class="dof">Laatst opgehaald</span>
+            <strong>${esc(new Date(stand.laatst).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" }))}</strong>
+          </div>` : ""}
         ${stand.fout ? `<div class="veld__fout">${esc(stand.fout)}</div>` : ""}
 
         ${maanden.length ? `
@@ -274,10 +279,15 @@ function accountBlok(s) {
       <div class="sectiekop"><h2>Account</h2></div>
       <div class="kaart">
         <p style="font-size:.86rem;color:var(--tekst-zacht);margin:0">
-          Er is nog geen Firebase ingesteld, dus de app draait alleen op dit apparaat.
-          In <code>firebase-config.js</code> staat hoe je dat aanzet — dan kun je inloggen,
-          samen bijhouden en bepalen wie erbij mag.
+          Voor Geldzaken zelf is nog geen cloud ingesteld, dus je cijfers staan alleen op dit
+          apparaat. In <code>firebase-config.js</code> staat hoe je dat aanzet — dan kun je
+          inloggen, samen bijhouden en bepalen wie erbij mag.
         </p>
+        ${Koppeling.configuratie() ? `
+          <p style="font-size:.86rem;color:var(--tekst-zacht);margin:8px 0 0">
+            Dit staat los van de koppeling hierboven: meelezen met ${esc(Koppeling.appNaam())}
+            werkt ook zonder account hier.
+          </p>` : ""}
       </div>`;
   }
 
@@ -368,14 +378,24 @@ export function koppel(wortel, params) {
   /* De naam slaan we op terwijl je typt, niet pas als je het veld
      verlaat. Tik je meteen daarna op een tabblad, dan is je invoer
      anders weg — het veld verdwijnt dan zonder dat de browser nog een
-     wijziging meldt. */
+     wijziging meldt.
+
+     Tijdens het typen bewaren we letterlijk wat er staat: geen trim en
+     geen standaardnaam. Elk opslaan tekent het scherm opnieuw, dus zou
+     een trim hier de spatie wissen die je net tikte ("Ons " wordt weer
+     "Ons") en zou een lege naam meteen in "Mijn huishouden" veranderen.
+     Netjes maken doen we pas als je klaar bent — bij `change`, dus als
+     je het veld verlaat. Niet bij `blur`: het hertekenen haalt dit veld
+     weg, en dat geeft een blur die opnieuw opslaat, wat opnieuw
+     hertekent. Daar komt de browser niet meer uit. */
   const naamVeld = wortel.querySelector("#huisnaam");
-  const bewaarNaam = debounce(waarde => {
-    zetInstelling({ huisNaam: waarde.trim() || "Mijn huishouden" });
-  }, 500);
+  const bewaarNaam = debounce(waarde => zetInstelling({ huisNaam: waarde }), 500);
+
   naamVeld?.addEventListener("input", e => bewaarNaam(e.target.value));
   naamVeld?.addEventListener("change", e => {
-    zetInstelling({ huisNaam: e.target.value.trim() || "Mijn huishouden" });
+    const netjes = e.target.value.trim();
+    if (netjes !== e.target.value) e.target.value = netjes;
+    zetInstelling({ huisNaam: netjes || "Mijn huishouden" });
   });
 
   wortel.addEventListener("change", e => {

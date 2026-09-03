@@ -1,48 +1,52 @@
 /* =====================================================================
    GELDZAKEN — koppeling met de boodschappenapp
    =====================================================================
-   De boodschappenapp van het huisje houdt zijn bonnen bij in Firestore,
-   in de collectie `ovs_bonnen`. Deze module leest die mee, zodat je in
-   Geldzaken ziet wat er deze maand aan boodschappen is uitgegeven
-   zonder dat je het overtikt.
+   De boodschappenapp van het huisje houdt zijn bonnen bij in Firestore.
+   Deze module leest die mee, zodat je in Geldzaken ziet wat er deze
+   maand aan boodschappen is uitgegeven zonder dat je het overtikt.
 
-   Twee dingen zijn hier bewust zo:
+   Drie keuzes die het hier eenvoudig houden:
 
-   - Het is een spiegel, geen kopie. We lezen alleen; we schrijven niets
-     terug en we maken geen boekingen aan. Wat je in de boodschappenapp
-     aanpast, klopt hier een seconde later ook. En omdat er niets wordt
-     overgenomen, kan er ook niets dubbel gaan tellen als je daarnaast
-     je bankafschrift inleest.
+   - We lezen rechtstreeks via de REST-kant van Firestore, met een
+     gewone fetch. Geen Firebase-SDK dus: dat scheelt een paar honderd
+     kilobyte laden bij het opstarten, en het werkt ook op netwerken
+     waar het adres van die SDK geblokkeerd is. Voor het ophalen van een
+     lijstje bonnen heb je die machinerie niet nodig.
 
-   - Het staat los van je eigen Firebase. Deze koppeling praat met het
-     project van de boodschappenapp, in een eigen verbinding naast die
-     van Geldzaken. Je hoeft dus niets in te stellen om hem aan te
-     zetten, en je financiën blijven staan waar ze stonden.
+   - Het is een spiegel, geen kopie. We schrijven niets terug en maken
+     geen boekingen aan. Wat je in de boodschappenapp aanpast klopt hier
+     bij de volgende verversing ook, en omdat er niets wordt overgenomen
+     kan er niets dubbel tellen naast een ingelezen bankafschrift.
+
+   - Verversen doen we bij het opstarten, zodra je de app weer opent, en
+     verder elke vijf minuten. Boodschappen zijn geen beurskoersen.
    ===================================================================== */
 
-const SDK = "https://www.gstatic.com/firebasejs/10.12.2";
+const BASIS = "https://firestore.googleapis.com/v1/projects";
+const HERHAAL = 5 * 60 * 1000;
 
 export const koppeling = {
   beschikbaar: false,   // staat er een configuratie klaar?
-  actief: false,        // luisteren we mee?
+  actief: false,        // hebben we gegevens binnen?
   bezig: false,
   fout: null,
   bonnen: [],           // { id, datum (ISO), bedrag, omschrijving, winkel, door }
   winkels: new Map(),   // id → naam
-  aantalTotaal: 0,      // alle bonnen, ook die van vorige maanden
+  aantalTotaal: 0,
   laatst: 0,            // wanneer kwam er voor het laatst iets binnen
 };
 
-let FB = null;
-let stoppers = [];
 let opData = () => {};
+let klok = null;
+let luistertOpTerugkeer = false;
 
 /* ---------------------------------------------------------------
    Configuratie
    --------------------------------------------------------------- */
 export function configuratie() {
   const cfg = window.GELDZAKEN_CONFIG?.koppelingen?.boodschappen;
-  if (!cfg?.firebase?.apiKey || String(cfg.firebase.apiKey).startsWith("PLAK")) return null;
+  const fb = cfg?.firebase;
+  if (!fb?.apiKey || !fb?.projectId || String(fb.apiKey).startsWith("PLAK")) return null;
   return cfg;
 }
 
@@ -50,122 +54,145 @@ export const appNaam = () => configuratie()?.naam || "Boodschappenapp";
 export const appLink = () => configuratie()?.link || "../boodschappen/";
 
 /* ---------------------------------------------------------------
-   Aanzetten
+   Een collectie ophalen
    ---------------------------------------------------------------
-   Idempotent: nog een keer aanroepen terwijl hij al luistert doet
-   niets. Zo kan de store hem gerust bij elke instellingswijziging
-   aanroepen.
+   Firestore geeft elk veld met zijn type terug ("stringValue",
+   "integerValue"…). `waarde()` haalt daar weer een gewone waarde uit.
+   Grote collecties komen in stukken; de nextPageToken haalt de rest op.
    --------------------------------------------------------------- */
+function waarde(veld) {
+  if (!veld || typeof veld !== "object") return null;
+  if ("stringValue" in veld) return veld.stringValue;
+  if ("integerValue" in veld) return Number(veld.integerValue);
+  if ("doubleValue" in veld) return Number(veld.doubleValue);
+  if ("booleanValue" in veld) return veld.booleanValue;
+  if ("nullValue" in veld) return null;
+  return null;
+}
+
+export function velden(doc) {
+  const uit = { id: String(doc.name || "").split("/").pop() };
+  for (const [naam, veld] of Object.entries(doc.fields || {})) uit[naam] = waarde(veld);
+  return uit;
+}
+
+async function haalCollectie(cfg, naam) {
+  const { projectId, apiKey } = cfg.firebase;
+  const documenten = [];
+  let token = "";
+
+  do {
+    const url = `${BASIS}/${encodeURIComponent(projectId)}/databases/(default)/documents/${encodeURIComponent(naam)}` +
+                `?pageSize=300&key=${encodeURIComponent(apiKey)}${token ? `&pageToken=${encodeURIComponent(token)}` : ""}`;
+    const antwoord = await fetch(url);
+
+    if (!antwoord.ok) {
+      const fout = new Error("Ophalen mislukte (" + antwoord.status + ")");
+      fout.status = antwoord.status;
+      throw fout;
+    }
+
+    const data = await antwoord.json();
+    documenten.push(...(data.documents || []));
+    token = data.nextPageToken || "";
+  } while (token);
+
+  return documenten.map(velden);
+}
+
+/* Een bon uit de andere app omzetten naar iets waar deze app mee rekent. */
+export function leesBon(rij) {
+  const stempel = Number(rij.datum || rij.gemaakt) || Date.now();
+  const dag = new Date(stempel);
+  return {
+    id: rij.id,
+    datum: `${dag.getFullYear()}-${String(dag.getMonth() + 1).padStart(2, "0")}-${String(dag.getDate()).padStart(2, "0")}`,
+    bedrag: Number(rij.bedrag) || 0,
+    omschrijving: String(rij.omschrijving || "").trim(),
+    winkel: rij.winkel || "",
+    door: rij.door || "",
+  };
+}
+
+/* ---------------------------------------------------------------
+   Ophalen en bijhouden
+   --------------------------------------------------------------- */
+export async function ververs() {
+  const cfg = configuratie();
+  koppeling.beschikbaar = !!cfg;
+  if (!cfg) return false;
+
+  koppeling.bezig = true;
+  opData();
+
+  try {
+    const ruimte = cfg.ruimte || "ovs";
+    const [bonnen, winkels] = await Promise.all([
+      haalCollectie(cfg, `${ruimte}_bonnen`),
+      haalCollectie(cfg, `${ruimte}_winkels`).catch(() => []),   // namen zijn mooi meegenomen
+    ]);
+
+    koppeling.bonnen = bonnen.map(leesBon).sort((a, b) => b.datum.localeCompare(a.datum));
+    koppeling.winkels = new Map(winkels.map(w => [w.id, w.naam || ""]));
+    koppeling.aantalTotaal = koppeling.bonnen.length;
+    koppeling.laatst = Date.now();
+    koppeling.actief = true;
+    koppeling.fout = null;
+    return true;
+  } catch (e) {
+    console.error("koppeling", e);
+    koppeling.fout = e.status === 403 || e.status === 401
+      ? "De boodschappenapp laat niet toe dat er wordt meegelezen."
+      : e.status === 404
+        ? "Die collectie bestaat niet in het ingestelde project."
+        : "Even geen verbinding met de boodschappenapp.";
+    return false;
+  } finally {
+    koppeling.bezig = false;
+    opData();
+  }
+}
+
 export async function start({ onData } = {}) {
   if (onData) opData = onData;
 
   const cfg = configuratie();
   koppeling.beschikbaar = !!cfg;
   if (!cfg) return false;
-  if (koppeling.actief) return true;
 
-  koppeling.bezig = true;
-  koppeling.fout = null;
+  if (!klok) klok = setInterval(() => ververs(), HERHAAL);
 
-  try {
-    if (!FB) {
-      const [appMod, dbMod] = await Promise.all([
-        import(`${SDK}/firebase-app.js`),
-        import(`${SDK}/firebase-firestore.js`),
-      ]);
-      /* Een eigen, genoemde app-instantie: die botst niet met de
-         verbinding die Geldzaken zelf voor je gegevens gebruikt, ook
-         niet als het toevallig hetzelfde project is. */
-      const app = appMod.initializeApp(cfg.firebase, "boodschappen");
-      FB = { app, db: dbMod.getFirestore(app), db_: dbMod };
-    }
-
-    const ruimte = cfg.ruimte || "ovs";
-    const { db, db_ } = FB;
-
-    stoppers.push(db_.onSnapshot(db_.collection(db, `${ruimte}_bonnen`),
-      snap => {
-        koppeling.bonnen = snap.docs.map(d => {
-          const b = d.data() || {};
-          const stempel = Number(b.datum || b.gemaakt) || Date.now();
-          const dag = new Date(stempel);
-          return {
-            id: d.id,
-            datum: `${dag.getFullYear()}-${String(dag.getMonth() + 1).padStart(2, "0")}-${String(dag.getDate()).padStart(2, "0")}`,
-            bedrag: Number(b.bedrag) || 0,
-            omschrijving: String(b.omschrijving || "").trim(),
-            winkel: b.winkel || "",
-            door: b.door || "",
-          };
-        }).sort((a, b) => b.datum.localeCompare(a.datum));
-        koppeling.aantalTotaal = koppeling.bonnen.length;
-        koppeling.laatst = Date.now();
-        koppeling.actief = true;
-        koppeling.bezig = false;
-        koppeling.fout = null;
-        opData();
-      },
-      fout => {
-        console.error("koppeling", fout);
-        koppeling.fout = fout.code === "permission-denied"
-          ? "De boodschappenapp laat niet toe dat er wordt meegelezen."
-          : "Even geen verbinding met de boodschappenapp.";
-        koppeling.bezig = false;
-        opData();
-      }));
-
-    /* De winkelnamen erbij, zodat er "Jumbo" staat en niet een id. */
-    stoppers.push(db_.onSnapshot(db_.collection(db, `${ruimte}_winkels`),
-      snap => {
-        koppeling.winkels = new Map(snap.docs.map(d => [d.id, (d.data() || {}).naam || ""]));
-        opData();
-      },
-      () => { /* zonder namen werkt het ook */ }));
-
-    koppeling.actief = true;
-    return true;
-  } catch (e) {
-    /* Meestal is dit gewoon "geen internet". De technische tekst
-       ("Failed to fetch dynamically imported module…") zegt niemand
-       iets, dus die houden we voor de console. */
-    console.error("koppeling", e);
-    koppeling.fout = /fetch|network|import/i.test(e.message || "")
-      ? "Even geen verbinding. Meelezen werkt alleen online."
-      : e.message;
-    koppeling.bezig = false;
-    koppeling.actief = false;
-    opData();
-    return false;
+  /* Kom je terug in de app, dan wil je meteen de laatste stand zien —
+     en niet tot de volgende ronde wachten. */
+  if (!luistertOpTerugkeer) {
+    luistertOpTerugkeer = true;
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && koppeling.beschikbaar &&
+          Date.now() - koppeling.laatst > 60000) ververs();
+    });
   }
+
+  return ververs();
 }
 
 export function stop() {
-  stoppers.forEach(f => { try { f(); } catch { /* al gestopt */ } });
-  stoppers = [];
+  if (klok) { clearInterval(klok); klok = null; }
   koppeling.actief = false;
   koppeling.bezig = false;
+  koppeling.fout = null;
   koppeling.bonnen = [];
   koppeling.winkels = new Map();
   koppeling.aantalTotaal = 0;
   opData();
 }
 
-/* ---------------------------------------------------------------
-   Eén keer kijken of het werkt
-   ---------------------------------------------------------------
-   Voor de knop "Nu ophalen" in de instellingen. Het live meeluisteren
-   zegt niets als er toevallig deze maand niets is afgerekend; dit
-   haalt alles op en vertelt precies wat het aantreft.
-   --------------------------------------------------------------- */
+/* Voor de knop "Nu ophalen" in de instellingen: haalt op en vertelt
+   hoeveel er staat, of waarom het niet lukte. */
 export async function haalNu() {
-  const cfg = configuratie();
-  if (!cfg) throw new Error("Er is geen boodschappenapp ingesteld.");
-
-  await start();
-  if (!FB) throw new Error(koppeling.fout || "Verbinden lukte niet.");
-
-  const snap = await FB.db_.getDocs(FB.db_.collection(FB.db, `${cfg.ruimte || "ovs"}_bonnen`));
-  return snap.size;
+  if (!configuratie()) throw new Error("Er is geen boodschappenapp ingesteld.");
+  const gelukt = await ververs();
+  if (!gelukt) throw new Error(koppeling.fout || "Ophalen lukte niet.");
+  return koppeling.aantalTotaal;
 }
 
 /* De naam van de winkel, of anders de omschrijving. */

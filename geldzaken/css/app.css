@@ -609,6 +609,36 @@ input[type="date"], input[type="month"] { min-height: 46px; }
 }
 .pot__bij { display: block; font-size: .72rem; color: var(--tekst-dof); margin-top: 2px; }
 .pot__streep { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+/* Een potje dat uit onderdelen bestaat draagt dat rechtsboven, zodat je
+   op het raster al ziet dat er wat achter zit. */
+.pot__delen {
+  position: absolute; top: 11px; right: 11px;
+  font-size: .68rem; font-weight: 640; color: var(--tekst-dof);
+  background: var(--vlak-diep); border-radius: 999px; padding: 2px 7px;
+}
+
+/* --------------------- Onderdelen van een potje --------------------- */
+.deelrij {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 11px 2px; text-align: left; color: inherit;
+  background: none; border: 0;
+  border-bottom: 1px solid var(--rand-zacht);
+}
+.deelrij:active { opacity: .6; }
+.deelrij:last-of-type { border-bottom: 0; }
+.deelrij__naam { flex: 1; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deelrij__deel { font-size: .74rem; color: var(--tekst-dof); font-variant-numeric: tabular-nums; }
+.deelrij__bedrag { font-weight: 640; font-variant-numeric: tabular-nums; }
+.deelbalk {
+  display: flex; height: 8px; border-radius: 999px; overflow: hidden;
+  background: var(--vlak-diep); margin-bottom: 12px;
+}
+.deelbalk__stuk { height: 100%; }
+.deelsom {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--rand);
+  font-weight: 700; font-variant-numeric: tabular-nums;
+}
 
 .voortgang {
   display: block; height: 7px; border-radius: 999px;
@@ -922,6 +952,15 @@ hr.scheiding { border: 0; border-top: 1px solid var(--rand-zacht); margin: 18px 
   width: 96px; text-align: right;
   padding: 9px 10px;
   font-weight: 650; font-variant-numeric: tabular-nums;
+}
+/* Een potje dat uit onderdelen bestaat heeft hier geen invoerveld: dat
+   bedrag is de som, en die pas je bij het potje zelf aan. */
+.verdeelrij__vast {
+  flex: none; width: 96px; padding: 9px 10px;
+  text-align: right; color: inherit;
+  background: var(--vlak-diep); border: 1px dashed var(--rand);
+  border-radius: var(--radius-s);
+  font-weight: 650; font-size: .88rem; font-variant-numeric: tabular-nums;
 }
 
 /* Soortkeuze bij een potje: drie kaartjes onder elkaar. */

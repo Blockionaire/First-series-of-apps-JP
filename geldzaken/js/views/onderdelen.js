@@ -187,10 +187,13 @@ export function potKaart(pot) {
       ? voortgang(pot.ditUit || 0, maand)
       : "";
 
+  const delen = (pot.subpotjes || []).length;
+
   return `
     <button class="pot" data-potje="${esc(pot.id)}">
       <span class="pot__streep" style="background:${esc(pot.kleur || "var(--accent)")}"></span>
       <span class="pot__icoon">${esc(pot.icoon || "🫙")}</span>
+      ${delen ? `<span class="pot__delen" title="${delen} onderdelen">▦ ${delen}</span>` : ""}
       <span class="pot__naam">${esc(pot.naam)}</span>
       <span class="pot__saldo" style="${hoofd < 0 ? "color:var(--uitgave)" : ""}">${geld(hoofd)}</span>
       <span class="pot__bij">${esc(bij)}</span>

@@ -40,6 +40,12 @@ elke maand af.
   | **Vrij te besteden** | Boodschappen, uitgaan. Bedoeld om op te maken. Boek je wel eens iets, dan zie je wat er déze maand nog over is. |
   | **Sparen** | Vakantie, buffer, onderhoud. Dit bouwt op; het saldo blijft staan. |
 
+- **Een potje kan uit onderdelen bestaan** — "Vaste lasten € 500" zegt weinig; open je
+  het potje, dan zie je waar die 500 uit is opgebouwd: hypotheek 300, energie 120,
+  verzekeringen 80, met een balkje en het aandeel per onderdeel. Het maandbedrag van
+  het potje ís die som, dus je vult nooit twee getallen in die uit elkaar kunnen lopen.
+  Op het overzicht verschijnt de opbouw zodra je de schijf van dat potje aantikt.
+
 - **Inkomen** — salaris, toeslagen, het inkomen van je partner. Eén keer instellen,
   daarna rekent de app er elke maand mee. Een bonus of teruggave boek je los.
 - **Cijfers** — hoe je maanden zich tot elkaar verhouden.
@@ -206,7 +212,7 @@ js/store.js             alle gegevens en alle wijzigingen
 js/bereken.js           alle afgeleide cijfers
 js/db.js                IndexedDB
 js/sync.js              inloggen, lidmaatschap en Firestore
-js/koppeling.js         meelezen met de boodschappenapp
+js/koppeling.js         meelezen met de boodschappenapp (Firestore REST)
 js/util.js              opmaak, maanden, dialogen, grafiekjes
 js/data/standaard.js    categorieën, potjesvoorstellen, bankprofielen
 js/views/overzicht.js   de taart: inkomen en verdeling
@@ -255,12 +261,15 @@ verzamelboeking wordt netjes uit elkaar gehaald. MT940 wordt (nog) niet gelezen.
 
 **Hoe werkt het meelezen met de boodschappenapp?**
 Die app bewaart zijn bonnen in Firestore (collectie `ovs_bonnen` in het project
-`geheime-dienst`). Geldzaken maakt daar een tweede, aparte verbinding mee en luistert
-alleen. Je hoeft er niets voor in te stellen: aanzetten onder ⚙️ → Koppelingen is
-genoeg. Het bedrag verschijnt op je overzicht en gaat af van het potje dat je eraan
-hangt, maar het wordt géén boeking in Geldzaken — dat is precies waarom er niets
-dubbel kan tellen. Wil je een andere app of een andere ruimte meelezen, dan pas je het
-blok `koppelingen` in `firebase-config.js` aan.
+`geheime-dienst`). Geldzaken haalt die op met een gewone `fetch` naar de REST-kant van
+Firestore — geen Firebase-SDK, dus niets extra's te laden en het werkt ook op netwerken
+waar dat adres dicht staat. Bij het openen van de app, zodra je terugkomt, en verder elke
+vijf minuten. Je hoeft er niets voor in te stellen: aanzetten onder ⚙️ → Koppelingen is
+genoeg, en dit staat helemaal los van of Geldzaken zelf een cloud heeft. Het bedrag
+verschijnt op je overzicht en gaat af van het potje dat je eraan hangt, maar het wordt
+géén boeking in Geldzaken — dat is precies waarom er niets dubbel kan tellen. Wil je een
+andere app of een andere ruimte meelezen, dan pas je het blok `koppelingen` in
+`firebase-config.js` aan.
 
 **Waarom staat mijn hypotheekpotje altijd op nul?**
 Dat klopt: een potje van het soort *vaste last* houdt geen saldo bij. Het bedrag

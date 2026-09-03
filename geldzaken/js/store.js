@@ -385,6 +385,7 @@ export function legPotje(velden = {}) {
     kleur: "#3ddc97",
     soort: "sparen",     // vast | sparen | vrij — zie bereken.js
     maandelijks: 0,
+    subpotjes: [],       // [{ id, naam, bedrag }] — waaruit het bedrag bestaat
     doelBedrag: null,
     startMaand: maandNu(),
     volgorde: state.potjes.length,
@@ -396,7 +397,20 @@ export function legPotje(velden = {}) {
   };
 }
 
-export const bewaarPotje = p => bewaar("potjes", p);
+export const legSubpotje = (velden = {}) => ({ id: nieuweId(), naam: "", bedrag: 0, ...velden });
+
+/* Heeft een potje subpotjes, dan is het maandbedrag de som daarvan.
+   We rekenen dat hier één keer uit, bij het opslaan, zodat de rest van
+   de app gewoon naar `maandelijks` kan blijven kijken en de twee nooit
+   uit elkaar kunnen lopen. */
+export function bewaarPotje(potje) {
+  const delen = (potje.subpotjes || []).filter(d => d && (d.naam || d.bedrag));
+  const p = delen.length
+    ? { ...potje, subpotjes: delen, maandelijks: delen.reduce((s, d) => s + (Number(d.bedrag) || 0), 0) }
+    : { ...potje, subpotjes: [] };
+  return bewaar("potjes", p);
+}
+
 export const wisPotje = id => wis("potjes", id);
 
 /* =====================================================================
