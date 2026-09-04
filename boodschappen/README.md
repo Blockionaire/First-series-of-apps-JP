@@ -60,6 +60,11 @@ wat je hebt uitgegeven en **bij welke winkel**, en zie je direct wat er van het
 maandbudget over is. Liep je alle winkels in één lijst af, dan raadt de app de winkel
 op basis van wat je zojuist hebt afgevinkt — één tik zet hem op een andere.
 
+- **Alles in één lijst?** Dan kies je bovenin van welke winkel je de looproute aanhoudt:
+  *Standaard*, *Jumbo*, *Albert Heijn*… De lijst sorteert zich meteen op die volgorde, ook
+  voor boodschappen waar geen winkel bij staat. Je keuze blijft bewaard tijdens je rit en
+  wordt bij het afrekenen als winkel voorgesteld. De rij verschijnt zodra minstens één
+  winkel een looproute heeft.
 - **Categorieën in- en uitklappen**: tik op een kop en de hele categorie vouwt dicht,
   met *3/7* ernaast zodat je ziet hoeveel je daar al hebt. Handig om je door een
   lange lijst heen te werken zonder eindeloos te scrollen.
