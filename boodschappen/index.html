@@ -2739,7 +2739,7 @@ function schermBudget(){
       <div class="kop-rij">
         <div class="kop-titel">
           <h1>Budget</h1>
-          <div class="sub">${esc(maandNaam(maand))}${info.isNu && info.dagenOver ? " · nog " + info.dagenOver + (info.dagenOver===1?" dag":" dagen") : ""}</div>
+          <div class="sub">${esc(maandNaam(maand))}${bonnen.length ? " · " + bonnen.length + " " + (bonnen.length===1?"uitgave":"uitgaven") : ""}</div>
         </div>
         <button class="ikoonknop" id="b-instel" aria-label="Budget instellen">${IK.tandwiel}</button>
         <button class="ikoonknop" id="b-plus" aria-label="Uitgave toevoegen">${IK.plus}</button>
@@ -2754,7 +2754,7 @@ function schermBudget(){
     <div class="inhoud" id="inhoud">
       <div class="wrap">
         ${budget <= 0 ? geenBudgetKaart(uitgegeven, bonnen.length) : budgetKaart(budget, uitgegeven, over, deel, info)}
-        ${budget > 0 ? statRij(bonnen, uitgegeven, info, budget) : ""}
+        ${budget > 0 ? statRij(bonnen, uitgegeven, info, budget, maand) : ""}
         ${verdelingSectie(bonnen, uitgegeven)}
         ${uitgavenSectie(bonnen, maand)}
         ${maandenSectie(maand)}
@@ -2785,27 +2785,20 @@ function budgetKaart(budget, uitgegeven, over, deel, info){
   const kleur = deel > 1 ? "var(--rood)" : (deel > 0.85 ? "var(--geel)" : "var(--groen)");
   const procent = Math.round(deel * 100);
 
-  /* ligt het uitgavetempo voor of achter op schema? */
+  /* Geen "voor of achter op schema": boodschappen doe je niet in dagporties.
+     Alleen als het budget op is heeft een melding zin, en achteraf de uitkomst. */
   let tempo = "";
-  if(info.isNu && info.dagVandaag > 0){
-    const verwacht = budget * (info.dagVandaag / info.dagenTotaal);
-    const verschil = verwacht - uitgegeven;
+  if(info.isNu){
     if(over < 0){
-      tempo = `<div class="tempo let">${IK.waarsch}<span>Je zit ${euro(-over)} boven het budget van deze maand</span></div>`;
-    }else if(Math.abs(verschil) < budget * 0.03){
-      tempo = `<div class="tempo neutraal">${IK.klok}<span>Je zit precies op schema</span></div>`;
-    }else if(verschil > 0){
-      tempo = `<div class="tempo goed">${IK.vink}<span>Je ligt ${euro(verschil)} voor op schema</span></div>`;
-    }else{
-      tempo = `<div class="tempo let">${IK.waarsch}<span>Je ligt ${euro(-verschil)} achter op schema</span></div>`;
+      tempo = `<div class="tempo let">${IK.waarsch}<span>Het budget van deze maand is met ${euro(-over)} overschreden</span></div>`;
+    }else if(deel > 0.85){
+      tempo = `<div class="tempo neutraal">${IK.klok}<span>Nog ${euro(over)} te gaan deze maand</span></div>`;
     }
   }else if(!info.isToekomst){
     tempo = over >= 0
       ? `<div class="tempo goed">${IK.vink}<span>Deze maand ${euro(over)} onder het budget gebleven</span></div>`
       : `<div class="tempo let">${IK.waarsch}<span>Deze maand ${euro(-over)} over het budget gegaan</span></div>`;
   }
-
-  const perDag = (info.isNu && info.dagenOver > 0 && over > 0) ? over / info.dagenOver : null;
 
   return `
   <div class="budgetkaart">
@@ -2826,23 +2819,22 @@ function budgetKaart(budget, uitgegeven, over, deel, info){
       <b>${euro(uitgegeven)}</b> van ${euro(budget)} uitgegeven · ${procent}%
     </div>
     ${tempo}
-    ${perDag !== null ? `<div class="hint" style="text-align:center; margin-top:10px">
-      Dat is nog ${euro(perDag)} per dag voor de resterende ${info.dagenOver} ${info.dagenOver===1?"dag":"dagen"}.</div>` : ""}
   </div>`;
 }
 
-function statRij(bonnen, uitgegeven, info, budget){
-  const dagenGeweest = Math.max(1, info.dagVandaag);
-  const perDag = uitgegeven / dagenGeweest;
+function statRij(bonnen, uitgegeven, info, budget, maand){
   const gem = bonnen.length ? uitgegeven / bonnen.length : 0;
-  const verwachtEind = info.isNu ? perDag * info.dagenTotaal : uitgegeven;
+  /* vergelijken met de vorige maand zegt meer dan een gemiddelde per dag */
+  const [j, m] = maand.split("-").map(Number);
+  const vorige = (m === 1 ? (j-1) + "-12" : j + "-" + String(m-1).padStart(2,"0"));
+  const vorigeSom = bonnenVan(vorige).reduce((s,b) => s + (Number(b.bedrag)||0), 0);
   return `
   <div class="stat-rij">
     <div class="stat"><b>${bonnen.length}</b><span>${bonnen.length===1?"uitgave":"uitgaven"}</span></div>
-    <div class="stat"><b>${euro(perDag)}</b><span>per dag</span></div>
+    <div class="stat"><b>${euro(gem)}</b><span>per keer</span></div>
     <div class="stat">
-      <b style="color:${verwachtEind > budget ? "var(--rood)" : "var(--ink)"}">${euro(verwachtEind)}</b>
-      <span>${info.isNu ? "einde maand" : "totaal"}</span>
+      <b>${vorigeSom ? euro(vorigeSom) : "—"}</b>
+      <span>vorige maand</span>
     </div>
   </div>`;
 }
