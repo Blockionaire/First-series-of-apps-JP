@@ -776,13 +776,14 @@ const PAD = {
   winkels:P+"_winkels",
   vast:   P+"_vast",
   geleerd:P+"_geleerd",   // categorieën die jullie zelf hebben rechtgezet
+  cats:   P+"_cats",
   bonnen: P+"_bonnen",
   meta:   P+"_meta"
 };
 
 const KLEUREN = ["#8C6E4F","#6E8B62","#B85C43","#4F6E8C","#8C5F7A","#A8853C","#5B7D7A","#7A5C8C"];
 
-const CATS = [
+const STANDAARD_CATS = [
   {id:"groente",  naam:"Groente & fruit", em:"🥬"},
   {id:"brood",    naam:"Brood & banket",  em:"🥖"},
   {id:"zuivel",   naam:"Zuivel & eieren", em:"🥛"},
@@ -797,8 +798,31 @@ const CATS = [
   {id:"klus",     naam:"Huisje & klussen",em:"🔧"},
   {id:"overig",   naam:"Overig",          em:"📦"}
 ];
-const catVan = id => CATS.find(c => c.id === id) || CATS[CATS.length-1];
-const catIndex = id => { const i = CATS.findIndex(c => c.id === id); return i < 0 ? 99 : i; };
+/* de categorieën staan in de database, zodat jullie ze zelf kunnen beheren.
+   Zolang die nog niet binnen is, gelden de standaardcategorieën. */
+const cats = () => (S.cats && S.cats.length) ? S.cats : STANDAARD_CATS;
+const catVan = id => cats().find(c => c.id === id)
+                  || cats().find(c => c.id === "overig")
+                  || cats()[cats().length-1]
+                  || {id:"overig", naam:"Overig", em:"📦"};
+const catBestaat = id => cats().some(c => c.id === id);
+
+/* De volgorde van de categorieën. Heeft een winkel een looproute, dan telt die;
+   categorieën die er niet in staan komen daarachter in de gewone volgorde. */
+function catOrde(winkelId){
+  const w = winkelId && winkelId !== "alles" ? S.winkels.find(x => x.id === winkelId) : null;
+  const route = (w && Array.isArray(w.route) && w.route.length) ? w.route : null;
+  const orde = new Map();
+  let n = 0;
+  if(route) route.forEach(id => { if(catBestaat(id) && !orde.has(id)) orde.set(id, n++); });
+  cats().forEach(c => { if(!orde.has(c.id)) orde.set(c.id, n++); });
+  return orde;
+}
+const STANDAARD_ORDE = () => catOrde(null);
+const catIndex = (id, orde) => {
+  const m = orde || STANDAARD_ORDE();
+  return m.has(id) ? m.get(id) : 999;
+};
 
 const STANDAARD_WINKELS = [
   {id:"ah",      naam:"Albert Heijn", em:"🛒", kleur:"#4F84C4", volgorde:1},
@@ -859,10 +883,10 @@ function geleerdeCategorie(tekst){
   const sleutel = leerSleutel(tekst);
   if(!sleutel || !S.geleerd.length) return null;
   const zelfde = S.geleerd.find(g => g.id === sleutel);
-  if(zelfde) return zelfde.cat;
+  if(zelfde && catBestaat(zelfde.cat)) return zelfde.cat;
   const st = stam(tekst);
   if(st.length < 3) return null;
-  const viaStam = S.geleerd.find(g => stam(g.tekst || "") === st);
+  const viaStam = S.geleerd.find(g => stam(g.tekst || "") === st && catBestaat(g.cat));
   return viaStam ? viaStam.cat : null;
 }
 
@@ -887,7 +911,7 @@ function raadCategorie(tekst){
   const woorden = t.split(/[\s,./-]+/).filter(Boolean);
   for(const woord of woorden){
     const s = stam(woord);
-    if(s.length >= 3 && RAAD_STAM[s]) return RAAD_STAM[s];
+    if(s.length >= 3 && RAAD_STAM[s] && catBestaat(RAAD_STAM[s])) return RAAD_STAM[s];
   }
   /* samengestelde woorden: volkorenbrood, wasmiddel, sinaasappelsap */
   for(const woord of woorden){
@@ -895,7 +919,7 @@ function raadCategorie(tekst){
     if(s.length < 5) continue;
     let besteLengte = 0, besteCat = null;
     for(const [sleutel, cat] of Object.entries(RAAD_STAM)){
-      if(sleutel.length >= 4 && sleutel.length > besteLengte && s.includes(sleutel)){
+      if(sleutel.length >= 4 && sleutel.length > besteLengte && s.includes(sleutel) && catBestaat(cat)){
         besteLengte = sleutel.length; besteCat = cat;
       }
     }
@@ -984,6 +1008,7 @@ const IK = {
   waarsch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.2 2.6 17.5A1.9 1.9 0 0 0 4.3 20.4h15.4a1.9 1.9 0 0 0 1.7-2.9L13.7 4.2a1.9 1.9 0 0 0-3.4 0Z"/><path d="M12 9.5v4"/><circle cx="12" cy="16.8" r=".9" fill="currentColor"/></svg>',
   sorteer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15M7 19.5 4 16.5M7 19.5l3-3M17 19.5v-15M17 4.5l-3 3M17 4.5l3 3"/></svg>',
   bon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 3.5v17l2.2-1.4 2.1 1.4 2.2-1.4 2.1 1.4 2.2-1.4 2.2 1.4v-17z"/><path d="M8.8 8h6.4M8.8 12h6.4"/></svg>',
+  route:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 20.5v-4a3 3 0 0 1 3-3h5a3 3 0 0 0 3-3v-4"/><circle cx="6.5" cy="4.2" r="2.2"/><circle cx="17.5" cy="19.8" r="2.2"/></svg>',
   later:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v10.2"/><path d="m8.2 10.2 3.8 3.8 3.8-3.8"/><path d="M4.5 19.5h15"/></svg>',
   omhoog:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5V10.3"/><path d="m8.2 14.1 3.8-3.8 3.8 3.8"/><path d="M4.5 4.5h15"/></svg>',
   vlam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c3.6 0 6.2-2.4 6.2-5.7 0-4.4-4.3-5.6-3.4-10.8C11.3 6 9 8.6 9.4 11.6c-1-.5-1.7-1.6-1.9-2.9-1.1 1.3-1.7 3.2-1.7 5.1C5.8 18 8.4 21 12 21Z"/></svg>'
@@ -1085,7 +1110,7 @@ function toonSyncFout(e){
    ===================================================================== */
 const S = {
   ik:null,                 // {id, naam}
-  leden:[], items:[], winkels:[], vast:[], bonnen:[], geleerd:[],
+  leden:[], items:[], winkels:[], vast:[], bonnen:[], geleerd:[], cats:[],
   geladen:false,
   tab:"lijst",
   syncFout:null,
@@ -1489,10 +1514,11 @@ function filterActief(){
   const f = S.filter;
   return !!(f.cat || f.door || f.urgent || f.zoek.trim());
 }
-function sorteerItems(lijst){
+function sorteerItems(lijst, orde){
+  const m = orde || STANDAARD_ORDE();
   return [...lijst].sort((a,b) => {
     if(!!b.urgent !== !!a.urgent) return b.urgent ? 1 : -1;
-    const ca = catIndex(a.cat), cb = catIndex(b.cat);
+    const ca = catIndex(a.cat, m), cb = catIndex(b.cat, m);
     if(ca !== cb) return ca - cb;
     return (a.gemaakt||0) - (b.gemaakt||0);
   });
@@ -1867,7 +1893,7 @@ function sheetToevoegen(voorinvul){
     </div>
     <div class="veld">
       <label>Categorie</label>
-      ${keuzeChips("cat", CATS.map(c => ({id:c.id, naam:c.naam, em:c.em})), f.cat, "grijs")}
+      ${keuzeChips("cat", cats().map(c => ({id:c.id, naam:c.naam, em:c.em})), f.cat, "grijs")}
       <div class="hint verborgen" id="f-geleerd">${IK.ster} Onthouden van de vorige keer.</div>
     </div>
     <div class="veld">
@@ -2091,7 +2117,7 @@ function sheetBewerk(item){
     <div class="veld"><label>Waar te koop</label>
       ${keuzeChips("winkel", S.winkels.map(w => ({id:w.id, naam:w.naam, em:w.em})), f.winkel)}</div>
     <div class="veld"><label>Categorie</label>
-      ${keuzeChips("cat", CATS.map(c => ({id:c.id, naam:c.naam, em:c.em})), f.cat, "grijs")}</div>
+      ${keuzeChips("cat", cats().map(c => ({id:c.id, naam:c.naam, em:c.em})), f.cat, "grijs")}</div>
     <div class="veld"><label>Foto</label>
       <div class="fotovak">
         <button type="button" class="fotoknop" id="b-foto">${item.fotoId ? IK.herhaal : IK.camera}<span>${item.fotoId ? "Andere foto" : "Foto toevoegen"}</span></button>
@@ -2158,7 +2184,7 @@ function sheetBewerk(item){
    ===================================================================== */
 function sheetFilters(){
   const f = S.filter;
-  const catsMetItems = CATS.filter(c => openItems().some(i => (i.cat||"overig") === c.id));
+  const catsMetItems = cats().filter(c => openItems().some(i => (i.cat||"overig") === c.id));
   const body = `
     <div class="veld">
       <label>Groeperen op</label>
@@ -2312,13 +2338,16 @@ function schermWinkelen(){
   const pct = actief.length ? Math.round(gedaan / actief.length * 100) : 0;
   const klaar = actief.length > 0 && gedaan === actief.length;
 
+  /* de looproute van deze winkel bepaalt de volgorde van de categorieën */
+  const orde = catOrde(wid);
   const perCat = new Map();
-  sorteerItems(actief).forEach(i => {
+  sorteerItems(actief, orde).forEach(i => {
     const c = catVan(i.cat);
     if(!perCat.has(c.id)) perCat.set(c.id, {c, items:[]});
     perCat.get(c.id).items.push(i);
   });
-  const groepen = [...perCat.values()].sort((a,b) => catIndex(a.c.id) - catIndex(b.c.id));
+  const groepen = [...perCat.values()].sort((a,b) => catIndex(a.c.id, orde) - catIndex(b.c.id, orde));
+  const heeftRoute = !!(w && Array.isArray(w.route) && w.route.length);
   const handmatig = sessie.handmatig || {};
 
   return `
@@ -2348,6 +2377,9 @@ function schermWinkelen(){
           </div>
           ${actief.filter(i => !i.af).length > 1
             ? `<button class="wm-actie" id="w-allelater">${IK.later}<span>Alles niet nu</span></button>` : ""}
+          ${heeftRoute ? `<div class="hint" style="text-align:center; margin-top:10px">
+            ${IK.route.replace("<svg", '<svg style="width:13px;height:13px;vertical-align:-2px"')}
+            Op volgorde van jullie looproute door ${esc(w.naam)}.</div>` : ""}
         </div>
 
         ${alleItems.length === 0 ? `
@@ -2387,7 +2419,7 @@ function schermWinkelen(){
             </button>
             ${laterDicht
               ? `<div class="hint" style="padding-left:4px">Tik erop om te zien wat je hebt weggezet.</div>`
-              : `<div class="lijst fade">${sorteerItems(later).map(i => wmItemHtml(i, true)).join("")}</div>
+              : `<div class="lijst fade">${sorteerItems(later, orde).map(i => wmItemHtml(i, true)).join("")}</div>
                  <button class="wm-actie" id="w-alleterug" style="margin-top:10px">
                    ${IK.omhoog}<span>Alles weer meenemen</span></button>`}
           </div>`;
@@ -3180,8 +3212,13 @@ function schermMeer(){
             </button>
             <button class="rij" id="m-winkels">
               <span class="ik">${IK.winkel}</span>
-              <div class="tk"><b>Winkels</b><span>toevoegen, hernoemen en op volgorde zetten</span></div>
+              <div class="tk"><b>Winkels &amp; looproutes</b><span>per winkel de volgorde waarin je erdoorheen loopt</span></div>
               <span class="na">${S.winkels.length}${IK.pijl}</span>
+            </button>
+            <button class="rij" id="m-cats">
+              <span class="ik">${IK.lijst}</span>
+              <div class="tk"><b>Categorieën</b><span>toevoegen, hernoemen en op volgorde zetten</span></div>
+              <span class="na">${cats().length}${IK.pijl}</span>
             </button>
             <button class="rij" id="m-delen">
               <span class="ik">${IK.deel}</span>
@@ -3238,6 +3275,7 @@ function bindMeer(){
   $("#m-vast").onclick = sheetVast;
   $("#m-winkels").onclick = sheetWinkels;
   $("#m-geleerd").onclick = sheetGeleerd;
+  $("#m-cats").onclick = sheetCategorieen;
   $("#m-delen").onclick = deelLijst;
   $("#m-thema").onclick = sheetThema;
   $("#m-over").onclick = sheetOver;
@@ -3354,18 +3392,30 @@ function sheetWinkels(){
   const gesorteerd = [...S.winkels].sort((a,b) => (a.volgorde||50)-(b.volgorde||50));
   const body = `
     <p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
-      Bij elke boodschap kies je waar hij te koop is. Hier bepaal je welke winkels dat zijn.
+      Bij elke boodschap kies je waar hij te koop is. Tik een winkel aan om hem aan te
+      passen of om de looproute in te stellen.
     </p>
     <div class="lijst" style="margin-bottom:14px">
-      ${gesorteerd.map((w,idx) => `
+      ${gesorteerd.map((w,idx) => {
+        const route = Array.isArray(w.route) && w.route.length;
+        return `
         <div class="rij">
-          <span class="ik" style="background:${esc(w.kleur)}22; font-size:17px">${w.em}</span>
-          <div class="tk"><b>${esc(w.naam)}</b>
-            <span>${S.items.filter(i => !i.af && (i.winkel||"nvt")===w.id).length} op de lijst</span></div>
-          <button class="ikoonknop" data-wop="${esc(w.id)}" style="width:30px;height:30px" ${idx===0?"disabled":""}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
-          ${w.id === "nvt" ? "" : `<button class="ikoonknop" data-wwis="${esc(w.id)}" style="width:30px;height:30px;color:var(--muted)">${IK.prul}</button>`}
-        </div>`).join("")}
+          <button data-wop="${esc(w.id)}" ${idx===0?"disabled":""}
+                  style="width:28px;height:28px;display:grid;place-items:center;color:${idx===0?"var(--line)":"var(--muted)"};flex:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+          <button class="tk" data-winkel="${esc(w.id)}" style="display:flex; align-items:center; gap:12px; flex:1; min-width:0; text-align:left; background:none">
+            <span class="ik" style="background:${esc(w.kleur)}22; font-size:17px; flex:none">${w.em}</span>
+            <span style="flex:1; min-width:0; color:var(--ink)">
+              <b style="display:block; font-size:15.5px; font-weight:600">${esc(w.naam)}</b>
+              <span style="font-size:12.5px; color:var(--muted)">
+                ${S.items.filter(i => !i.af && (i.winkel||"nvt")===w.id).length} op de lijst${route ? " · looproute ingesteld" : ""}
+              </span>
+            </span>
+            <span style="color:var(--line-2); flex:none; display:grid; place-items:center">${IK.pijl}</span>
+          </button>
+        </div>`;
+      }).join("")}
     </div>
     <div class="veld" style="margin-bottom:0">
       <label>Winkel toevoegen</label>
@@ -3374,27 +3424,17 @@ function sheetWinkels(){
         <input class="invoer" id="w-naam" placeholder="Naam van de winkel" maxlength="26">
         <button class="knop" id="w-add" style="flex:0 0 auto">${IK.plus}</button>
       </div>
-      <div class="hint">De volgorde bepaalt hoe de lijst gegroepeerd staat.</div>
+      <div class="hint">De pijltjes bepalen de volgorde waarin de winkels in de lijst staan.</div>
     </div>`;
   sheet({titel:"Winkels", body, naTeken:() => {
     $$("[data-wop]").forEach(b => b.onclick = async () => {
       const lijst = [...S.winkels].sort((a,b) => (a.volgorde||50)-(b.volgorde||50));
       const i = lijst.findIndex(w => w.id === b.dataset.wop);
       if(i <= 0) return;
-      const a = lijst[i], vorige = lijst[i-1];
-      await DB.zet(PAD.winkels + "/" + a.id, {volgorde: (vorige.volgorde||50) - 1});
+      await DB.zet(PAD.winkels + "/" + lijst[i].id, {volgorde: (lijst[i-1].volgorde||50) - 1});
       tril(); setTimeout(sheetWinkels, 140);
     });
-    $$("[data-wwis]").forEach(b => b.onclick = async () => {
-      const w = winkelVan(b.dataset.wwis);
-      const aantal = S.items.filter(i => (i.winkel||"nvt") === w.id).length;
-      if(!confirm(`“${w.naam}” verwijderen?` + (aantal ? `\n\n${aantal} boodschappen komen dan bij “Nog niet gekozen”.` : ""))) return;
-      for(const i of S.items.filter(i => (i.winkel||"nvt") === w.id)){
-        await DB.zet(PAD.items + "/" + i.id, {winkel:"nvt"});
-      }
-      await DB.wis(PAD.winkels + "/" + w.id);
-      setTimeout(sheetWinkels, 140);
-    });
+    $$("[data-winkel]").forEach(b => b.onclick = () => sheetWinkel(winkelVan(b.dataset.winkel)));
     const voegToe = async () => {
       const naam = $("#w-naam").value.trim();
       if(naam.length < 2){ $("#w-naam").focus(); return; }
@@ -3407,6 +3447,250 @@ function sheetWinkels(){
     };
     $("#w-add").onclick = voegToe;
     $("#w-naam").onkeydown = e => { if(e.key === "Enter") voegToe(); };
+  }});
+}
+
+/* ---------- één winkel: naam, looproute, verwijderen ---------- */
+function sheetWinkel(w){
+  if(!w) return;
+  const route = Array.isArray(w.route) && w.route.length ? w.route.filter(catBestaat) : null;
+  const aantal = S.items.filter(i => (i.winkel||"nvt") === w.id).length;
+  const body = `
+    <div style="text-align:center; margin-bottom:20px">
+      <div style="width:62px;height:62px;border-radius:20px;display:grid;place-items:center;font-size:30px;
+                  background:${esc(w.kleur)}22; margin:0 auto 12px">${w.em}</div>
+      <div style="font-size:21px; font-weight:700; letter-spacing:-.02em">${esc(w.naam)}</div>
+      <div style="color:var(--muted); font-size:13.5px; margin-top:2px">
+        ${aantal} ${aantal===1?"boodschap":"boodschappen"} · ${route ? route.length + " stappen in de looproute" : "geen looproute"}
+      </div>
+    </div>
+    <div class="veld-rij" style="margin-bottom:15px">
+      <input class="invoer" id="ww-emoji" maxlength="2" value="${esc(w.em)}"
+             style="flex:0 0 62px; text-align:center; font-size:20px">
+      <input class="invoer" id="ww-naam" maxlength="26" value="${esc(w.naam)}">
+      <button class="knop" id="ww-bewaar" style="flex:0 0 auto">${IK.vink}</button>
+    </div>
+    <div class="lijst">
+      <button class="rij" id="ww-route">
+        <span class="ik" style="background:var(--accent-zacht); color:var(--accent)">${IK.route}</span>
+        <div class="tk"><b>Looproute</b>
+          <span>${route ? "de volgorde waarin je door de winkel loopt" : "nog niet ingesteld — volgt nu de standaardvolgorde"}</span></div>
+        <span class="na">${route ? route.length : ""}${IK.pijl}</span>
+      </button>
+      ${w.id === "nvt" ? "" : `
+      <button class="rij" id="ww-wis">
+        <span class="ik" style="background:var(--rood-zacht); color:var(--rood)">${IK.prul}</span>
+        <div class="tk"><b style="color:var(--rood)">Winkel verwijderen</b>
+          <span>${aantal ? aantal + " boodschappen gaan naar “Nog niet gekozen”" : "er hangt niets aan deze winkel"}</span></div>
+      </button>`}
+    </div>`;
+  sheet({titel:"Winkel", body, naTeken:() => {
+    $("#ww-bewaar").onclick = async () => {
+      const naam = $("#ww-naam").value.trim();
+      if(naam.length < 2){ $("#ww-naam").focus(); return; }
+      await DB.zet(PAD.winkels + "/" + w.id, {naam, em: $("#ww-emoji").value.trim() || w.em});
+      tril(); toast("Opgeslagen", "✓"); setTimeout(sheetWinkels, 160);
+    };
+    $("#ww-route").onclick = () => sheetRoute(w.id);
+    const wis = $("#ww-wis");
+    if(wis) wis.onclick = async () => {
+      if(!confirm(`“${w.naam}” verwijderen?` + (aantal ? `\n\n${aantal} boodschappen komen dan bij “Nog niet gekozen”.` : ""))) return;
+      for(const i of S.items.filter(i => (i.winkel||"nvt") === w.id)){
+        await DB.zet(PAD.items + "/" + i.id, {winkel:"nvt"});
+      }
+      await DB.wis(PAD.winkels + "/" + w.id);
+      setTimeout(sheetWinkels, 160);
+    };
+  }});
+}
+
+/* ---------- looproute van één winkel ---------- */
+function sheetRoute(winkelId){
+  const w = winkelVan(winkelId);
+  const opgeslagen = Array.isArray(w.route) ? w.route.filter(catBestaat) : [];
+  /* categorieën die nog niet in de route staan, komen er in de gewone volgorde achter */
+  const volgorde = [...opgeslagen];
+  cats().forEach(c => { if(!volgorde.includes(c.id)) volgorde.push(c.id); });
+  const eigen = opgeslagen.length > 0;
+
+  const body = `
+    <p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+      Zet de categorieën in de volgorde waarin je bij <b>${esc(w.naam)}</b> door de winkel
+      loopt. Tijdens het winkelen staat je lijst dan precies zo op je scherm.
+    </p>
+    ${!eigen ? `<div class="banner info">${IK.info}<span>Nog geen eigen route — dit is de standaardvolgorde. Verschuif er een en hij wordt bewaard.</span></div>` : ""}
+    <div class="lijst" style="margin-top:14px">
+      ${volgorde.map((id, idx) => {
+        const c = catVan(id);
+        return `<div class="rij">
+          <span style="width:22px; text-align:center; font-size:12px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums; flex:none">${idx+1}</span>
+          <span class="ik" style="font-size:17px">${c.em}</span>
+          <div class="tk"><b>${esc(c.naam)}</b></div>
+          <button data-op="${esc(id)}" ${idx===0?"disabled":""}
+                  style="width:34px;height:34px;display:grid;place-items:center;color:${idx===0?"var(--line)":"var(--ink-2)"};flex:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+          <button data-neer="${esc(id)}" ${idx===volgorde.length-1?"disabled":""}
+                  style="width:34px;height:34px;display:grid;place-items:center;color:${idx===volgorde.length-1?"var(--line)":"var(--ink-2)"};flex:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+          </button>
+        </div>`;
+      }).join("")}
+    </div>
+    ${eigen ? `<button class="knop stil vol klein" id="rt-standaard" style="margin-top:12px">
+      ${IK.herhaal} Terug naar de standaardvolgorde</button>` : ""}`;
+
+  sheet({titel:"Looproute", body, naTeken:() => {
+    const bewaar = async nieuw => {
+      await DB.zet(PAD.winkels + "/" + w.id, {route: nieuw});
+      const kopie = S.winkels.find(x => x.id === w.id);
+      if(kopie) kopie.route = nieuw;
+      tril(8); setTimeout(() => sheetRoute(w.id), 100);
+    };
+    const verschuif = (id, richting) => {
+      const i = volgorde.indexOf(id);
+      const j = i + richting;
+      if(i < 0 || j < 0 || j >= volgorde.length) return;
+      const nieuw = [...volgorde];
+      nieuw[i] = nieuw[j]; nieuw[j] = id;
+      bewaar(nieuw);
+    };
+    $$("[data-op]").forEach(b => b.onclick = () => verschuif(b.dataset.op, -1));
+    $$("[data-neer]").forEach(b => b.onclick = () => verschuif(b.dataset.neer, +1));
+    const std = $("#rt-standaard");
+    if(std) std.onclick = async () => {
+      await DB.zet(PAD.winkels + "/" + w.id, {route: []});
+      const kopie = S.winkels.find(x => x.id === w.id);
+      if(kopie) kopie.route = [];
+      toast("Terug naar de standaardvolgorde"); setTimeout(() => sheetRoute(w.id), 120);
+    };
+  }});
+}
+
+/* ---------- categorieën beheren ---------- */
+function catInGebruik(id){
+  return S.items.filter(i => (i.cat||"overig") === id).length
+       + S.vast.filter(v => (v.cat||"overig") === id).length;
+}
+
+function sheetCategorieen(){
+  const lijst = cats();
+  const body = `
+    <p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+      Hiermee worden je boodschappen gegroepeerd. De volgorde hier is de standaard;
+      per winkel kun je er bij <b>Winkels → Looproute</b> van afwijken.
+    </p>
+    <div class="lijst" style="margin-bottom:14px">
+      ${lijst.map((c, idx) => {
+        const n = catInGebruik(c.id);
+        return `<div class="rij">
+          <button data-cop="${esc(c.id)}" ${idx===0?"disabled":""}
+                  style="width:30px;height:30px;display:grid;place-items:center;color:${idx===0?"var(--line)":"var(--muted)"};flex:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+          <button class="tk" data-cbewerk="${esc(c.id)}" style="display:flex; align-items:center; gap:11px; flex:1; min-width:0; text-align:left; background:none">
+            <span class="ik" style="font-size:17px; flex:none">${c.em}</span>
+            <span style="flex:1; min-width:0; color:var(--ink)">
+              <b style="display:block; font-size:15.5px; font-weight:600">${esc(c.naam)}</b>
+              <span style="font-size:12.5px; color:var(--muted)">${n ? n + " " + (n===1?"boodschap":"boodschappen") : "niet in gebruik"}</span>
+            </span>
+          </button>
+          <button data-cwis="${esc(c.id)}"
+                  style="width:32px;height:32px;display:grid;place-items:center;flex:none;
+                         color:${c.id === "overig" || n ? "var(--line-2)" : "var(--muted)"}">
+            <span style="width:17px;height:17px">${c.id === "overig" ? IK.slot : IK.prul}</span>
+          </button>
+        </div>`;
+      }).join("")}
+    </div>
+    <div class="veld" style="margin-bottom:0">
+      <label>Categorie toevoegen</label>
+      <div class="veld-rij">
+        <input class="invoer" id="c-emoji" placeholder="📦" maxlength="2" style="flex:0 0 62px; text-align:center; font-size:20px">
+        <input class="invoer" id="c-naam" placeholder="Naam van de categorie" maxlength="26">
+        <button class="knop" id="c-add" style="flex:0 0 auto">${IK.plus}</button>
+      </div>
+      <div class="hint">
+        Een categorie kun je alleen verwijderen als er op dat moment geen boodschappen
+        aan hangen. “Overig” blijft altijd staan — daar landt alles wat de app niet thuis kan brengen.
+      </div>
+    </div>`;
+
+  sheet({titel:"Categorieën", body, naTeken:() => {
+    $$("[data-cop]").forEach(b => b.onclick = async () => {
+      const l = cats();
+      const i = l.findIndex(c => c.id === b.dataset.cop);
+      if(i <= 0) return;
+      await DB.zet(PAD.cats + "/" + l[i].id, {volgorde: (l[i-1].volgorde || i) - 1});
+      tril(); setTimeout(sheetCategorieen, 140);
+    });
+    $$("[data-cbewerk]").forEach(b => b.onclick = () => sheetCategorie(catVan(b.dataset.cbewerk)));
+    $$("[data-cwis]").forEach(b => b.onclick = () => {
+      const id = b.dataset.cwis, c = catVan(id), n = catInGebruik(id);
+      if(id === "overig"){
+        alert("“Overig” kan niet weg.\n\nDat is de categorie waar de app alles in zet wat hij niet kan thuisbrengen.");
+        return;
+      }
+      if(n){
+        alert(`“${c.naam}” kan nu niet weg.\n\nEr ${n===1?"hangt":"hangen"} nog ${n} ${n===1?"boodschap":"boodschappen"} aan deze categorie. Zet die eerst in een andere categorie, of vink ze af en ruim de kar op.`);
+        return;
+      }
+      if(!confirm(`“${c.naam}” verwijderen?`)) return;
+      (async () => {
+        await DB.wis(PAD.cats + "/" + id);
+        S.cats = S.cats.filter(x => x.id !== id);
+        /* de categorie ook uit alle looproutes halen */
+        for(const w of S.winkels.filter(w => Array.isArray(w.route) && w.route.includes(id))){
+          await DB.zet(PAD.winkels + "/" + w.id, {route: w.route.filter(x => x !== id)});
+        }
+        toast("Categorie verwijderd"); setTimeout(sheetCategorieen, 140);
+      })();
+    });
+    const voegToe = async () => {
+      const naam = $("#c-naam").value.trim();
+      if(naam.length < 2){ $("#c-naam").focus(); return; }
+      const basis = leerSleutel(naam) || "cat";
+      let id = basis, n = 2;
+      while(catBestaat(id)) id = basis + "-" + (n++);
+      const max = Math.max(0, ...cats().map(c => c.volgorde || 0));
+      const em = $("#c-emoji").value.trim() || "📦";
+      await DB.zet(PAD.cats + "/" + id, {naam, em, volgorde: max + 1});
+      /* de luisteraar heeft hem meestal al binnen — alleen aanvullen als dat nog niet zo is */
+      if(!catBestaat(id)) S.cats = [...S.cats, {id, naam, em, volgorde: max + 1}];
+      setTimeout(sheetCategorieen, 160);
+    };
+    $("#c-add").onclick = voegToe;
+    $("#c-naam").onkeydown = e => { if(e.key === "Enter") voegToe(); };
+  }});
+}
+
+function sheetCategorie(c){
+  if(!c) return;
+  const n = catInGebruik(c.id);
+  const body = `
+    <div style="text-align:center; margin-bottom:20px">
+      <div style="font-size:40px; margin-bottom:6px">${c.em}</div>
+      <div style="font-size:20px; font-weight:700; letter-spacing:-.02em">${esc(c.naam)}</div>
+      <div style="color:var(--muted); font-size:13.5px; margin-top:2px">
+        ${n ? n + " " + (n===1?"boodschap":"boodschappen") : "op dit moment niet in gebruik"}
+      </div>
+    </div>
+    <div class="veld-rij">
+      <input class="invoer" id="cc-emoji" maxlength="2" value="${esc(c.em)}"
+             style="flex:0 0 62px; text-align:center; font-size:20px">
+      <input class="invoer" id="cc-naam" maxlength="26" value="${esc(c.naam)}">
+      <button class="knop" id="cc-bewaar" style="flex:0 0 auto">${IK.vink}</button>
+    </div>
+    <div class="hint">Hernoemen mag altijd — de boodschappen blijven eraan hangen.</div>`;
+  sheet({titel:"Categorie", body, naTeken:() => {
+    $("#cc-bewaar").onclick = async () => {
+      const naam = $("#cc-naam").value.trim();
+      if(naam.length < 2){ $("#cc-naam").focus(); return; }
+      await DB.zet(PAD.cats + "/" + c.id, {naam, em: $("#cc-emoji").value.trim() || c.em});
+      const kopie = S.cats.find(x => x.id === c.id);
+      if(kopie){ kopie.naam = naam; kopie.em = $("#cc-emoji").value.trim() || c.em; }
+      tril(); toast("Opgeslagen", "✓"); setTimeout(sheetCategorieen, 160);
+    };
   }});
 }
 
@@ -3681,12 +3965,33 @@ function startLuisteren(){
   });
   DB.luister(PAD.vast,   l => { S.vast = l;   if(S.geladen && S.tab === "meer") tekenNu(); });
   DB.luister(PAD.geleerd, l => { S.geleerd = l; });
+  DB.luister(PAD.cats, l => {
+    if(!l.length) return;
+    S.cats = l.sort((a,b) => (a.volgorde||50) - (b.volgorde||50));
+    if(S.geladen) tekenNu();
+  });
   DB.luister(PAD.bonnen, l => { S.bonnen = l; if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu(); });
   DB.luister(PAD.meta, l => {
     const b = l.find(x => x.id === "budget");
     S.budget = b ? {standaard: Number(b.standaard)||0, perMaand: b.perMaand || {}} : {standaard:0, perMaand:{}};
     if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu();
   });
+}
+
+async function zetCatsKlaar(){
+  /* meteen bruikbaar, ook als de database nog niet geantwoord heeft */
+  S.cats = STANDAARD_CATS.map((c,i) => ({...c, volgorde:i+1}));
+  const bestaand = await DB.haalAlles(PAD.cats);
+  if(bestaand.length){
+    S.cats = bestaand.sort((a,b) => (a.volgorde||50) - (b.volgorde||50));
+    return;
+  }
+  /* de eerste keer: dezelfde id's als voorheen, zodat bestaande boodschappen
+     gewoon in hun categorie blijven staan */
+  Promise.all(STANDAARD_CATS.map((c,i) => {
+    const {id, ...rest} = c;
+    return DB.zet(PAD.cats + "/" + id, {...rest, volgorde:i+1});
+  })).catch(e => console.error("standaardcategorieën", e));
 }
 
 async function zetWinkelsKlaar(){
@@ -3722,6 +4027,8 @@ async function start(){
 
   try{ await metGrens(zetWinkelsKlaar(), null); }
   catch(e){ console.error(e); S.winkels = STANDAARD_WINKELS.map(w => ({...w})); toonSyncFout(e); }
+  try{ await metGrens(zetCatsKlaar(), null); }
+  catch(e){ console.error(e); S.cats = STANDAARD_CATS.map((c,i) => ({...c, volgorde:i+1})); }
 
   startLuisteren();
 
