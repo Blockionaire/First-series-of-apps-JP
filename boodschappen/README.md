@@ -42,7 +42,8 @@ wie welke bon betaalde.
   Afgevinkte boodschappen zakken naar *In de kar*, met wie het gehaald heeft en hoe laat.
   Per ongeluk afgevinkt? Nog een tik zet hem terug.
 - **Opruimen** wist de kar in één keer, of alleen wat ouder is dan een week.
-- **Groeperen** op winkel (standaard) of op categorie.
+- **Groeperen** op winkel (standaard) of op categorie. De volgorde van de categorieën
+  stel je in bij *Meer → Categorieën*.
 
 ### Filters & zoeken
 - Chips bovenin filteren op winkel, met het aantal erbij.
@@ -97,8 +98,15 @@ gewoon: hoeveel is er deze maand nog over?
   eentje op de lijst, of zet ze allemaal in één keer klaar.
 - **Wat de app onthoudt** — de categorieën die jullie zelf hebben rechtgezet, met de
   mogelijkheid om er een te vergeten.
-- **Winkels** toevoegen, verwijderen en op volgorde zetten (de volgorde bepaalt hoe de
-  lijst gegroepeerd staat).
+- **Winkels & looproutes** — winkels toevoegen, hernoemen en op volgorde zetten, en per
+  winkel een **looproute** instellen: de volgorde waarin je door die winkel loopt. Tik een
+  winkel aan → *Looproute* en schuif de categorieën met de pijltjes op hun plek. Tijdens
+  het winkelen staat je lijst dan precies in die volgorde, met een regel eronder die dat
+  zegt. Geen route ingesteld? Dan geldt de standaardvolgorde van de categorieën.
+- **Categorieën** — zelf toevoegen, hernoemen, van icoon veranderen en op volgorde zetten.
+  Verwijderen kan **alleen als er op dat moment geen boodschappen aan hangen**; de app zegt
+  erbij hoeveel het er zijn. *Overig* blijft altijd staan, want daar landt alles wat de app
+  niet kan thuisbrengen. Verdwijnt een categorie, dan wordt hij ook uit alle looproutes gehaald.
 - **Lijst delen** als bericht, bijvoorbeeld via WhatsApp.
 - **Huisgenoten** met online-stipje, wie hoeveel toevoegde, haalde en betaalde.
 - **Thema**: licht (warm beige), donker, of automatisch meebewegen met je telefoon.
@@ -137,6 +145,7 @@ ovs_vast     de vaste boodschappen
 ovs_bonnen   de uitgaven
 ovs_meta     instellingen, waaronder het maandbudget
 ovs_geleerd  categorieën die jullie zelf hebben rechtgezet (id = de naam)
+ovs_cats     de categorieën zelf (naam, icoon, volgorde)
 ```
 
 De Geheime Dienst-app gebruikt andere collecties, dus de twee apps zitten elkaar niet
