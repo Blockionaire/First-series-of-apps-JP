@@ -624,6 +624,48 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
 .persoonkaart .tk b{display:block; font-size:17px; font-weight:650; letter-spacing:-.01em;}
 .persoonkaart .tk span{font-size:12.5px; color:var(--muted);}
 
+/* ---------- streepjescode scannen ---------- */
+.scanner{
+  position:fixed; inset:0; z-index:98; background:#0d0a06;
+  display:flex; flex-direction:column; opacity:0; transition:opacity var(--vt);
+}
+.scanner.open{opacity:1;}
+.scanner video{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#0d0a06;
+}
+.scanner .sluier{position:absolute; inset:0; background:rgba(10,7,3,.45);}
+.scanner .kader{
+  position:absolute; left:8%; right:8%; top:50%; transform:translateY(-50%);
+  aspect-ratio:1.7; border-radius:var(--r-l);
+  box-shadow:0 0 0 100vmax rgba(10,7,3,.55);
+  border:2px solid rgba(255,250,242,.85);
+}
+.scanner .kader::after{
+  content:""; position:absolute; left:8%; right:8%; top:50%;
+  height:2px; background:var(--rood); border-radius:2px;
+  box-shadow:0 0 12px 2px rgba(217,129,104,.8);
+  animation:scanlijn 2.2s ease-in-out infinite;
+}
+@keyframes scanlijn{0%,100%{transform:translateY(-38px);} 50%{transform:translateY(38px);}}
+.scanner .kop2{
+  position:absolute; top:0; left:0; right:0; z-index:2;
+  padding:calc(env(safe-area-inset-top) + 14px) 16px 14px;
+  display:flex; align-items:center; gap:12px; color:#fff;
+}
+.scanner .kop2 b{flex:1; font-size:17px; font-weight:650; letter-spacing:-.01em;}
+.scanner .kop2 button{
+  width:38px; height:38px; border-radius:50%; display:grid; place-items:center;
+  background:rgba(255,255,255,.16); color:#fff; backdrop-filter:blur(6px);
+}
+.scanner .kop2 button svg{width:19px; height:19px; stroke-width:2.4;}
+.scanner .onderin{
+  position:absolute; left:0; right:0; z-index:2;
+  bottom:calc(env(safe-area-inset-bottom) + 26px);
+  text-align:center; color:rgba(255,250,242,.86); font-size:14.5px; line-height:1.5;
+  padding:0 28px;
+}
+.scanner .onderin .spinner{margin:0 auto 10px; border-color:rgba(255,255,255,.25); border-top-color:#fff;}
+
 /* ---------- fotobekijker ---------- */
 .kijker{
   position:fixed; inset:0; z-index:95; background:rgba(18,13,5,.94);
@@ -756,6 +798,7 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
 @keyframes draai{to{transform:rotate(360deg);}}
 .midden{display:grid; place-items:center; min-height:60dvh; gap:14px; color:var(--muted); font-size:14px;}
 .hint{font-size:12.5px; color:var(--muted); margin-top:7px; padding-left:2px; line-height:1.4;}
+.hint svg{width:13px; height:13px; vertical-align:-2px; stroke-width:2;}
 .fade{animation:fadein .28s ease;}
 @keyframes fadein{from{opacity:0; transform:translateY(5px);}}
 .verborgen{display:none !important;}
@@ -783,6 +826,7 @@ const PAD = {
   vast:   P+"_vast",
   geleerd:P+"_geleerd",   // categorieën die jullie zelf hebben rechtgezet
   cats:   P+"_cats",
+  producten:P+"_producten",  // wat jullie zelf hebben gescand, op streepjescode
   bonnen: P+"_bonnen",
   meta:   P+"_meta"
 };
@@ -1014,6 +1058,7 @@ const IK = {
   waarsch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.2 2.6 17.5A1.9 1.9 0 0 0 4.3 20.4h15.4a1.9 1.9 0 0 0 1.7-2.9L13.7 4.2a1.9 1.9 0 0 0-3.4 0Z"/><path d="M12 9.5v4"/><circle cx="12" cy="16.8" r=".9" fill="currentColor"/></svg>',
   sorteer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15M7 19.5 4 16.5M7 19.5l3-3M17 19.5v-15M17 4.5l-3 3M17 4.5l3 3"/></svg>',
   bon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 3.5v17l2.2-1.4 2.1 1.4 2.2-1.4 2.1 1.4 2.2-1.4 2.2 1.4v-17z"/><path d="M8.8 8h6.4M8.8 12h6.4"/></svg>',
+  streepjes:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.9M17 4h1.9a1.6 1.6 0 0 1 1.6 1.6V7M20.5 17v1.4a1.6 1.6 0 0 1-1.6 1.6H17M7 20H5.1a1.6 1.6 0 0 1-1.6-1.6V17"/><path d="M7.5 8.5v7M10.5 8.5v7M13.5 8.5v7M16.5 8.5v7"/></svg>',
   route:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 20.5v-4a3 3 0 0 1 3-3h5a3 3 0 0 0 3-3v-4"/><circle cx="6.5" cy="4.2" r="2.2"/><circle cx="17.5" cy="19.8" r="2.2"/></svg>',
   later:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v10.2"/><path d="m8.2 10.2 3.8 3.8 3.8-3.8"/><path d="M4.5 19.5h15"/></svg>',
   omhoog:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5V10.3"/><path d="m8.2 14.1 3.8-3.8 3.8 3.8"/><path d="M4.5 4.5h15"/></svg>',
@@ -1267,6 +1312,195 @@ function openKijker(fid, bijschrift){
   const dicht = () => { el.classList.remove("open"); setTimeout(() => el.remove(), 220); };
   el.addEventListener("click", () => { if(nu() - geopend > 400) dicht(); });
   vulFotos(el);
+}
+
+
+/* =====================================================================
+   4b · STREEPJESCODE SCANNEN
+   Nieuwe telefoons hebben er een ingebouwde lezer voor (BarcodeDetector).
+   Kan die niet, zoals op de iPhone, dan halen we ZXing erbij.
+   ===================================================================== */
+window.ZXING_URL = window.ZXING_URL || "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/+esm";
+
+function geldigeCode(code){
+  const c = String(code || "").replace(/\D/g, "");
+  return (c.length === 8 || c.length === 12 || c.length === 13) ? c : null;
+}
+
+/* opent het scherm en lost op met de code, of met null als je afbreekt */
+function scanStreepjescode(){
+  return new Promise(async resolve => {
+    const el = document.createElement("div");
+    el.className = "scanner";
+    el.innerHTML = `
+      <video playsinline muted autoplay></video>
+      <div class="kader"></div>
+      <div class="kop2">
+        <b>Streepjescode scannen</b>
+        <button id="sc-dicht" aria-label="Sluiten">${IK.kruis}</button>
+      </div>
+      <div class="onderin" id="sc-tekst">Camera starten…</div>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("open"));
+
+    const video = el.querySelector("video");
+    const tekst = t => { const v = el.querySelector("#sc-tekst"); if(v) v.innerHTML = t; };
+    let stream = null, bezig = true, zxing = null;
+
+    const stop = code => {
+      if(!bezig) return;
+      bezig = false;
+      try{ if(zxing && zxing.reset) zxing.reset(); }catch(e){}
+      /* de lus stopt vanzelf zodra bezig op false staat */
+      try{ if(stream) stream.getTracks().forEach(t => t.stop()); }catch(e){}
+      el.classList.remove("open");
+      setTimeout(() => el.remove(), 220);
+      resolve(code || null);
+    };
+    el.querySelector("#sc-dicht").onclick = () => stop(null);
+
+    /* de terugknop van de telefoon sluit ook */
+    const opTerug = () => stop(null);
+    window.addEventListener("scanner-terug", opTerug, {once:true});
+
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {facingMode:{ideal:"environment"}, width:{ideal:1280}, height:{ideal:720}}
+      });
+    }catch(e){
+      console.error("camera", e);
+      tekst(e && e.name === "NotAllowedError"
+        ? "Geen toegang tot de camera.<br>Zet die aan in de instellingen van je telefoon."
+        : "Er is geen camera beschikbaar.");
+      setTimeout(() => stop(null), 3200);
+      return;
+    }
+    video.srcObject = stream;
+    try{ await video.play(); }catch(e){}
+    tekst("Houd de streepjescode in het kader");
+
+    /* 1 · de ingebouwde lezer */
+    if("BarcodeDetector" in window){
+      try{
+        const soorten = await window.BarcodeDetector.getSupportedFormats();
+        const wil = ["ean_13","ean_8","upc_a","upc_e"].filter(f => soorten.includes(f));
+        if(wil.length){
+          const lezer = new window.BarcodeDetector({formats: wil});
+          const kijk = async () => {
+            if(!bezig) return;
+            try{
+              const gevonden = await lezer.detect(video);
+              const code = gevonden.map(g => geldigeCode(g.rawValue)).find(Boolean);
+              if(code){ tril(30); stop(code); return; }
+            }catch(e){}
+            requestAnimationFrame(kijk);
+          };
+          kijk();
+          return;
+        }
+      }catch(e){ console.error("BarcodeDetector", e); }
+    }
+
+    /* 2 · anders ZXing erbij halen (iPhone) */
+    try{
+      tekst(`<span class="spinner"></span>Lezer laden…`);
+      const Z = await import(window.ZXING_URL);
+      if(!bezig) return;
+      const hints = new Map();
+      hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [
+        Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8,
+        Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E
+      ]);
+      hints.set(Z.DecodeHintType.TRY_HARDER, true);
+      /* We voeren ZXing zelf beeldjes, net als bij de ingebouwde lezer. Zijn
+         eigen videohulp wil de video eerst starten en wacht op het
+         "playing"-signaal — maar die loopt hier al, dus dat komt nooit. En zijn
+         videopad draait het beeld om, waardoor een gewone donkere code op een
+         lichte verpakking juist niet gelezen wordt. */
+      zxing = new Z.MultiFormatReader();
+      const doek = document.createElement("canvas");
+      let tek = null;
+      try{ tek = doek.getContext("2d", {willReadFrequently:true}); }catch(e){ tek = doek.getContext("2d"); }
+      tekst("Houd de streepjescode in het kader");
+
+      let vorige = 0;
+      const kijk = tijd => {
+        if(!bezig) return;
+        if(tijd - vorige > 120 && video.readyState >= 2 && video.videoWidth > 0){
+          vorige = tijd;
+          if(doek.width !== video.videoWidth){
+            doek.width = video.videoWidth; doek.height = video.videoHeight;
+          }
+          try{
+            tek.drawImage(video, 0, 0, doek.width, doek.height);
+            const bron = new Z.HTMLCanvasElementLuminanceSource(doek);
+            const beeld = new Z.BinaryBitmap(new Z.HybridBinarizer(bron));
+            const resultaat = zxing.decode(beeld, hints);
+            const code = geldigeCode(resultaat && (resultaat.getText ? resultaat.getText() : resultaat.text));
+            if(code){ tril(30); stop(code); return; }
+          }catch(e){ /* niets gevonden in dit beeldje */ }
+          finally { try{ zxing.reset(); }catch(e){} }
+        }
+        requestAnimationFrame(kijk);
+      };
+      requestAnimationFrame(kijk);
+    }catch(e){
+      console.error("zxing", e);
+      tekst("De scanner kon niet geladen worden.<br>Typ de naam er zelf even in.");
+      setTimeout(() => stop(null), 3200);
+    }
+  });
+}
+
+/* =====================================================================
+   4c · WAT HOORT BIJ DEZE STREEPJESCODE?
+   Eerst wat jullie zelf al gescand hebben, anders Open Food Facts:
+   een vrije, open productendatabase met veel Nederlandse boodschappen.
+   ===================================================================== */
+const OFF_URL = code =>
+  "https://world.openfoodfacts.org/api/v2/product/" + encodeURIComponent(code) +
+  ".json?fields=product_name,product_name_nl,brands,quantity,categories_tags";
+
+async function zoekProduct(code){
+  /* 1 · al eens gescand? Dan weten jullie het zelf het beste */
+  try{
+    const eigen = await DB.haal(PAD.producten + "/" + code);
+    if(eigen && eigen.naam) return {...eigen, bron:"eigen"};
+  }catch(e){}
+
+  /* 2 · anders in de open database kijken */
+  try{
+    const antwoord = await Promise.race([
+      fetch(OFF_URL(code), {headers:{Accept:"application/json"}}),
+      new Promise((_, nee) => setTimeout(() => nee(new Error("te traag")), 8000))
+    ]);
+    if(!antwoord.ok) return null;
+    const data = await antwoord.json();
+    if(!data || data.status !== 1 || !data.product) return null;
+    const pr = data.product;
+    const naam = (pr.product_name_nl || pr.product_name || "").trim();
+    if(!naam) return null;
+    return {
+      naam,
+      merk: (pr.brands || "").split(",")[0].trim(),
+      hoeveelheid: (pr.quantity || "").trim(),
+      bron: "off"
+    };
+  }catch(e){ console.error("open food facts", e); return null; }
+}
+
+/* onthoud wat jullie bij een streepjescode invullen, zodat de volgende keer
+   meteen goed gaat — ook bij je huisgenoot */
+async function bewaarProduct(code, gegevens){
+  if(!geldigeCode(code)) return;
+  try{
+    await DB.zet(PAD.producten + "/" + code, {
+      naam: gegevens.naam, merk: gegevens.merk || "",
+      hoeveelheid: gegevens.hoeveelheid || "",
+      cat: gegevens.cat || "overig", winkel: gegevens.winkel || "nvt",
+      door: S.ik ? S.ik.id : null, laatst: nu()
+    });
+  }catch(e){ console.error("product bewaren", e); }
 }
 
 /* =====================================================================
@@ -1870,14 +2104,20 @@ function bindKeuze(naam, opZet){
 function sheetToevoegen(voorinvul){
   const f = Object.assign({
     tekst:"", hoeveelheid:"", winkel:S.filter.winkel || "nvt", cat:S.filter.cat || "overig",
-    notitie:"", urgent:false, fotoVb:null, fotoFile:null, catHandmatig:false
+    notitie:"", urgent:false, fotoVb:null, fotoFile:null, catHandmatig:false,
+    streepjescode:null
   }, voorinvul||{});
 
   const body = `
     <div class="veld">
       <label>Wat heb je nodig?</label>
-      <input class="invoer" id="f-tekst" placeholder="Bijvoorbeeld melk" maxlength="60"
-             autocomplete="off" autocapitalize="sentences" value="${esc(f.tekst)}">
+      <div class="veld-rij">
+        <input class="invoer" id="f-tekst" placeholder="Bijvoorbeeld melk" maxlength="60"
+               autocomplete="off" autocapitalize="sentences" value="${esc(f.tekst)}">
+        <button type="button" class="knop stil" id="f-scan" style="flex:0 0 auto; padding:13px 15px"
+                aria-label="Streepjescode scannen">${IK.streepjes}</button>
+      </div>
+      <div class="hint verborgen" id="f-code"></div>
       <div class="sugg" id="f-sugg"></div>
     </div>
     <div class="veld-rij">
@@ -1972,6 +2212,41 @@ function sheetToevoegen(voorinvul){
       const vak = $("#f-geleerd"); if(vak) vak.classList.add("verborgen");
     });
 
+    /* streepjescode scannen en opzoeken */
+    $("#f-scan").onclick = async () => {
+      const code = await scanStreepjescode();
+      if(!code) return;
+      f.streepjescode = code;
+      const codevak = $("#f-code");
+      if(codevak){
+        codevak.classList.remove("verborgen");
+        codevak.innerHTML = `<span class="spinner" style="width:13px;height:13px;border-width:2px;display:inline-block;vertical-align:-2px"></span> Streepjescode ${esc(code)} opzoeken…`;
+      }
+      const gevonden = await zoekProduct(code);
+      if(gevonden){
+        const naam = gevonden.merk && !gevonden.naam.toLowerCase().includes(gevonden.merk.toLowerCase())
+          ? gevonden.naam + " " + gevonden.merk : gevonden.naam;
+        ti.value = naam.slice(0, 60); f.tekst = ti.value;
+        if(gevonden.hoeveelheid && !$("#f-hoev").value){
+          $("#f-hoev").value = gevonden.hoeveelheid.slice(0, 18);
+          f.hoeveelheid = $("#f-hoev").value;
+        }
+        if(gevonden.cat && catBestaat(gevonden.cat)){ f.cat = gevonden.cat; zetKeuze("cat", gevonden.cat); }
+        else { const geraden = raadCategorie(ti.value); if(geraden){ f.cat = geraden; zetKeuze("cat", geraden); } }
+        if(gevonden.winkel && gevonden.bron === "eigen" && !S.filter.winkel){
+          f.winkel = gevonden.winkel; zetKeuze("winkel", gevonden.winkel);
+        }
+        if(codevak) codevak.innerHTML = gevonden.bron === "eigen"
+          ? `${IK.streepjes} Deze had je al eens gescand.`
+          : `${IK.streepjes} Gevonden in de open productendatabase.`;
+        tekenSugg(); toonGeleerd(ti.value); tril(12);
+      }else{
+        if(codevak) codevak.innerHTML =
+          `${IK.streepjes} Streepjescode ${esc(code)} kennen we nog niet — typ de naam er zelf bij, dan onthoudt de app hem.`;
+        setTimeout(() => ti.focus(), 120);
+      }
+    };
+
     $("#f-foto").onclick = () => $("#f-bestand").click();
     $("#f-bestand").onchange = async e => {
       const file = e.target.files[0]; if(!file) return;
@@ -2010,6 +2285,11 @@ function sheetToevoegen(voorinvul){
           notitie:f.notitie.trim(), urgent:f.urgent, fotoId
         });
         if(zelfGekozen) await leerCategorie(tekst, f.cat);
+        if(f.streepjescode){
+          await bewaarProduct(f.streepjescode, {
+            naam: tekst, hoeveelheid: f.hoeveelheid.trim(), cat: f.cat, winkel: f.winkel
+          });
+        }
         sluitSheet();
         toast(zelfGekozen ? "Onthouden: " + tekst + " is " + catVan(f.cat).naam.toLowerCase()
                           : tekst + " staat op de lijst",
@@ -4088,6 +4368,7 @@ async function start(){
   history.pushState({app:true}, "");
   window.addEventListener("popstate", () => {
     history.pushState({app:true}, "");
+    if($(".scanner")){ window.dispatchEvent(new Event("scanner-terug")); return; }
     if($(".kijker")){ $(".kijker").click(); return; }
     if(S.sheet){ sluitSheet(); return; }
     if(S.tab === "winkelen" && S.winkelSessie){ S.winkelSessie = null; houdSchermAan(false); tekenNu(); return; }
