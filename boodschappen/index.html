@@ -510,6 +510,12 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
 .wm-item.overgeslagen{opacity:.66;}
 .wm-item.overgeslagen .tk b{font-weight:600; color:var(--ink-2);}
 .wm-item.overgeslagen .later{background:var(--accent-zacht); color:var(--accent);}
+.routelabel{
+  flex:none; display:grid; place-items:center; color:var(--muted);
+  width:20px; align-self:center;
+}
+.routelabel svg{width:17px; height:17px; stroke-width:1.9;}
+
 .wm-actie{
   display:flex; align-items:center; justify-content:center; gap:7px;
   width:100%; margin-top:13px; padding:10px; border-radius:var(--r-s);
@@ -2306,7 +2312,7 @@ function ritLaden(wid){
 function ritBewaren(){
   const s = S.winkelSessie; if(!s) return;
   const alles = LS.get(RIT(), {});
-  alles[s.winkelId] = {over:s.over || [], handmatig:s.handmatig || {}, tijd:nu()};
+  alles[s.winkelId] = {over:s.over || [], handmatig:s.handmatig || {}, routeVan:s.routeVan || null, tijd:nu()};
   LS.zet(RIT(), alles);
 }
 function ritWissen(wid){
@@ -2317,7 +2323,8 @@ function startRit(wid){
   const bewaard = ritLaden(wid) || {};
   S.winkelSessie = {
     winkelId: wid, gestart: nu(), gepakt: [],
-    over: bewaard.over || [], handmatig: bewaard.handmatig || {}
+    over: bewaard.over || [], handmatig: bewaard.handmatig || {},
+    routeVan: bewaard.routeVan || null
   };
 }
 
@@ -2338,8 +2345,16 @@ function schermWinkelen(){
   const pct = actief.length ? Math.round(gedaan / actief.length * 100) : 0;
   const klaar = actief.length > 0 && gedaan === actief.length;
 
-  /* de looproute van deze winkel bepaalt de volgorde van de categorieën */
-  const orde = catOrde(wid);
+  /* Loop je alles in één lijst af, dan kies je bovenin van welke winkel je de
+     looproute wilt aanhouden. Bij één winkel is dat vanzelf die winkel. */
+  const winkelsMetRoute = S.winkels
+    .filter(x => x.id !== "nvt" && Array.isArray(x.route) && x.route.length)
+    .sort((a,b) => (a.volgorde||50)-(b.volgorde||50));
+  const routeVan = wid === "alles"
+    ? (sessie.routeVan && winkelsMetRoute.some(x => x.id === sessie.routeVan) ? sessie.routeVan : null)
+    : wid;
+  const routeWinkel = routeVan ? winkelVan(routeVan) : null;
+  const orde = catOrde(routeVan);
   const perCat = new Map();
   sorteerItems(actief, orde).forEach(i => {
     const c = catVan(i.cat);
@@ -2347,7 +2362,7 @@ function schermWinkelen(){
     perCat.get(c.id).items.push(i);
   });
   const groepen = [...perCat.values()].sort((a,b) => catIndex(a.c.id, orde) - catIndex(b.c.id, orde));
-  const heeftRoute = !!(w && Array.isArray(w.route) && w.route.length);
+  const heeftRoute = !!(routeWinkel && Array.isArray(routeWinkel.route) && routeWinkel.route.length);
   const handmatig = sessie.handmatig || {};
 
   return `
@@ -2361,6 +2376,16 @@ function schermWinkelen(){
         </div>
         <button class="ikoonknop" id="w-plus">${IK.plus}</button>
       </div>
+      ${wid === "alles" && winkelsMetRoute.length ? `
+      <div class="chiprij">
+        <span class="routelabel">${IK.route}</span>
+        <button class="chip ${!routeVan?"aan":""}" data-routevan="">Standaard</button>
+        ${winkelsMetRoute.map(x => `
+          <button class="chip ${routeVan===x.id?"aan winkel":""}" data-routevan="${esc(x.id)}">
+            <span>${x.em}</span>${esc(x.naam)}
+          </button>`).join("")}
+        <span class="rek">&nbsp;</span>
+      </div>` : ""}
     </div>
     <div class="inhoud" id="inhoud">
       <div class="wrap">
@@ -2379,7 +2404,11 @@ function schermWinkelen(){
             ? `<button class="wm-actie" id="w-allelater">${IK.later}<span>Alles niet nu</span></button>` : ""}
           ${heeftRoute ? `<div class="hint" style="text-align:center; margin-top:10px">
             ${IK.route.replace("<svg", '<svg style="width:13px;height:13px;vertical-align:-2px"')}
-            Op volgorde van jullie looproute door ${esc(w.naam)}.</div>` : ""}
+            Op volgorde van jullie looproute door ${esc(routeWinkel.naam)}.</div>`
+          : (wid === "alles" && !winkelsMetRoute.length && actief.length > 2 ? `
+            <div class="hint" style="text-align:center; margin-top:10px; line-height:1.5">
+              Stel bij <b>Meer → Winkels</b> een looproute in, dan kun je deze lijst hier
+              op de volgorde van die winkel zetten.</div>` : "")}
         </div>
 
         ${alleItems.length === 0 ? `
@@ -2512,6 +2541,12 @@ function bindWinkelen(){
     tril(); houdSchermAan(true); tekenNu();
   });
 
+  /* van welke winkel houden we de looproute aan? */
+  $$("[data-routevan]").forEach(b => b.onclick = () => {
+    S.winkelSessie.routeVan = b.dataset.routevan || null;
+    ritBewaren(); tril(); tekenNu(); naarBoven();
+  });
+
   /* categorie in- of uitklappen */
   $$("[data-groep]").forEach(b => b.onclick = () => {
     const cat = b.dataset.groep;
@@ -2573,6 +2608,8 @@ function winkelVoorstel(){
   const sessie = S.winkelSessie;
   if(!sessie) return "nvt";
   if(sessie.winkelId !== "alles") return sessie.winkelId;
+  /* koos je bovenin de looproute van een winkel, dan sta je daar waarschijnlijk ook */
+  if(sessie.routeVan && winkelVan(sessie.routeVan).id === sessie.routeVan) return sessie.routeVan;
   const tel = {};
   S.items.filter(i => i.af && (i.afOp||0) >= sessie.gestart)
          .forEach(i => { const w = i.winkel || "nvt"; tel[w] = (tel[w]||0) + 1; });
