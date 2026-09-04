@@ -87,11 +87,10 @@ gewoon: hoeveel is er deze maand nog over?
   **afwijkend bedrag** instellen dat alleen voor die maand geldt.
 - Een **ring** laat zien wat er nog over is. Groen zolang het meevalt, geel vanaf
   85%, rood zodra je eroverheen gaat.
-- **Lig je voor of achter op schema?** De app vergelijkt wat je hebt uitgegeven met
-  waar je zou moeten staan op deze dag van de maand: *"Je ligt €126,24 voor op schema"*.
-- **Nog zoveel per dag**: wat er over is, gedeeld door de resterende dagen.
-- Drie tellers: aantal uitgaven, gemiddeld per dag en waar je op uitkomt aan het
-  eind van de maand als je zo doorgaat.
+- Loopt het budget vol, dan zegt de app dat: vanaf 85% hoeveel er nog te gaan is, en
+  daarboven met hoeveel je eroverheen bent. Bewust géén "voor of achter op schema" —
+  boodschappen doe je niet in dagporties.
+- Drie tellers: aantal uitgaven, het gemiddelde per keer en wat je vorige maand uitgaf.
 - **Waar gaat het heen** — een balkje per winkel, van groot naar klein.
 - **Per maand** — een staafje per maand van de laatste halfjaar, met een stippellijn
   op het budget van die maand. Tik op een staafje om die maand te bekijken.
