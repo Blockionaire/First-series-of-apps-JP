@@ -35,6 +35,12 @@ wie welke bon betaalde.
   weet de app dat de volgende keer meteen — ook als je huisgenoot hem invoert. Hoofdletters,
   leestekens en meervoud maken niet uit: leer je *bloempot*, dan gaat *Bloempotten* ook goed.
   In *Meer → Wat de app onthoudt* zie je alle lessen staan en kun je er een weghalen.
+- **Streepjescode scannen** 📷 — tik het scanknopje naast het invoerveld, houd de code van
+  de verpakking voor de camera en de app vult naam, hoeveelheid en categorie in. Hij kijkt
+  eerst of jullie die code al eens gescand hebben; zo niet, dan zoekt hij in
+  [Open Food Facts](https://world.openfoodfacts.org), een vrije productendatabase.
+  Staat het product er niet in, dan typ je de naam er zelf bij en onthoudt de app hem —
+  ook voor je huisgenoot. Zo bouwen jullie vanzelf je eigen assortiment op.
 - **Snelknoppen**: dingen die je vaker koopt staan als suggestie onder het invoerveld,
   met de winkel en categorie van de vorige keer er meteen bij.
 - **Spoed** ⚡ zet iets bovenaan de lijst.
@@ -150,6 +156,7 @@ ovs_bonnen   de uitgaven
 ovs_meta     instellingen, waaronder het maandbudget
 ovs_geleerd  categorieën die jullie zelf hebben rechtgezet (id = de naam)
 ovs_cats     de categorieën zelf (naam, icoon, volgorde)
+ovs_producten wat jullie hebben gescand, met de streepjescode als id
 ```
 
 De Geheime Dienst-app gebruikt andere collecties, dus de twee apps zitten elkaar niet
@@ -158,6 +165,20 @@ op bijvoorbeeld `"ovs2"`.
 
 Foto's worden vóór het versturen verkleind (maximaal 1280 px, JPEG) en er wordt een
 aparte miniatuur van 220 px bewaard, zodat de lijst snel blijft laden.
+
+### Streepjescodes lezen
+
+Nieuwe Android-telefoons hebben er een ingebouwde lezer voor (`BarcodeDetector`). Heeft de
+telefoon die niet — de iPhone bijvoorbeeld — dan haalt de app
+[ZXing](https://github.com/zxing-js/library) van jsDelivr, alleen op het moment dat je gaat
+scannen. De beeldjes gaan via een eigen canvas naar de lezer; de ingebouwde videohulp van
+ZXing wachtte op een startsignaal dat niet meer komt als de video al loopt, en draaide het
+beeld om waardoor een gewone donkere code op lichte verpakking juist niet gelezen werd.
+
+**Geen koppeling met Albert Heijn of Jumbo.** Geen van beide heeft een openbare API voor
+productgegevens, en een pagina op GitHub Pages mag hun site sowieso niet rechtstreeks
+bevragen (dat blokkeert de browser). Open Food Facts is wel vrij toegankelijk en bedoeld
+voor dit soort gebruik.
 
 ### Demo-modus
 
