@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Koekenbakker Pocket</title>
+<meta name="description" content="Verse chocoladekoekjes van Zara, besteld in drie tikken. Vijf smaken, elke vrijdag gebakken, de zesde is gratis.">
+<meta name="theme-color" content="#17100C">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300..800&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --nacht:#17100C;
+  --diep:#221812;
+  --hoger:#2C201A;
+  --rand:rgba(245,233,220,.13);
+  --room:#F5E9DC;
+  --zacht:#B29C8C;
+  --abrikoos:#F2A97E;
+  --honing:#E8B06A;
+  --pistache:#A8BE8F;
+  --display:"Unbounded","Trebuchet MS",system-ui,sans-serif;
+  --tekst:"Plus Jakarta Sans","Helvetica Neue",Arial,sans-serif;
+  --kolom:480px;
+  --r:22px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--nacht);color:var(--room);font-family:var(--tekst);font-size:16px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(70% 45% at 50% -8%, rgba(242,169,126,.20), transparent 70%),
+    radial-gradient(50% 30% at 90% 40%, rgba(232,176,106,.10), transparent 70%)}
+h1,h2,h3{font-family:var(--display);font-weight:600;line-height:1.12;letter-spacing:-.02em;margin:0;text-wrap:balance}
+p{margin:0}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+svg{display:block;max-width:100%}
+:focus-visible{outline:2px solid var(--abrikoos);outline-offset:3px;border-radius:10px}
+
+.app{position:relative;z-index:1;width:min(100%,var(--kolom));margin-inline:auto;padding:0 16px 120px}
+.kaart{background:var(--diep);border:1px solid var(--rand);border-radius:var(--r);padding:20px}
+.pil{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:6px 12px;font-size:.76rem;
+  font-weight:600;background:rgba(245,233,220,.08);border:1px solid var(--rand);color:var(--room)}
+.pil--accent{background:rgba(242,169,126,.16);border-color:rgba(242,169,126,.4);color:var(--abrikoos)}
+.pil--gratis{background:rgba(168,190,143,.16);border-color:rgba(168,190,143,.4);color:var(--pistache)}
+.stip{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pols 2.2s ease-in-out infinite}
+@keyframes pols{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+.knop{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--abrikoos);color:#221610;
+  font-weight:700;font-size:1rem;padding:15px 22px;border-radius:16px;transition:transform .15s,filter .15s}
+.knop:active{transform:scale(.97)}
+.knop:hover{filter:brightness(1.06)}
+.knop--stil{background:rgba(245,233,220,.09);color:var(--room);border:1px solid var(--rand)}
+.knop--vol{width:100%}
+.klein{font-size:.82rem;color:var(--zacht)}
+.titel{font-size:1.45rem}
+.kop{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin:34px 4px 14px}
+.kop h2{font-size:1.18rem}
+.kop a,.kop span{font-size:.8rem;color:var(--zacht)}
+
+/* ---------- topbalk ---------- */
+.top{position:sticky;top:0;z-index:30;background:rgba(23,16,12,.86);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--rand)}
+.top-in{width:min(100%,var(--kolom));margin-inline:auto;padding:11px 16px;display:flex;align-items:center;gap:12px}
+.logo{display:flex;align-items:center;gap:9px;font-family:var(--display);font-weight:600;font-size:.92rem}
+.logo span{width:26px;height:26px;display:block}
+.top .pil{margin-left:auto;font-size:.72rem;padding:5px 10px}
+
+/* ---------- hero ---------- */
+.hero{padding:26px 0 8px;text-align:center}
+.hero h1{font-size:clamp(1.9rem,8.4vw,2.5rem);margin-top:16px}
+.hero h1 em{font-style:normal;color:var(--abrikoos)}
+.hero p{margin:14px auto 0;max-width:34ch;color:var(--zacht)}
+.hero-koek{width:min(74%,260px);margin:0 auto;position:relative;filter:drop-shadow(0 22px 30px rgba(0,0,0,.55))}
+.hero-koek .draai{animation:zweef 6s ease-in-out infinite}
+@keyframes zweef{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-12px) rotate(3deg)}}
+.hero-acties{display:grid;gap:10px;margin-top:22px}
+
+/* ---------- carrousel ---------- */
+.baan{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 16px;
+  margin-inline:-16px;padding:4px 16px 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.baan::-webkit-scrollbar{display:none}
+.koekkaart{scroll-snap-align:center;flex:0 0 min(82%,320px);background:var(--diep);border:1px solid var(--rand);
+  border-radius:26px;padding:18px;display:grid;gap:12px;position:relative;overflow:hidden}
+.koekkaart::before{content:"";position:absolute;inset:-40% 30% 55% -20%;
+  background:radial-gradient(circle, rgba(242,169,126,.16), transparent 68%);pointer-events:none}
+.koekkaart .beeld{position:relative;display:grid;place-items:center;padding:6px 0 2px}
+.koekkaart .beeld svg{width:min(62%,180px);filter:drop-shadow(0 14px 18px rgba(0,0,0,.45));
+  transition:transform .4s cubic-bezier(.3,1.3,.5,1)}
+.koekkaart:hover .beeld svg{transform:rotate(8deg) scale(1.04)}
+.koekkaart h3{font-size:1.12rem}
+.koekkaart .sub{font-size:.86rem;color:var(--zacht);min-height:2.6em}
+.koekkaart .voet{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:2px}
+.koekkaart .prijs{font-family:var(--display);font-weight:600;font-size:1.16rem}
+.koekkaart .prijs small{display:block;font-family:var(--tekst);font-weight:500;font-size:.68rem;color:var(--zacht)}
+.plusknop{width:46px;height:46px;border-radius:50%;background:var(--abrikoos);color:#221610;font-size:1.4rem;
+  font-weight:700;display:grid;place-items:center;transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
+.plusknop:active{transform:scale(.88)}
+.plusknop.geteld{background:var(--pistache)}
+.telbal{position:absolute;top:14px;right:14px;background:var(--abrikoos);color:#221610;border-radius:999px;
+  min-width:26px;height:26px;display:none;place-items:center;font-size:.8rem;font-weight:700;padding:0 8px}
+.telbal.zien{display:grid}
+.punten{display:flex;gap:6px;justify-content:center;margin-top:2px}
+.punten i{width:6px;height:6px;border-radius:50%;background:rgba(245,233,220,.22);transition:width .25s,background .25s}
+.punten i.aan{width:18px;background:var(--abrikoos)}
+
+/* ---------- spaarring ---------- */
+.spaar{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.ring{width:82px;height:82px;position:relative;display:grid;place-items:center}
+.ring svg{transform:rotate(-90deg)}
+.ring b{position:absolute;font-family:var(--display);font-weight:600;font-size:1.05rem}
+.spaar h3{font-size:1.05rem;margin-bottom:5px}
+.gratiskiezer{display:grid;gap:8px;margin-top:14px}
+.gratisrij{display:flex;align-items:center;gap:10px;background:rgba(168,190,143,.1);border:1px solid rgba(168,190,143,.34);
+  border-radius:14px;padding:9px 12px}
+.gratisrij svg{width:34px}
+.gratisrij select{flex:1;background:var(--hoger);color:var(--room);border:1px solid var(--rand);border-radius:10px;
+  padding:8px 10px;font-family:var(--tekst);font-size:.88rem}
+
+/* ---------- verhalen ---------- */
+.verhalen{display:flex;gap:12px;overflow-x:auto;margin-inline:-16px;padding:4px 16px 12px;
+  scroll-snap-type:x mandatory;scrollbar-width:none}
+.verhalen::-webkit-scrollbar{display:none}
+.verhaal{scroll-snap-align:start;flex:0 0 150px;aspect-ratio:9/14;border-radius:20px;padding:16px;
+  display:flex;flex-direction:column;justify-content:flex-end;gap:6px;border:1px solid var(--rand);position:relative;overflow:hidden}
+.verhaal b{font-family:var(--display);font-weight:600;font-size:1rem;line-height:1.15}
+.verhaal span{font-size:.76rem;color:var(--zacht)}
+.verhaal svg{position:absolute;top:12px;right:-14px;width:78px;opacity:.9}
+.v1{background:linear-gradient(165deg,#3A281E,#221812)}
+.v2{background:linear-gradient(165deg,#33241C,#1E150F)}
+.v3{background:linear-gradient(165deg,#3D2A1D,#241811)}
+.v4{background:linear-gradient(165deg,#2E241C,#1D1410)}
+
+/* ---------- profiel ---------- */
+.profiel{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+.avatar{width:66px;height:66px;border-radius:50%;background:linear-gradient(150deg,var(--abrikoos),#8A5A3A);
+  display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:1.5rem;color:#221610;
+  border:2px solid rgba(245,233,220,.22)}
+.profiel h3{font-size:1.08rem}
+.profiel .klein{margin-top:3px}
+.volgrij{display:flex;gap:8px;margin-top:16px}
+.volgrij button{flex:1;padding:11px;border-radius:14px;border:1px solid var(--rand);background:rgba(245,233,220,.06);
+  font-size:.86rem;font-weight:600}
+.volgrij button:hover{background:rgba(245,233,220,.12)}
+.cijfers{display:flex;gap:8px;margin-top:16px}
+.cijfers div{flex:1;background:var(--hoger);border-radius:14px;padding:11px;text-align:center}
+.cijfers b{display:block;font-family:var(--display);font-weight:600;font-size:1.1rem}
+.cijfers span{font-size:.68rem;color:var(--zacht)}
+
+/* ---------- chatbubbels ---------- */
+.chat{display:grid;gap:10px}
+.bubbel{max-width:82%;padding:12px 15px;border-radius:20px;background:var(--hoger);border:1px solid var(--rand);
+  font-size:.93rem;position:relative}
+.bubbel span{display:block;font-size:.68rem;color:var(--zacht);margin-top:6px}
+.bubbel--zij{border-bottom-left-radius:6px}
+.bubbel--ik{margin-left:auto;background:rgba(242,169,126,.16);border-color:rgba(242,169,126,.32);border-bottom-right-radius:6px}
+
+/* ---------- vragen ---------- */
+.vragen{display:grid;gap:8px}
+.vragen details{background:var(--diep);border:1px solid var(--rand);border-radius:16px;overflow:hidden}
+.vragen summary{list-style:none;cursor:pointer;padding:15px 17px;font-weight:600;font-size:.95rem;
+  display:flex;justify-content:space-between;gap:14px;align-items:center}
+.vragen summary::-webkit-details-marker{display:none}
+.vragen summary::after{content:"+";color:var(--abrikoos);font-size:1.2rem}
+.vragen details[open] summary::after{content:"–"}
+.vragen p{padding:0 17px 16px;color:var(--zacht);font-size:.92rem}
+
+/* ---------- vaste balk + sheet ---------- */
+.balk{position:fixed;left:50%;transform:translateX(-50%);bottom:0;z-index:40;width:min(100%,var(--kolom));
+  padding:10px 16px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top, var(--nacht) 62%, rgba(23,16,12,0))}
+.balk-in{width:min(100%,calc(var(--kolom) - 32px));margin-inline:auto;background:var(--hoger);
+  border:1px solid var(--rand);border-radius:20px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:12px;
+  box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.balk-in b{font-family:var(--display);font-weight:600;font-size:1rem}
+.balk-in .klein{font-size:.74rem}
+.balk-in .knop{padding:12px 18px;font-size:.92rem;margin-left:auto}
+
+.sluier{position:fixed;inset:0;background:rgba(10,6,4,.6);z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
+.sluier.aan{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;z-index:60;background:var(--diep);border-top:1px solid var(--rand);
+  border-radius:26px 26px 0 0;transform:translate(-50%,101%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+  height:min(92dvh,760px);overflow:hidden;display:flex;flex-direction:column;width:min(100%,var(--kolom))}
+.sheet.aan{transform:translate(-50%,0)}
+.greep{width:42px;height:4px;border-radius:99px;background:rgba(245,233,220,.24);margin:10px auto 4px}
+.sheet-kop{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 18px 12px;border-bottom:1px solid var(--rand)}
+.sheet-kop h3{font-size:1.06rem}
+.dicht{width:34px;height:34px;border-radius:50%;background:rgba(245,233,220,.08);display:grid;place-items:center}
+.sheet-body{flex:1;min-height:0;overflow-y:auto;padding:16px 18px;display:grid;gap:12px;align-content:start}
+.sheet-voet{padding:14px 18px calc(18px + env(safe-area-inset-bottom));border-top:1px solid var(--rand);display:grid;gap:10px}
+.regel{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center}
+.regel svg{width:44px}
+.regel h4{font-size:.95rem;font-weight:700;margin:0}
+.regel .p{font-weight:700;font-size:.92rem}
+.teller{display:inline-flex;align-items:center;gap:0;border:1px solid var(--rand);border-radius:999px;margin-top:5px}
+.teller button{width:28px;height:28px;font-weight:700;line-height:1}
+.teller span{min-width:24px;text-align:center;font-size:.88rem;font-weight:700}
+.veld{display:grid;gap:5px}
+.veld label{font-size:.74rem;color:var(--zacht);font-weight:600}
+.veld input,.veld textarea{background:var(--hoger);border:1px solid var(--rand);border-radius:14px;padding:12px 14px;
+  color:var(--room);font-family:var(--tekst);font-size:.95rem;width:100%}
+.veld textarea{min-height:64px;resize:vertical}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.duo button{padding:12px;border-radius:14px;border:1px solid var(--rand);background:rgba(245,233,220,.06);font-weight:600;font-size:.88rem}
+.duo button.aan{background:var(--room);color:#221610;border-color:var(--room)}
+.somrij{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--display);font-weight:600;font-size:1.1rem}
+
+/* ---------- overig ---------- */
+.voet{text-align:center;padding:34px 0 10px;display:grid;gap:12px}
+.voet .logo{justify-content:center;font-size:1.1rem}
+.zijnoot{display:none}
+@media(min-width:980px){
+  .zijnoot{display:block;position:fixed;left:40px;bottom:40px;z-index:2;max-width:230px;color:var(--zacht);font-size:.82rem}
+  .zijnoot b{display:block;font-family:var(--display);color:var(--room);font-size:.92rem;margin-bottom:6px}
+}
+#melding{position:fixed;left:50%;bottom:96px;transform:translate(-50%,18px);opacity:0;visibility:hidden;z-index:70;
+  background:var(--room);color:#221610;padding:12px 20px;border-radius:999px;font-size:.88rem;font-weight:700;
+  max-width:86vw;text-align:center;transition:transform .32s cubic-bezier(.3,1.4,.5,1),opacity .22s,visibility .22s}
+#melding.aan{transform:translate(-50%,0);opacity:1;visibility:visible}
+[hidden]{display:none !important}
+.js-anim .op{opacity:0;transform:translateY(14px)}
+.js-anim .op.in{opacity:1;transform:none;transition:opacity .5s ease,transform .5s cubic-bezier(.2,.8,.3,1)}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  html{scroll-behavior:auto}
+  .js-anim .op{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div id="melding" role="status" aria-live="polite"></div>
+<aside class="zijnoot" aria-hidden="true">
+  <b>Gemaakt voor je telefoon</b>
+  Deze pagina hoort in de bio van Zara's Instagram en TikTok. Op een laptop zie je 'm precies zoals op mobiel.
+</aside>
+
+<header class="top">
+  <div class="top-in">
+    <a class="logo" href="#boven"><span id="logoKoek" aria-hidden="true"></span> De Koekenbakker</a>
+    <span class="pil pil--accent"><i class="stip"></i> <span id="klokPil">Vrijdag bakdag</span></span>
+  </div>
+</header>
+
+<main class="app" id="boven">
+
+  <section class="hero">
+    <div class="hero-koek"><div class="draai" id="heroKoek" aria-hidden="true"></div></div>
+    <h1>Verse koekjes,<br><em>vrijdag bij je thuis</em></h1>
+    <p>Vijf chocoladekoekjes, met de hand gebakken door Zara (16). Bestellen kost drie tikken. Koop er 5, de 6e is gratis.</p>
+    <div class="hero-acties">
+      <button class="knop" id="startKnop" type="button">Kies je koekjes</button>
+      <button class="knop knop--stil" id="verrasKnop" type="button">Verras me met 5 + 1</button>
+    </div>
+  </section>
+
+  <div class="kop op"><h2>Deze week in de oven</h2><span>swipe →</span></div>
+  <div class="baan" id="baan" aria-label="Koekjes"></div>
+  <div class="punten" id="punten" aria-hidden="true"></div>
+
+  <div class="kop op"><h2>Je gratis koekje</h2><span id="spaarKort">nog 5 te gaan</span></div>
+  <section class="kaart op" id="spaarKaart">
+    <div class="spaar">
+      <div class="ring">
+        <svg viewBox="0 0 100 100" width="82" height="82" aria-hidden="true">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(245,233,220,.16)" stroke-width="9"></circle>
+          <circle id="ringBoog" cx="50" cy="50" r="42" fill="none" stroke="#A8BE8F" stroke-width="9"
+                  stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264"></circle>
+        </svg>
+        <b id="ringTekst">0/5</b>
+      </div>
+      <div>
+        <h3 id="spaarTitel">Nog 5 koekjes tot een gratis koekje</h3>
+        <p class="klein" id="spaarUitleg">Bij elke vijf koekjes doet Zara er eentje bij in de doos. Jij kiest de smaak.</p>
+      </div>
+    </div>
+    <div class="gratiskiezer" id="gratiskiezer"></div>
+  </section>
+
+  <div class="kop op"><h2>Uit de keuken</h2><span>4 kaartjes</span></div>
+  <div class="verhalen op" id="verhalen"></div>
+
+  <div class="kop op"><h2>De bakker</h2><span>sinds 2022</span></div>
+  <section class="kaart op">
+    <div class="profiel">
+      <div class="avatar">Z</div>
+      <div>
+        <h3>Zara</h3>
+        <p class="klein">16 · bakt alles zelf · één bakdag per week</p>
+      </div>
+    </div>
+    <p class="klein" style="margin-top:14px;line-height:1.55">Begonnen op mijn twaalfde met de mixer van mijn oma. Nu gaat de oven elke vrijdag drie keer achter elkaar aan. Deeg rust 48 uur, chocolade komt uit België, en ik haal ze er expres een minuut te vroeg uit — dan blijft het midden zacht.</p>
+    <div class="cijfers">
+      <div><b>5</b><span>smaken</span></div>
+      <div><b>48 u</b><span>gerijpt deeg</span></div>
+      <div><b>40</b><span>per batch</span></div>
+    </div>
+    <div class="volgrij">
+      <button type="button" data-social="Instagram">Instagram</button>
+      <button type="button" data-social="TikTok">TikTok</button>
+      <button type="button" id="deelKnop">Deel</button>
+    </div>
+  </section>
+
+  <div class="kop op"><h2>Wat klanten sturen</h2><span>na de bezorging</span></div>
+  <section class="chat op">
+    <div class="bubbel bubbel--zij">Zijn ze net uit de oven?? Nog warm bezorgd op de fiets 🤯<span>Sem · 16:58</span></div>
+    <div class="bubbel bubbel--ik">Vers uit de tweede batch 😌<span>Zara · 17:01</span></div>
+    <div class="bubbel bubbel--zij">Doos was binnen tien minuten leeg. De Karamelbom is echt gevaarlijk lekker.<span>Fenna · 18:24</span></div>
+    <div class="bubbel bubbel--zij">Wij nemen elke vrijdag zes stuks voor kantoor. Die gratis zesde is inmiddels traditie.<span>Team Nieuwstraat · vrijdag</span></div>
+  </section>
+
+  <div class="kop op"><h2>Handig om te weten</h2></div>
+  <section class="vragen op">
+    <details open><summary>Hoe werkt 5 + 1 gratis?</summary><p>Zodra er vijf koekjes in je doos zitten, verschijnt er een gratis koekje. Bij tien krijg je er twee. Je kiest zelf de smaak, of je laat Zara verrassen.</p></details>
+    <details><summary>Wanneer wordt er gebakken?</summary><p>Elke vrijdag om 16:00. Bestel je vóór donderdag 20:00, dan zit je in die batch. Daarna schuif je door naar de week erop.</p></details>
+    <details><summary>Bezorgen of afhalen?</summary><p>Afhalen kan vrijdag tussen 17:00 en 19:00. Bezorgen doet Zara zelf op de fiets binnen de stad: gratis vanaf zes koekjes, daaronder € 2,50.</p></details>
+    <details><summary>Hoe lang blijven ze goed?</summary><p>Op hun best op de dag zelf. Daarna drie dagen in een gesloten trommel — tien seconden in de magnetron en ze zijn weer zacht. Invriezen kan tot drie maanden.</p></details>
+    <details><summary>Allergenen</summary><p>Alles bevat tarwe, ei, melk en soja. Witte Wolk en Nootje Noir bevatten noten, en er wordt gebakken in een keuken waar noten aanwezig zijn. Geef het door bij je bestelling als er iets speelt.</p></details>
+  </section>
+
+  <footer class="voet">
+    <div class="logo"><span id="voetKoek" aria-hidden="true"></span> De Koekenbakker</div>
+    <p class="klein">Eén bakdag per week · gebakken in eigen keuken<br>© <span id="jaar">2026</span></p>
+  </footer>
+</main>
+
+<div class="balk">
+  <div class="balk-in">
+    <div>
+      <b id="balkTotaal">€ 0,00</b>
+      <div class="klein" id="balkTekst">Nog geen koekjes gekozen</div>
+    </div>
+    <button class="knop" id="balkKnop" type="button">Bestellen</button>
+  </div>
+</div>
+
+<div class="sluier" id="sluier"></div>
+
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Je bestelling" aria-hidden="true">
+  <div class="greep" aria-hidden="true"></div>
+  <div class="sheet-kop">
+    <div><h3>Je doos</h3><span class="klein" id="sheetSub">0 koekjes</span></div>
+    <button class="dicht" id="sheetDicht" aria-label="Sluiten">✕</button>
+  </div>
+  <div class="sheet-body" id="sheetBody"></div>
+  <div class="sheet-voet">
+    <div class="veld"><label for="sNaam">Je naam</label><input id="sNaam" type="text" autocomplete="name" placeholder="Bijv. Joost"></div>
+    <div class="veld"><label for="sContact">Telefoon of e-mail</label><input id="sContact" type="text" autocomplete="tel" placeholder="06 – …"></div>
+    <div class="veld"><label>Afhalen of bezorgen</label>
+      <div class="duo" id="duo">
+        <button type="button" data-lever="Afhalen" class="aan">Afhalen</button>
+        <button type="button" data-lever="Bezorgen">Bezorgen</button>
+      </div>
+    </div>
+    <div class="veld" id="sAdresVeld" hidden><label for="sAdres">Bezorgadres</label><input id="sAdres" type="text" autocomplete="street-address" placeholder="Straat en huisnummer"></div>
+    <div class="veld"><label for="sNotitie">Iets doorgeven?</label><textarea id="sNotitie" placeholder="Allergieën, cadeauverpakking, ander moment…"></textarea></div>
+    <div class="somrij"><span>Totaal</span><span id="sheetTotaal">€ 0,00</span></div>
+    <button class="knop knop--vol" id="verstuur" type="button">Stuur naar Zara</button>
+    <p class="klein" style="text-align:center">Betalen bij het afhalen of bezorgen</p>
+  </div>
+</section>
+
+<script>
+(function(){
+"use strict";
+
+/* =====================================================================
+   Instellingen — pas dit blok aan als de gegevens van Zara veranderen.
+   ===================================================================== */
+const CONFIG = {
+  whatsapp: "",                 // bijv. "31612345678" — landcode, geen + of spaties
+  email: "hoi@dekoekenbakker.nl",
+  stad: "de stad",
+  bezorgkosten: 2.50,
+  gratisBezorgenVanaf: 6,
+  bakdag: 5,                    // 0 = zondag, 5 = vrijdag
+  bakuur: 16
+};
+
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+const euro = n => "€ " + n.toLocaleString("nl-NL", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const bewaar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const lees = (k, standaard) => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : standaard; } catch (e) { return standaard; } };
+const rustig = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function melden(tekst){
+  const m = $("#melding");
+  m.textContent = tekst;
+  m.classList.add("aan");
+  clearTimeout(melden._t);
+  melden._t = setTimeout(() => m.classList.remove("aan"), 2400);
+}
+function trillen(ms){ if (navigator.vibrate && !rustig) { try { navigator.vibrate(ms); } catch (e) {} } }
+
+/* ---------- koekjes tekenen (zacht, met randlicht voor de donkere achtergrond) ---------- */
+function rng(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function rondPad(r, wiebel){
+  const n = 22, p = [];
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2, rr = r * (0.955 + wiebel() * 0.085);
+    p.push([100 + Math.cos(a) * rr, 100 + Math.sin(a) * rr]);
+  }
+  let d = "M" + p[0][0].toFixed(1) + "," + p[0][1].toFixed(1);
+  for (let i = 0; i < p.length; i++){
+    const b = p[(i + 1) % p.length], c = p[(i + 2) % p.length];
+    d += " Q" + b[0].toFixed(1) + "," + b[1].toFixed(1) + " " + ((b[0] + c[0]) / 2).toFixed(1) + "," + ((b[1] + c[1]) / 2).toFixed(1);
+  }
+  return d + "Z";
+}
+let uid = 0;
+function koek(k){
+  const id = "p" + (++uid), r2 = rng(k.seed), rand = rng(k.seed + 53);
+  let s = '<svg viewBox="0 0 200 200" role="img" aria-label="' + k.naam + '" xmlns="http://www.w3.org/2000/svg">';
+  s += '<defs><radialGradient id="g' + id + '" cx="38%" cy="30%" r="78%">'
+     + '<stop offset="0%" stop-color="' + k.licht + '"/><stop offset="62%" stop-color="' + k.deeg + '"/>'
+     + '<stop offset="100%" stop-color="' + k.donker + '"/></radialGradient></defs>';
+  s += '<path d="' + rondPad(88, r2) + '" fill="url(#g' + id + ')"/>';
+  for (let i = 0; i < 22; i++){
+    const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * 80;
+    s += '<circle cx="' + (100 + Math.cos(a) * d).toFixed(1) + '" cy="' + (100 + Math.sin(a) * d).toFixed(1)
+       + '" r="' + (1 + rand() * 1.7).toFixed(1) + '" fill="' + k.donker + '" opacity=".5"/>';
+  }
+  for (let i = 0; i < 10; i++){
+    const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * 64;
+    const x = 100 + Math.cos(a) * d, y = 100 + Math.sin(a) * d;
+    const w = 16 + rand() * 12, h = 12 + rand() * 8, rot = rand() * 90 - 45;
+    s += '<g transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + rot.toFixed(1) + ')">'
+       + '<rect x="' + (-w / 2).toFixed(1) + '" y="' + (-h / 2).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="4" fill="' + k.brok + '"/>'
+       + '<rect x="' + (-w / 2).toFixed(1) + '" y="' + (-h / 2).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (h * .32).toFixed(1) + '" rx="3" fill="#F5E9DC" opacity=".2"/>'
+       + '</g>';
+  }
+  s += '<path d="' + rondPad(88, rng(k.seed)) + '" fill="none" stroke="#F5E9DC" stroke-opacity=".22" stroke-width="2.2"/>';
+  return s + '</svg>';
+}
+
+/* ---------- assortiment ---------- */
+const KOEKJES = [
+  { id: "klassieker", naam: "De Klassieker", prijs: 2.75, sub: "Melkchocolade in grove brokken, roomboterdeeg en een vlok zeezout.",
+    seed: 11, licht: "#F0CF9C", deeg: "#DCAF74", donker: "#9C6836", brok: "#57392A" },
+  { id: "nachtdonker", naam: "Nachtdonker", prijs: 3.00, sub: "Cacaodeeg met 70% puur. Bijna zwart, van binnen nog vloeibaar.",
+    seed: 23, licht: "#7A5340", deeg: "#553728", donker: "#2A1A12", brok: "#170F0B" },
+  { id: "wittewolk", naam: "Witte Wolk", prijs: 3.00, sub: "Witte chocolade met geroosterde macadamia. Romig en zoet.",
+    seed: 41, licht: "#FBEDD0", deeg: "#EDD8AE", donker: "#B78F5B", brok: "#FDF6E6" },
+  { id: "karamelbom", naam: "Karamelbom", prijs: 3.25, sub: "Kern van zeezoutkaramel die eruit loopt als je 'm openbreekt.",
+    seed: 67, licht: "#F5C489", deeg: "#DFA55F", donker: "#96601F", brok: "#B8722A" },
+  { id: "nootjenoir", naam: "Nootje Noir", prijs: 3.25, sub: "Pure chocolade met hazelnootcrunch op hazelnootdeeg.",
+    seed: 89, licht: "#DDB07C", deeg: "#BE8A52", donker: "#7A4E22", brok: "#31200F" }
+];
+const vind = id => KOEKJES.filter(k => k.id === id)[0];
+
+const VERHALEN = [
+  {klasse: "v1", koek: 0, titel: "48 uur", tekst: "Zo lang rust het deeg voordat het de oven in gaat."},
+  {klasse: "v2", koek: 1, titel: "Geen bakmix", tekst: "Roomboter, Belgische chocolade, eieren. Meer zit er niet in."},
+  {klasse: "v3", koek: 3, titel: "Op de fiets", tekst: "Zara bezorgt zelf, dezelfde middag nog."},
+  {klasse: "v4", koek: 4, titel: "Op is op", tekst: "40 koekjes per batch. Donderdag 20:00 sluit de lijst."}
+];
+
+/* ---------- toestand ---------- */
+let doos = lees("kbp-doos", {});
+let gratisKeuze = lees("kbp-gratis", []);
+let lever = lees("kbp-lever", "Afhalen");
+Object.keys(doos).forEach(id => { if (!vind(id) || !(doos[id] > 0)) delete doos[id]; });
+
+const betaald = () => Object.keys(doos).reduce((n, id) => n + doos[id], 0);
+const gratisAantal = () => Math.floor(betaald() / 5);
+const somPrijs = () => Object.keys(doos).reduce((n, id) => n + doos[id] * vind(id).prijs, 0);
+
+function wijzig(id, delta){
+  doos[id] = (doos[id] || 0) + delta;
+  if (doos[id] <= 0) delete doos[id];
+  const g = gratisAantal();
+  while (gratisKeuze.length < g) gratisKeuze.push("verrassing");
+  gratisKeuze.length = g;
+  bewaar("kbp-doos", doos);
+  bewaar("kbp-gratis", gratisKeuze);
+  ververs();
+}
+
+/* ---------- tekenen ---------- */
+function tekenBaan(){
+  $("#baan").innerHTML = KOEKJES.map(function(k){
+    return '<article class="koekkaart" data-kaart="' + k.id + '">'
+      + '<span class="telbal" data-tel="' + k.id + '">0</span>'
+      + '<div class="beeld">' + koek(k) + '</div>'
+      + '<h3>' + k.naam + '</h3>'
+      + '<p class="sub">' + k.sub + '</p>'
+      + '<div class="voet"><span class="prijs">' + euro(k.prijs) + '<small>95 g · Ø 10 cm</small></span>'
+      + '<button class="plusknop" type="button" data-plus="' + k.id + '" aria-label="' + k.naam + ' toevoegen">+</button></div>'
+      + '</article>';
+  }).join("");
+  $("#punten").innerHTML = KOEKJES.map((k, i) => '<i class="' + (i === 0 ? "aan" : "") + '"></i>').join("");
+}
+
+function tekenVerhalen(){
+  $("#verhalen").innerHTML = VERHALEN.map(function(v){
+    return '<div class="verhaal ' + v.klasse + '">' + koek(KOEKJES[v.koek])
+      + '<b>' + v.titel + '</b><span>' + v.tekst + '</span></div>';
+  }).join("");
+}
+
+function ververs(){
+  const b = betaald(), g = gratisAantal(), sub = somPrijs();
+  const inRing = b === 0 ? 0 : (b % 5 === 0 ? 5 : b % 5);
+
+  KOEKJES.forEach(function(k){
+    const bal = $('[data-tel="' + k.id + '"]');
+    if (!bal) return;
+    bal.textContent = doos[k.id] || 0;
+    bal.classList.toggle("zien", !!doos[k.id]);
+  });
+
+  $("#ringBoog").style.strokeDashoffset = 264 - (264 * inRing / 5);
+  $("#ringTekst").textContent = inRing + "/5";
+  const tot = 5 - inRing;
+  $("#spaarTitel").textContent = tot === 0 && b > 0
+    ? (g === 1 ? "Je hebt een gratis koekje" : "Je hebt " + g + " gratis koekjes")
+    : "Nog " + tot + " koekje" + (tot === 1 ? "" : "s") + " tot een gratis koekje";
+  $("#spaarKort").textContent = tot === 0 && b > 0 ? "kies je smaak" : "nog " + tot + " te gaan";
+  $("#spaarUitleg").textContent = g > 0
+    ? "Kies hieronder welke smaak Zara erbij doet."
+    : "Bij elke vijf koekjes doet Zara er eentje bij in de doos. Jij kiest de smaak.";
+
+  $("#gratiskiezer").innerHTML = gratisKeuze.map(function(keuze, i){
+    const opties = '<option value="verrassing"' + (keuze === "verrassing" ? " selected" : "") + '>Verras me (keuze van Zara)</option>'
+      + KOEKJES.map(k => '<option value="' + k.id + '"' + (keuze === k.id ? " selected" : "") + '>' + k.naam + '</option>').join("");
+    return '<div class="gratisrij">' + koek(vind(keuze === "verrassing" ? "karamelbom" : keuze))
+      + '<select data-gratis="' + i + '" aria-label="Smaak van gratis koekje ' + (i + 1) + '">' + opties + '</select></div>';
+  }).join("");
+
+  const bezorgen = lever === "Bezorgen" && (b + g) < CONFIG.gratisBezorgenVanaf && b > 0;
+  const totaal = sub + (bezorgen ? CONFIG.bezorgkosten : 0);
+  $("#balkTotaal").textContent = euro(sub);
+  $("#balkTekst").textContent = b === 0 ? "Nog geen koekjes gekozen"
+    : b + " koekje" + (b === 1 ? "" : "s") + (g ? " + " + g + " gratis" : "");
+  $("#sheetSub").textContent = (b + g) + " koekje" + (b + g === 1 ? "" : "s") + (g ? " (" + g + " gratis)" : "");
+  $("#sheetTotaal").textContent = euro(totaal);
+  $("#sAdresVeld").hidden = lever !== "Bezorgen";
+
+  const ids = Object.keys(doos);
+  $("#sheetBody").innerHTML = (ids.length === 0
+    ? '<p class="klein" style="text-align:center;padding:22px 0">Je doos is nog leeg. Kies eerst een paar koekjes.</p>'
+    : ids.map(function(id){
+        const k = vind(id);
+        return '<div class="regel">' + koek(k)
+          + '<div><h4>' + k.naam + '</h4>'
+          + '<div class="teller"><button type="button" data-min="' + id + '" aria-label="Eén minder">–</button>'
+          + '<span>' + doos[id] + '</span><button type="button" data-meer="' + id + '" aria-label="Eén meer">+</button></div></div>'
+          + '<span class="p">' + euro(doos[id] * k.prijs) + '</span></div>';
+      }).join("")
+    ) + gratisKeuze.map(function(keuze){
+        const k = vind(keuze === "verrassing" ? "karamelbom" : keuze);
+        return '<div class="regel">' + koek(k)
+          + '<div><h4>' + (keuze === "verrassing" ? "Gratis koekje (verrassing)" : k.naam) + '</h4>'
+          + '<span class="klein">Van het huis</span></div><span class="p" style="color:#A8BE8F">gratis</span></div>';
+      }).join("")
+    + (bezorgen ? '<div class="regel" style="grid-template-columns:1fr auto"><span class="klein">Bezorging binnen ' + CONFIG.stad + '</span><span class="p">' + euro(CONFIG.bezorgkosten) + '</span></div>' : "");
+}
+
+function openSheet(open){
+  $("#sheet").classList.toggle("aan", open);
+  $("#sluier").classList.toggle("aan", open);
+  $("#sheet").setAttribute("aria-hidden", open ? "false" : "true");
+  document.body.style.overflow = open ? "hidden" : "";
+  if (open) setTimeout(() => $("#sheetDicht").focus(), 60);
+}
+
+/* ---------- bestelling ---------- */
+function bestelTekst(){
+  const regels = Object.keys(doos).map(id => "• " + doos[id] + "× " + vind(id).naam + " — " + euro(doos[id] * vind(id).prijs));
+  gratisKeuze.forEach(function(keuze){
+    regels.push("• 1× " + (keuze === "verrassing" ? "Gratis koekje (verrassing)" : "Gratis koekje: " + vind(keuze).naam) + " — gratis");
+  });
+  const b = betaald(), g = gratisAantal();
+  const bezorgen = lever === "Bezorgen" && (b + g) < CONFIG.gratisBezorgenVanaf;
+  const totaal = somPrijs() + (bezorgen ? CONFIG.bezorgkosten : 0);
+  let t = "Hoi Zara! Ik wil graag bestellen bij De Koekenbakker:\n\n" + regels.join("\n");
+  t += "\n\nTotaal: " + euro(totaal) + (bezorgen ? " (incl. bezorging)" : "");
+  t += "\n" + lever + (lever === "Bezorgen" ? " — " + ($("#sAdres").value.trim() || "adres volgt") : "");
+  t += "\n\nNaam: " + $("#sNaam").value.trim();
+  t += "\nContact: " + $("#sContact").value.trim();
+  const notitie = $("#sNotitie").value.trim();
+  if (notitie) t += "\nOpmerking: " + notitie;
+  return t;
+}
+
+function verstuur(){
+  if (betaald() === 0){ melden("Je doos is nog leeg."); return; }
+  if (!$("#sNaam").value.trim()){ melden("Vul even je naam in."); $("#sNaam").focus(); return; }
+  if (!$("#sContact").value.trim()){ melden("Hoe kan Zara je bereiken?"); $("#sContact").focus(); return; }
+  if (lever === "Bezorgen" && !$("#sAdres").value.trim()){ melden("Vul je bezorgadres in."); $("#sAdres").focus(); return; }
+  const tekst = bestelTekst();
+  if (navigator.clipboard) navigator.clipboard.writeText(tekst).catch(function(){});
+  if (CONFIG.whatsapp){
+    window.open("https://wa.me/" + CONFIG.whatsapp + "?text=" + encodeURIComponent(tekst), "_blank", "noopener");
+    melden("Je bestelling staat klaar in WhatsApp.");
+  } else {
+    window.location.href = "mailto:" + CONFIG.email + "?subject=" + encodeURIComponent("Bestelling De Koekenbakker") + "&body=" + encodeURIComponent(tekst);
+    melden("Bestelling gekopieerd en klaargezet in je mail.");
+  }
+}
+
+/* ---------- bakdag ---------- */
+function volgendeBakdag(){
+  const nu = new Date();
+  const d = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate(), CONFIG.bakuur, 0, 0, 0);
+  let dagen = (CONFIG.bakdag - d.getDay() + 7) % 7;
+  if (dagen === 0 && nu > d) dagen = 7;
+  d.setDate(d.getDate() + dagen);
+  return d;
+}
+function klokPil(){
+  const over = Math.max(0, volgendeBakdag() - new Date());
+  const uren = Math.floor(over / 3600000);
+  $("#klokPil").textContent = uren < 1 ? "De oven staat aan"
+    : uren < 24 ? "Nog " + uren + " uur tot de bakdag"
+    : "Nog " + Math.round(uren / 24) + " dagen tot de bakdag";
+}
+
+/* ---------- delen ---------- */
+function delen(){
+  const tekst = "Verse koekjes van De Koekenbakker — koop er 5, de 6e is gratis.";
+  if (navigator.share){
+    navigator.share({title: "De Koekenbakker", text: tekst, url: location.href}).catch(function(){});
+    return;
+  }
+  if (navigator.clipboard){
+    navigator.clipboard.writeText(tekst + " " + location.href).then(function(){ melden("Link gekopieerd."); }).catch(function(){ melden("Kopiëren lukte niet."); });
+  } else {
+    melden("Kopieer de link uit je adresbalk.");
+  }
+}
+
+/* ---------- opstarten ---------- */
+function start(){
+  $("#logoKoek").innerHTML = koek(KOEKJES[0]);
+  $("#voetKoek").innerHTML = koek(KOEKJES[2]);
+  $("#heroKoek").innerHTML = koek(KOEKJES[0]);
+  tekenBaan();
+  tekenVerhalen();
+  ververs();
+  klokPil();
+  setInterval(klokPil, 60000);
+  $("#jaar").textContent = new Date().getFullYear();
+  $$("#duo button").forEach(b => b.classList.toggle("aan", b.dataset.lever === lever));
+
+  const baan = $("#baan");
+  baan.addEventListener("scroll", function(){
+    const kaart = baan.querySelector(".koekkaart");
+    if (!kaart) return;
+    const stap = kaart.getBoundingClientRect().width + 14;
+    const i = Math.min(KOEKJES.length - 1, Math.max(0, Math.round(baan.scrollLeft / stap)));
+    $$("#punten i").forEach((p, j) => p.classList.toggle("aan", j === i));
+  }, {passive: true});
+
+  if ("IntersectionObserver" in window && !rustig){
+    document.documentElement.classList.add("js-anim");
+    const io = new IntersectionObserver(function(rijen){
+      rijen.forEach(function(r){ if (r.isIntersecting){ r.target.classList.add("in"); io.unobserve(r.target); } });
+    }, {rootMargin: "0px 0px -5% 0px"});
+    $$(".op").forEach(el => io.observe(el));
+    setTimeout(() => $$(".op").forEach(el => el.classList.add("in")), 3500);
+  }
+}
+
+/* ---------- klikken ---------- */
+document.addEventListener("click", function(e){
+  const plus = e.target.closest("[data-plus]");
+  if (plus){
+    wijzig(plus.dataset.plus, 1);
+    plus.classList.add("geteld");
+    plus.textContent = "✓";
+    trillen(12);
+    setTimeout(function(){ plus.classList.remove("geteld"); plus.textContent = "+"; }, 700);
+    return;
+  }
+  const min = e.target.closest("[data-min]");
+  if (min){ wijzig(min.dataset.min, -1); return; }
+  const meer = e.target.closest("[data-meer]");
+  if (meer){ wijzig(meer.dataset.meer, 1); return; }
+
+  if (e.target.closest("#startKnop")){
+    document.getElementById("baan").scrollIntoView({behavior: rustig ? "auto" : "smooth", block: "center"});
+    return;
+  }
+  if (e.target.closest("#verrasKnop")){
+    doos = {};
+    const keuze = KOEKJES.slice().sort(() => Math.random() - .5);
+    doos[keuze[0].id] = 2; doos[keuze[1].id] = 2; doos[keuze[2].id] = 1;
+    gratisKeuze = ["verrassing"];
+    bewaar("kbp-doos", doos); bewaar("kbp-gratis", gratisKeuze);
+    ververs();
+    openSheet(true);
+    melden("Doos gevuld — inclusief je gratis koekje.");
+    return;
+  }
+  if (e.target.closest("#balkKnop")){
+    if (betaald() === 0){
+      melden("Kies eerst een paar koekjes.");
+      document.getElementById("baan").scrollIntoView({behavior: rustig ? "auto" : "smooth", block: "center"});
+      return;
+    }
+    openSheet(true);
+    return;
+  }
+  if (e.target.closest("#sheetDicht, #sluier")){ openSheet(false); return; }
+  if (e.target.closest("#deelKnop")){ delen(); return; }
+
+  const lev = e.target.closest("[data-lever]");
+  if (lev){
+    lever = lev.dataset.lever;
+    bewaar("kbp-lever", lever);
+    $$("#duo button").forEach(b => b.classList.toggle("aan", b === lev));
+    ververs();
+    return;
+  }
+  const soc = e.target.closest("[data-social]");
+  if (soc){ melden(soc.dataset.social + " van Zara komt eraan."); return; }
+});
+
+document.addEventListener("change", function(e){
+  const g = e.target.closest("[data-gratis]");
+  if (g){ gratisKeuze[+g.dataset.gratis] = g.value; bewaar("kbp-gratis", gratisKeuze); ververs(); }
+});
+
+document.addEventListener("keydown", function(e){ if (e.key === "Escape") openSheet(false); });
+$("#verstuur").addEventListener("click", verstuur);
+
+try { start(); } catch (fout) { console.error(fout); }
+})();
+</script>
+</body>
+</html>

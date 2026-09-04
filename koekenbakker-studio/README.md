@@ -2,7 +2,8 @@
 
 Het strakke concept voor de webshop van **Zara**: editorial, rustig, met een zichtbaar
 raster en veel witruimte. Zelfde koekjes, zelfde 5 + 1-regel, andere vormtaal dan
-[concept 1](../koekenbakker/) (dat is het speelse, warme concept).
+[concept 1](../koekenbakker/) (speels en warm) en [concept 3](../koekenbakker-pocket/)
+(donker en mobiel).
 
 **🔗 Live op:**
 👉 https://blockionaire.github.io/First-series-of-apps-JP/koekenbakker-studio/
