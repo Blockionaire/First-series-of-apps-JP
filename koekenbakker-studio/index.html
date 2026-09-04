@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Koekenbakker Studio</title>
+<meta name="description" content="Eén batch per week, vijf chocoladekoekjes, met de hand gebakken door Zara. Stel je doos van zes samen — het zesde koekje is van het huis.">
+<meta name="theme-color" content="#E6E1D8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400..800&family=Hanken+Grotesk:wght@300..700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --inkt:#17130F;
+  --steen:#E6E1D8;
+  --papier:#F7F5F1;
+  --greige:#CFC7BA;
+  --stof:#8A7F73;
+  --walnoot:#8E5A3B;
+  --klei:#C2A78D;
+  --wit:#FDFCFA;
+
+  --kop:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --tekst:"Hanken Grotesk","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+
+  --max:1280px;
+  --gutter:clamp(18px,4vw,44px);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--steen);color:var(--inkt);font-family:var(--tekst);font-size:16.5px;
+  line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,h3,h4{font-family:var(--kop);font-weight:700;line-height:1.0;letter-spacing:-.045em;margin:0;text-wrap:balance}
+p{margin:0}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0}
+:focus-visible{outline:2px solid var(--walnoot);outline-offset:3px}
+svg{display:block;max-width:100%}
+
+.wrap{width:min(100% - (2 * var(--gutter)), var(--max));margin-inline:auto}
+.lijn{border-top:1px solid var(--greige)}
+.label{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--stof)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.groot{font-size:clamp(2.1rem,4.6vw,3.4rem)}
+.stil{color:var(--stof)}
+.max60{max-width:60ch}
+
+.knop{display:inline-flex;align-items:center;justify-content:center;gap:10px;font-family:var(--kop);
+  font-weight:600;font-size:.95rem;letter-spacing:-.01em;padding:13px 22px;border-radius:6px;
+  background:var(--inkt);color:var(--papier);cursor:pointer;transition:background .18s,color .18s,transform .18s}
+.knop:hover{background:var(--walnoot);transform:translateY(-1px)}
+.knop[disabled]{background:var(--greige);color:var(--stof);cursor:not-allowed;transform:none}
+.knop--rand{background:transparent;color:var(--inkt);border:1px solid var(--inkt)}
+.knop--rand:hover{background:var(--inkt);color:var(--papier)}
+.knop--vol{width:100%}
+
+/* voortgangslijn bovenaan */
+#voortgang{position:fixed;top:0;left:0;height:2px;background:var(--walnoot);z-index:60;width:0;transition:width .1s linear}
+
+/* ---------- kop ---------- */
+.top{position:sticky;top:0;z-index:50;background:rgba(230,225,216,.88);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--greige)}
+.top-in{display:flex;align-items:center;gap:26px;padding:14px 0}
+.merk{font-family:var(--kop);font-weight:700;letter-spacing:-.03em;font-size:1.02rem;display:flex;align-items:baseline;gap:8px}
+.merk span{font-family:var(--mono);font-size:.62rem;letter-spacing:.18em;color:var(--stof);text-transform:uppercase}
+.index{display:flex;gap:26px;margin-left:auto}
+.index a{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--stof);
+  display:flex;gap:7px;align-items:center}
+.index a:hover{color:var(--inkt)}
+.index a i{font-style:normal;color:var(--klei)}
+.doosknop{margin-left:auto;display:inline-flex;align-items:center;gap:10px;border:1px solid var(--inkt);
+  border-radius:6px;padding:9px 15px;cursor:pointer;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.1em;text-transform:uppercase;transition:background .18s,color .18s}
+.index + .doosknop{margin-left:26px}
+.doosknop:hover{background:var(--inkt);color:var(--papier)}
+.doosknop b{font-weight:500}
+@media(max-width:900px){.index{display:none}}
+
+/* ---------- hero ---------- */
+.hero{padding:clamp(40px,7vw,86px) 0 0}
+.hero-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:clamp(24px,4vw,60px);align-items:end}
+.hero h1{font-size:clamp(2.9rem,8.4vw,6.2rem);letter-spacing:-.05em}
+.hero h1 em{font-style:normal;color:var(--walnoot)}
+.hero-onder{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:clamp(36px,5vw,62px);
+  padding:22px 0;border-top:1px solid var(--greige);border-bottom:1px solid var(--greige)}
+.hero-onder div{display:grid;gap:5px}
+.hero-onder b{font-family:var(--kop);font-weight:600;font-size:1.02rem;letter-spacing:-.02em}
+.toonkoek{width:min(100%,340px);margin-left:auto;position:relative}
+.toonkoek .draai{animation:zacht 40s linear infinite}
+@keyframes zacht{to{transform:rotate(360deg)}}
+.toonkoek figcaption{margin-top:14px;text-align:right}
+@media(max-width:900px){
+  .hero-grid{grid-template-columns:1fr;gap:30px;align-items:start}
+  .toonkoek{margin:0;width:min(70%,260px)}
+  .hero-onder{grid-template-columns:repeat(2,1fr);gap:18px}
+}
+
+/* ---------- ticker ---------- */
+.ticker{border-top:1px solid var(--greige);border-bottom:1px solid var(--greige);overflow:hidden;
+  padding:11px 0;background:var(--papier)}
+.ticker-rij{display:flex;gap:44px;width:max-content;animation:loop 40s linear infinite}
+.ticker-rij span{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  white-space:nowrap;color:var(--stof);display:flex;align-items:center;gap:44px}
+.ticker-rij span::after{content:"/";color:var(--klei)}
+@keyframes loop{to{transform:translateX(-50%)}}
+
+/* ---------- secties ---------- */
+.blok{padding:clamp(56px,8vw,104px) 0}
+.blok--papier{background:var(--papier)}
+.blokkop{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:22px;align-items:baseline;
+  padding-bottom:22px;border-bottom:1px solid var(--greige);margin-bottom:clamp(28px,4vw,48px)}
+.blokkop .nr{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;color:var(--klei)}
+.blokkop .rechts{text-align:right;white-space:nowrap}
+@media(max-width:760px){
+  .blokkop{grid-template-columns:auto minmax(0,1fr)}
+  .blokkop .rechts{grid-column:2;text-align:left;white-space:normal}
+}
+
+/* ---------- kiezer ---------- */
+.kiezer{display:grid;grid-template-columns:1fr 1.1fr;gap:clamp(24px,4vw,56px);align-items:start}
+.rij{display:grid;grid-template-columns:38px 1fr auto;gap:14px;align-items:center;width:100%;
+  padding:18px 4px;border-bottom:1px solid var(--greige);cursor:pointer;text-align:left;
+  transition:padding-left .2s,color .2s}
+.rij:first-child{border-top:1px solid var(--greige)}
+.rij:hover{padding-left:12px}
+.rij .rnr{font-family:var(--mono);font-size:.7rem;color:var(--klei)}
+.rij .rnaam{display:block;font-family:var(--kop);font-weight:600;font-size:1.22rem;letter-spacing:-.03em}
+.rij .rprijs{font-family:var(--mono);font-size:.86rem;color:var(--stof)}
+.rij[aria-selected="true"]{padding-left:12px}
+.rij[aria-selected="true"] .rnr{color:var(--walnoot)}
+.rij[aria-selected="true"] .rnaam{color:var(--walnoot)}
+.rij .rsub{grid-column:2;font-size:.86rem;color:var(--stof);margin-top:2px;display:none}
+.rij[aria-selected="true"] .rsub{display:block}
+
+.detail{background:var(--wit);border:1px solid var(--greige);border-radius:12px;padding:clamp(20px,3vw,32px);
+  position:sticky;top:86px;display:grid;gap:22px}
+.detail-top{display:grid;grid-template-columns:150px 1fr;gap:24px;align-items:center}
+.detail-top h3{font-size:clamp(1.5rem,3vw,2rem)}
+.specs{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;border-top:1px solid var(--greige)}
+.spec{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--greige);
+  font-family:var(--mono);font-size:.74rem;letter-spacing:.04em}
+.spec span{color:var(--stof);text-transform:uppercase;letter-spacing:.1em;font-size:.66rem}
+.meters{display:grid;gap:9px}
+.meter{display:grid;grid-template-columns:96px 1fr 30px;gap:12px;align-items:center;
+  font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--stof)}
+.meter .baan{height:3px;background:var(--greige);position:relative}
+.meter .baan i{position:absolute;left:0;top:0;bottom:0;background:var(--walnoot)}
+.detail-voet{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  border-top:1px solid var(--greige);padding-top:20px}
+.detail-prijs{font-family:var(--kop);font-weight:700;font-size:1.7rem;letter-spacing:-.03em}
+.detail-prijs small{display:block;font-family:var(--mono);font-size:.64rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--stof);font-weight:400}
+@media(max-width:900px){
+  .kiezer{grid-template-columns:1fr}
+  .detail{position:static;order:-1}
+  .detail-top{grid-template-columns:110px 1fr}
+}
+
+/* ---------- doos ---------- */
+.doosblok{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(26px,4vw,60px);align-items:start}
+.vakken{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.vak{aspect-ratio:1;border:1px solid var(--greige);border-radius:10px;background:var(--wit);cursor:pointer;
+  display:grid;place-items:center;position:relative;padding:12px;transition:border-color .2s,background .2s}
+.vak:hover{border-color:var(--inkt)}
+.vak .nrv{position:absolute;top:8px;left:10px;font-family:var(--mono);font-size:.6rem;color:var(--klei)}
+.vak .plus{font-family:var(--kop);font-weight:400;font-size:1.5rem;color:var(--greige)}
+.vak .naam{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-family:var(--mono);
+  font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:var(--stof)}
+.vak.gevuld{background:var(--papier);border-color:var(--inkt)}
+.vak.gevuld svg{width:74%}
+.vak--gratis{border-style:dashed;border-color:var(--klei)}
+.vak--gratis .plus{color:var(--klei)}
+.vak--gratis.klaar{border-style:solid;border-color:var(--walnoot);background:rgba(142,90,59,.06)}
+.vak--gratis .nrv{color:var(--walnoot)}
+.vak--slot{cursor:not-allowed;opacity:.55}
+.doos-info{display:grid;gap:18px}
+.balkje{height:3px;background:var(--greige);position:relative;overflow:hidden}
+.balkje i{position:absolute;inset:0 auto 0 0;background:var(--inkt);width:0;transition:width .35s}
+.doos-regels{display:grid;gap:0;border-top:1px solid var(--greige)}
+.doos-regel{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;padding:11px 0;
+  border-bottom:1px solid var(--greige);font-size:.95rem}
+.doos-regel .p{font-family:var(--mono);font-size:.84rem}
+.doos-regel button{font-family:var(--mono);font-size:.7rem;color:var(--stof);cursor:pointer;letter-spacing:.08em}
+.doos-regel button:hover{color:var(--walnoot)}
+.doos-totaal{display:flex;justify-content:space-between;align-items:baseline;padding-top:16px;
+  font-family:var(--kop);font-weight:700;font-size:1.3rem;letter-spacing:-.03em}
+.doos-acties{display:flex;gap:12px;flex-wrap:wrap}
+@media(max-width:900px){.doosblok{grid-template-columns:1fr}}
+
+/* ---------- batch ---------- */
+.batch{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(20px,3vw,44px)}
+.batch-cel{display:grid;gap:10px;padding-top:20px;border-top:1px solid var(--greige)}
+.batch-cel b{font-family:var(--kop);font-weight:700;font-size:clamp(1.9rem,4vw,2.8rem);letter-spacing:-.04em;line-height:1}
+.klok{display:flex;gap:6px;align-items:baseline;font-family:var(--kop);font-weight:700;
+  font-size:clamp(1.9rem,4vw,2.8rem);letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.klok small{font-family:var(--mono);font-size:.8rem;letter-spacing:.06em;color:var(--stof);
+  font-weight:400;margin-right:10px;align-self:center}
+@media(max-width:760px){.batch{grid-template-columns:1fr}}
+
+/* ---------- interview ---------- */
+.interview{display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(28px,5vw,72px);align-items:start}
+.portret{border:1px solid var(--greige);border-radius:12px;background:var(--wit);padding:16px;display:grid;gap:14px}
+.portret-vlak{aspect-ratio:3/4;background:
+    repeating-linear-gradient(135deg, rgba(23,19,15,.045) 0 2px, transparent 2px 9px), var(--steen);
+  border-radius:8px;display:grid;place-items:center;position:relative}
+.portret-vlak .initiaal{font-family:var(--kop);font-weight:700;font-size:6rem;letter-spacing:-.06em;color:rgba(23,19,15,.13)}
+.portret-vlak svg{position:absolute;width:86px;right:14px;bottom:14px}
+.qa{display:grid;gap:0}
+.qa div{padding:22px 0;border-bottom:1px solid var(--greige)}
+.qa div:first-child{border-top:1px solid var(--greige)}
+.qa h4{font-family:var(--kop);font-weight:600;font-size:1.05rem;letter-spacing:-.02em;margin-bottom:8px;
+  display:grid;grid-template-columns:26px 1fr;gap:10px}
+.qa h4::before{content:"V";font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;color:var(--klei);padding-top:3px}
+.qa p{display:grid;grid-template-columns:26px 1fr;gap:10px;color:var(--stof)}
+.qa p::before{content:"A";font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;color:var(--klei);padding-top:4px}
+@media(max-width:900px){.interview{grid-template-columns:1fr}}
+
+/* ---------- quotes + faq ---------- */
+.quotes{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.quote{padding:26px 26px 26px 0;border-top:1px solid var(--greige)}
+.quote p{font-family:var(--kop);font-weight:500;font-size:1.05rem;letter-spacing:-.02em;line-height:1.35}
+.quote footer{margin-top:12px}
+@media(max-width:760px){.quotes{grid-template-columns:1fr}.quote{padding-right:0}}
+
+.faq details{border-bottom:1px solid var(--greige)}
+.faq details:first-child{border-top:1px solid var(--greige)}
+.faq summary{cursor:pointer;list-style:none;padding:20px 0;display:grid;grid-template-columns:1fr auto;gap:16px;
+  font-family:var(--kop);font-weight:600;font-size:1.05rem;letter-spacing:-.02em}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:var(--mono);color:var(--klei)}
+.faq details[open] summary::after{content:"–"}
+.faq p{padding:0 0 22px;color:var(--stof);max-width:64ch}
+
+/* ---------- bestelpaneel ---------- */
+.sluier{position:fixed;inset:0;background:rgba(23,19,15,.42);z-index:70;opacity:0;pointer-events:none;transition:opacity .25s}
+.sluier.aan{opacity:1;pointer-events:auto}
+.paneel{position:fixed;top:0;right:0;height:100dvh;width:min(460px,100%);background:var(--papier);z-index:80;
+  transform:translateX(101%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;
+  border-left:1px solid var(--greige)}
+.paneel.aan{transform:none}
+.paneel-kop{display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom:1px solid var(--greige)}
+.paneel-body{flex:1;overflow-y:auto;padding:20px;display:grid;gap:16px;align-content:start}
+.paneel-voet{padding:20px;border-top:1px solid var(--greige);display:grid;gap:12px;background:var(--wit)}
+.dicht{width:34px;height:34px;border:1px solid var(--greige);border-radius:6px;cursor:pointer;display:grid;place-items:center}
+.dicht:hover{border-color:var(--inkt)}
+.veld{display:grid;gap:6px}
+.veld input,.veld textarea{padding:11px 13px;border:1px solid var(--greige);border-radius:6px;background:var(--wit);
+  font-family:var(--tekst);font-size:.96rem;width:100%}
+.veld input:focus,.veld textarea:focus{border-color:var(--inkt);outline:none}
+.veld textarea{min-height:70px;resize:vertical}
+.schakelaars{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.schakelaars button{padding:11px;border:1px solid var(--greige);border-radius:6px;cursor:pointer;
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase}
+.schakelaars button.aan{background:var(--inkt);color:var(--papier);border-color:var(--inkt)}
+
+/* ---------- smaakkiezer ---------- */
+.kiesvenster{position:fixed;inset:auto 0 0 0;z-index:85;background:var(--papier);border-top:1px solid var(--greige);
+  transform:translateY(101%);transition:transform .3s cubic-bezier(.4,0,.2,1);padding:22px var(--gutter) 30px}
+.kiesvenster.aan{transform:none}
+.kieslijst{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;width:min(100% ,var(--max));margin:18px auto 0}
+.kieskaart{border:1px solid var(--greige);border-radius:10px;background:var(--wit);padding:14px;cursor:pointer;
+  display:grid;gap:8px;justify-items:center;text-align:center;transition:border-color .2s,transform .2s}
+.kieskaart:hover{border-color:var(--inkt);transform:translateY(-2px)}
+.kieskaart svg{width:64px}
+.kieskaart b{font-family:var(--kop);font-weight:600;font-size:.9rem;letter-spacing:-.02em}
+@media(max-width:760px){.kieslijst{grid-template-columns:repeat(2,1fr)}}
+
+/* ---------- balk mobiel ---------- */
+.mobalk{position:fixed;left:0;right:0;bottom:0;z-index:45;background:var(--wit);border-top:1px solid var(--greige);
+  padding:10px var(--gutter) calc(10px + env(safe-area-inset-bottom));display:none;align-items:center;justify-content:space-between;gap:14px}
+@media(max-width:900px){.mobalk{display:flex}body{padding-bottom:72px}}
+
+/* ---------- voet ---------- */
+.voet{background:var(--inkt);color:var(--steen);padding:clamp(44px,6vw,72px) 0 26px}
+.voet-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:32px}
+.voet h4{font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--klei);
+  font-weight:400;margin-bottom:12px}
+.voet ul{list-style:none;padding:0;margin:0;display:grid;gap:9px;font-size:.95rem;color:#CFC7BA}
+.voet a:hover{color:var(--wit)}
+.voet-merk{font-family:var(--kop);font-weight:700;font-size:clamp(1.8rem,4vw,2.6rem);letter-spacing:-.045em}
+.voet-onder{margin-top:38px;padding-top:18px;border-top:1px solid rgba(207,199,186,.24);display:flex;
+  flex-wrap:wrap;gap:12px;justify-content:space-between;font-family:var(--mono);font-size:.66rem;
+  letter-spacing:.1em;text-transform:uppercase;color:#9E958A}
+@media(max-width:760px){.voet-grid{grid-template-columns:1fr}}
+
+/* ---------- melding ---------- */
+#melding{position:fixed;left:50%;bottom:26px;transform:translate(-50%,150%);z-index:95;background:var(--inkt);
+  color:var(--papier);padding:12px 20px;border-radius:6px;font-family:var(--mono);font-size:.74rem;
+  letter-spacing:.06em;transition:transform .3s cubic-bezier(.3,1.3,.5,1);max-width:88vw;text-align:center}
+#melding.aan{transform:translate(-50%,0)}
+@media(max-width:900px){#melding{bottom:86px}}
+
+/* ---------- verschijnen ---------- */
+.js-anim .op{opacity:0;transform:translateY(12px)}
+.js-anim .op.in{opacity:1;transform:none;transition:opacity .55s ease,transform .55s cubic-bezier(.2,.8,.3,1)}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  html{scroll-behavior:auto}
+  .js-anim .op{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div id="voortgang" aria-hidden="true"></div>
+<div id="melding" role="status" aria-live="polite"></div>
+
+<header class="top">
+  <div class="wrap top-in">
+    <a class="merk" href="#boven">Koekenbakker <span>Studio</span></a>
+    <nav class="index" aria-label="Inhoud">
+      <a href="#assortiment"><i>01</i> Assortiment</a>
+      <a href="#doos"><i>02</i> De doos</a>
+      <a href="#bakdag"><i>03</i> Bakdag</a>
+      <a href="#zara"><i>04</i> Zara</a>
+      <a href="#vragen"><i>05</i> Vragen</a>
+    </nav>
+    <button class="doosknop" id="doosKnop">Doos <b id="doosTeller">0/6</b></button>
+  </div>
+</header>
+
+<main id="boven">
+
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-grid">
+        <div>
+          <p class="label">Batch <span id="batchNr">064</span> · vrijdag <span id="batchDatum"></span></p>
+          <h1 style="margin-top:18px">Vijf koekjes.<br>Eén oven.<br><em>Elke vrijdag.</em></h1>
+          <p class="max60 stil" style="margin-top:24px;font-size:1.08rem">Zara bakt één batch per week, in haar eigen keuken. Je stelt een doos van zes samen — vijf kies je zelf, de zesde is van het huis. Op is op.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:28px">
+            <a class="knop" href="#assortiment">Bekijk het assortiment</a>
+            <button class="knop knop--rand" id="snelVullen" type="button">Vul een doos voor me</button>
+          </div>
+        </div>
+        <figure class="toonkoek" style="margin:0">
+          <div class="draai" id="heroKoek" aria-hidden="true"></div>
+          <figcaption class="label">Fig. 1 — De Klassieker, 95 g</figcaption>
+        </figure>
+      </div>
+      <div class="hero-onder">
+        <div><span class="label">Bakdag</span><b>Vrijdag 16:00</b></div>
+        <div><span class="label">Bestellen tot</span><b>Donderdag 20:00</b></div>
+        <div><span class="label">Oplage</span><b>40 koekjes</b></div>
+        <div><span class="label">Levering</span><b>Afhalen of bezorgd</b></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="ticker" aria-hidden="true"><div class="ticker-rij" id="ticker"></div></div>
+
+  <section class="blok" id="assortiment">
+    <div class="wrap">
+      <div class="blokkop op">
+        <span class="nr">01</span>
+        <div>
+          <h2 class="groot">Het assortiment</h2>
+          <p class="stil max60" style="margin-top:10px">Vijf chocoladekoekjes, elk met een eigen deeg. Kies er een om de details te zien.</p>
+        </div>
+        <span class="rechts label">5 smaken · vanaf € 2,75</span>
+      </div>
+      <div class="kiezer">
+        <div role="listbox" aria-label="Koekjes" id="rijen"></div>
+        <div class="detail" id="detail"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="blok blok--papier" id="doos">
+    <div class="wrap">
+      <div class="blokkop op">
+        <span class="nr">02</span>
+        <div>
+          <h2 class="groot">Stel je doos samen</h2>
+          <p class="stil max60" style="margin-top:10px">Zes vakjes per doos. Vul de eerste vijf en het zesde vakje opent zich — dat koekje is van het huis.</p>
+        </div>
+        <span class="rechts label" id="doosLabel">Doos 1 · 0 van 5 gevuld</span>
+      </div>
+      <div class="doosblok">
+        <div>
+          <div class="vakken" id="vakken"></div>
+          <div class="doos-acties" style="margin-top:16px">
+            <button class="knop knop--rand" id="doosErbij" type="button">Doos toevoegen</button>
+            <button class="knop knop--rand" id="doosLeeg" type="button">Leegmaken</button>
+          </div>
+        </div>
+        <div class="doos-info">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+              <span class="label" id="vulTekst">Nog 5 vakjes te gaan</span>
+              <span class="label mono" id="vulCijfer">0/5</span>
+            </div>
+            <div class="balkje"><i id="vulBalk"></i></div>
+          </div>
+          <div class="doos-regels" id="doosRegels"></div>
+          <div class="doos-totaal"><span>Totaal</span><span id="doosTotaal">€ 0,00</span></div>
+          <p class="label" id="doosVoetnoot">Het zesde koekje per doos kost niets.</p>
+          <button class="knop knop--vol" id="naarBestellen" type="button">Bestelling opmaken</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="blok" id="bakdag">
+    <div class="wrap">
+      <div class="blokkop op">
+        <span class="nr">03</span>
+        <div><h2 class="groot">De volgende batch</h2></div>
+        <span class="rechts label">Wekelijks, één keer</span>
+      </div>
+      <div class="batch op">
+        <div class="batch-cel">
+          <span class="label">Oven gaat aan over</span>
+          <div class="klok" id="klok"><span id="kD">0</span><small>d</small><span id="kU">00</span><small>u</small><span id="kM">00</span><small>m</small></div>
+          <p class="stil" style="font-size:.94rem">Vrijdag om 16:00. Bestellingen die vóór donderdag 20:00 binnen zijn, gaan mee.</p>
+        </div>
+        <div class="batch-cel">
+          <span class="label">Batch 064</span>
+          <b><span id="verkocht">18</span>/40</b>
+          <div class="balkje" style="margin-top:2px"><i style="width:45%"></i></div>
+          <p class="stil" style="font-size:.94rem">Zoveel koekjes van deze batch zijn al gereserveerd.</p>
+        </div>
+        <div class="batch-cel">
+          <span class="label">Levering</span>
+          <b>Vrijdag 17–19u</b>
+          <p class="stil" style="font-size:.94rem">Afhalen, of bezorgd op de fiets binnen de stad. Vanaf zes koekjes zonder kosten.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="blok blok--papier" id="zara">
+    <div class="wrap">
+      <div class="blokkop op">
+        <span class="nr">04</span>
+        <div><h2 class="groot">Zara, 16, bakt alles zelf</h2></div>
+        <span class="rechts label">Interview · 4 vragen</span>
+      </div>
+      <div class="interview">
+        <figure class="portret op" style="margin:0">
+          <div class="portret-vlak">
+            <span class="initiaal">Z</span>
+            <span id="portretKoek" aria-hidden="true"></span>
+          </div>
+          <figcaption class="label">Zara — oprichter en enige bakker</figcaption>
+        </figure>
+        <div class="qa op">
+          <div>
+            <h4><span>Wanneer ben je begonnen?</span></h4>
+            <p><span>Op mijn twaalfde, met de mixer van mijn oma. Vier jaar later staat de oven elke vrijdag drie keer achter elkaar aan en is het een echte bestelling geworden in plaats van iets voor thuis.</span></p>
+          </div>
+          <div>
+            <h4><span>Wat maakt jouw koekje anders?</span></h4>
+            <p><span>Het deeg rust 48 uur in de koelkast. Daardoor smaakt het voller en blijft het midden zacht. En ik haal ze er expres een minuut te vroeg uit.</span></p>
+          </div>
+          <div>
+            <h4><span>Waarom maar één bakdag?</span></h4>
+            <p><span>Ik zit op school. Eén batch per week kan ik goed doen — dan is alles vers en hoeft er niets te blijven liggen. Op is echt op.</span></p>
+          </div>
+          <div>
+            <h4><span>Wat wil je hierna?</span></h4>
+            <p><span>Een tweede bakdag, en een seizoenssmaak die maar een paar weken bestaat. Verder blijft het gewoon: roomboter, Belgische chocolade, en zelf bakken.</span></p>
+          </div>
+        </div>
+      </div>
+      <div class="quotes" style="margin-top:clamp(36px,5vw,60px)">
+        <div class="quote"><p>"Nog warm bezorgd op de fiets. Dat is gewoon een ander koekje dan uit de supermarkt."</p><footer class="label">Sem · uit de klas</footer></div>
+        <div class="quote"><p>"Binnen tien minuten was de hele doos leeg. De Karamelbom is gevaarlijk."</p><footer class="label">Fenna · vaste klant</footer></div>
+        <div class="quote"><p>"Wij nemen elke vrijdag zes stuks voor kantoor. De gratis zesde is traditie."</p><footer class="label">Team Nieuwstraat</footer></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="blok" id="vragen">
+    <div class="wrap">
+      <div class="blokkop op">
+        <span class="nr">05</span>
+        <div><h2 class="groot">Vragen</h2></div>
+      </div>
+      <div class="faq op">
+        <details open><summary>Hoe werkt de doos van zes?</summary><p>Je vult vijf vakjes met de smaken die je wilt. Zodra die vol zijn, opent het zesde vakje en kies je daar gratis een koekje bij. Meer nodig? Voeg een tweede doos toe — dan geldt dezelfde regel opnieuw.</p></details>
+        <details><summary>Wanneer wordt er gebakken?</summary><p>Elke vrijdagmiddag om 16:00. Bestel je vóór donderdag 20:00, dan zit je in die batch. Daarna schuif je door naar de week erop.</p></details>
+        <details><summary>Afhalen of bezorgen?</summary><p>Afhalen kan vrijdag tussen 17:00 en 19:00. Bezorgen doet Zara zelf binnen de stad: gratis vanaf zes koekjes, daaronder € 2,50.</p></details>
+        <details><summary>Hoe lang blijven ze goed?</summary><p>Op hun best op de dag zelf. Daarna drie dagen in een gesloten trommel; tien seconden in de magnetron en ze zijn weer zacht. Invriezen kan tot drie maanden.</p></details>
+        <details><summary>Allergenen</summary><p>Alles bevat tarwe, ei, melk en soja. Witte Wolk en Nootje Noir bevatten noten, en er wordt gebakken in een keuken waar noten aanwezig zijn. Geef het door bij je bestelling als er iets speelt.</p></details>
+        <details><summary>Grotere bestelling voor een feest?</summary><p>Vanaf 24 koekjes plant Zara het apart in. Stuur de datum mee bij je bestelling, dan hoor je snel of het past.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="voet">
+  <div class="wrap">
+    <div class="voet-grid">
+      <div>
+        <div class="voet-merk">Koekenbakker</div>
+        <p style="color:#CFC7BA;max-width:36ch;margin-top:10px">Eén batch per week, met de hand gebakken door Zara.</p>
+      </div>
+      <div>
+        <h4>Index</h4>
+        <ul>
+          <li><a href="#assortiment">01 Assortiment</a></li>
+          <li><a href="#doos">02 De doos</a></li>
+          <li><a href="#bakdag">03 Bakdag</a></li>
+          <li><a href="#zara">04 Zara</a></li>
+          <li><a href="#vragen">05 Vragen</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="#" data-social="Instagram">Instagram @dekoekenbakker</a></li>
+          <li><a href="#" data-social="TikTok">TikTok @dekoekenbakker</a></li>
+          <li><a href="#" data-social="E-mail">hoi@dekoekenbakker.nl</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="voet-onder">
+      <span>© <span id="jaar">2026</span> De Koekenbakker</span>
+      <span>Gebakken in eigen keuken</span>
+    </div>
+  </div>
+</footer>
+
+<div class="mobalk">
+  <div><b class="mono" id="mobTotaal">€ 0,00</b><span class="label" id="mobTekst">Doos nog leeg</span></div>
+  <button class="knop" id="mobKnop" type="button">Bestellen</button>
+</div>
+
+<div class="sluier" id="sluier"></div>
+
+<section class="kiesvenster" id="kiesvenster" aria-hidden="true" aria-label="Kies een smaak">
+  <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;gap:16px">
+    <p class="label" id="kiesTitel">Kies een smaak voor vakje 1</p>
+    <button class="dicht" id="kiesDicht" aria-label="Sluiten">✕</button>
+  </div>
+  <div class="kieslijst" id="kieslijst"></div>
+</section>
+
+<aside class="paneel" id="paneel" role="dialog" aria-modal="true" aria-label="Bestelling" aria-hidden="true">
+  <div class="paneel-kop">
+    <div><h3 style="font-size:1.15rem">Bestelling</h3><span class="label" id="paneelSub">0 koekjes</span></div>
+    <button class="dicht" id="paneelDicht" aria-label="Sluiten">✕</button>
+  </div>
+  <div class="paneel-body" id="paneelBody"></div>
+  <div class="paneel-voet">
+    <div class="veld"><label class="label" for="pNaam">Naam</label><input id="pNaam" type="text" autocomplete="name" placeholder="Voor- en achternaam"></div>
+    <div class="veld"><label class="label" for="pContact">Telefoon of e-mail</label><input id="pContact" type="text" autocomplete="tel" placeholder="06 – …"></div>
+    <div class="veld">
+      <label class="label">Levering</label>
+      <div class="schakelaars" id="schakelaars">
+        <button type="button" data-lever="Afhalen" class="aan">Afhalen</button>
+        <button type="button" data-lever="Bezorgen">Bezorgen</button>
+      </div>
+    </div>
+    <div class="veld" id="pAdresVeld" hidden><label class="label" for="pAdres">Adres</label><input id="pAdres" type="text" autocomplete="street-address" placeholder="Straat en huisnummer"></div>
+    <div class="veld"><label class="label" for="pNotitie">Opmerking</label><textarea id="pNotitie" placeholder="Allergieën, ander bezorgmoment, cadeauverpakking…"></textarea></div>
+    <div class="doos-totaal" style="padding-top:6px"><span>Te betalen</span><span id="paneelTotaal">€ 0,00</span></div>
+    <button class="knop knop--vol" id="versturen" type="button">Bestelling versturen</button>
+    <p class="label" style="text-align:center">Betalen bij afhalen of bezorgen</p>
+  </div>
+</aside>
+
+<script>
+(function(){
+"use strict";
+
+/* =====================================================================
+   Instellingen — pas dit blok aan als de gegevens van Zara veranderen.
+   ===================================================================== */
+const CONFIG = {
+  whatsapp: "",                 // bijv. "31612345678" — landcode, geen + of spaties
+  email: "hoi@dekoekenbakker.nl",
+  stad: "de stad",
+  bezorgkosten: 2.50,
+  gratisBezorgenVanaf: 6,
+  bakdag: 5,                    // 0 = zondag, 5 = vrijdag
+  bakuur: 16
+};
+
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+const euro = n => "€ " + n.toLocaleString("nl-NL", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const bewaar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const lees = (k, standaard) => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : standaard; } catch (e) { return standaard; } };
+const rustig = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function melden(tekst){
+  const m = $("#melding");
+  m.textContent = tekst;
+  m.classList.add("aan");
+  clearTimeout(melden._t);
+  melden._t = setTimeout(() => m.classList.remove("aan"), 2600);
+}
+
+/* ---------- koekjes tekenen (vlak, als een zeefdruk) ---------- */
+function rng(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+function rondPad(r, wiebel){
+  const n = 20, p = [];
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2, rr = r * (0.96 + wiebel() * 0.08);
+    p.push([100 + Math.cos(a) * rr, 100 + Math.sin(a) * rr]);
+  }
+  let d = "M" + p[0][0].toFixed(1) + "," + p[0][1].toFixed(1);
+  for (let i = 0; i < p.length; i++){
+    const b = p[(i + 1) % p.length], c = p[(i + 2) % p.length];
+    d += " Q" + b[0].toFixed(1) + "," + b[1].toFixed(1) + " " + ((b[0] + c[0]) / 2).toFixed(1) + "," + ((b[1] + c[1]) / 2).toFixed(1);
+  }
+  return d + "Z";
+}
+
+function koek(k){
+  const r2 = rng(k.seed), rand = rng(k.seed + 31);
+  let s = '<svg viewBox="0 0 200 200" role="img" aria-label="' + k.naam + '" xmlns="http://www.w3.org/2000/svg">';
+  s += '<path d="' + rondPad(86, r2) + '" fill="' + k.tint + '" stroke="#17130F" stroke-width="2.4"/>';
+  s += '<path d="' + rondPad(66, rng(k.seed + 9)) + '" fill="none" stroke="#17130F" stroke-width="1" stroke-opacity=".18"/>';
+  for (let i = 0; i < 9; i++){
+    const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * 62;
+    const x = 100 + Math.cos(a) * d, y = 100 + Math.sin(a) * d;
+    const w = 17 + rand() * 11, h = 13 + rand() * 8, rot = rand() * 90 - 45;
+    s += '<rect x="' + (-w / 2).toFixed(1) + '" y="' + (-h / 2).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1)
+       + '" rx="3" fill="' + k.brok + '" stroke="#17130F" stroke-width="1.6" transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + rot.toFixed(1) + ')"/>';
+  }
+  for (let i = 0; i < 14; i++){
+    const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * 76;
+    s += '<circle cx="' + (100 + Math.cos(a) * d).toFixed(1) + '" cy="' + (100 + Math.sin(a) * d).toFixed(1)
+       + '" r="' + (1.2 + rand() * 1.4).toFixed(1) + '" fill="#17130F" fill-opacity=".22"/>';
+  }
+  return s + '</svg>';
+}
+
+/* ---------- assortiment ---------- */
+const KOEKJES = [
+  { id: "klassieker", nr: "01", naam: "De Klassieker", prijs: 2.75,
+    sub: "Melkchocolade · zeezout",
+    tekst: "Grove brokken melkchocolade in een roomboterdeeg dat 48 uur heeft gerust, afgemaakt met een vlok zeezout.",
+    specs: {Gewicht: "95 g", Doorsnede: "10 cm", Cacao: "36 %", Baktijd: "11 min"},
+    meters: {Cacao: 3, Zoet: 4, Zacht: 4},
+    seed: 11, tint: "#E3C79E", brok: "#4A3527" },
+  { id: "nachtdonker", nr: "02", naam: "Nachtdonker", prijs: 3.00,
+    sub: "70% puur · dubbel cacao",
+    tekst: "Cacaodeeg met pure chocolade van 70%. Bijna zwart, nauwelijks zoet en van binnen nog vloeibaar.",
+    specs: {Gewicht: "95 g", Doorsnede: "10 cm", Cacao: "70 %", Baktijd: "10 min"},
+    meters: {Cacao: 5, Zoet: 2, Zacht: 5},
+    seed: 23, tint: "#6B4A38", brok: "#241812" },
+  { id: "wittewolk", nr: "03", naam: "Witte Wolk", prijs: 3.00,
+    sub: "Witte chocolade · macadamia",
+    tekst: "Witte chocolade met geroosterde macadamia. Romig, zoet en het lichtste koekje van de vijf.",
+    specs: {Gewicht: "95 g", Doorsnede: "10 cm", Cacao: "28 %", Baktijd: "11 min"},
+    meters: {Cacao: 2, Zoet: 5, Zacht: 3},
+    seed: 41, tint: "#EFE2C8", brok: "#FBF6EA" },
+  { id: "karamelbom", nr: "04", naam: "Karamelbom", prijs: 3.25,
+    sub: "Gevuld · zeezoutkaramel",
+    tekst: "Een kern van zeezoutkaramel die eruit loopt zodra je het koekje openbreekt, in melkchocoladedeeg. Warm eten.",
+    specs: {Gewicht: "110 g", Doorsnede: "10 cm", Cacao: "34 %", Baktijd: "12 min"},
+    meters: {Cacao: 3, Zoet: 5, Zacht: 5},
+    seed: 67, tint: "#DFB37E", brok: "#8E5A3B" },
+  { id: "nootjenoir", nr: "05", naam: "Nootje Noir", prijs: 3.25,
+    sub: "Puur · hazelnootcrunch",
+    tekst: "Pure chocolade met een laag hazelnootcrunch, gebakken op een deeg met geroosterde hazelnoot.",
+    specs: {Gewicht: "95 g", Doorsnede: "10 cm", Cacao: "58 %", Baktijd: "11 min"},
+    meters: {Cacao: 4, Zoet: 3, Zacht: 3},
+    seed: 89, tint: "#C9A374", brok: "#2E1F17" }
+];
+const vind = id => KOEKJES.filter(k => k.id === id)[0];
+
+/* ---------- toestand ---------- */
+let gekozen = KOEKJES[0].id;
+let doos = lees("kbs-doos", [null, null, null, null, null, null]);
+let lever = lees("kbs-lever", "Afhalen");
+let kiesVak = -1;
+
+if (!Array.isArray(doos) || doos.length % 6 !== 0 || doos.length === 0) doos = [null, null, null, null, null, null];
+doos = doos.map(v => (v && vind(v) ? v : null));
+
+const isGratis = i => i % 6 === 5;
+const blokVol = blok => [0,1,2,3,4].every(j => doos[blok * 6 + j]);
+const gevuldAantal = () => doos.filter(Boolean).length;
+const betaaldAantal = () => doos.filter((v, i) => v && !isGratis(i)).length;
+const totaalPrijs = () => doos.reduce((n, v, i) => n + (v && !isGratis(i) ? vind(v).prijs : 0), 0);
+
+/* ---------- assortiment tekenen ---------- */
+function tekenRijen(){
+  $("#rijen").innerHTML = KOEKJES.map(function(k){
+    return '<button class="rij" role="option" data-kies="' + k.id + '" aria-selected="' + (k.id === gekozen) + '">'
+      + '<span class="rnr">' + k.nr + '</span>'
+      + '<span><span class="rnaam">' + k.naam + '</span><span class="rsub">' + k.sub + '</span></span>'
+      + '<span class="rprijs">' + euro(k.prijs) + '</span></button>';
+  }).join("");
+}
+
+function tekenDetail(){
+  const k = vind(gekozen);
+  const specs = Object.keys(k.specs).map(n => '<div class="spec"><span>' + n + '</span>' + k.specs[n] + '</div>').join("");
+  const meters = Object.keys(k.meters).map(function(n){
+    return '<div class="meter"><span>' + n + '</span><span class="baan"><i style="width:' + (k.meters[n] / 5 * 100) + '%"></i></span><span>' + k.meters[n] + '/5</span></div>';
+  }).join("");
+  $("#detail").innerHTML =
+      '<div class="detail-top"><span id="detailKoek"></span>'
+    + '<div><span class="label">' + k.nr + ' · ' + k.sub + '</span><h3 style="margin-top:8px">' + k.naam + '</h3>'
+    + '<p class="stil" style="margin-top:12px">' + k.tekst + '</p></div></div>'
+    + '<div class="specs">' + specs + '</div>'
+    + '<div class="meters">' + meters + '</div>'
+    + '<div class="detail-voet"><span class="detail-prijs">' + euro(k.prijs) + '<small>per koekje</small></span>'
+    + '<button class="knop" type="button" data-indoos="' + k.id + '">In je doos</button></div>';
+  $("#detailKoek").innerHTML = koek(k);
+}
+
+/* ---------- doos tekenen ---------- */
+function tekenVakken(){
+  $("#vakken").innerHTML = doos.map(function(v, i){
+    const blok = Math.floor(i / 6), gratis = isGratis(i), open = !gratis || blokVol(blok);
+    const klassen = ["vak"];
+    if (v) klassen.push("gevuld");
+    if (gratis) klassen.push("vak--gratis");
+    if (gratis && open) klassen.push("klaar");
+    if (gratis && !open) klassen.push("vak--slot");
+    const label = gratis ? "Gratis" : String(i % 6 + 1);
+    return '<button class="' + klassen.join(" ") + '" data-vak="' + i + '" aria-label="Vakje ' + label + '">'
+      + '<span class="nrv">' + (gratis ? "GRATIS" : "0" + (i % 6 + 1)) + '</span>'
+      + (v ? koek(vind(v)) + '<span class="naam">' + vind(v).naam + '</span>' : '<span class="plus">+</span>')
+      + '</button>';
+  }).join("");
+}
+
+function ververs(){
+  const betaald = betaaldAantal(), gevuld = gevuldAantal();
+  const blokken = doos.length / 6;
+  const huidigBlok = Math.min(blokken - 1, Math.floor(betaald / 5));
+  const inBlok = [0,1,2,3,4].filter(j => doos[huidigBlok * 6 + j]).length;
+
+  $("#doosTeller").textContent = gevuld + "/" + doos.length;
+  $("#doosLabel").textContent = "Doos " + (huidigBlok + 1) + " · " + inBlok + " van 5 gevuld";
+  $("#vulCijfer").textContent = inBlok + "/5";
+  $("#vulTekst").textContent = inBlok === 5
+    ? "Doos " + (huidigBlok + 1) + " compleet — kies je gratis koekje"
+    : "Nog " + (5 - inBlok) + " vakje" + (5 - inBlok === 1 ? "" : "s") + " in doos " + (huidigBlok + 1);
+  $("#vulBalk").style.width = (inBlok / 5 * 100) + "%";
+
+  const regels = {};
+  doos.forEach(function(v, i){
+    if (!v) return;
+    const sleutel = v + (isGratis(i) ? "|gratis" : "");
+    regels[sleutel] = (regels[sleutel] || 0) + 1;
+  });
+  const sleutels = Object.keys(regels);
+  $("#doosRegels").innerHTML = sleutels.length === 0
+    ? '<div class="doos-regel stil"><span>Nog geen koekjes gekozen</span><span class="p">—</span><span></span></div>'
+    : sleutels.map(function(sleutel){
+        const gratis = sleutel.indexOf("|gratis") > -1;
+        const k = vind(sleutel.split("|")[0]);
+        return '<div class="doos-regel"><span>' + regels[sleutel] + '× ' + k.naam + (gratis ? ' <span class="label">gratis</span>' : '') + '</span>'
+          + '<span class="p">' + (gratis ? "€ 0,00" : euro(regels[sleutel] * k.prijs)) + '</span>'
+          + '<button type="button" data-weg="' + sleutel + '">wis</button></div>';
+      }).join("");
+
+  const bezorgen = lever === "Bezorgen" && gevuld < CONFIG.gratisBezorgenVanaf && gevuld > 0;
+  const totaal = totaalPrijs() + (bezorgen ? CONFIG.bezorgkosten : 0);
+  $("#doosTotaal").textContent = euro(totaalPrijs());
+  $("#paneelTotaal").textContent = euro(totaal);
+  $("#mobTotaal").textContent = euro(totaalPrijs());
+  $("#mobTekst").textContent = gevuld === 0 ? "Doos nog leeg" : gevuld + " koekjes in je doos";
+  $("#paneelSub").textContent = gevuld + " koekje" + (gevuld === 1 ? "" : "s")
+    + (betaald !== gevuld ? " (" + (gevuld - betaald) + " gratis)" : "");
+  $("#doosVoetnoot").textContent = bezorgen
+    ? "Bezorgen kost " + euro(CONFIG.bezorgkosten) + " tot zes koekjes."
+    : "Het zesde koekje per doos kost niets.";
+  $("#pAdresVeld").hidden = lever !== "Bezorgen";
+
+  $("#paneelBody").innerHTML = '<div class="doos-regels">' + $("#doosRegels").innerHTML.replace(/data-weg/g, "data-uit") + '</div>'
+    + '<p class="label">' + lever + (lever === "Bezorgen" ? " · " + CONFIG.stad : " · vrijdag 17–19 uur") + '</p>';
+
+  bewaar("kbs-doos", doos);
+  tekenVakken();
+}
+
+function vulVolgende(id){
+  let plek = -1;
+  for (let i = 0; i < doos.length; i++){ if (!isGratis(i) && !doos[i]){ plek = i; break; } }
+  if (plek === -1){
+    doos = doos.concat([null, null, null, null, null, null]);
+    plek = doos.length - 6;
+    melden("Nieuwe doos geopend.");
+  }
+  doos[plek] = id;
+  const blok = Math.floor(plek / 6);
+  if (blokVol(blok) && !doos[blok * 6 + 5]) melden("Doos vol — kies je gratis koekje in vakje 6.");
+  ververs();
+}
+
+function leegVak(i){
+  const blok = Math.floor(i / 6);
+  doos[i] = null;
+  if (!isGratis(i) && !blokVol(blok)) doos[blok * 6 + 5] = null;   // gratis vakje vervalt weer
+  ververs();
+}
+
+function opsKiezer(i){
+  kiesVak = i;
+  $("#kiesTitel").textContent = isGratis(i) ? "Kies je gratis koekje" : "Kies een smaak voor vakje " + (i % 6 + 1);
+  $("#kieslijst").innerHTML = KOEKJES.map(k =>
+    '<button class="kieskaart" data-smaak="' + k.id + '">' + koek(k) + '<b>' + k.naam + '</b>'
+    + '<span class="label">' + (isGratis(i) ? "gratis" : euro(k.prijs)) + '</span></button>').join("");
+  $("#kiesvenster").classList.add("aan");
+  $("#kiesvenster").setAttribute("aria-hidden", "false");
+  $("#sluier").classList.add("aan");
+}
+function sluitKiezer(){
+  $("#kiesvenster").classList.remove("aan");
+  $("#kiesvenster").setAttribute("aria-hidden", "true");
+  if (!$("#paneel").classList.contains("aan")) $("#sluier").classList.remove("aan");
+  kiesVak = -1;
+}
+function openPaneel(open){
+  $("#paneel").classList.toggle("aan", open);
+  $("#paneel").setAttribute("aria-hidden", open ? "false" : "true");
+  $("#sluier").classList.toggle("aan", open);
+  document.body.style.overflow = open ? "hidden" : "";
+  if (open) setTimeout(() => $("#paneelDicht").focus(), 60);
+}
+
+/* ---------- bestelling ---------- */
+function bestelTekst(){
+  const regels = [];
+  const telling = {};
+  doos.forEach(function(v, i){ if (v){ const s = v + (isGratis(i) ? "|gratis" : ""); telling[s] = (telling[s] || 0) + 1; } });
+  Object.keys(telling).forEach(function(s){
+    const gratis = s.indexOf("|gratis") > -1, k = vind(s.split("|")[0]);
+    regels.push("• " + telling[s] + "× " + k.naam + " — " + (gratis ? "gratis" : euro(telling[s] * k.prijs)));
+  });
+  const gevuld = gevuldAantal();
+  const bezorgen = lever === "Bezorgen" && gevuld < CONFIG.gratisBezorgenVanaf;
+  const totaal = totaalPrijs() + (bezorgen ? CONFIG.bezorgkosten : 0);
+  let t = "Hoi Zara! Ik wil graag bestellen bij De Koekenbakker:\n\n" + regels.join("\n");
+  t += "\n\n" + doos.length / 6 + " doos" + (doos.length / 6 === 1 ? "" : "en") + " · " + gevuld + " koekjes";
+  t += "\nTotaal: " + euro(totaal) + (bezorgen ? " (incl. bezorging)" : "");
+  t += "\n" + lever + (lever === "Bezorgen" ? " — " + ($("#pAdres").value.trim() || "adres volgt") : "");
+  t += "\n\nNaam: " + $("#pNaam").value.trim();
+  t += "\nContact: " + $("#pContact").value.trim();
+  const notitie = $("#pNotitie").value.trim();
+  if (notitie) t += "\nOpmerking: " + notitie;
+  return t;
+}
+
+function versturen(){
+  if (gevuldAantal() === 0){ melden("Je doos is nog leeg."); return; }
+  if (!$("#pNaam").value.trim()){ melden("Vul je naam in."); $("#pNaam").focus(); return; }
+  if (!$("#pContact").value.trim()){ melden("Hoe kan Zara je bereiken?"); $("#pContact").focus(); return; }
+  if (lever === "Bezorgen" && !$("#pAdres").value.trim()){ melden("Vul je bezorgadres in."); $("#pAdres").focus(); return; }
+  const tekst = bestelTekst();
+  if (navigator.clipboard) navigator.clipboard.writeText(tekst).catch(function(){});
+  if (CONFIG.whatsapp){
+    window.open("https://wa.me/" + CONFIG.whatsapp + "?text=" + encodeURIComponent(tekst), "_blank", "noopener");
+    melden("Je bestelling staat klaar in WhatsApp.");
+  } else {
+    window.location.href = "mailto:" + CONFIG.email + "?subject=" + encodeURIComponent("Bestelling De Koekenbakker") + "&body=" + encodeURIComponent(tekst);
+    melden("Bestelling gekopieerd en klaargezet in je mail.");
+  }
+}
+
+/* ---------- bakdag ---------- */
+function volgendeBakdag(){
+  const nu = new Date();
+  const d = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate(), CONFIG.bakuur, 0, 0, 0);
+  let dagen = (CONFIG.bakdag - d.getDay() + 7) % 7;
+  if (dagen === 0 && nu > d) dagen = 7;
+  d.setDate(d.getDate() + dagen);
+  return d;
+}
+function tikTak(){
+  const over = Math.max(0, volgendeBakdag() - new Date());
+  const s = Math.floor(over / 1000);
+  $("#kD").textContent = Math.floor(s / 86400);
+  $("#kU").textContent = String(Math.floor(s / 3600) % 24).padStart(2, "0");
+  $("#kM").textContent = String(Math.floor(s / 60) % 60).padStart(2, "0");
+}
+
+/* ---------- opstarten ---------- */
+function start(){
+  $("#heroKoek").innerHTML = koek(KOEKJES[0]);
+  $("#portretKoek").innerHTML = koek(KOEKJES[3]);
+  tekenRijen();
+  tekenDetail();
+  ververs();
+  tikTak();
+  setInterval(tikTak, 30000);
+
+  const woorden = ["Eén batch per week", "Vijf smaken", "Zesde koekje van het huis", "48 uur gerijpt deeg",
+                   "Belgische chocolade", "Bezorgd in " + CONFIG.stad, "Op is op"];
+  $("#ticker").innerHTML = woorden.concat(woorden).map(w => "<span>" + w + "</span>").join("");
+
+  $("#batchDatum").textContent = volgendeBakdag().toLocaleDateString("nl-NL", {day: "numeric", month: "long"});
+  $("#jaar").textContent = new Date().getFullYear();
+  $$("#schakelaars button").forEach(b => b.classList.toggle("aan", b.dataset.lever === lever));
+
+  if ("IntersectionObserver" in window && !rustig){
+    document.documentElement.classList.add("js-anim");
+    const io = new IntersectionObserver(function(rijen){
+      rijen.forEach(function(r){ if (r.isIntersecting){ r.target.classList.add("in"); io.unobserve(r.target); } });
+    }, {rootMargin: "0px 0px -6% 0px"});
+    $$(".op").forEach(el => io.observe(el));
+    setTimeout(() => $$(".op").forEach(el => el.classList.add("in")), 3500);
+
+    const teller = new IntersectionObserver(function(rijen){
+      rijen.forEach(function(r){
+        if (!r.isIntersecting) return;
+        teller.disconnect();
+        let n = 0;
+        const stap = setInterval(function(){ n += 1; $("#verkocht").textContent = n; if (n >= 18) clearInterval(stap); }, 45);
+      });
+    }, {threshold: .4});
+    teller.observe($("#bakdag"));
+  }
+
+  window.addEventListener("scroll", function(){
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    $("#voortgang").style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + "%";
+  }, {passive: true});
+}
+
+/* ---------- klikken ---------- */
+document.addEventListener("click", function(e){
+  const kies = e.target.closest("[data-kies]");
+  if (kies){ gekozen = kies.dataset.kies; tekenRijen(); tekenDetail(); return; }
+
+  const indoos = e.target.closest("[data-indoos]");
+  if (indoos){ vulVolgende(indoos.dataset.indoos); return; }
+
+  const vak = e.target.closest("[data-vak]");
+  if (vak){
+    const i = +vak.dataset.vak;
+    if (doos[i]) { leegVak(i); return; }
+    if (isGratis(i) && !blokVol(Math.floor(i / 6))){ melden("Vul eerst de vijf vakjes van deze doos."); return; }
+    opsKiezer(i);
+    return;
+  }
+
+  const smaak = e.target.closest("[data-smaak]");
+  if (smaak && kiesVak > -1){ doos[kiesVak] = smaak.dataset.smaak; sluitKiezer(); ververs(); return; }
+
+  const weg = e.target.closest("[data-weg], [data-uit]");
+  if (weg){
+    const sleutel = weg.dataset.weg || weg.dataset.uit;
+    const id = sleutel.split("|")[0], gratis = sleutel.indexOf("|gratis") > -1;
+    for (let i = doos.length - 1; i >= 0; i--){ if (doos[i] === id && isGratis(i) === gratis) doos[i] = null; }
+    doos.forEach(function(v, i){ if (isGratis(i) && v && !blokVol(Math.floor(i / 6))) doos[i] = null; });
+    ververs();
+    return;
+  }
+
+  if (e.target.closest("#doosErbij")){
+    if (doos.length >= 24){ melden("Vanaf vier dozen mailt Zara je liever even persoonlijk."); return; }
+    doos = doos.concat([null, null, null, null, null, null]);
+    ververs();
+    return;
+  }
+  if (e.target.closest("#doosLeeg")){ doos = [null, null, null, null, null, null]; ververs(); melden("Doos leeggemaakt."); return; }
+
+  if (e.target.closest("#snelVullen")){
+    doos = [null, null, null, null, null, null];
+    const keuze = KOEKJES.slice().sort(() => Math.random() - .5);
+    [0,1,2,3,4].forEach(function(j){ doos[j] = keuze[j % keuze.length].id; });
+    doos[5] = keuze[0].id;
+    ververs();
+    document.getElementById("doos").scrollIntoView({behavior: rustig ? "auto" : "smooth"});
+    melden("Doos gevuld — pas 'm gerust aan.");
+    return;
+  }
+
+  if (e.target.closest("#doosKnop, #mobKnop, #naarBestellen")){
+    if (gevuldAantal() === 0){
+      melden("Kies eerst een paar koekjes.");
+      document.getElementById("assortiment").scrollIntoView({behavior: rustig ? "auto" : "smooth"});
+      return;
+    }
+    openPaneel(true);
+    return;
+  }
+  if (e.target.closest("#paneelDicht")){ openPaneel(false); return; }
+  if (e.target.closest("#kiesDicht")){ sluitKiezer(); return; }
+  if (e.target.closest("#sluier")){ sluitKiezer(); openPaneel(false); return; }
+
+  const lev = e.target.closest("[data-lever]");
+  if (lev){
+    lever = lev.dataset.lever;
+    bewaar("kbs-lever", lever);
+    $$("#schakelaars button").forEach(b => b.classList.toggle("aan", b === lev));
+    ververs();
+    return;
+  }
+
+  const soc = e.target.closest("[data-social]");
+  if (soc && soc.getAttribute("href") === "#"){
+    e.preventDefault();
+    melden(soc.dataset.social + " volgt binnenkort.");
+  }
+});
+
+document.addEventListener("keydown", function(e){
+  if (e.key === "Escape"){ sluitKiezer(); openPaneel(false); }
+});
+
+$("#versturen").addEventListener("click", versturen);
+
+try { start(); } catch (fout) { console.error(fout); }
+})();
+</script>
+</body>
+</html>

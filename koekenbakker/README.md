@@ -1,6 +1,8 @@
 # 🍪 De Koekenbakker
 
 De webshop van **Zara** — verse chocoladekoekjes, één bakdag per week.
+Dit is **concept 1**: speels en warm. Het strakke alternatief staat in
+[`koekenbakker-studio/`](../koekenbakker-studio/).
 
 **🔗 De site staat live op:**
 👉 https://blockionaire.github.io/First-series-of-apps-JP/koekenbakker/
