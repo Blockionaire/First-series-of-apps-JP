@@ -624,6 +624,39 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
 .persoonkaart .tk b{display:block; font-size:17px; font-weight:650; letter-spacing:-.01em;}
 .persoonkaart .tk span{font-size:12.5px; color:var(--muted);}
 
+/* ---------- nutri-score & voedingswaarden ---------- */
+.nutri{
+  display:inline-grid; place-items:center; flex:none;
+  width:17px; height:17px; border-radius:5px;
+  font-size:11px; font-weight:800; color:#fff; line-height:1;
+  text-transform:uppercase; letter-spacing:0;
+}
+.nutri.groot{width:46px; height:46px; border-radius:13px; font-size:26px;}
+.nutri.a{background:#038141;} .nutri.b{background:#7ab51d;}
+.nutri.c{background:#c8a207; color:#241d14;} .nutri.d{background:#e08300;}
+.nutri.e{background:#d2371a;}
+
+.voedingkop{
+  display:flex; align-items:center; gap:14px; padding:15px;
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r-l);
+  margin-bottom:16px;
+}
+.voedingkop .tk{flex:1; min-width:0;}
+.voedingkop .tk b{display:block; font-size:13px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--muted);}
+.voedingkop .tk span{font-size:14px; color:var(--ink-2); line-height:1.4; display:block; margin-top:3px;}
+
+.vrij{
+  display:flex; align-items:baseline; gap:10px; padding:10px 15px;
+  border-bottom:1px solid var(--line); font-size:15px;
+}
+.vrij:last-child{border-bottom:none;}
+.vrij .naam{flex:1; min-width:0;}
+.vrij .waarde{font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;}
+.vrij.onder{padding-left:30px; font-size:13.5px; color:var(--ink-2);}
+.vrij.onder .waarde{font-weight:600;}
+.vrij.dik{font-weight:650;}
+
 /* ---------- streepjescode scannen ---------- */
 .scanner{
   position:fixed; inset:0; z-index:98; background:#0d0a06;
@@ -1025,6 +1058,14 @@ function maandNaam(sleutel){
   return naam.charAt(0).toUpperCase() + naam.slice(1);
 }
 
+/* het gekleurde Nutri-Score-blokje */
+const nutriHtml = (letter, klas="") => {
+  const l = String(letter || "").toLowerCase();
+  return /^[a-e]$/.test(l)
+    ? `<span class="nutri ${l} ${klas}" title="Nutri-Score ${l.toUpperCase()}">${l.toUpperCase()}</span>`
+    : "";
+};
+
 /* iconen (inline svg, één stijl) */
 const IK = {
   zoek:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>',
@@ -1058,6 +1099,7 @@ const IK = {
   waarsch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.2 2.6 17.5A1.9 1.9 0 0 0 4.3 20.4h15.4a1.9 1.9 0 0 0 1.7-2.9L13.7 4.2a1.9 1.9 0 0 0-3.4 0Z"/><path d="M12 9.5v4"/><circle cx="12" cy="16.8" r=".9" fill="currentColor"/></svg>',
   sorteer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15M7 19.5 4 16.5M7 19.5l3-3M17 19.5v-15M17 4.5l-3 3M17 4.5l3 3"/></svg>',
   bon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 3.5v17l2.2-1.4 2.1 1.4 2.2-1.4 2.1 1.4 2.2-1.4 2.2 1.4v-17z"/><path d="M8.8 8h6.4M8.8 12h6.4"/></svg>',
+  hart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3S3.8 15.4 3.8 9.6a4.4 4.4 0 0 1 8.2-2.2 4.4 4.4 0 0 1 8.2 2.2c0 5.8-8.2 10.7-8.2 10.7Z"/></svg>',
   streepjes:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.9M17 4h1.9a1.6 1.6 0 0 1 1.6 1.6V7M20.5 17v1.4a1.6 1.6 0 0 1-1.6 1.6H17M7 20H5.1a1.6 1.6 0 0 1-1.6-1.6V17"/><path d="M7.5 8.5v7M10.5 8.5v7M13.5 8.5v7M16.5 8.5v7"/></svg>',
   route:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 20.5v-4a3 3 0 0 1 3-3h5a3 3 0 0 0 3-3v-4"/><circle cx="6.5" cy="4.2" r="2.2"/><circle cx="17.5" cy="19.8" r="2.2"/></svg>',
   later:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v10.2"/><path d="m8.2 10.2 3.8 3.8 3.8-3.8"/><path d="M4.5 19.5h15"/></svg>',
@@ -1457,9 +1499,62 @@ function scanStreepjescode(){
    Eerst wat jullie zelf al gescand hebben, anders Open Food Facts:
    een vrije, open productendatabase met veel Nederlandse boodschappen.
    ===================================================================== */
+const OFF_VELDEN = [
+  "product_name","product_name_nl","brands","quantity","categories_tags",
+  "nutriscore_grade","nova_group","nutriments","serving_size",
+  "ingredients_text_nl","ingredients_text","allergens_tags"
+].join(",");
 const OFF_URL = code =>
   "https://world.openfoodfacts.org/api/v2/product/" + encodeURIComponent(code) +
-  ".json?fields=product_name,product_name_nl,brands,quantity,categories_tags";
+  ".json?fields=" + OFF_VELDEN;
+
+/* de allergenen komen als en:gluten terug */
+const ALLERGEEN = {
+  gluten:"gluten", milk:"melk", eggs:"eieren", nuts:"noten", peanuts:"pinda's",
+  soybeans:"soja", fish:"vis", crustaceans:"schaaldieren", molluscs:"weekdieren",
+  celery:"selderij", mustard:"mosterd", "sesame-seeds":"sesamzaad", lupin:"lupine",
+  "sulphur-dioxide-and-sulphites":"sulfiet"
+};
+
+/* De voedingswaarden zoals ze achterop de verpakking staan. Ontbrekende
+   waarden laten we weg — beter niets dan een verzonnen nul. */
+function pakVoeding(pr){
+  const n = pr.nutriments || {};
+  const getal = sleutel => {
+    const v = n[sleutel];
+    return (typeof v === "number" && isFinite(v)) ? v : null;
+  };
+  const vloeibaar = /(\d\s*)(ml|cl|l|liter)\b/i.test(pr.quantity || "");
+  const waarden = {
+    energieKj:   getal("energy-kj_100g")   ?? getal("energy_100g"),
+    energieKcal: getal("energy-kcal_100g"),
+    vet:         getal("fat_100g"),
+    verzadigd:   getal("saturated-fat_100g"),
+    koolhydraten:getal("carbohydrates_100g"),
+    suikers:     getal("sugars_100g"),
+    vezels:      getal("fiber_100g"),
+    eiwit:       getal("proteins_100g"),
+    zout:        getal("salt_100g")
+  };
+  const ietsGevonden = Object.values(waarden).some(v => v !== null);
+  const allergenen = (pr.allergens_tags || [])
+    .map(t => String(t).split(":").pop())
+    .map(t => ALLERGEEN[t] || t.replace(/-/g, " "))
+    .filter(Boolean);
+  const nutri = (pr.nutriscore_grade || "").toLowerCase();
+  const voeding = {
+    nutri: /^[a-e]$/.test(nutri) ? nutri : null,
+    nova: [1,2,3,4].includes(Number(pr.nova_group)) ? Number(pr.nova_group) : null,
+    per: vloeibaar ? "100 ml" : "100 g",
+    portie: (pr.serving_size || "").trim(),
+    waarden: ietsGevonden ? waarden : null,
+    ingredienten: (pr.ingredients_text_nl || pr.ingredients_text || "").trim(),
+    allergenen
+  };
+  const leeg = !voeding.nutri && !voeding.nova && !voeding.waarden &&
+               !voeding.ingredienten && !voeding.allergenen.length;
+  return leeg ? null : voeding;
+}
 
 async function zoekProduct(code){
   /* 1 · al eens gescand? Dan weten jullie het zelf het beste */
@@ -1484,6 +1579,7 @@ async function zoekProduct(code){
       naam,
       merk: (pr.brands || "").split(",")[0].trim(),
       hoeveelheid: (pr.quantity || "").trim(),
+      voeding: pakVoeding(pr),
       bron: "off"
     };
   }catch(e){ console.error("open food facts", e); return null; }
@@ -1498,6 +1594,7 @@ async function bewaarProduct(code, gegevens){
       naam: gegevens.naam, merk: gegevens.merk || "",
       hoeveelheid: gegevens.hoeveelheid || "",
       cat: gegevens.cat || "overig", winkel: gegevens.winkel || "nvt",
+      voeding: gegevens.voeding || null,
       door: S.ik ? S.ik.id : null, laatst: nu()
     });
   }catch(e){ console.error("product bewaren", e); }
@@ -1944,6 +2041,7 @@ function itemHtml(i){
         ${S.filter.groep === "cat"
           ? `<span class="stuk">${w.em} ${esc(w.naam)}</span>`
           : `<span class="stuk">${c.em} ${esc(c.naam)}</span>`}
+        ${i.nutri ? `<span class="stuk">${nutriHtml(i.nutri)}</span>` : ""}
         ${lid ? `<span class="stuk">${AV.html(lid,"mini")} ${esc(lid.naam.split(" ")[0])}</span>` : ""}
         ${i.af && afLid
           ? `<span class="stuk">${IK.vink} ${esc(afLid.naam.split(" ")[0])} · ${datumKort(i.afOp)}</span>`
@@ -2105,7 +2203,7 @@ function sheetToevoegen(voorinvul){
   const f = Object.assign({
     tekst:"", hoeveelheid:"", winkel:S.filter.winkel || "nvt", cat:S.filter.cat || "overig",
     notitie:"", urgent:false, fotoVb:null, fotoFile:null, catHandmatig:false,
-    streepjescode:null
+    streepjescode:null, voeding:null
   }, voorinvul||{});
 
   const body = `
@@ -2223,6 +2321,7 @@ function sheetToevoegen(voorinvul){
         codevak.innerHTML = `<span class="spinner" style="width:13px;height:13px;border-width:2px;display:inline-block;vertical-align:-2px"></span> Streepjescode ${esc(code)} opzoeken…`;
       }
       const gevonden = await zoekProduct(code);
+      f.voeding = (gevonden && gevonden.voeding) || null;
       if(gevonden){
         const naam = gevonden.merk && !gevonden.naam.toLowerCase().includes(gevonden.merk.toLowerCase())
           ? gevonden.naam + " " + gevonden.merk : gevonden.naam;
@@ -2282,12 +2381,15 @@ function sheetToevoegen(voorinvul){
         const zelfGekozen = f.catHandmatig && f.cat !== zouRaden;
         await nieuwItem({
           tekst, hoeveelheid:f.hoeveelheid.trim(), winkel:f.winkel, cat:f.cat,
-          notitie:f.notitie.trim(), urgent:f.urgent, fotoId
+          notitie:f.notitie.trim(), urgent:f.urgent, fotoId,
+          streepjescode: f.streepjescode || null,
+          nutri: (f.voeding && f.voeding.nutri) || null
         });
         if(zelfGekozen) await leerCategorie(tekst, f.cat);
         if(f.streepjescode){
           await bewaarProduct(f.streepjescode, {
-            naam: tekst, hoeveelheid: f.hoeveelheid.trim(), cat: f.cat, winkel: f.winkel
+            naam: tekst, hoeveelheid: f.hoeveelheid.trim(), cat: f.cat, winkel: f.winkel,
+            voeding: f.voeding || null
           });
         }
         sluitSheet();
@@ -2318,6 +2420,7 @@ function sheetItem(item){
         <div class="item-meta" style="margin-top:7px">
           <span class="stuk">${w.em} ${esc(w.naam)}</span>
           <span class="stuk">${c.em} ${esc(c.naam)}</span>
+          ${item.nutri ? `<span class="stuk">${nutriHtml(item.nutri)} Nutri-Score ${item.nutri.toUpperCase()}</span>` : ""}
           ${item.urgent ? `<span class="vlag">spoed</span>` : ""}
         </div>
       </div>
@@ -2346,6 +2449,14 @@ function sheetItem(item){
         <div class="tk"><b>${item.urgent ? "Spoed eraf halen" : "Markeer als spoed"}</b>
           <span>staat dan bovenaan de lijst</span></div>
       </button>
+      <button class="rij" id="det-voeding">
+        <span class="ik" style="background:var(--groen-zacht); color:var(--groen)">${IK.hart}</span>
+        <div class="tk"><b>Voedingswaarden weergeven</b>
+          <span>${item.streepjescode
+            ? "wat er achterop de verpakking staat"
+            : "scan eerst de verpakking van dit product"}</span></div>
+        <span class="na">${IK.pijl}</span>
+      </button>
       <button class="rij" id="det-bewerk">
         <span class="ik">${IK.potlood}</span>
         <div class="tk"><b>Aanpassen</b><span>naam, winkel, aantal of notitie</span></div>
@@ -2369,6 +2480,15 @@ function sheetItem(item){
       tril(); await DB.zet(PAD.items + "/" + item.id, {urgent: !item.urgent}); sluitSheet();
       toast(item.urgent ? "Spoed eraf" : "Met spoed", item.urgent ? "" : "⚡");
     };
+    $("#det-voeding").onclick = async () => {
+      if(item.streepjescode){ sheetVoeding(item); return; }
+      /* nog geen streepjescode bij deze boodschap — even scannen dus */
+      const code = await scanStreepjescode();
+      if(!code) return;
+      await DB.zet(PAD.items + "/" + item.id, {streepjescode: code});
+      const bij = Object.assign({}, item, {streepjescode: code});
+      sheetVoeding(bij);
+    };
     $("#det-bewerk").onclick = () => sheetBewerk(item);
     $("#det-vast").onclick = async () => {
       const bestaat = S.vast.some(v => v.tekst.toLowerCase() === item.tekst.toLowerCase());
@@ -2381,6 +2501,121 @@ function sheetItem(item){
       await verwijderItem(item); sluitSheet(); toast("Verwijderd");
     };
   }});
+}
+
+
+/* =====================================================================
+   VOEDINGSWAARDEN — wat er achterop de verpakking staat
+   ===================================================================== */
+const NOVA_UITLEG = {
+  1:"onbewerkt of nauwelijks bewerkt", 2:"keukeningrediënt",
+  3:"bewerkt levensmiddel", 4:"sterk bewerkt"
+};
+const getalNL = (n, cijfers=1) => {
+  if(n === null || n === undefined) return null;
+  const afgerond = Math.round(n * Math.pow(10, cijfers)) / Math.pow(10, cijfers);
+  return String(afgerond).replace(".", ",");
+};
+
+function voedingRijen(v){
+  const w = v.waarden || {};
+  const rij = (naam, waarde, eenheid, klas="") =>
+    waarde === null || waarde === undefined ? "" :
+    `<div class="vrij ${klas}"><span class="naam">${naam}</span>
+      <span class="waarde">${getalNL(waarde, eenheid === "g" ? 1 : 0)} ${eenheid}</span></div>`;
+
+  const energie = (w.energieKj !== null && w.energieKj !== undefined) || (w.energieKcal !== null && w.energieKcal !== undefined)
+    ? `<div class="vrij dik"><span class="naam">Energie</span><span class="waarde">${
+        [w.energieKj !== null && w.energieKj !== undefined ? getalNL(w.energieKj,0) + " kJ" : null,
+         w.energieKcal !== null && w.energieKcal !== undefined ? getalNL(w.energieKcal,0) + " kcal" : null]
+        .filter(Boolean).join(" · ")}</span></div>`
+    : "";
+
+  return energie
+    + rij("Vetten", w.vet, "g", "dik")
+    + rij("waarvan verzadigd", w.verzadigd, "g", "onder")
+    + rij("Koolhydraten", w.koolhydraten, "g", "dik")
+    + rij("waarvan suikers", w.suikers, "g", "onder")
+    + rij("Vezels", w.vezels, "g")
+    + rij("Eiwitten", w.eiwit, "g", "dik")
+    + rij("Zout", w.zout, "g", "dik");
+}
+
+function sheetVoeding(item){
+  const code = item.streepjescode;
+
+  const teken = (v, laden) => {
+    const body = laden
+      ? `<div class="midden" style="min-height:180px"><div class="spinner"></div>
+           <span>Voedingswaarden ophalen…</span></div>`
+      : !v
+      ? `<div class="leeg" style="padding:34px 10px"><span class="em">🔍</span>
+           <h3>Niets gevonden</h3>
+           <p>Van dit product staan geen voedingswaarden in de open database.
+              Dat komt vaker voor bij huismerken en verse producten.</p></div>`
+      : `
+        ${v.nutri || v.nova ? `
+        <div class="voedingkop">
+          ${v.nutri ? nutriHtml(v.nutri, "groot") : ""}
+          <div class="tk">
+            ${v.nutri ? `<b>Nutri-Score ${v.nutri.toUpperCase()}</b>
+              <span>A is de gunstigste keuze, E de minst gunstige — binnen dezelfde productgroep.</span>`
+              : `<b>Bewerking</b>`}
+            ${v.nova ? `<span>${v.nova === 4 ? "Sterk bewerkt product" : "NOVA " + v.nova + " · " + NOVA_UITLEG[v.nova]}</span>` : ""}
+          </div>
+        </div>` : ""}
+
+        ${v.waarden ? `
+        <div class="sectie" style="margin-top:0">
+          <div class="sectie-kop"><h2>Per ${esc(v.per)}</h2><span class="lijn"></span>
+            ${v.portie ? `<span class="telw">portie ${esc(v.portie)}</span>` : ""}</div>
+          <div class="lijst">${voedingRijen(v)}</div>
+        </div>` : ""}
+
+        ${v.ingredienten ? `
+        <div class="sectie">
+          <div class="sectie-kop"><h2>Ingrediënten</h2><span class="lijn"></span></div>
+          <div class="lijst"><div style="padding:14px 15px; font-size:14px; line-height:1.55; color:var(--ink-2)">
+            ${esc(v.ingredienten)}</div></div>
+        </div>` : ""}
+
+        ${v.allergenen && v.allergenen.length ? `
+        <div class="sectie">
+          <div class="sectie-kop"><h2>Bevat</h2><span class="lijn"></span></div>
+          <div class="keuzes" style="padding:2px">
+            ${v.allergenen.map(a => `<span class="keuze" style="pointer-events:none">${esc(a)}</span>`).join("")}
+          </div>
+        </div>` : ""}
+
+        <div class="hint" style="margin-top:18px; line-height:1.5">
+          Gegevens uit <b>Open Food Facts</b>, aangeleverd door vrijwilligers. Klopt er iets
+          niet, kijk dan op de verpakking zelf — die is leidend.
+          ${code ? `<br>Streepjescode ${esc(code)}.` : ""}
+        </div>`;
+    sheet({titel: item.tekst, body});
+  };
+
+  if(!code){ teken(null, false); return; }
+
+  teken(null, true);
+  (async () => {
+    let product = null;
+    try{ product = await DB.haal(PAD.producten + "/" + code); }catch(e){}
+    if(product && product.voeding){ teken(product.voeding, false); return; }
+    /* nog niet opgehaald (of van vóór deze versie) — nu alsnog */
+    const vers = await zoekProduct(code);
+    const v = (vers && vers.voeding) || null;
+    if(v) await bewaarProduct(code, {
+      naam: (product && product.naam) || item.tekst,
+      hoeveelheid: (product && product.hoeveelheid) || item.hoeveelheid || "",
+      cat: (product && product.cat) || item.cat, winkel: (product && product.winkel) || item.winkel,
+      voeding: v
+    });
+    if(v && v.nutri && v.nutri !== item.nutri){
+      try{ await DB.zet(PAD.items + "/" + item.id, {nutri: v.nutri}); }catch(e){}
+    }
+    teken(v, false);
+  })();
 }
 
 function sheetBewerk(item){

@@ -41,6 +41,14 @@ wie welke bon betaalde.
   [Open Food Facts](https://world.openfoodfacts.org), een vrije productendatabase.
   Staat het product er niet in, dan typ je de naam er zelf bij en onthoudt de app hem —
   ook voor je huisgenoot. Zo bouwen jullie vanzelf je eigen assortiment op.
+- **Nutri-Score** staat als klein gekleurd blokje (A t/m E) bij de boodschap op de lijst,
+  als de database die kent.
+- **Voedingswaarden weergeven** — tik een gescande boodschap aan en je krijgt de knop.
+  Daarachter staat wat er achterop de verpakking staat: Nutri-Score met uitleg, hoe sterk
+  bewerkt het product is, de tabel per 100 g of 100 ml (energie, vetten waarvan verzadigd,
+  koolhydraten waarvan suikers, vezels, eiwitten en zout), de ingrediënten en waar het
+  product allergenen bevat. Bij een boodschap zonder streepjescode biedt dezelfde knop
+  aan om de verpakking alsnog te scannen.
 - **Snelknoppen**: dingen die je vaker koopt staan als suggestie onder het invoerveld,
   met de winkel en categorie van de vorige keer er meteen bij.
 - **Spoed** ⚡ zet iets bovenaan de lijst.
