@@ -134,7 +134,7 @@ settings page.
 | G | Auditor-assisted walkthrough | `#/interview` | 1 | Auditor conducts; AI observes and suggests, never interrupts |
 | H | **Live walkthrough cockpit** | `#/cockpit` | **Future** | Three panes. Explicitly labelled future state (`00` Product 3) |
 | I | Coverage & missing information | `#/coverage` | 1 | 12 sub-processes, 45 items, fact-level status |
-| J | Generation | `#/generate` | 1 | Seven visible pipeline stages, including a validation stage that *fails* |
+| J | Generation | `#/generate` | 1 | Nine visible pipeline stages, including a validation stage that *fails* |
 | K | Review workspace — narrative | `#/review` | 1 | **The screen. Split-pane, section-level approval, live source panel** |
 | L | Risks | `#/risks` | 1 | AI proposal vs auditor decision, side by side |
 | M | Controls | `#/controls` | 1 | Including the six key-control criteria from `02 §2.7` |
@@ -187,8 +187,8 @@ time and where the product is won or lost.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│  Revenue ▸ Documentation      [Show unresolved only ▢]   [Approve 9 sections]│
-│  9 of 14 sections need a decision · 3 needs source · 1 contradiction          │
+│  Revenue ▸ Documentation     [Show unresolved only ▢]  [Approve 10 sections] │
+│  14 of 14 sections need a decision · 3 need a source · 1 contradictory        │
 ├───────────────────┬──────────────────────────────────────┬───────────────────┤
 │  SECTIONS         │  NARRATIVE                           │  SOURCES          │
 │                   │                                      │                   │
@@ -219,9 +219,9 @@ the count in the label and a confirmation listing what it excludes: anything nee
 source, anything contradictory, anything the auditor has already edited. Bulk approval can
 never sweep up a problem — that is what makes it safe to offer.
 
-**The unresolved filter is the real feature.** With it on, the 14-section document collapses
-to the three sections carrying a *needs source*, the one carrying a contradiction, and the
-sections not yet decided. The claim "review is faster than authoring" is only true if the
+**The unresolved filter is the real feature.** With it on, the document collapses to the
+sections not yet decided — and of those, the four that are *blocked* (three carrying an
+unsupported statement, one carrying a contradiction) are the only ones that need real thought. The claim "review is faster than authoring" is only true if the
 auditor can find the 8% that needs them.
 
 **Regeneration shows a diff.** Regenerating a section produces a side-by-side with changed
@@ -231,8 +231,8 @@ overwritten (`01 §1.5.3`).
 **Keyboard.** `J`/`K` move between sections, `A` approves, `E` edits, `S` opens sources.
 A senior reviewing their fifth engagement should never touch the mouse.
 
-**The effort meter.** The header states the remaining work in decisions: *"9 of 14 sections
-need a decision"*. Not a percentage. The auditor should be able to estimate the time cost
+**The effort meter.** The header states the remaining work in decisions: *"14 of 14 sections
+need a decision"*, falling as you go. Not a percentage. The auditor should be able to estimate the time cost
 of finishing before they start.
 
 ---
