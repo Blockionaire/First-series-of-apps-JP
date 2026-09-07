@@ -1,201 +1,192 @@
 # Design Partner Demo — nine beats, 5–10 minutes
 
-The in-app version of this path runs from the left rail: **Design partner demo**. It sets each
-screen up for you and puts the line to say in a bar at the bottom. `→` and `←` move between
-beats; `Esc` exits. This document is the same path, with the presenter's notes.
+The in-app version runs from the Work screen (*start the guided demo*) or `⌘K → Guided demo`. It
+sets each screen up and puts the line to say at the bottom. `→` and `←` move between beats,
+`Esc` exits. This document is the same path with the presenter's notes.
 
-**Before you start:** open `index.html`, click **Reset demo** in the top right, and check you are
-on the dashboard. The whole prototype runs locally with fictional data — say so once, at the
-start, and then stop talking about it.
+**Before you start:** open `index.html` and press `⌘K → Reset the prototype`. Say once that the
+client is fictional and nothing leaves the browser, then stop talking about the prototype.
 
-**The one-line framing:** *"This is what a Revenue walkthrough could look like if the write-up
-were a review task instead of an authoring task. Everything you see is fictional."*
+**The framing, in one line:** *"This is what a Revenue walkthrough could look like if the
+write-up were a review task instead of an authoring task."*
 
----
-
-## Beat 1 — The auditor's morning · `#/`
-
-**Show:** the *Needs your attention* list.
-
-**Say:** "This is not a dashboard of metrics. Every line is something waiting on a person. Two of
-them are things the system is deliberately refusing to finish — we'll come back to those."
-
-**Do not** explore the other engagements. Move on.
+**If you only have two minutes,** do beats 4, 5 and 6. They are the product.
 
 ---
 
-## Beat 2 — One process, measured · `#/revenue`
+## Beat 1 — One question, not a dashboard · `#/`
 
-**Show:** the metric strip and the coverage bars by sub-process.
+**Show:** the whole screen. Let them look at it for three seconds before you say anything.
 
-**Say:** "Revenue is the only process in scope. Its state is a number, not a feeling: how much of
-the process we understand, how many facts we've established, how many questions are open, how
-many statements can't be supported."
+**Say:** "No sidebar. No tabs. No metric tiles. It opens by telling you the single most useful
+thing to do next, and what else is waiting. Everything else is behind ⌘K."
 
-**If asked what 84% means:** "37 of 44 applicable coverage items. One item is marked not
-applicable with a reason that's written into the file. It measures how complete our
-*understanding* is against the firm's methodology — not how complete the audit is."
+**Press ⌘K** and type three letters. "That's the navigation. Sections, risks, controls, coverage
+areas, sources, other engagements — and commands."
 
 ---
 
-## Beat 3 — What we still do not know · `#/coverage`
+## Beat 2 — What we still don't know · `#/understand`
 
-**Show:** expand **R5 — Invoicing**. Point at item **R5.3**, and at the fact chips under it.
+**Show:** the three gaps, in plain English, each with its actions on the row.
 
-**Say:** "Forty-five coverage items from the firm's own methodology pack. Under each one are the
-facts we have to establish. Here's the invoicing item — it's a mandatory item, and it's only
-partially covered, because one fact is missing: *who reviews the price override report*. The
-client told us the report exists. Nobody could tell us who reads it."
+**Say:** "Everything the walkthrough established, and the three things it didn't. Notice there
+are no IDs, no fact keys and no percentages per sub-process — just what we still don't know and
+what to do about it. Resolving any of these updates the number at the top immediately."
 
-**The point to land:** the system knows what it doesn't know, at the level of a named fact, not a
-vague sense of incompleteness.
+**Then open *Show methodology*.** "And underneath: the 45 coverage items from your own pack, the
+must-know facts, which are mandatory under ISA 240, and the deterministic rule that produced each
+follow-up question. The engine is as complex as your methodology. The screen isn't."
 
----
-
-## Beat 4 — The follow-up nobody would have written down · `#/open-items`
-
-**Show:** `OI-02` (the override reviewer question) and `OI-01` (the contradiction).
-
-**Say:** "That missing fact turned into a question automatically — and look at the label: it came
-from a deterministic rule in the methodology pack, `R5.3.T2`, not from the model's initiative.
-The firm can read the rule.
-
-And above it, something the model *did* find on its own: the controller told us only credit
-control can change a credit limit. The commercial director, in a questionnaire, said he can raise
-one himself by up to fifty thousand euro. Nobody in that engagement had both answers in front of
-them. The system did."
-
-**This is usually where the room goes quiet.** Let it.
+**This is the beat that satisfies a methodology partner.** Give it time if one is in the room.
 
 ---
 
-## Beat 5 — Nine stages, not one prompt · `#/generate`
+## Beat 3 — Nine stages, not one prompt · `#/review`
 
-**Show:** run the pipeline and let it play. It takes about eighteen seconds.
+**Show:** press Start and let it run. About eighteen seconds.
 
 **Say:** "Facts first, then narrative, then risks, then controls, then the six key-control
-criteria. Two of the nine stages are ordinary code, not a model — including stage 8."
+criteria. Two of the nine stages are ordinary code rather than a model."
 
-**Wait for stage 8**, then: "Validation. Every generated statement has to cite a source, and the
-quoted text has to actually occur in that source. Thirty-eight of forty-one passed. Three did
-not."
-
----
-
-## Beat 6 — Where did this sentence come from? · `#/review`
-
-**Show:** section **8, Invoicing**. Hover a source chip, then click it.
-
-**Say:** "This is where the auditor spends their time, so it's where the product is won or lost.
-Every claim carries a source. Hover for the quote. Click, and the exact passage is pinned on the
-right, with the speaker and the timestamp.
-
-In a file review, the question is always *where does this sentence come from?* Today that takes a
-senior twenty minutes and a lot of scrolling. Here it takes two seconds."
-
-**Point out** the section has fourteen statements and one decision. "Approval is per section, not
-per sentence. Ninety approval clicks would just replace writing with clicking."
+**Wait for the validation stage.** "That one is code. Every statement has to cite a source, and
+the quoted text has to actually occur in that source. Thirty-eight passed. Three did not."
 
 ---
 
-## Beat 7 — The system stops itself · `#/review`, section 10
+## Beat 4 — The routine, separated from the judgement · `#/review`
 
-**Show:** the amber statement — *"Credit notes above EUR 5,000 additionally require the approval
-of the financial controller."*
+**Show:** the triage screen. Say nothing for a moment.
 
-**Say:** "Read that sentence. It's plausible, it's well written, it's in the right register — and
-it is entirely invented. No source in this engagement says anything about a five thousand euro
-threshold. It's marked *Needs source*, and look at the section header: the approve button is
-disabled. Not a warning. A stop."
+**Say:** "This is the whole product on one screen, and it happens before anything is asked of
+you. Four things need a person. Ten sections are clean — every statement traced, nothing
+contradictory, nothing edited — and you can accept all ten in one action.
 
-**Click Resolve.** "And the platform will tell you why it produced it: it generalised from the
-other value thresholds in the process, and from the commercial director saying he'd 'expect
-finance to look at' the larger ones. It searched thirty-eight transcript segments, twelve
-questionnaire answers and a hundred and thirty-four document chunks, and found nothing."
-
-**Click *Replace with what the evidence supports*.** The section unblocks.
-
-**The line that matters:** "That is the difference between this and a chatbot. A chatbot would
-have given you that sentence and let you sign it."
+That is the promise: the machine does the routine work and sorts it from the judgement. It
+doesn't ask you to review two hundred paragraphs with equal attention."
 
 ---
 
-## Beat 8 — AI proposes, the auditor decides · `#/risks`
+## Beat 5 — One judgement at a time · `#/review` → Start
 
-**Show:** the risk table, then click into `R-01`.
+**Show:** the contradiction, which the queue puts first.
 
-**Say:** "Eleven risks, mapped to the firm's own library at assertion level. One of them isn't in
-the library at all — the model had to justify why it created a new one, and you can read the
-justification.
+**Say:** "The controller told us only credit control can change a credit limit. The commercial
+director, in a questionnaire, said he can raise one himself by up to fifty thousand euro. Nobody
+in that engagement had both answers in front of them.
 
-Two columns matter here: *AI proposes* and *Auditor decision*. They're deliberately different
-fields with different styling, because only one of them goes in the file as a conclusion."
+Three ways out, and they're all one keypress." **Press 2.**
 
-**Scroll to `R-07`.** "And this one can't be concluded at all — it's blocked by the contradiction
-we saw earlier. The system won't guess, and it won't quietly drop it."
+**Then the unsupported claim.** "Read this sentence. It's plausible, well written, and entirely
+invented — no source says anything about a five thousand euro threshold. The platform will tell
+you why it produced it, and the correction is already written."
 
-**If you have time, go to `#/controls` and click `C-10`.** Show the six key-control criteria with
-two marked *unknown*: "It won't tell you this is a key control, because it can't establish two of
-the six criteria. It generates the follow-up question instead of a lower-confidence answer."
+**Press Enter three times.** "Four judgements, four keystrokes, no mouse."
+
+**The line that matters:** "A chatbot would have given you that sentence and let you sign it."
 
 ---
 
-## Beat 9 — Nothing is signed by the machine · `#/signoff`
+## Beat 6 — Where did this sentence come from? · Read the working paper
 
-**Show:** the seven readiness gates.
+**Show:** click any sentence.
 
-**Say:** "Seven conditions. An unsupported statement, an unresolved contradiction, or an open
-mandatory ISA 240 item each block sign-off on their own. The file records who prepared, who
-reviewed, and that AI assistance was used with the pack and model versions.
+**Say:** "The evidence opens directly beneath the line you're reading — speaker, timestamp, exact
+words. No side panel, no navigation, no losing your place.
 
-The platform never signs anything. That is not a limitation we're apologising for — it's the
-product."
+In a file review the question is always *where does this come from?* Today that's twenty minutes
+of scrolling. Here it's about two seconds."
 
-**Close on:** "The claim isn't that this writes your working paper. It's that reviewing this is
-faster than writing it from scratch, and that it finds the things you'd otherwise find three days
-later, or not at all."
+**Point at the left margin.** "And that's the only navigation the document has: a tick per
+section, coloured where something needs attention."
+
+---
+
+## Beat 7 — Seven decisions in under a minute · Review recommendations
+
+**Show:** the control queue.
+
+**Say:** "Fourteen controls. Not a table of fourteen rows with a pair of buttons in each — one at
+a time, with the reasoning in prose, and the six key-control criteria one click away if you want
+them. Enter accepts the suggestion, N marks it not key."
+
+**Clear five or six with the keyboard.** Then find `C-10`, the monthly management review:
+"This one it refuses to recommend either way, because two of the six criteria can't be
+established. It generates the follow-up question instead of a lower-confidence answer."
+
+**Press ⌘Z.** "And every decision is reversible. Nothing in this product asks 'are you sure?'
+except the sign-off."
+
+---
+
+## Beat 8 — What is holding things up · `#/resolve`
+
+**Show:** the list, ordered by what each item blocks.
+
+**Say:** "Not sorted by type — sorted by consequence. The contradiction at the top is stopping a
+statement, a control and a risk at once. And each one says where it came from: a deterministic
+rule in your methodology, or something the model noticed across two sources."
+
+---
+
+## Beat 9 — Nothing is signed by the machine · `#/complete`
+
+**Show:** the seven conditions.
+
+**Say:** "Seven conditions, each linking to the work that clears it. An unsupported statement, an
+unresolved contradiction or an open mandatory item each block sign-off on their own.
+
+The file records who prepared, who reviewed, and that AI assistance was used with the pack and
+model versions. The platform never signs anything — and that isn't a limitation we're
+apologising for. It's the product."
+
+**Close on:** "The claim isn't that this writes your working paper. It's that reviewing this
+beats writing it, and that it catches the things you'd otherwise find three days later, or not
+at all."
 
 ---
 
 ## Optional tenth beat — the future · `#/cockpit`
 
-Only if the conversation has gone well and there is time.
+Only if the conversation has gone well.
 
-**Say:** "This one is clearly labelled as a future concept — there's no audio, no speech
-recognition and no live model here, and it's some way down the roadmap. But this is where it
-goes: the transcript on the left, coverage filling in live in the middle, and the follow-up
-question on the right *while the person is still in the room*.
+**Say:** "Clearly labelled as a concept — no audio, no speech recognition, no live model, and
+some way down the roadmap. But this is where it goes: transcript on the left, understanding
+filling in live in the middle, and the follow-up question on the right *while the person is
+still in the room*. Everything you've seen so far happens after the meeting."
 
-Everything you've seen up to now happens after the meeting. This is the version where the
-question that surfaces during write-up surfaces during the walkthrough instead."
-
-**Be explicit that it is not built.** Design partners forgive a roadmap. They do not forgive a
+**Be explicit that it is not built.** Design partners forgive a roadmap; they do not forgive a
 demo that implied a capability.
 
 ---
 
-## Questions you will get, and short answers
+## Questions you will get
 
-**"Does the client data go to a model vendor?"**
-In this prototype nothing leaves the browser. In the product, the architecture and data
-classification are in `04-security-privacy-compliance.md`, and EU-resident inference is on the
-path before any client data class is processed.
+**"Does client data go to a model vendor?"**
+Nothing leaves the browser in this prototype. In the product, data classification and EU-resident
+inference are in `04-security-privacy-compliance.md`, and EU inference is on the path before any
+client data is processed.
 
 **"Whose methodology is it?"**
-Yours. The pack is versioned YAML — sub-processes, coverage items, risk and control libraries,
-sample-size tables. It is configuration, not code, and it is pinned per engagement so a pack
-update never changes an approved file.
+Yours. Versioned YAML — sub-processes, coverage items, risk and control libraries, sample-size
+tables. Configuration, not code, pinned per engagement so a pack update never changes an approved
+file. That's what *Show methodology* is showing you.
 
 **"What if the AI is wrong?"**
-It is, regularly — you saw one case. The design assumption is that it will be wrong, so the
-question is whether being wrong is visible and cheap. Grounding validation, the needs-source
-gate, and the fact that nothing enters the file unapproved are all answers to that question.
+It is, regularly — you saw three cases in one process. The design assumes it will be wrong, so
+the question is whether being wrong is visible and cheap. Validation in code, the needs-support
+gate, and nothing entering the file unapproved are all answers to that.
 
-**"How much time does it actually save?"**
-We don't know yet, and we'd rather not guess at you. Today a Revenue process costs four to eight
-hours of senior time. The measurement we care about is whether an auditor prefers reviewing this
-output to writing it themselves — that experiment is running separately from this prototype.
+**"Will my seniors actually use it?"**
+That's the one we care most about. It's built for a 24-year-old who has never been trained on it:
+⌘K, keyboard decisions, undo instead of confirmation dialogs, and no form longer than one field.
+Put your newest joiner in front of it and watch — that's the test that matters.
+
+**"How much time does it save?"**
+We don't know yet and would rather not guess at you. Today a Revenue process costs four to eight
+hours of senior time. What we're measuring is whether an auditor prefers reviewing this output to
+writing it themselves; that experiment runs separately from this prototype.
 
 **"Can I have it?"**
-Not yet. What we want from you is an hour with a senior who does these walkthroughs, and access
-to one anonymised prior-year Revenue working paper.
+Not yet. What we want is an hour with a senior who does these walkthroughs, and one anonymised
+prior-year Revenue working paper.

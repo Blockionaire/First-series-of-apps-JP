@@ -31,7 +31,7 @@ export const subProcesses = [
       f("credit_limit_setter", "known", "Credit control (I. Molenaar)"),
       f("limit_approval_threshold", "known", "CFO above EUR 250,000"),
     ], refs: ["T:seg-15", "T:seg-17", "D:note-1"] },
-    { id: "R1.3", mandatory: true, state: "partial", q: "What contract terms exist, and who approves anything non-standard?", facts: [
+    { id: "R1.3", plain: "How the consignment stock held at the German distributor is treated at period end", mandatory: true, state: "partial", q: "What contract terms exist, and who approves anything non-standard?", facts: [
       f("standard_terms_source", "known", "Standard sales conditions; machine terms from the signed quotation"),
       f("non_standard_clause_approver", "known", "Commercial Director above EUR 100,000"),
       f("unusual_terms_types", "known", "Volume rebates (2 OEM customers); consignment stock at one German distributor"),
@@ -64,7 +64,7 @@ export const subProcesses = [
   ]},
 
   { id: "R3", name: "Credit management", items: [
-    { id: "R3.1", state: "partial", flags: ["contradiction"], q: "Who maintains credit limits and how are changes controlled?", facts: [
+    { id: "R3.1", plain: "Who can change a customer's credit limit — two sources give different answers", state: "partial", flags: ["contradiction"], q: "Who maintains credit limits and how are changes controlled?", facts: [
       f("limit_change_owner", "contradictory", "Credit control only (controller) vs. Commercial Director to EUR 50,000 (questionnaire)"),
       f("limit_change_approval", "contradictory", "CFO above EUR 250,000 — unclear whether any approval applies to the Commercial Director route"),
       f("limit_review_frequency", "unknown"),
@@ -108,7 +108,7 @@ export const subProcesses = [
       f("sequence_control", "known", "Business Central number series, no gaps permitted"),
       f("duplicate_prevention", "known", "One invoice per posted shipment"),
     ], refs: ["T:seg-13", "D:doc-py-3"] },
-    { id: "R5.3", mandatory: true, state: "partial", q: "How is the invoice amount derived, and what prevents it from being wrong?", facts: [
+    { id: "R5.3", plain: "Who reviews the price override report, and what happens when an exception is found", mandatory: true, state: "partial", q: "How is the invoice amount derived, and what prevents it from being wrong?", facts: [
       f("price_source", "known", "Order price, derived from quotation or price list"),
       f("quantity_source", "known", "Posted shipment quantity"),
       f("automated_or_manual", "known", "Automated"),
@@ -121,7 +121,7 @@ export const subProcesses = [
       f("manual_invoice_possible", "known", "Yes — settlements and project milestones"),
       f("manual_invoice_approver", "known", "Financial controller"),
     ], refs: ["T:seg-14"] },
-    { id: "R5.5", state: "open", q: "How is VAT or sales tax determined on an invoice?", facts: [
+    { id: "R5.5", plain: "How VAT is determined on an invoice, including on export sales", state: "open", q: "How is VAT or sales tax determined on an invoice?", facts: [
       f("vat_determination", "unknown"),
       f("export_evidence", "unknown"),
     ], refs: [] },
@@ -193,7 +193,7 @@ export const subProcesses = [
       f("close_calendar", "known", "Ledger closes on working day four"),
       f("late_entry_control", "known", "Only the financial controller may post after close"),
     ], refs: ["T:seg-32"] },
-    { id: "R9.3", state: "open", q: "How are undelivered orders and goods in transit treated at period end?", facts: [
+    { id: "R9.3", plain: "How goods in transit and consignment stock are treated at the reporting date", state: "open", q: "How are undelivered orders and goods in transit treated at period end?", facts: [
       f("goods_in_transit_treatment", "unknown"),
       f("consignment_treatment", "unknown"),
       f("open_order_treatment", "unknown"),
@@ -209,7 +209,7 @@ export const subProcesses = [
       f("interfaces", "known", "Van Dijk despatch file (daily); ServiceTrack to Business Central (nightly)"),
       f("interface_monitoring", "known", "Failure alert to IT; no completeness check on a partially loaded file"),
     ], refs: ["T:seg-19", "T:seg-21", "T:seg-24"] },
-    { id: "R10.3", state: "open", q: "Which controls are automated, and who can change the configuration?", facts: [
+    { id: "R10.3", plain: "Which controls are configured in the system, and who can change that configuration", state: "open", q: "Which controls are automated, and who can change the configuration?", facts: [
       f("automated_control_inventory", "unknown"),
       f("config_change_authority", "unknown"),
       f("config_change_evidence", "unknown"),
@@ -252,7 +252,7 @@ export const subProcesses = [
       f("analysis_performed", "known", "Revenue and gross margin by stream against budget"),
       f("follow_up_evidence", "assumed", "No documented record of investigation or conclusion seen"),
     ], refs: ["T:seg-37"] },
-    { id: "R12.3", state: "partial", q: "Where do the reported numbers come from, and how is that information's completeness and accuracy established?", facts: [
+    { id: "R12.3", plain: "How the completeness and accuracy of the revenue report used by management is established", state: "partial", q: "Where do the reported numbers come from, and how is that information's completeness and accuracy established?", facts: [
       f("report_source", "known", "Business Central revenue and margin reports"),
       f("ipe_completeness_accuracy", "unknown"),
       f("report_change_control", "unknown"),
@@ -299,7 +299,18 @@ export const narrative = [
 
   { id: "N6", n: "6", heading: "Credit management", sub: "R3", blocks: [
     { id: "N6.1", text: "Credit limits are assessed at onboarding on the basis of a Graydon credit report and, for existing customers, the payment history on the account. [[T:seg-15]]" },
-    { id: "N6.2", conflict: true, text: "Authority to change a customer credit limit could not be established. The financial controller stated that only credit control may change a limit, with CFO agreement above EUR 250,000, and credit control confirmed that position. The Commercial Director stated in the questionnaire that he is able to raise a limit by up to EUR 50,000 himself where an order is blocked and he knows the customer. [[conflict:T:seg-17|Q:6|D:note-1]]" },
+    { id: "N6.2", conflict: true,
+      options: [
+        { choice: "controller", label: "Credit control is correct",
+          detail: "Two corroborating sources against one. The Commercial Director's answer is recorded as inconsistent and followed up.",
+          text: "Credit limits are set and changed only by credit control, with the agreement of the CFO above EUR 250,000. [[T:seg-17|D:note-1]]" },
+        { choice: "both", label: "Both are true — record the second route",
+          detail: "The Commercial Director has an override the financial controller was unaware of. This weakens control C-02 and is itself a finding.",
+          text: "Credit limits are set by credit control, with CFO agreement above EUR 250,000. The Commercial Director is additionally able to raise a limit by up to EUR 50,000 where an order is blocked, which the financial controller was not aware of. [[T:seg-17|Q:6]]" },
+        { choice: "unresolved", label: "Leave it open and document the difference",
+          detail: "Records the contradiction as an audit finding. The open item stays live and sign-off stays blocked.",
+          text: "The authority to change a customer credit limit could not be established. Two sources give different answers and the difference has been raised with the entity. [[conflict:T:seg-17|Q:6]]" },
+      ], text: "Authority to change a customer credit limit could not be established. The financial controller stated that only credit control may change a limit, with CFO agreement above EUR 250,000, and credit control confirmed that position. The Commercial Director stated in the questionnaire that he is able to raise a limit by up to EUR 50,000 himself where an order is blocked and he knows the customer. [[conflict:T:seg-17|Q:6|D:note-1]]" },
     { id: "N6.3", text: "An order that breaches the customer's credit limit is blocked by the system and can be released only by credit control. Releases are recorded in a log within Business Central. [[T:seg-18|D:note-1]]" },
   ]},
 
@@ -324,7 +335,9 @@ export const narrative = [
 
   { id: "N10", n: "10", heading: "Credit notes, returns and rebates", sub: "R7", blocks: [
     { id: "N10.1", text: "Credit notes are raised by sales administration and approved by the sales manager. A credit note must reference the original invoice. [[T:seg-26|D:doc-py-5]]" },
-    { id: "N10.2", unsupported: true, text: "Credit notes above EUR 5,000 additionally require the approval of the financial controller. [[none]]",
+    { id: "N10.2", unsupported: true,
+      suggestion: "Credit notes are raised by sales administration and approved by the sales manager. No value threshold requiring finance approval was identified. [[T:seg-26|D:doc-py-5]]",
+      askedText: "We asked whether a value threshold applies above which finance must approve a credit note. No threshold has been established. [[T:seg-26]]", text: "Credit notes above EUR 5,000 additionally require the approval of the financial controller. [[none]]",
       why: "The model generalised from the pattern of value thresholds elsewhere in the process (CFO approval of write-offs above EUR 10,000, Commercial Director approval of quotations above EUR 100,000) and from the Commercial Director's statement that he would \"expect finance to look at\" larger credit notes. No source states a EUR 5,000 threshold." },
     { id: "N10.3", text: "Machines are not returnable under the standard sales conditions. Spare parts may be returned within thirty days, but returns are infrequent and immaterial, and no return provision is recognised. [[Q:11]]" },
     { id: "N10.4", missing: true, text: "We did not obtain evidence of any review of the volume rebate accrual. The financial controller prepares the calculation and releases it without independent review. [[T:seg-29]]" },
@@ -332,7 +345,9 @@ export const narrative = [
 
   { id: "N11", n: "11", heading: "Cash receipt and receivables", sub: "R8", blocks: [
     { id: "N11.1", text: "Bank statements are loaded daily and matched automatically to open invoices on the payment reference. Items that do not match are placed on a suspense list which credit control clears. [[T:seg-30]]" },
-    { id: "N11.2", unsupported: true, text: "Unapplied cash older than sixty days is escalated to the financial controller for investigation. [[none]]",
+    { id: "N11.2", unsupported: true,
+      suggestion: "Receipts that do not match automatically are placed on a suspense list which credit control clears. No ageing threshold or escalation route for unapplied cash was established. [[T:seg-30]]",
+      askedText: "We asked how long unapplied cash may remain on the suspense list and who is informed. No answer has been obtained. [[T:seg-30]]", text: "Unapplied cash older than sixty days is escalated to the financial controller for investigation. [[none]]",
       why: "No source states an ageing threshold or an escalation route for unapplied cash. The transcript establishes only that credit control clears the suspense list." },
     { id: "N11.3", text: "The aged receivables listing is reviewed monthly by the financial controller together with the CFO. Write-offs above EUR 10,000 require CFO approval. [[T:seg-30|T:seg-31]]" },
   ]},
@@ -351,7 +366,9 @@ export const narrative = [
 
   { id: "N14", n: "14", heading: "Monitoring and IT dependencies", sub: "R12", blocks: [
     { id: "N14.1", text: "The financial controller reviews revenue and gross margin by stream against budget each month and discusses the result with the CFO. Variances of approximately EUR 250,000 or more are investigated. [[T:seg-37]]" },
-    { id: "N14.2", unsupported: true, text: "The reports used in this review are produced by Business Central and their completeness and accuracy are confirmed against the general ledger before the review takes place. [[none]]",
+    { id: "N14.2", unsupported: true,
+      suggestion: "The reports used in this review are produced by Business Central. We did not establish how their completeness and accuracy is confirmed. [[T:seg-37]]",
+      askedText: "We asked how the completeness and accuracy of the revenue and margin report is established. No answer has been obtained. [[T:seg-37]]", text: "The reports used in this review are produced by Business Central and their completeness and accuracy are confirmed against the general ledger before the review takes place. [[none]]",
       why: "No source addresses the completeness and accuracy of the information used in the management review. This is the ISA 500 information-produced-by-the-entity question, and it remains open." },
     { id: "N14.3", text: "Fourteen users hold the permission to modify price lists and nine hold the permission to modify customer master data, including two IT service accounts. There is no periodic review of who holds this access. [[T:seg-38|D:doc-al-1]]" },
   ]},

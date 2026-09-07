@@ -1,459 +1,555 @@
-/* K + L. Review workspace — the screen the product is won or lost on.
+/* REVIEW — the surface the product is won or lost on.
 
-   Three columns: section navigator, document, source panel. Approval happens at
-   section level (14 decisions, not ~90), but status is tracked per block so one
-   ungrounded sentence blocks its section. */
+   Three modes:
+     triage  the routine separated from the judgement, before anything is asked
+     focus   one judgement at a time, full width, keyboard-first
+     read    the document, with evidence opening inline beneath the claim
 
-import { esc, cx, btn, tag, panel, note, status, meter, toggle, drawer, sourceChip, empty } from "../ui.js";
-import { ref, sources, transcript, questionnaire } from "../data-sources.js";
-import { narrative } from "../data-model.js";
+   No table, no permanent source panel, no modal. */
+
+import { esc, cx, act as btn, row, dot, chip, more, evidence, empty, callout, link, state } from "../ui.js";
+import { narrative, risks, controls, pipeline, subProcesses } from "../data-model.js";
+import { ref, sources } from "../data-sources.js";
 import * as st from "../state.js";
-import { wsScreen } from "./chrome.js";
+import { screen } from "./shell.js";
 
 const S = st.S;
 
-/* --- Inline provenance parsing --------------------------------------------
-   [[T:seg-13|D:doc-py-3]] · [[none]] · [[conflict:T:seg-17|Q:6]]
-   -------------------------------------------------------------------------- */
+/* --- helpers --------------------------------------------------------------- */
 
-export function blockRefs(b) {
+/** The claim as prose. Reference markers never reach the page: the whole
+ *  sentence is the click target, so the text stays readable. */
+export const prose = (b) =>
+  st.claimText(b).replace(/\[\[.+?\]\]/g, "").replace(/\s+([.,;])/g, "$1").replace(/\s{2,}/g, " ").trim();
+
+export function claimRefs(b) {
   const out = [];
-  const text = st.blockText(b);
   const re = /\[\[(.+?)\]\]/g;
   let m;
-  while ((m = re.exec(text))) {
-    const body = m[1];
-    if (body === "none") continue;
-    body.replace(/^conflict:/, "").split("|").forEach((id) => { if (!out.includes(id)) out.push(id); });
+  while ((m = re.exec(st.claimText(b)))) {
+    if (m[1] === "none") continue;
+    m[1].replace(/^conflict:/, "").split("|").forEach((id) => { if (!out.includes(id)) out.push(id); });
   }
-  const rt = S.blocks[b.id];
-  if (rt?.resolution?.refId && !out.includes(rt.resolution.refId)) out.push(rt.resolution.refId);
-  return out;
+  return out.map(ref).filter(Boolean);
 }
 
-function renderText(b) {
-  const text = st.blockText(b);
-  return esc(text).replace(/\[\[(.+?)\]\]/g, (_, body) => {
-    if (body === "none") {
-      return `<button class="src src--none" data-act="resolve-source" data-block="${esc(b.id)}"
-        title="No source could be validated for this statement">no source</button>`;
-    }
-    const conflict = body.startsWith("conflict:");
-    const ids = body.replace(/^conflict:/, "").split("|");
-    const first = ref(ids[0]);
-    if (!first) return "";
-    const chip = sourceChip({ ...first, conflict }, { pinned: S.pinned === first.id, extra: ids.length - 1 });
-    return conflict
-      ? `${chip}<button class="src src--conflict" data-act="resolve-conflict" data-block="${esc(b.id)}">resolve</button>`
-      : chip;
-  });
-}
+const sectionOfClaim = (id) => narrative.find((s) => s.blocks.some((b) => b.id === id));
 
-/* --- Section navigator ----------------------------------------------------- */
+/* ── Generation ──────────────────────────────────────────────────────────── */
 
-function navigator_() {
-  const n = st.narrativeSummary();
-  return `<div class="ws__nav">
-    <div style="padding:0 16px 10px">
-      <div class="lbl">Sections</div>
-      <div class="tiny dim" style="margin-top:2px">${n.approved + n.rejected} of ${n.sections} decided</div>
+function generateView() {
+  const running = S.generating;
+  const cov = st.coverageSummary();
+
+  const body = `
+    <div class="head">
+      <h1 class="t-title">${running ? "Drafting the documentation" : "Draft the documentation"}</h1>
+      <p class="t-lede" style="margin-top:10px">
+        Nine stages over ${Object.keys(sources).length} sources. Seven ask a model; two are ordinary
+        code. Every stage is validated before the next one runs.
+      </p>
     </div>
-    ${st.visibleSections().map((sec) => {
-      const s = st.sectionState(sec);
-      const blocking = st.sectionBlocking(sec).length;
-      const missing = sec.blocks.filter((b) => st.blockState(b) === "missing").length;
-      const mark = s === "approved" ? `<span class="st st--approved"><i></i></span>`
-        : s === "rejected" ? `<span class="st st--rejected"><i></i></span>`
-        : s === "needs_source" ? `<span class="st st--needssource"><i></i></span>`
-        : s === "contradiction" ? `<span class="st st--contradiction"><i></i></span>`
-        : s === "edited" ? `<span class="st st--edited"><i></i></span>`
-        : `<span class="st st--draft"><i></i></span>`;
-      return `<button class="${cx("navitem", S.section === sec.id && "is-active")}"
-        data-act="select-section" data-id="${esc(sec.id)}">
-        ${mark}
-        <span class="navitem__t">${esc(sec.n)}. ${esc(sec.heading)}</span>
-        ${blocking ? `<span class="tab__c tab__c--${s === "contradiction" ? "alert" : "warn"}">${blocking}</span>`
-          : missing ? `<span class="tab__c">${missing}</span>` : ""}
-      </button>`;
-    }).join("")}
-    ${st.visibleSections().length === 0
-      ? `<div style="padding:24px 16px" class="tiny dim">Every section has been decided.</div>` : ""}
-  </div>`;
-}
 
-/* --- Document -------------------------------------------------------------- */
-
-function blockView(b, sec) {
-  const s = st.blockState(b);
-  const sel = S.selBlock === b.id;
-  const decided = st.sectionDecision(sec);
-  const rt = S.blocks[b.id] || {};
-
-  const flag =
-    s === "needs_source" ? `<div class="doc__flag">${status("needs_source")}
-        <span class="dim">·</span><span class="dim">No source in this engagement supports this statement. It cannot be approved.</span>
-        ${btn("Resolve", "resolve-source", { size: "sm", data: { block: b.id } })}</div>`
-    : s === "contradiction" ? `<div class="doc__flag">${status("contradiction")}
-        <span class="dim">·</span><span class="dim">Two sources give different answers. A decision is required.</span>
-        ${btn("Resolve", "resolve-conflict", { size: "sm", data: { block: b.id } })}</div>`
-    : s === "missing" ? `<div class="doc__flag">${status("missing")}
-        <span class="dim">·</span><span class="dim">Recorded as not obtained — this is documentation, not an error.</span></div>`
-    : s === "edited" ? `<div class="doc__flag">${status("edited", rt.resolution ? "Resolved by the auditor" : "Edited by the auditor")}</div>`
-    : s === "rejected" ? `<div class="doc__flag">${status("rejected")}</div>` : "";
-
-  const actions = sel && !decided && s !== "rejected"
-    ? `<div class="doc__flag" style="margin-top:8px">
-        ${btn("Edit", "edit-block", { size: "sm", data: { block: b.id } })}
-        ${btn("Reject statement", "reject-block", { size: "sm", variant: "danger", data: { block: b.id } })}
-        ${btn("Regenerate", "mock", { size: "sm" })}
-        <span class="tiny dim">${blockRefs(b).length} source${blockRefs(b).length === 1 ? "" : "s"}</span>
-      </div>` : "";
-
-  return `<div class="${cx("doc__blk", `doc__blk--${s}`, sel && "is-sel")}"
-    data-act="select-block" data-block="${esc(b.id)}">
-    ${renderText(b)}${flag}${actions}
-  </div>`;
-}
-
-function document_() {
-  const secs = st.visibleSections();
-  if (!secs.length) {
-    return `<div class="ws__main"><div style="padding:40px">
-      ${empty("Nothing unresolved", "Turn off the filter to see the approved sections.")}</div></div>`;
-  }
-  return `<div class="ws__main" id="doc-scroll"><div class="doc">
-    ${secs.map((sec) => {
-      const s = st.sectionState(sec);
-      const decided = st.sectionDecision(sec);
-      const blocking = st.sectionBlocking(sec);
-      return `<section class="${cx("doc__sec", decided === "approved" && "is-approved")}" id="sec-${esc(sec.id)}">
-        <header class="doc__sechead">
-          <div class="row" style="gap:10px">
-            <span class="doc__hn">${esc(sec.n)}</span>
-            <span class="doc__h">${esc(sec.heading)}</span>
-            ${status(s === "approved" ? "approved" : s === "rejected" ? "rejected"
-              : s === "needs_source" ? "needs_source" : s === "contradiction" ? "contradiction"
-              : s === "edited" ? "edited" : "draft",
-              s === "draft" ? "AI draft" : undefined)}
-          </div>
-          <div class="btn-row">
-            ${decided
-              ? btn("Reopen", "unapprove-section", { size: "sm", variant: "ghost", data: { id: sec.id } })
-              : blocking.length
-                ? btn(`Blocked — ${blocking.length} to resolve`, null, { size: "sm", disabled: true,
-                    title: "A section cannot be approved while it contains an unsupported or contradictory statement" })
-                : btn("Approve section", "approve-section", { size: "sm", variant: "ok", data: { id: sec.id } })}
-            ${decided ? "" : btn("Reject", "reject-section", { size: "sm", data: { id: sec.id } })}
-          </div>
-        </header>
-        <div class="doc__body">
-          ${sec.blocks.map((b) => blockView(b, sec)).join("")}
-        </div>
-      </section>`;
-    }).join("")}
-  </div></div>`;
-}
-
-/* --- Source panel ---------------------------------------------------------- */
-
-function sourcePanel() {
-  const sec = narrative.find((s) => s.id === S.section) || narrative[0];
-  const block = sec.blocks.find((b) => b.id === S.selBlock);
-  const target = block || sec.blocks[0];
-  const ids = target ? blockRefs(target) : [];
-  const bs = target ? st.blockState(target) : "draft";
-
-  return `<aside class="ws__side">
-    <div class="srcpanel__head">
-      <div class="lbl">Sources</div>
-      <div class="tiny dim" style="margin-top:2px">
-        ${target ? `Statement ${esc(target.id)} · ${ids.length} source${ids.length === 1 ? "" : "s"}` : "Select a statement"}
+    ${!running ? `
+      <div class="rows" style="margin-top:36px">
+        ${row({ title: "Areas established", side: `${cov.covered} of ${cov.applicable}` })}
+        ${row({ title: "Process facts", side: `${cov.facts.known} of ${cov.facts.total}` })}
+        ${row({ title: "Methodology pack", side: `<span class="mono">revenue v0.1.0</span>` })}
+        ${row({ title: "Risk and control libraries", side: "30 and 33 entries" })}
       </div>
-    </div>
-    ${bs === "needs_source" ? `<div style="padding:16px 20px">
-      ${note(`<span class="strong">No validated source.</span> The grounding validator could not
-        find this statement in any ingested source. It cannot be approved until it is edited,
-        supported, or rejected.<div style="margin-top:8px">
-        ${btn("Why was this generated?", "explain-nosource", { size: "sm", data: { block: target.id } })}</div>`, "warn")}
-    </div>` : ""}
-    ${ids.length === 0 && bs !== "needs_source"
-      ? `<div style="padding:20px" class="tiny dim">This statement carries no source reference.</div>` : ""}
-    ${ids.map((id) => {
-      const r = ref(id);
-      if (!r) return "";
-      const pinned = S.pinned === id;
-      return `<div class="${cx("srccard", pinned && "is-pinned")}" data-act="pin-source" data-ref="${esc(id)}">
-        <div class="srccard__meta">
-          ${tag(r.short, "mono")}
-          <span class="srccard__kind">${esc(r.sourceName)}</span>
-          ${r.conflict ? tag("Conflicting", "alert") : ""}
-        </div>
-        ${r.speaker ? `<div class="srccard__loc" style="margin-bottom:6px">${esc(r.speaker)} · ${esc(r.locator)}</div>` : ""}
-        ${r.question ? `<div class="tiny dim" style="margin-bottom:4px">Q: ${esc(r.question)}</div>` : ""}
-        <div class="srccard__q">${esc(r.quote)}</div>
-        <div class="srccard__ctx">
-          ${btn("Open full source", "open-source", { size: "sm", variant: "ghost", data: { src: r.sourceId, ref: id } })}
-        </div>
-      </div>`;
-    }).join("")}
-  </aside>`;
-}
-
-/* --- Screen ---------------------------------------------------------------- */
-
-export function review() {
-  if (!S.generated) return notGenerated("documentation");
-  const n = st.narrativeSummary();
-
-  const bar = `<div class="wsbar">
-    <span><span class="strong">${n.pending}</span> of ${n.sections} sections need a decision</span>
-    <span class="dim">·</span>
-    ${n.needsSource.length ? `<span>${status("needs_source", `${n.needsSource.length} need a source`)}</span>` : ""}
-    ${n.contradiction.length ? `<span>${status("contradiction", `${n.contradiction.length} contradictory`)}</span>` : ""}
-    ${n.missing.length ? `<span>${status("missing", `${n.missing.length} not obtained`)}</span>` : ""}
-    <span class="wsbar__spacer"></span>
-    <span style="width:110px">${meter(n.pct, 100, n.pct === 100)}</span>
-    <span class="num tiny">${n.pct}%</span>
-    ${toggle("Show unresolved only", S.unresolvedOnly, "toggle-unresolved")}
-    ${btn(`Approve ${n.bulkReady.length} grounded sections`, "bulk-approve",
-      { size: "sm", variant: n.bulkReady.length ? "primary" : "", disabled: !n.bulkReady.length })}
-  </div>`;
-
-  return wsScreen("documentation",
-    `${bar}<div class="ws">${navigator_()}${document_()}${sourcePanel()}</div>`,
-    { raw: true });
-}
-
-export function notGenerated(what) {
-  return wsScreen("documentation", `
-    ${empty(`No ${what} yet`, "Run the generation pipeline from the Revenue overview first.")}
-    <div style="text-align:center;margin-top:-32px">
-      ${btn("Generate documentation", "nav", { variant: "primary", data: { href: "#/generate" } })}
-    </div>`);
-}
-
-/* --- Drawers --------------------------------------------------------------- */
-
-const findBlock = (id) => {
-  for (const sec of narrative) { const b = sec.blocks.find((x) => x.id === id); if (b) return { b, sec }; }
-  return null;
-};
-
-export function editDrawer(id) {
-  const { b } = findBlock(id);
-  return drawer({
-    title: "Edit statement",
-    sub: `Statement <span class="mono">${esc(b.id)}</span> · your edit is never overwritten by regeneration`,
-    body: `<textarea class="editarea" id="edit-text" rows="7">${esc(st.blockText(b))}</textarea>
-      <p class="tiny dim" style="margin-top:10px">
-        Source references stay in the text as <span class="mono">[[…]]</span> markers. Removing a marker
-        removes the reference. Editing a statement marks it as auditor-authored, and it no longer
-        requires model grounding.</p>`,
-    foot: `<div class="btn-row">
-      ${btn("Save edit", "save-edit", { variant: "primary", data: { block: b.id } })}
-      ${btn("Cancel", "close-drawer")}</div>`,
-  });
-}
-
-export function resolveSourceDrawer(id) {
-  const { b, sec } = findBlock(id);
-  const suggestion = b.id === "N10.2"
-    ? "Credit notes are raised by sales administration and approved by the sales manager. No value threshold requiring finance approval was identified. [[T:seg-26|D:doc-py-5]]"
-    : b.id === "N11.2"
-    ? "Receipts that do not match automatically are placed on a suspense list which credit control clears. No ageing threshold or escalation route for unapplied cash was established. [[T:seg-30]]"
-    : "The reports used in this review are produced by Business Central. We did not establish how their completeness and accuracy is confirmed. [[T:seg-37]]";
-
-  return drawer({
-    title: "This statement has no source",
-    sub: `Statement <span class="mono">${esc(b.id)}</span> in <span class="strong">${esc(sec.heading)}</span>`,
-    wide: true,
-    body: `
-      ${note(`<div class="strong" style="margin-bottom:6px">What the draft says</div>
-        <div style="font-family:var(--font-doc);font-size:14px;line-height:1.6">
-          ${esc(st.blockText(b).replace(/\[\[.+?\]\]/g, "").trim())}</div>`, "warn")}
-
-      <div style="margin-top:18px">
-        <div class="lbl" style="margin-bottom:6px">Why the model produced it</div>
-        <p class="small muted" style="line-height:1.6">${esc(b.why || "")}</p>
-      </div>
-
-      <div style="margin-top:20px">
-        <div class="lbl" style="margin-bottom:6px">Search the evidence base</div>
-        <input class="input" value="credit note approval threshold" readonly>
-        <div class="empty" style="margin-top:10px;padding:22px">
-          <div class="empty__t">No source supports this statement</div>
-          <div class="tiny">Searched 38 transcript segments, 12 questionnaire answers and 134 document
-            chunks across ${Object.keys(sources).length} sources.</div>
-        </div>
-      </div>
-
-      <hr class="hr">
-      <div class="lbl" style="margin-bottom:10px">Resolve</div>
-      <div class="stack-sm">
-        <button class="radio-card" data-act="accept-suggestion" data-block="${esc(b.id)}"
-          data-text="${esc(suggestion)}">
-          <span class="radio-card__r"></span>
-          <span style="flex:1">
-            <span class="small strong">Replace with what the evidence supports</span>
-            <span class="tiny dim" style="display:block;margin-top:4px;font-family:var(--font-doc);font-size:13px">
-              ${esc(suggestion.replace(/\[\[.+?\]\]/g, "").trim())}</span>
-          </span>
-        </button>
-        <button class="radio-card" data-act="edit-block" data-block="${esc(b.id)}">
-          <span class="radio-card__r"></span>
-          <span style="flex:1"><span class="small strong">Write it myself</span>
-          <span class="tiny dim" style="display:block">The statement becomes auditor-authored.</span></span>
-        </button>
-        <button class="radio-card" data-act="raise-item" data-block="${esc(b.id)}">
-          <span class="radio-card__r"></span>
-          <span style="flex:1"><span class="small strong">Ask the client and keep it open</span>
-          <span class="tiny dim" style="display:block">Creates an open item; the section stays blocked until it is answered.</span></span>
-        </button>
-        <button class="radio-card" data-act="reject-block" data-block="${esc(b.id)}">
-          <span class="radio-card__r"></span>
-          <span style="flex:1"><span class="small strong">Reject the statement</span>
-          <span class="tiny dim" style="display:block">Removed from the working paper. The rejection is recorded.</span></span>
-        </button>
-      </div>`,
-  });
-}
-
-export function resolveConflictDrawer(id) {
-  const { b } = findBlock(id);
-  const a = ref("T:seg-17"), c = ref("Q:6"), d = ref("D:note-1");
-  const card = (r, label) => `<div class="srccard" style="border:1px solid var(--line);border-radius:6px;margin-bottom:10px">
-    <div class="srccard__meta">${tag(r.short, "mono")}<span class="srccard__kind">${esc(label)}</span></div>
-    <div class="srccard__loc" style="margin-bottom:6px">${esc(r.speaker)} · ${esc(r.locator)}</div>
-    <div class="srccard__q">${esc(r.quote)}</div>
-  </div>`;
-
-  const optA = "Only credit control may change a customer credit limit, with the agreement of the CFO above EUR 250,000. [[T:seg-17|D:note-1]]";
-  const optB = "Credit limits are set by credit control, with CFO agreement above EUR 250,000. The Commercial Director is additionally able to raise a limit by up to EUR 50,000 where an order is blocked. [[T:seg-17|Q:6]]";
-  const optC = "The authority to change a customer credit limit could not be established. Two sources give different answers and the difference has been raised with the entity. [[conflict:T:seg-17|Q:6]]";
-
-  return drawer({
-    title: "Resolve contradiction",
-    sub: "Coverage item <span class='mono'>R3.1</span> · fact <span class='mono'>limit_change_owner</span>",
-    wide: true,
-    body: `
-      ${note(`Two sources give different answers to the same question. Until this is resolved,
-        control <span class="mono">C-02</span> cannot be assessed and risk <span class="mono">R-07</span>
-        cannot be concluded.`, "alert")}
-      <div style="margin-top:18px">
-        ${card(a, "Walkthrough — financial controller")}
-        ${card(d, "Auditor notes — credit control")}
-        ${card(c, "Questionnaire — commercial director")}
-      </div>
-      <hr class="hr">
-      <div class="lbl" style="margin-bottom:10px">Auditor decision</div>
-      <div class="stack-sm">
-        <button class="radio-card" data-act="pick-conflict" data-block="${esc(b.id)}" data-choice="controller" data-text="${esc(optA)}">
-          <span class="radio-card__r"></span><span style="flex:1">
-          <span class="small strong">The controller and credit control are correct</span>
-          <span class="tiny dim" style="display:block;margin-top:3px">Two corroborating sources against one. The commercial director's answer is recorded as inconsistent.</span></span>
-        </button>
-        <button class="radio-card" data-act="pick-conflict" data-block="${esc(b.id)}" data-choice="both" data-text="${esc(optB)}">
-          <span class="radio-card__r"></span><span style="flex:1">
-          <span class="small strong">Both are true — record the additional route</span>
-          <span class="tiny dim" style="display:block;margin-top:3px">The commercial director has an override the controller was unaware of. This weakens control C-02.</span></span>
-        </button>
-        <button class="radio-card" data-act="pick-conflict" data-block="${esc(b.id)}" data-choice="unresolved" data-text="${esc(optC)}">
-          <span class="radio-card__r"></span><span style="flex:1">
-          <span class="small strong">Leave unresolved and document the difference</span>
-          <span class="tiny dim" style="display:block;margin-top:3px">Records the contradiction as an audit finding and keeps the open item live.</span></span>
-        </button>
-      </div>`,
-  });
-}
-
-export function bulkDrawer() {
-  const n = st.narrativeSummary();
-  const excluded = narrative.filter((s) => !st.sectionDecision(s) && !n.bulkReady.includes(s));
-  return drawer({
-    title: `Approve ${n.bulkReady.length} sections`,
-    sub: "Bulk approval never sweeps up a problem — that is what makes it safe to offer",
-    body: `
-      <div class="lbl" style="margin-bottom:8px">Will be approved — grounded and unedited</div>
-      <div class="stack-sm" style="margin-bottom:20px">
-        ${n.bulkReady.map((s) => `<div class="row" style="gap:8px">${status("grounded", "")}
-          <span class="small">${esc(s.n)}. ${esc(s.heading)}</span>
-          <span class="tiny dim">${s.blocks.length} statements</span></div>`).join("")}
-      </div>
-      ${excluded.length ? `<div class="lbl" style="margin-bottom:8px">Excluded — a decision is required</div>
-      <div class="stack-sm">
-        ${excluded.map((s) => {
-          const bs = st.sectionState(s);
-          return `<div class="row" style="gap:8px">
-            ${status(bs === "contradiction" ? "contradiction" : bs === "needs_source" ? "needs_source" : "edited", "")}
-            <span class="small">${esc(s.n)}. ${esc(s.heading)}</span>
-            <span class="tiny dim">${bs === "contradiction" ? "contains a contradiction"
-              : bs === "needs_source" ? "contains an unsupported statement" : "you have edited it"}</span>
+      <div style="margin-top:30px">
+        ${btn("Start", "run-pipeline", { variant: "go", size: "lg", key: "Enter" })}
+      </div>` : `
+      <div style="margin-top:36px" class="rows">
+        ${pipeline.map((p, i) => {
+          const done = i < S.genStage, now = i === S.genStage;
+          const warn = p.warn && done;
+          return `<div class="rw" style="opacity:${done || now ? 1 : .35};transition:opacity .3s">
+            <span class="rw__lead" style="padding-top:4px;width:18px">
+              ${done ? `<span style="color:${warn ? "var(--warn)" : "var(--ok)"}">${warn ? "!" : "✓"}</span>`
+                : now ? `<span class="dot dot--open"></span>` : `<span class="t-meta">${i + 1}</span>`}</span>
+            <span class="rw__main">
+              <span class="rw__t">${esc(p.name)}</span>
+              <span class="rw__d">${esc(p.desc)}</span>
+              ${done ? `<span class="rw__d" style="color:${warn ? "var(--warn)" : "var(--ink-2)"};margin-top:5px">
+                ${esc(fill(p.out))}</span>` : ""}
+            </span>
+            <span class="rw__side mono" style="font-size:11.5px">${esc(p.model)}</span>
           </div>`;
         }).join("")}
-      </div>` : ""}`,
-    foot: `<div class="btn-row">
-      ${btn(`Approve ${n.bulkReady.length} sections`, "confirm-bulk", { variant: "ok" })}
-      ${btn("Cancel", "close-drawer")}</div>`,
-  });
+      </div>`}
+  `;
+  return screen("review", body);
 }
 
-export function sourceDrawer(srcId, refId) {
-  const s = sources[srcId];
-  const r = refId ? ref(refId) : null;
-  let body = "";
-  if (srcId === "SRC-1") {
-    body = transcript.map((seg) => {
-      const hit = r && r.segId === seg.id;
-      return `<div class="turn" ${hit ? 'id="hit"' : ""}>
-        <div class="turn__who"><b>${esc(seg.who)}</b><span>${esc(seg.role)}</span><span class="mono">${esc(seg.t)}</span></div>
-        <div class="turn__t">${hit ? `<mark style="background:#fdf0c8">${esc(seg.text)}</mark>` : esc(seg.text)}</div>
-      </div>`;
-    }).join("");
-  } else if (srcId === "SRC-2") {
-    body = questionnaire.map((q) => `<div class="turn">
-      <div class="turn__who"><b>Question ${q.n}</b><span class="mono">${esc(q.coverage)}</span></div>
-      <div class="turn__t" style="font-weight:500">${esc(q.q)}</div>
-      <div class="turn__t" style="margin-top:4px;padding-left:12px;border-left:2px solid var(--line-strong)">
-        ${q.a ? esc(q.a) : `<span class="dim">Awaiting response — sent ${esc(q.sentOn)}</span>`}</div>
-    </div>`).join("");
-  } else {
-    body = `<div class="turn"><div class="turn__t">${esc(r ? r.quote : "")}</div></div>
-      <p class="tiny dim" style="margin-top:16px">Document rendering is mocked in this prototype.
-      In the product the page image is shown with the cited span highlighted.</p>`;
+function fill(t) {
+  const cov = st.coverageSummary();
+  return t.replace("FACTS_KNOWN", cov.facts.known).replace("FACTS_UNKNOWN", cov.facts.unknown + cov.facts.contradictory)
+    .replace("RISK_COUNT", risks.length).replace("CONTROL_COUNT", controls.length)
+    .replace("GAP_COUNT", st.controlSummary().gaps).replace("KEY_COUNT", st.controlSummary().suggestedKey)
+    .replace("RCM_ROWS", st.rcmRows().length).replace("OPEN_COUNT", 10);
+}
+
+/* ── Triage ──────────────────────────────────────────────────────────────── */
+
+function triage() {
+  const n = st.narrativeSummary();
+  const rs = st.riskSummary();
+  const cs = st.controlSummary();
+  const queue = st.claimQueue();
+
+  const describe = (b) => {
+    const s = st.claimState(b);
+    return s === "contradiction" ? "Two sources give different answers"
+      : "A statement no source supports";
+  };
+
+  const body = `
+    <div class="head">
+      <h1 class="t-title">Revenue documentation</h1>
+      <p class="t-lede" style="margin-top:10px">
+        ${n.sections} sections and ${n.blocks} statements, drawn from ${Object.keys(sources).length} sources.
+        ${queue.length ? "Most of it is clean." : "Everything is traced."}
+      </p>
+    </div>
+
+    ${queue.length ? `
+      <section class="triage__group">
+        <div class="triage__n"><span class="c">${queue.length}</span> need your judgement</div>
+        <p class="t-sub" style="margin-bottom:18px">
+          Contradictions first, then statements the drafting could not support.</p>
+        <div class="rows">
+          ${queue.map(({ b, sec }) => row({
+            lead: dot(st.claimState(b) === "contradiction" ? "alert" : "warn"),
+            title: esc(sec.heading), detail: describe(b),
+            side: `<span class="t-meta">${esc(b.id)}</span>`,
+            action: "focus-claim", data: { claim: b.id },
+            mod: st.claimState(b) === "contradiction" ? "conflict" : "attn",
+          })).join("")}
+        </div>
+        <div class="acts" style="margin-top:20px">
+          ${btn("Start", "start-focus", { variant: "go", data: { kind: "claims" }, key: "Enter" })}
+        </div>
+      </section>` : `
+      <section class="triage__group">
+        <div class="triage__n">All judgements made</div>
+        <p class="t-sub">Nothing in the documentation is unsupported or contradictory.</p>
+      </section>`}
+
+    ${n.cleanReady.length ? `
+      <section class="triage__group">
+        <div class="triage__n"><span class="c">${n.cleanReady.length}</span> sections are clean</div>
+        <p class="t-sub" style="margin-bottom:16px">
+          Every statement traced to a source, nothing contradictory, nothing edited.</p>
+        <p class="inline-list" style="margin-bottom:18px">
+          ${n.cleanReady.map((s) => `<b>${esc(s.heading)}</b>`).join(" · ")}</p>
+        <div class="acts">
+          ${btn(`Accept all ${n.cleanReady.length}`, "accept-clean", { variant: "ok" })}
+          ${btn("Read them first", "read-mode", { variant: "plain" })}
+        </div>
+      </section>` : ""}
+
+    ${rs.pending ? `
+      <section class="triage__group">
+        <div class="triage__n"><span class="c">${rs.pending}</span> risks to conclude</div>
+        <p class="t-sub" style="margin-bottom:18px">
+          ${rs.significant} proposed as significant · ${rs.fraud} fraud-related ·
+          ${rs.newRisks} outside the firm's library${rs.blocked.length ? ` · ${rs.blocked.length} blocked by an open item` : ""}
+        </p>
+        <div class="acts">
+          ${btn("Review recommendations", "start-focus", { variant: "go", data: { kind: "risks" } })}
+        </div>
+      </section>` : ""}
+
+    ${cs.pending ? `
+      <section class="triage__group">
+        <div class="triage__n"><span class="c">${cs.pending}</span> controls to conclude</div>
+        <p class="t-sub" style="margin-bottom:18px">
+          ${cs.suggestedKey} suggested as key controls · ${cs.unassessable} where the criteria could not
+          be established · ${cs.gaps} control gaps recorded
+        </p>
+        <div class="acts">
+          ${btn("Review recommendations", "start-focus", { variant: "go", data: { kind: "controls" } })}
+        </div>
+      </section>` : ""}
+
+    ${!queue.length && !n.cleanReady.length && !rs.pending && !cs.pending ? `
+      <section class="triage__group">
+        <div class="triage__n">Review complete</div>
+        <p class="t-sub" style="margin-bottom:18px">
+          ${n.approved} sections approved, ${st.riskSummary().decided} risks and
+          ${st.controlSummary().decided} controls concluded.</p>
+        <div class="acts">
+          ${btn("Read the working paper", "read-mode", { variant: "go" })}
+          ${btn("Go to sign-off", "nav", { data: { href: "#/complete" } })}
+        </div>
+      </section>` : ""}
+
+    <div style="margin-top:36px" class="acts">
+      ${btn("Read the working paper", "read-mode", { variant: "plain" })}
+      ${btn("Risk and control matrix", "nav", { variant: "plain", data: { href: "#/matrix" } })}
+    </div>
+  `;
+
+  return screen("review", body);
+}
+
+/* ── Focus: one judgement at a time ──────────────────────────────────────── */
+
+const focusBar = (i, len, label) => `<div class="focus__bar">
+  <button class="b-act b-act--plain b-act--sm" data-act="exit-focus">← Back</button>
+  <span class="sp"></span>
+  <span>${esc(label)}</span>
+  <span class="idline__sep">·</span>
+  <span><b style="color:var(--ink-2)">${i + 1}</b> of ${len}</span>
+</div>`;
+
+function claimFocus() {
+  const queue = st.claimQueue();
+  if (!queue.length) { S.reviewMode = "triage"; return triage(); }
+  const ix = Math.min(S.focusIx, queue.length - 1);
+  const { b, sec } = queue[ix];
+  const isConflict = st.claimState(b) === "contradiction";
+  const idx = sec.blocks.indexOf(b);
+  const before = sec.blocks[idx - 1], after = sec.blocks[idx + 1];
+
+  const ctx = (x) => x && !st.claimBlocking(x)
+    ? `<div class="focus__ctx">${esc(prose(x))}</div>` : "";
+
+  const body = `<div class="focus">
+    ${focusBar(ix, queue.length, sec.heading)}
+    <div class="focus__body"><div class="focus__in">
+
+      <h1 class="t-h" style="margin-bottom:20px">${esc(sec.heading)}</h1>
+      ${ctx(before)}
+      <div class="${cx("focus__item", isConflict && "focus__item--alert")}">${esc(prose(b))}</div>
+      ${ctx(after)}
+
+      ${isConflict ? conflictBody(b) : unsupportedBody(b)}
+
+    </div></div>
+  </div>`;
+
+  return screen("review", body, { raw: true });
+}
+
+function unsupportedBody(b) {
+  return `
+    <div class="focus__why">
+      <h4>No source supports this</h4>
+      <p>Searched 38 transcript segments, 12 questionnaire answers and 134 document chunks across
+      six sources. ${esc(b.why || "")}</p>
+    </div>
+
+    <div class="suggest">
+      <div class="suggest__l">What the evidence actually supports</div>
+      <div class="suggest__t">${esc((b.suggestion || "").replace(/\[\[.+?\]\]/g, "").trim())}</div>
+    </div>
+
+    ${S.editing === b.id ? `
+      <div style="margin-top:20px">
+        <textarea class="field" id="claim-edit" rows="4">${esc(prose(b))}</textarea>
+        <div class="acts" style="margin-top:12px">
+          ${btn("Save", "save-claim", { variant: "go", data: { claim: b.id } })}
+          ${btn("Cancel", "cancel-edit", { variant: "plain" })}
+        </div>
+      </div>`
+    : `<div class="focus__acts">
+        ${btn("Use this", "use-suggestion", { variant: "go", data: { claim: b.id }, key: "Enter" })}
+        ${btn("Write my own", "edit-claim", { data: { claim: b.id }, key: "E" })}
+        ${btn("Ask the client", "ask-about", { data: { claim: b.id }, key: "A" })}
+        ${btn("Reject", "reject-claim", { data: { claim: b.id }, key: "R" })}
+      </div>`}
+
+    ${more("gr", "Show what the validator checked", `<div class="meth">
+      <dl>
+        <dt>rule 1</dt><dd>Every statement carries at least one evidence reference — <span style="color:var(--warn)">failed</span></dd>
+        <dt>rule 2</dt><dd>Each reference resolves inside this engagement — not reached</dd>
+        <dt>rule 3</dt><dd>The quoted text occurs in the referenced source — not reached</dd>
+        <dt>rule 4</dt><dd>Library references exist in pack revenue v0.1.0 — passed</dd>
+      </dl>
+      <p class="t-meta" style="margin-top:12px">Validation runs in code, not in the model. A failure sets
+      <span class="mono">grounding = needs_source</span> and raises a flag — never a silent drop.</p>
+    </div>`, S.disclosed.gr)}
+  `;
+}
+
+function conflictBody(b) {
+  const a = ref("T:seg-17"), c = ref("Q:6"), d = ref("D:note-1");
+  const card = (r, cls, who) => `<div class="vs ${cls}">
+    <div class="vs__who">${esc(who)}</div>
+    <div class="vs__meta">${esc(r.sourceName)} · ${esc(r.locator)}</div>
+    <div class="vs__q">&ldquo;${esc(r.quote)}&rdquo;</div>
+  </div>`;
+
+  return `
+    <div class="focus__why">
+      <h4>Two sources give different answers</h4>
+      <p>Until this is settled, control <span class="mono">C-02</span> cannot be assessed and risk
+      <span class="mono">R-07</span> cannot be concluded.</p>
+    </div>
+
+    <div class="versus">
+      ${card(a, "vs--a", "Financial controller")}
+      ${card(c, "vs--b", "Commercial Director")}
+    </div>
+    <div style="margin-top:14px">${card(d, "vs--a", "Credit control, on a follow-up call")}</div>
+
+    <div class="focus__acts" style="flex-direction:column;align-items:stretch;gap:10px">
+      ${(b.options || []).map((o, i) => `
+        <button class="rw" data-act="pick-conflict" data-claim="${esc(b.id)}"
+          data-choice="${esc(o.choice)}" data-text="${esc(o.text)}"
+          style="border-bottom:1px solid var(--line)">
+          <span class="rw__lead"><span class="chip">${i + 1}</span></span>
+          <span class="rw__main">
+            <span class="rw__t">${esc(o.label)}</span>
+            <span class="rw__d">${esc(o.detail)}</span>
+          </span>
+        </button>`).join("")}
+    </div>`;
+}
+
+function riskFocus() {
+  const q = st.riskSummary().queue;
+  if (!q.length) { S.reviewMode = "triage"; return triage(); }
+  const ix = Math.min(S.focusIx, q.length - 1);
+  const r = q[ix];
+  const linked = controls.filter((c) => c.risks.includes(r.id));
+  const refs = claimRefsFrom(r.refs);
+
+  const body = `<div class="focus">
+    ${focusBar(ix, q.length, "Risks")}
+    <div class="focus__body"><div class="q">
+      <h1 class="q__t">${esc(r.title)}</h1>
+      <p class="q__d">${esc(r.desc)}</p>
+
+      <div class="q__block">
+        <h4>Why this was identified here</h4>
+        <p>${esc(r.drivers)}</p>
+      </div>
+
+      ${r.newJustification ? `<div class="q__flag">
+        <b>Not in the firm's risk library.</b> ${esc(r.newJustification)}</div>` : ""}
+
+      <dl class="q__facts">
+        <div class="q__fact"><dt>Assertions</dt><dd>${r.assertions.map((a) => esc(a.replace(/_/g, " "))).join(", ")}</dd></div>
+        <div class="q__fact"><dt>Risk factors</dt><dd>${r.factors.map((a) => esc(a.replace(/_/g, " "))).join(", ")}</dd></div>
+        <div class="q__fact"><dt>Sub-process</dt><dd>${esc(subProcesses.find((s) => s.id === r.sub)?.name || r.sub)}</dd></div>
+        ${linked.length ? `<div class="q__fact"><dt>Addressed by</dt><dd>${linked.map((c) => esc(c.title)).join("; ")}</dd></div>`
+          : `<div class="q__fact"><dt>Addressed by</dt><dd style="color:var(--alert)">No control identified</dd></div>`}
+      </dl>
+
+      ${more("rsrc", `Supported by ${refs.length} sources`, evidence(refs), S.disclosed.rsrc)}
+
+      <div class="q__sug">
+        <span class="l">Suggested</span>
+        <span class="v">${r.rating === "higher" ? "Higher" : r.rating === "moderate" ? "Moderate" : "Lower"} inherent risk${
+          r.significant ? " · significant risk" : ""}</span>
+      </div>
+      <div class="q__acts">
+        ${btn("Accept", "decide-risk", { variant: "go", data: { id: r.id, d: "accepted" }, key: "Enter" })}
+        ${btn("Accept as modified", "decide-risk", { data: { id: r.id, d: "modified" }, key: "M" })}
+        ${btn("Reject", "decide-risk", { data: { id: r.id, d: "rejected" }, key: "R" })}
+        <span class="sp"></span>
+        ${btn("Skip", "focus-next", { variant: "plain" })}
+      </div>
+    </div></div>
+  </div>`;
+
+  return screen("review", body, { raw: true });
+}
+
+const CRIT = {
+  addresses_rmm: "Addresses an assessed risk at assertion level",
+  precision: "Precise enough to detect a material misstatement",
+  evidence_of_operation: "Evidence exists that it operated",
+  owner_competence_authority: "Owner has the authority to act on exceptions",
+  it_dependencies_identified: "IT dependencies and information used are identified",
+  not_redundant: "Not redundant with a stronger control",
+};
+
+function controlFocus() {
+  const q = st.controlSummary().queue;
+  if (!q.length) { S.reviewMode = "triage"; return triage(); }
+  const ix = Math.min(S.focusIx, q.length - 1);
+  const c = q[ix];
+  const refs = claimRefsFrom(c.refs);
+  const linked = risks.filter((r) => c.risks.includes(r.id));
+  const unmet = Object.entries(c.criteria).filter(([, v]) => v !== "met");
+
+  const NAT = { manual: "Manual", automated: "Automated", it_dependent_manual: "IT-dependent manual" };
+  const FRQ = { per_transaction: "Per transaction", daily: "Daily", weekly: "Weekly", monthly: "Monthly",
+    quarterly: "Quarterly", annual: "Annual", event_driven: "Event-driven" };
+
+  const body = `<div class="focus">
+    ${focusBar(ix, q.length, "Controls")}
+    <div class="focus__body"><div class="q">
+      <h1 class="q__t">${esc(c.title)}</h1>
+      <p class="q__d">${esc(c.desc)}</p>
+
+      <div class="q__block">
+        <h4>${c.keyProposal === true ? "Why this may be a key control"
+          : c.keyProposal === false ? "Why this is probably not a key control"
+          : "Why this cannot be assessed"}</h4>
+        <p>${esc(c.rationale)}</p>
+      </div>
+
+      <dl class="q__facts">
+        <div class="q__fact"><dt>Owner</dt><dd>${esc(c.owner || "Not established")}</dd></div>
+        <div class="q__fact"><dt>Type</dt><dd>${c.type === "preventive" ? "Preventive" : "Detective"} · ${esc(NAT[c.nature])} · ${esc(FRQ[c.frequency])}</dd></div>
+        <div class="q__fact"><dt>Addresses</dt><dd>${linked.length ? linked.map((r) => esc(r.title)).join("; ") : "No assessed risk linked"}</dd></div>
+        <div class="q__fact"><dt>Evidence it operated</dt><dd>${c.evidenceOfOperation ? esc(c.evidenceOfOperation)
+          : `<span style="color:var(--warn)">Not established</span>`}</dd></div>
+        ${c.ipe ? `<div class="q__fact"><dt>Information used</dt><dd>${esc(c.ipe)}${
+          c.ipeNote ? `<div class="t-meta" style="margin-top:3px">${esc(c.ipeNote)}</div>` : ""}</dd></div>` : ""}
+      </dl>
+
+      ${more("csrc", `Supported by ${refs.length} sources`, evidence(refs), S.disclosed.csrc)}
+
+      ${c.blocked ? `<div class="q__flag q__flag--alert"><b>Blocked.</b> ${esc(c.blocked)}</div>` : ""}
+      ${!c.blocked && unmet.length ? `<div class="q__flag">
+        <b>${unmet.length === 1 ? "One criterion is not met" : `${unmet.length} criteria are not met`}.</b>
+        ${unmet.map(([k]) => esc(CRIT[k].toLowerCase())).join("; ")}.
+        ${c.followUp ? " " + esc(c.followUp) : ""}</div>` : ""}
+
+      ${more("crit", "Show the six criteria", `<div class="meth">
+        ${Object.entries(c.criteria).map(([k, v]) => `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)">
+          <span style="flex:1;color:var(--ink-2)">${esc(CRIT[k])}</span>
+          ${v === "met" ? state("approved", "Met") : v === "not_met" ? state("rejected", "Not met") : state("needs_source", "Unknown")}
+        </div>`).join("")}
+        <p class="t-meta" style="margin-top:12px">A criterion that cannot be established produces a
+        follow-up question, never a lower-confidence conclusion.</p>
+      </div>`, S.disclosed.crit)}
+
+      <div class="q__sug">
+        <span class="l">Suggested</span>
+        <span class="v">${c.keyProposal === true ? "Key control"
+          : c.keyProposal === false ? "Not a key control" : "Cannot be assessed"}</span>
+      </div>
+      <div class="q__acts">
+        ${btn(c.keyProposal === true ? "Accept — key control" : c.keyProposal === false ? "Accept — not key" : "Leave undecided",
+          "decide-control", { variant: "go", key: "Enter",
+          data: { id: c.id, d: c.keyProposal === true ? "key" : c.keyProposal === false ? "not_key" : "undecided" } })}
+        ${c.keyProposal !== true ? btn("Key control", "decide-control", { data: { id: c.id, d: "key" }, key: "K" }) : ""}
+        ${c.keyProposal !== false ? btn("Not key", "decide-control", { data: { id: c.id, d: "not_key" }, key: "N" }) : ""}
+        ${c.keyProposal !== null ? btn("Undecided", "decide-control", { data: { id: c.id, d: "undecided" }, key: "U" }) : ""}
+        <span class="sp"></span>
+        ${btn("Skip", "focus-next", { variant: "plain" })}
+      </div>
+    </div></div>
+  </div>`;
+
+  return screen("review", body, { raw: true });
+}
+
+const claimRefsFrom = (ids) => ids.map(ref).filter(Boolean);
+
+/* ── Read: the document ──────────────────────────────────────────────────── */
+
+function claimView(b, sec) {
+  const s = st.claimState(b);
+  const open = S.openClaim === b.id;
+  const refs = claimRefs(b);
+  const decided = st.sectionDecision(sec);
+  const mod = s === "needs_source" ? "warn" : s === "contradiction" ? "alert"
+    : s === "absent" ? "absent" : s === "rejected" ? "gone" : s === "edited" ? "edited" : "";
+
+  if (S.editing === b.id) {
+    return `<div class="claim is-open" style="cursor:default">
+      <textarea class="field" id="claim-edit" rows="4">${esc(prose(b))}</textarea>
+      <div class="acts" style="margin-top:12px">
+        ${btn("Save", "save-claim", { variant: "go", size: "sm", data: { claim: b.id } })}
+        ${btn("Cancel", "cancel-edit", { variant: "plain", size: "sm" })}
+      </div>
+    </div>`;
   }
-  return drawer({
-    title: s.name, sub: `${esc(s.detail)}<br>${esc(s.participants)}`, wide: true, body,
-  });
+
+  const note =
+    s === "needs_source" ? `<div class="claim__note"><span class="state state--warn">
+        <i class="dot dot--warn"></i>No source supports this</span>
+        ${btn("Resolve", "focus-claim", { size: "sm", data: { claim: b.id } })}</div>`
+    : s === "contradiction" ? `<div class="claim__note"><span class="state state--alert">
+        <i class="dot dot--alert"></i>Two sources disagree</span>
+        ${btn("Compare", "focus-claim", { size: "sm", data: { claim: b.id } })}</div>`
+    : s === "absent" ? `<div class="claim__note"><i class="dot dot--open"></i>
+        Recorded as not obtained — this is documentation, not an error</div>`
+    : s === "edited" ? `<div class="claim__note"><i class="dot"></i>Edited by you</div>`
+    : s === "rejected" ? `<div class="claim__note"><i class="dot"></i>Removed from the working paper</div>`
+    : "";
+
+  return `<div class="${cx("claim", mod && "claim--" + mod, open && "is-open")}"
+      data-act="toggle-claim" data-claim="${esc(b.id)}">
+      ${esc(prose(b))}${note}
+    </div>
+    ${open ? evidence(refs, {
+      footer: `${refs.length ? `<span class="t-meta">${refs.length} source${refs.length === 1 ? "" : "s"}</span>` : ""}
+        <span class="sp"></span>
+        ${decided ? "" : btn("Edit", "edit-claim", { variant: "plain", size: "sm", data: { claim: b.id } })}
+        ${decided ? "" : btn("Reject", "reject-claim", { variant: "plain", size: "sm", data: { claim: b.id } })}
+        ${btn("Open full source", "mock", { variant: "plain", size: "sm" })}`,
+    }) : ""}`;
 }
 
-export function explainDrawer(blockId) {
-  const found = blockId ? findBlock(blockId) : null;
-  const b = found?.b;
-  return drawer({
-    title: "Why this was flagged",
-    sub: "Grounding validation runs in code, not in the model",
-    body: `
-      <p class="small" style="line-height:1.7">Every generated statement must cite at least one source,
-      and the quote it cites must actually occur in that source after normalisation. This statement
-      cited nothing that could be validated, so it was marked
-      <span class="strong">Needs source</span> rather than dropped silently.</p>
-      ${b?.why ? `<div style="margin-top:16px">${note(`<span class="strong">Most likely origin.</span> ${esc(b.why)}`, "warn")}</div>` : ""}
-      <hr class="hr">
-      <div class="lbl" style="margin-bottom:8px">The rules that ran</div>
-      <table class="tbl tbl--dense"><tbody>
-        ${[
-          ["Every object carries at least one evidence reference", "failed"],
-          ["Each reference resolves inside this engagement", "n/a"],
-          ["The quoted text occurs in the referenced source", "n/a"],
-          ["Library references exist in pack revenue v0.1.0", "passed"],
-          ["A new risk carries a justification", "passed"],
-        ].map(([rule, res]) => `<tr><td>${esc(rule)}</td>
-          <td class="r">${res === "failed" ? status("needs_source", "Failed")
-            : res === "passed" ? status("approved", "Passed") : `<span class="tiny dim">not reached</span>`}</td></tr>`).join("")}
-      </tbody></table>
-      <p class="tiny dim" style="margin-top:14px">This is the mechanism described in
-      <span class="mono">06 §6.3</span>: validator failures set
-      <span class="mono">grounding = 'needs_source'</span> and raise a flag — never a silent drop.</p>`,
-    foot: b ? `<div class="btn-row">${btn("Resolve this statement", "resolve-source", { variant: "primary", data: { block: b.id } })}</div>` : "",
-  });
+function readView() {
+  const n = st.narrativeSummary();
+
+  const railHtml = `<aside class="rail">
+    <div class="t-eyebrow" style="margin-bottom:10px">Sections</div>
+    ${narrative.map((sec) => {
+      const s = st.sectionState(sec);
+      const attn = s === "needs_source" || s === "contradiction";
+      const tick = s === "approved" ? "ok" : s === "contradiction" ? "alert"
+        : s === "needs_source" ? "warn" : s === "rejected" ? "gone" : "";
+      return `<button class="${cx("rail__i", S.section === sec.id && "is-on", !attn && s !== "approved" && "rail__i--quiet")}"
+        data-act="go-section" data-id="${esc(sec.id)}">
+        <span class="${cx("rail__tick", tick && "rail__tick--" + tick)}"></span>
+        <span>${esc(sec.heading)}</span>
+      </button>`;
+    }).join("")}
+    <div class="t-meta" style="margin-top:16px">${n.decided} of ${n.sections} decided</div>
+  </aside>`;
+
+  const docHtml = `<div class="reader__doc"><div class="doc">
+    ${narrative.map((sec) => {
+      const s = st.sectionState(sec);
+      const decided = st.sectionDecision(sec);
+      const blockers = st.sectionBlockers(sec);
+      return `<section class="doc__sec" id="sec-${esc(sec.id)}">
+        <div class="doc__h">
+          <span class="n">${esc(sec.n)}</span>${esc(sec.heading)}
+          <span class="sp"></span>
+          ${decided === "approved" ? `<span class="state state--ok"><i class="dot dot--ok"></i>Approved</span>`
+            : decided === "rejected" ? `<span class="state"><i class="dot"></i>Rejected</span>`
+            : blockers.length ? `<span class="state state--${s === "contradiction" ? "alert" : "warn"}">
+                <i class="dot dot--${s === "contradiction" ? "alert" : "warn"}"></i>${blockers.length} to resolve</span>`
+            : btn("Approve", "approve-section", { variant: "ok", size: "sm", data: { id: sec.id }, key: "A" })}
+          ${decided ? btn("Reopen", "reopen-section", { variant: "plain", size: "sm", data: { id: sec.id } }) : ""}
+        </div>
+        ${sec.blocks.map((b) => claimView(b, sec)).join("")}
+      </section>`;
+    }).join("")}
+    <div style="margin-top:60px;padding-top:26px;border-top:1px solid var(--line)" class="acts">
+      ${btn("Back to review", "triage-mode", { variant: "plain" })}
+      ${n.pending === 0 ? btn("Go to sign-off", "nav", { variant: "go", data: { href: "#/complete" } }) : ""}
+    </div>
+  </div></div>`;
+
+  const body = `<div class="wrap wrap--wide" style="padding-top:24px">
+    <div class="reader">${railHtml}${docHtml}</div>
+  </div>`;
+
+  return screen("review", body, { raw: true });
+}
+
+/* ── Entry ───────────────────────────────────────────────────────────────── */
+
+export function review() {
+  if (!S.generated) return generateView();
+  if (S.reviewMode === "focus") {
+    if (S.focusKind === "risks") return riskFocus();
+    if (S.focusKind === "controls") return controlFocus();
+    return claimFocus();
+  }
+  if (S.reviewMode === "read") return readView();
+  return triage();
 }

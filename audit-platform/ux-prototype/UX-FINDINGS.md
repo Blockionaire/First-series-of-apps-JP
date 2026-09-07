@@ -283,6 +283,73 @@ rule-derived questions.
 
 ---
 
+---
+
+# Findings from the second iteration
+
+The redesign (`NEXT-GEN-UX-DIRECTION.md`) surfaced three more, all of them about what the engine
+should *emit* rather than how it should be displayed.
+
+## F-13 · The engine should emit the statement it can support, not only the flag
+
+**Priority: P1** · Engine impact: **stage output**
+
+**Observation.** When grounding validation fails, the engine currently produces
+`grounding = needs_source` and nothing else. The auditor is left with an unsupported sentence and
+a blank page. Building the focus queue made it obvious that the single most valuable thing the
+product can offer at that moment is *the version of the sentence the evidence does support* —
+which the engine is uniquely well placed to write, because it already knows which facts it had.
+
+**Why it matters.** With the fallback, resolving an unsupported claim is one keystroke. Without
+it, it is a writing task, and the reviewer is doing exactly the authoring work the product exists
+to remove. In the prototype this is the difference between four judgements in four keystrokes and
+four judgements in four paragraphs.
+
+**Suggested product change.** Every object that fails grounding carries
+`supported_alternative: string | null` — the same claim narrowed to what the evidence actually
+establishes, itself grounded — plus the existing `why`. Where nothing at all can be supported,
+`null`, and the UI offers only edit, ask or reject.
+
+**Engine impact.** A second, cheap pass over the failed objects after S8, with the retrieved
+evidence in context. It is not a new stage so much as a repair step.
+
+## F-14 · Coverage items need a plain-language form of their gap
+
+**Priority: P2** · Engine impact: **methodology pack**
+
+**Observation.** The pack's `questionIntent` is written to steer the interview ("How is the
+invoice amount derived, and what prevents it from being wrong?"). It is the wrong sentence to put
+on a coverage screen, where the auditor's question is what is *missing*. The prototype had to
+author a `plain` string per gap by hand: *"Who reviews the price override report, and what happens
+when an exception is found."*
+
+**Why it matters.** This is the difference between the coverage screen reading like methodology
+software and reading like a colleague's summary. It is a content change, not a code change, and
+the SME can write it while reviewing each item.
+
+**Suggested product change.** Add `gapStatement` to each coverage item in the pack — one sentence
+naming what is not yet known, phrased so it can follow the words "we don't yet know". Same
+review format, two hours of SME time for the whole pack.
+
+## F-15 · The exception set is a live view, not a snapshot
+
+**Priority: P3** · Engine impact: **none — product spec**
+
+**Observation.** A queue of items needing judgement shrinks as it is worked, so anything holding
+a position in it must be re-derived after every decision rather than advanced. The prototype's
+first implementation silently skipped every other item because it incremented an index into a
+list that had already shortened.
+
+**Why it matters.** It is not a UI bug so much as a modelling one, and it will recur in any
+production implementation that treats "what needs attention" as a fetched list rather than a
+derived view. In an audit product, silently skipping an item that needed a judgement is the worst
+class of defect there is.
+
+**Suggested product change.** State it in the product spec: the exception set is derived from
+current object state on every read; positions in it are identified by object id, never by index.
+
+---
+
 ## Summary
 
 | # | Finding | Priority | Engine impact |
@@ -299,7 +366,10 @@ rule-derived questions.
 | F-10 | No way to say a risk cannot be concluded | P2 | `blockedBy[]` |
 | F-11 | "Not obtained" vs "needs source" must not look alike | P2 | None (vocabulary) |
 | F-12 | Surface the deterministic trigger id | P3 | None (populate existing field) |
+| F-13 | Emit the statement the evidence *does* support | P1 | A repair pass after validation |
+| F-14 | Coverage items need a plain-language gap statement | P2 | Pack content |
+| F-15 | The exception set is a derived view, not a list | P3 | None (product spec) |
 
-Four findings (F-01, F-02, F-05, F-10) are cheap now and expensive later, because they add
-fields to records rather than changing what the pipeline does. The rest can wait for the Phase 1
-build.
+Five findings (F-01, F-02, F-05, F-10, F-13) are cheap now and expensive later. Four of them add
+fields to records rather than changing what the pipeline does; F-13 adds a small repair pass and
+is the one with the largest effect on how the product feels to use.

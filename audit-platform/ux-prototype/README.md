@@ -3,6 +3,11 @@
 A high-fidelity, clickable prototype of the future Audit AI interim platform, built so that
 auditors and design partners can experience the product before any production frontend exists.
 
+**Second iteration.** The first version proved the product logic but felt like enterprise audit
+software: a permanent sidebar, ten tabs exposing the data model, twenty decision tables and
+forty-five bordered panels. `NEXT-GEN-UX-DIRECTION.md` is the critique and the direction that
+replaced it. The first iteration is preserved at git tag `ux-v1` if you want to compare.
+
 **This is not the Audit Intelligence Engine.** The engine lives in `../audit-engine/` and is
 untouched by this track. This directory is removable without affecting it.
 
@@ -30,48 +35,55 @@ page, no data is stored.
 
 | File | What it is |
 |---|---|
-| `UX-PLAN.md` | The design decisions: principles, IA, screen map, review-workspace and provenance concepts, what is excluded. **Read this first.** |
+| `NEXT-GEN-UX-DIRECTION.md` | The critique of iteration one and the direction that replaced it. **Read this first.** |
+| `UX-PLAN.md` | Iteration one's plan. Still the reference for scope, provenance rules and what is excluded |
 | `DEMO-SCRIPT.md` | The nine-beat design-partner path, with presenter notes and the questions you will get |
 | `UX-FINDINGS.md` | Twelve product and data-model gaps found while building, written for the engine track. No engine file was changed |
 | `index.html` · `app.css` | Shell and the design system (tokens, primitives, components) |
 | `js/data-sources.js` | The evidence base: walkthrough transcript, client questionnaire, three documents, auditor notes |
 | `js/data-model.js` | Coverage (45 items), narrative (14 sections), 11 risks, 14 controls, 5 gaps, 10 open items |
-| `js/state.js` | Prototype state, derivations and actions. Every headline number is computed here |
-| `js/views/` | One module per screen group |
+| `js/state.js` | State, derivations, the exception model and the undo stack. Every headline number is computed here |
+| `js/palette.js` | ⌘K — the navigation |
+| `js/views/` | One module per stage |
 
 ## The journey
 
+Four stages, not ten tabs:
+
 ```
-Home → Client → Engagement → Revenue → Walkthrough → Coverage → Generate
-     → Review narrative → Inspect sources → Risks → Controls → Matrix
-     → Resolve open items → Sign-off → Export
+UNDERSTAND ──▶ REVIEW ──▶ RESOLVE ──▶ COMPLETE
+what we know   the judgements   what is    sign-off
+and what we    the drafting     blocking   and export
+still don't    could not make   us
 ```
 
-Plus, off the spine: the **client questionnaire** (a separate client-facing surface) and the
-**live walkthrough cockpit**, which is explicitly labelled as a future-state concept.
+Everything else — the matrix, the working paper, the questionnaire, the future cockpit, any
+section, risk, control, coverage area or source — is two keystrokes away on **⌘K**.
 
-**Start with the guided demo** — *Design partner demo* in the left rail. It sets each screen up
-and puts the line to say at the bottom. `→` and `←` move between beats, `Esc` exits.
+Off the spine: the **client questionnaire** (a separate, plainer client surface) and the
+**live walkthrough cockpit**, explicitly labelled as a future-state concept.
 
-## Things worth clicking
+**Start with the guided demo** — the link on the Work screen, or `⌘K → Guided demo`. It sets each
+screen up and puts the line to say at the bottom. `→` and `←` move between beats, `Esc` exits.
 
-- **Coverage → expand R5 Invoicing.** Fact-level status. `override_report_reviewer` is the fact
-  nobody could answer, and it is why a mandatory item is only partially covered.
-- **Generate → run the pipeline.** Nine stages; watch stage 8, which fails three statements.
-- **Documentation → section 8, then a source chip.** Hover for the quote, click to pin it.
-- **Documentation → section 10.** The invented EUR 5,000 credit-note threshold. The section
-  cannot be approved. Click *Resolve* to see why the model produced it.
-- **Documentation → section 6.** Two sources disagree about credit-limit authority. Resolving it
-  unblocks a control and a risk elsewhere.
-- **Controls → C-10.** The six key-control criteria, two of them `unknown`, so the platform
-  refuses to propose either way.
-- **Open items.** Note which questions came from a deterministic pack rule and which the model
-  proposed.
+## Things worth doing
 
-Keyboard in the review workspace: `J`/`K` move between sections, `A` approves, `E` edits,
-`U` toggles the unresolved filter, `Esc` closes a drawer.
+- **Understand.** Three gaps in plain English. Then open *Show methodology* to see the 45
+  coverage items, fact keys, triggers and ISA references underneath. The engine is complex; the
+  surface is not.
+- **Review → Start.** Nine pipeline stages; watch the validation stage fail three statements.
+- **Review, once drafted.** *Four need your judgement · ten sections are clean.* The whole
+  product promise on one screen, before anything is asked of you.
+- **Press Enter four times.** The contradiction first, with both sources side by side, then the
+  three unsupported statements. Each has the correction pre-written.
+- **Read the working paper, then click any sentence.** Evidence opens directly beneath it.
+- **Review recommendations (controls).** Fourteen decisions as a queue, not a table. `Enter`
+  accepts, `N` marks it not key. Try clearing all fourteen without the mouse.
+- **⌘K.** Type `cut`, `override`, `credit`, or the name of any risk or control.
+- **⌘Z.** Every decision is reversible. Nothing in the product asks "are you sure?" except
+  sign-off.
 
-**Reset demo** (top right) returns everything to the start.
+Press `?` for the full keyboard sheet. ⌘K → *Reset the prototype* starts over.
 
 ---
 
@@ -100,9 +112,10 @@ integrations. No process other than Revenue, no control testing, no sampling. Pr
 comparison, the test plan and an editable RCM grid are out of scope by design — see
 `UX-PLAN.md §12` for the reasoning on each.
 
-Interactions are real: approving, editing, rejecting, resolving, filtering and marking not
-applicable genuinely mutate state and are reflected on every screen. The *intelligence* is
-scripted — the point is the experience of the pipeline, not a live model in a demo.
+Interactions are real: approving, editing, rejecting, resolving, undoing and marking not
+applicable genuinely mutate state and are reflected on every screen and in the stage spine. The
+*intelligence* is scripted — the point is the experience of the workflow, not a live model in a
+demo.
 
 ---
 
