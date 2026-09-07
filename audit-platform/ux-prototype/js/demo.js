@@ -1,7 +1,7 @@
 /* Guided demo — nine beats over the redesigned product. */
 
 import { esc, act as btn } from "./ui.js";
-import { S, commit } from "./state.js";
+import { S, commit, act } from "./state.js";
 import { pipeline } from "./data-model.js";
 
 export const STEPS = [
@@ -64,9 +64,7 @@ export function demoGo(step) {
   // Beat 3 shows the pipeline; run it if it has not been run.
   if (S.demoStep === 2 && !S.generated && !S.generating) {
     location.hash = s.route;
-    setTimeout(() => {
-      import("./state.js").then((m) => m.act.startGeneration(pipeline));
-    }, 260);
+    setTimeout(() => act.startGeneration(pipeline), 260);
     return;
   }
   s.setup();

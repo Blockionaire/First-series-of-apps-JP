@@ -15,20 +15,40 @@ untouched by this track. This directory is removable without affecting it.
 
 ## Run it
 
-**You need a local static server — double-clicking `index.html` will not work.** The app is built
-from ES modules, and every browser blocks those over `file://` (CORS). You get a blank page.
+### The easy way — one file, no server
 
-From this directory:
+**`audit-ai-prototype.html`** is the whole prototype in a single self-contained file. Download it
+and double-click. It works in Chrome, Edge, Firefox and Safari, offline, with nothing installed.
+Everything is inlined — CSS, all fourteen modules, all mock data — and it makes no network
+requests at all. Email it to a design partner and it will work on their machine.
+
+### The developer way — the modular source
+
+`index.html` plus `js/` is the real source, and it is what you edit. It is built from ES modules,
+so it **needs a local static server** — double-clicking `index.html` gives a blank page, because
+every browser blocks module scripts over `file://` under CORS.
 
 ```
-python3 -m http.server 8000
+python3 -m http.server 8000        # then open http://localhost:8000/
 ```
 
-Then open <http://localhost:8000/>. Any static server does the same job — `npx serve`,
-`php -S localhost:8000`, VS Code's Live Server extension.
+Any static server works: `npx serve`, `php -S localhost:8000`, VS Code's Live Server.
 
-There is still no build step, no install and no dependencies. Everything runs in the browser
-against mock data: no model is called, no request leaves the page, nothing is stored.
+### Rebuilding the single file
+
+After changing anything under `js/` or `app.css`:
+
+```
+python3 build-standalone.py        # regenerates audit-ai-prototype.html
+```
+
+No dependencies — standard-library Python only. The script wraps each module in the same
+registry an ES-module loader would provide, so module scope is preserved and the bundle behaves
+identically to the source. It refuses to build on a dynamic `import()`, an unsupported export
+form or an import cycle rather than emitting something subtly broken.
+
+There is no build step for development, no install and no dependencies. Everything runs in the
+browser against mock data: no model is called, no request leaves the page, nothing is stored.
 
 ---
 
@@ -40,6 +60,8 @@ against mock data: no model is called, no request leaves the page, nothing is st
 | `UX-PLAN.md` | Iteration one's plan. Still the reference for scope, provenance rules and what is excluded |
 | `DEMO-SCRIPT.md` | The nine-beat design-partner path, with presenter notes and the questions you will get |
 | `UX-FINDINGS.md` | Twelve product and data-model gaps found while building, written for the engine track. No engine file was changed |
+| **`audit-ai-prototype.html`** | **The whole prototype in one file. Download, double-click, done. Generated — do not edit** |
+| `build-standalone.py` | Regenerates the file above from the source |
 | `index.html` · `app.css` | Shell and the design system (tokens, primitives, components) |
 | `js/data-sources.js` | The evidence base: walkthrough transcript, client questionnaire, three documents, auditor notes |
 | `js/data-model.js` | Coverage (45 items), narrative (14 sections), 11 risks, 14 controls, 5 gaps, 10 open items |
