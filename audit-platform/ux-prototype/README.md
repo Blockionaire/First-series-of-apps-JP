@@ -15,19 +15,20 @@ untouched by this track. This directory is removable without affecting it.
 
 ## Run it
 
-```
-open index.html                       # or double-click it
-```
+**You need a local static server — double-clicking `index.html` will not work.** The app is built
+from ES modules, and every browser blocks those over `file://` (CORS). You get a blank page.
 
-No build, no install, no server, no network. If your browser blocks ES modules on `file://`,
-serve the directory instead:
+From this directory:
 
 ```
-python3 -m http.server 8000     # then open http://localhost:8000/
+python3 -m http.server 8000
 ```
 
-Everything runs in the browser against mock data. No model is called, no request leaves the
-page, no data is stored.
+Then open <http://localhost:8000/>. Any static server does the same job — `npx serve`,
+`php -S localhost:8000`, VS Code's Live Server extension.
+
+There is still no build step, no install and no dependencies. Everything runs in the browser
+against mock data: no model is called, no request leaves the page, nothing is stored.
 
 ---
 
