@@ -257,12 +257,15 @@ No risk-analysis gate. Interim ends before it.
 ## 19. Revised next-action order
 
 Prepare → interview contradictions → required areas → draft understanding → documentation
-judgements → approve clean sections → conclude controls → conclude findings → required line
-walkthroughs → **review findings the walkthrough raised** → decide the testing approach →
-perform required tests → open matters → submit for review → reviewer approval → complete.
+judgements → approve clean sections → **review findings the walkthrough raised** → conclude
+controls → conclude findings → decide which variants need a walkthrough → outstanding walkthroughs
+→ decide the testing scope → perform required tests → open matters → sign as preparer → submit for
+review → reviewer approval → complete.
 
-The walkthrough-finding step is the one that must not be skipped: testing reality changed the
-documented understanding, and that has to be reviewed before the workflow moves on.
+A finding raised by the walkthrough is placed **above** the ordinary control and finding queues
+rather than after the walkthroughs, because it is the one item that means the documented
+understanding is now known to be wrong. Everything else in step four is a judgement on something
+the platform proposed; this is a judgement on something reality contradicted.
 
 ## 20. Guided-demo changes
 
@@ -278,3 +281,44 @@ walkthrough → the finding it raises → conditional testing → complete and h
 The V3 visual redesign. Production backend, authentication, database, real inference, cloud.
 Any change to `audit-engine`. A review-notes module beyond a mocked reopen. Full audit-strategy
 functionality behind the testing scope decision. Real sampling.
+
+
+---
+
+## Implementation status
+
+All twenty sections above are implemented. What changed, by file:
+
+| File | Change |
+|---|---|
+| `js/data-process.js` | Rewritten. `variants`, `processSteps` as a graph with `next`/`variants`/`merge`, two fully working transactions with their own paths and `untraced` reasons, `methodologyConfig`, `carriedContext`, per-variant walkthrough proposals, extended control-test results. |
+| `js/state.js` | Coverage recomputed from facts; `CONCLUDED_CONTROL` excludes `undecided`; findings hold a proposal and a conclusion separately; traces keyed by transaction; testing scope and conclusion separated from extension; `signOff` state machine; gates carry `applicable`; corrected `nextAction`; questionnaire answers write to the fact model and the open item. |
+| `js/app.js` | `#/interview` route bound to the right view (it pointed at an undefined `walkthrough`); new actions for carry-forward, modify, per-variant scope, testing scope, sign-off; keyboard model matched to the actions that exist; `checkRoutes()` on boot; grouped shortcut sheet. |
+| `js/views/map.js` | Rewritten as a branching, lane-based map derived from step variant membership. Distinguishes not-on-this-variant from not-yet-occurred from not-traced. |
+| `js/views/process.js` | Prepare shows carried context and the variants and navigates onward on confirm; process home shows per-variant walkthrough status. |
+| `js/views/interview.js` | Renamed from `walkthrough.js`. Framed as the whole input flow; guards on unconfirmed preparation; drafting no longer reads as completing. |
+| `js/views/controls.js` | Undecided keeps a control in the queue; carry-forward takes a reason; findings gain Modify with an editable title, severity, impact and remediation; risk language reframed as carried-forward signals. |
+| `js/views/trace.js` | Per-variant requirement decisions; the selected transaction loads its own steps and evidence; untraced steps state which kind they are; concluding with an exception routes to the finding. |
+| `js/views/testing.js` | Conditional on a key control existing; scope decision per control before any test; extending the sample leaves the test open. |
+| `js/views/complete.js` | Stateful sign-off, conditional gates, work-complete separated from process-complete; the matrix reads as a view with a way back; the questionnaire gives Send / I don't know / Rather have a call three different outcomes. |
+| `js/views/resolve.js` | Carry-forward takes a destination and a rationale, and carried items are listed as carried rather than closed. |
+| `js/demo.js` | Twelve beats matching the corrected workflow and the real keys. |
+| `js/palette.js`, `js/views/work.js` | Corrected derivations; variants and control testing added to ⌘K. |
+
+**Tests.** Three suites run against Chromium, over both the served app and the standalone bundle:
+a route-integrity check (`window.__checkRoutes()`, wired into boot), a 50-assertion state-integrity
+suite covering cases A–F, and a 33-assertion UI walkthrough that drives the whole seven-step
+workflow through the DOM and the keyboard. All pass with no runtime errors.
+
+**Defects found and fixed while testing, beyond the twenty sections:**
+
+1. `#/interview` was bound to an undefined identifier, so the route threw on navigation.
+2. The line-walkthrough requirement was pre-seeded from the methodology pack, so a decision the
+   screen asked for had silently already been made. The pack now *proposes* and the state starts
+   undecided.
+3. Trace steps that belong to another variant were labelled "not traced", which is a different
+   claim from "not on this variant's path". Now derived from variant membership.
+4. A questionnaire answer settled its fact but left the open item that had been raised to chase it
+   sitting open. One answer now closes both.
+5. `focusLength()` still referenced the removed process-level trace queue, so the focus index
+   could not clamp correctly once traces became per-transaction.

@@ -13,7 +13,7 @@ import { demoBar, demoGo, demoStart, demoExit, STEPS } from "./demo.js";
 
 import { work } from "./views/work.js";
 import { engagementView, processHome, prepare } from "./views/process.js";
-import { walkthrough } from "./views/walkthrough.js";
+import { interview } from "./views/interview.js";
 import { understanding } from "./views/understanding.js";
 import { controlsStep } from "./views/controls.js";
 import { trace } from "./views/trace.js";
@@ -23,13 +23,19 @@ import { complete, matrix, clientSurface } from "./views/complete.js";
 import { cockpit } from "./views/cockpit.js";
 
 window.__demoStart = demoStart;
+/* Test hooks. Read-only in practice; the smoke, route-integrity and
+   state-integrity tests drive the app through them rather than through the DOM. */
+window.__S = S;
+window.__st = st;
+window.__act = act;
+window.__narrative = narrative;
 
 const ROUTES = {
   "#/": work,                       // across engagements
   "#/engagement": engagementView,   // engagement layer
   "#/revenue": processHome,         // process workspace home
   "#/prepare": prepare,             // 1
-  "#/walkthrough": walkthrough,     // 2
+  "#/interview": interview,         // 2
   "#/understanding": understanding, // 3
   "#/controls": controlsStep,       // 4
   "#/trace": trace,                 // 5
@@ -58,20 +64,43 @@ function undoBar() {
 
 function keysSheet() {
   if (S.sheet !== "keys") return "";
-  const K = [
-    ["⌘K", "Search and commands"], ["/", "Search"],
-    ["J K", "Next / previous"], ["Enter", "Accept the suggestion"],
-    ["E", "Edit"], ["A", "Approve or ask"],
-    ["R", "Reject"], ["N", "Not key"],
-    ["U", "Undecided"], ["1 2 3", "Pick a resolution"],
-    ["⌘Z", "Undo the last decision"], ["Esc", "Back out one level"],
-    ["?", "This sheet"], ["→ ←", "Move through the demo"],
+  const GROUPS = [
+    ["Anywhere", [
+      ["⌘K", "Search and commands"], ["/", "Search"],
+      ["?", "This sheet"], ["⌘Z", "Undo the last decision"],
+      ["Esc", "Back out one level"], ["→ ←", "Move through the demo"],
+    ]],
+    ["Statements — step 3", [
+      ["Enter", "Use the correction as written"], ["E", "Edit it yourself"],
+      ["A", "Ask the client about it"], ["R", "Reject the statement"],
+      ["1 2 3", "Pick a resolution for a contradiction"],
+    ]],
+    ["Reading the working paper", [
+      ["J K", "Next / previous section"], ["A", "Approve the section"],
+    ]],
+    ["Controls — step 4", [
+      ["Enter", "Accept what is proposed"], ["K", "Key control"],
+      ["N", "Not a key control"], ["C", "Carry forward undecided, with a reason"],
+      ["U", "Park it — stays in the queue"], ["J", "Skip"],
+    ]],
+    ["Findings — step 4", [
+      ["Enter", "Confirm as proposed"], ["M", "Modify before confirming"],
+      ["D", "Dismiss"], ["J", "Skip"],
+    ]],
+    ["Line walkthrough — step 5", [
+      ["Enter", "Accept the proposed verdict"], ["C", "Corroborated"],
+      ["X", "Raise an exception"], ["J", "Skip"],
+    ]],
   ];
   return `<div class="sheet-scrim" data-act="close-sheet"></div>
   <div class="sheet">
     <div class="t-h">Keyboard</div>
-    <p class="t-sub" style="margin-top:6px">Everything in the review queue can be done without the mouse.</p>
-    <div class="keys">${K.map(([k, d]) => `<div><span class="k">${esc(k)}</span>${esc(d)}</div>`).join("")}</div>
+    <p class="t-sub" style="margin-top:6px">Every queue can be worked without the mouse. A key only
+    does something where the action exists.</p>
+    ${GROUPS.map(([g, ks]) => `<div style="margin-top:20px">
+      <div class="t-eyebrow" style="margin-bottom:8px">${esc(g)}</div>
+      <div class="keys">${ks.map(([k, d]) => `<div><span class="k">${esc(k)}</span>${esc(d)}</div>`).join("")}</div>
+    </div>`).join("")}
     <div style="margin-top:24px">${btn("Close", "close-sheet", { variant: "plain" })}</div>
   </div>`;
 }
@@ -110,6 +139,7 @@ st.onChange(render);
 /* --- Clicks ---------------------------------------------------------------- */
 
 const val = (id) => (document.getElementById(id)?.value || "").trim();
+const sel = (id) => document.getElementById(id)?.value || "";
 
 document.addEventListener("click", (e) => {
   const el = e.target.closest("[data-act]");
@@ -128,7 +158,6 @@ document.addEventListener("click", (e) => {
       } else location.hash = d.href;
       break;
     case "mock": act.toast("Mocked in this prototype — nothing is generated, sent or stored."); break;
-    case "sign": act.toast("Signed as preparer. In the product this records who and when."); break;
 
     /* palette + sheets */
     case "palette": case "palette-eng": act.openPalette(); break;
@@ -178,17 +207,54 @@ document.addEventListener("click", (e) => {
 
     /* controls, findings, the map */
     case "decide-control": act.decideControl(d.id, d.d); break;
+    case "park-control": act.parkControl(d.id); break;
+    case "carry-control-open": act.openEditor("carry:" + d.id); break;
+    case "carry-control": act.carryControl(d.id, val("ans")); break;
+    case "clear-control": act.clearControl(d.id); break;
     case "decide-finding": act.decideFinding(d.id, d.d); break;
+    case "edit-finding": act.editFinding(d.id); break;
+    case "cancel-finding-edit": act.cancelFindingEdit(); break;
+    case "clear-finding": act.clearFinding(d.id); break;
+    case "save-finding": act.decideFinding(d.id, "modified", {
+      title: val("f-title"), severity: sel("f-sev"),
+      impact: val("f-impact"), remediation: val("f-rem") || null,
+    }); break;
     case "map-node": S.mapStep = S.mapStep === d.step || !d.step ? null : d.step; st.commit(); break;
     case "noop": break;
 
     /* the process workflow */
     case "prepare-done": act.prepareDone(); break;
     case "pick-txn": act.pickTransaction(d.id); break;
-    case "decide-trace": act.decideTrace(d.id, d.v); break;
-    case "conclude-trace": act.concludeTrace(); break;
-    case "reopen-trace": act.reopenTrace(); break;
+    case "open-trace": act.openTrace(d.id); break;
+    case "back-to-variants": act.backToVariants(); break;
+    case "decide-trace": act.decideTrace(d.txn, d.id, d.v); break;
+    case "conclude-trace": act.concludeTrace(d.txn || S.traceTxn); break;
+    case "reopen-trace": act.reopenTrace(d.txn || S.traceTxn); break;
+    case "lw-require": act.setWalkthroughRequirement(d.v, "required"); break;
+    case "lw-not-open": act.openEditor("lw:" + d.v); break;
+    case "lw-not-required": act.setWalkthroughRequirement(d.v, "not_required",
+      val("ans") || "No reason recorded."); break;
+    case "lw-reopen": act.setWalkthroughRequirement(d.v, "not_decided", null); break;
+
+    /* step 6 — scope, then the test */
+    case "test-require": act.setTestScope(d.id, "required"); break;
+    case "test-not-open": act.openEditor("ts:" + d.id); break;
+    case "test-not-required": act.setTestScope(d.id, "not_required", val("ans") || "No reason recorded."); break;
+    case "test-reopen-scope": act.setTestScope(d.id, "deferred", null); break;
+    case "extend-sample": act.extendSample(); break;
     case "conclude-test": act.concludeTest(d.d || null); break;
+    case "reopen-test": act.reopenTest(); break;
+
+    /* step 7 — sign-off */
+    case "sign-preparer": act.signPreparer(); break;
+    case "submit-review": act.submitForReview(); break;
+    case "reviewer": act.reviewerAction(d.d); break;
+    case "prepare-reopen": act.prepareReopen(); break;
+    case "carry-item-open": act.openEditor("carry-item:" + d.id); break;
+    case "carry-item": act.carryItem(d.id, sel("carry-dest") || "Final audit", val("ans")); break;
+    case "answer-send": act.answerQuestion(Number(d.n), "answer", val("q-" + d.n)); break;
+    case "answer-unknown": act.answerQuestion(Number(d.n), "unknown"); break;
+    case "answer-call": act.answerQuestion(Number(d.n), "call"); break;
 
     /* coverage and open items */
     case "edit-item": case "edit-item-o": act.openEditor(d.item || d.id); break;
@@ -198,7 +264,6 @@ document.addEventListener("click", (e) => {
     case "set-item": act.setItem(d.id, d.s); break;
 
     /* peripheral */
-    case "answer-q": act.answerQuestion(); break;
     case "cockpit-next": act.cockpitAdvance(); break;
     case "cockpit-play": act.cockpitToggle(); break;
     case "reset": act.reset(); break;
@@ -266,9 +331,13 @@ document.addEventListener("keydown", (e) => {
   if (S.route === "#/prepare" && e.key === "Enter" && !S.prepared) { e.preventDefault(); act.prepareDone(); return; }
   if (S.route === "#/understanding" && e.key === "Enter" && !S.generated && !S.generating) { e.preventDefault(); act.startGeneration(pipeline); return; }
   if (S.route === "#/understanding" && e.key === "Enter" && S.generated && !S.genSeen) { e.preventDefault(); act.readGenResult(); return; }
-  if (S.route === "#/trace" && S.reviewMode !== "focus" && e.key === "Enter"
-      && S.traceTxn && !S.traceConcluded && !st.traceSummary().pending.length) {
-    e.preventDefault(); act.concludeTrace(); return;
+  if (S.route === "#/trace" && S.reviewMode !== "focus" && e.key === "Enter" && S.traceTxn) {
+    const prog = st.traceProgress(S.traceTxn);
+    if (prog && !prog.concluded) {
+      e.preventDefault();
+      if (prog.pending.length) act.pickTransaction(S.traceTxn); else act.concludeTrace(S.traceTxn);
+      return;
+    }
   }
   if (!FOCUS_ROUTES.includes(S.route) || !S.generated) return;
 
@@ -298,18 +367,19 @@ document.addEventListener("keydown", (e) => {
       const f = q[Math.min(S.focusIx, q.length - 1)];
       if (!f) return;
       if (e.key === "Enter") { e.preventDefault(); act.decideFinding(f.id, "confirmed"); }
+      else if (k === "m") { e.preventDefault(); act.editFinding(f.id); }
       else if (k === "d") { e.preventDefault(); act.decideFinding(f.id, "dismissed"); }
       else if (k === "j") { e.preventDefault(); act.focusNext(); }
       return;
     }
     if (S.focusKind === "trace") {
-      const q = st.traceSummary().pending;
+      const prog = S.traceTxn ? st.traceProgress(S.traceTxn) : null;
+      const q = prog ? prog.pending : [];
       const t = q[Math.min(S.focusIx, q.length - 1)];
       if (!t) return;
-      const suggested = t.suggested;
-      if (e.key === "Enter") { e.preventDefault(); act.decideTrace(t.id, suggested); }
-      else if (k === "x") { e.preventDefault(); act.decideTrace(t.id, "exception"); }
-      else if (k === "c") { e.preventDefault(); act.decideTrace(t.id, "corroborated"); }
+      if (e.key === "Enter") { e.preventDefault(); act.decideTrace(S.traceTxn, t.id, t.suggested); }
+      else if (k === "x") { e.preventDefault(); act.decideTrace(S.traceTxn, t.id, "exception"); }
+      else if (k === "c") { e.preventDefault(); act.decideTrace(S.traceTxn, t.id, "corroborated"); }
       else if (k === "j") { e.preventDefault(); act.focusNext(); }
       return;
     }
@@ -317,11 +387,12 @@ document.addEventListener("keydown", (e) => {
       const q = st.controlSummary().queue;
       const c = q[Math.min(S.focusIx, q.length - 1)];
       if (!c) return;
-      const suggested = c.keyProposal === true ? "key" : c.keyProposal === false ? "not_key" : "undecided";
+      const suggested = c.keyProposal === false ? "not_key" : "key";
       if (e.key === "Enter") { e.preventDefault(); act.decideControl(c.id, suggested); }
       else if (k === "k" && !meta) { e.preventDefault(); act.decideControl(c.id, "key"); }
       else if (k === "n") { e.preventDefault(); act.decideControl(c.id, "not_key"); }
-      else if (k === "u") { e.preventDefault(); act.decideControl(c.id, "undecided"); }
+      else if (k === "c") { e.preventDefault(); act.openEditor("carry:" + c.id); }
+      else if (k === "u") { e.preventDefault(); act.parkControl(c.id); }
       else if (k === "j") { e.preventDefault(); act.focusNext(); }
       return;
     }
@@ -356,7 +427,33 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+/* --- Route integrity -----------------------------------------------------------
+   Every data-href the app renders must resolve to a registered route. Runs over
+   each screen once on boot; a mismatch is a console error naming the offender.
+   -------------------------------------------------------------------------- */
+
+function checkRoutes() {
+  const valid = new Set(Object.keys(ROUTES));
+  const bad = new Set();
+  const probe = document.createElement("div");
+  Object.entries(ROUTES).forEach(([route, view]) => {
+    let html = "";
+    try { html = view(); } catch { return; }        // a view that needs state we lack
+    probe.innerHTML = html;
+    probe.querySelectorAll("[data-href]").forEach((el) => {
+      const h = el.dataset.href;
+      if (h && !valid.has(h)) bad.add(`${h}  (rendered by ${route})`);
+    });
+  });
+  probe.innerHTML = "";
+  if (bad.size) console.error("Route integrity: unregistered routes —\n  " + [...bad].join("\n  "));
+  else console.info(`Route integrity: ${valid.size} routes, every link resolves.`);
+  return [...bad];
+}
+window.__checkRoutes = checkRoutes;
+
 /* --- Boot ------------------------------------------------------------------- */
 
 window.addEventListener("hashchange", render);
 render();
+checkRoutes();

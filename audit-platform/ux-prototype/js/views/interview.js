@@ -1,10 +1,14 @@
-/* UNDERSTAND — what we know and what we still don't.
+/* Step 2 — Process interview.
 
-   The auditor's question is four words. The default answer is plain English;
-   the 45 items, fact keys, triggers and ISA references live one disclosure
-   deeper. */
+   Not one meeting: the whole input flow. The interview transcript, the client
+   questionnaire, the documents and the auditor's own notes all land here and
+   feed one coverage model.
 
-import { esc, cx, act as btn, row, dot, chip, more, bar, callout, link } from "../ui.js";
+   The auditor's question is four words — what do we still not know? The
+   default answer is plain English; the 45 items, fact keys, triggers and ISA
+   references live one disclosure deeper. */
+
+import { esc, cx, act as btn, row, dot, chip, more, bar, callout, link, empty } from "../ui.js";
 import { subProcesses } from "../data-model.js";
 import { sources, ref, client } from "../data-sources.js";
 import * as st from "../state.js";
@@ -98,7 +102,15 @@ function methodology() {
 
 /* --- screen ---------------------------------------------------------------- */
 
-export function walkthrough() {
+export function interview() {
+  if (!S.prepared) {
+    return screen("interview", `
+      ${empty("Preparation has not been confirmed",
+        "Step one settles the scope, the participants and what is carried in from planning. The interview starts from that, so it is not asked twice.")}
+      <div style="text-align:center;margin-top:-40px">
+        ${btn("Go to Prepare", "nav", { variant: "go", data: { href: "#/prepare" } })}
+      </div>`);
+  }
   const cov = st.coverageSummary();
   const gaps = st.coverageGaps();
   const settled = st.coverageSettled();
@@ -108,9 +120,12 @@ export function walkthrough() {
     <div class="head">
       <div class="head__row">
         <div>
-          <h1 class="t-title">Revenue understanding</h1>
+          <h1 class="t-title">Process interview</h1>
           <p class="t-lede" style="margin-top:10px">
-            ${cov.covered} of ${cov.applicable} areas established from ${Object.keys(sources).length} sources.
+            Everything that tells us how Revenue works arrives here — the interview itself, the
+            client questionnaire, the documents and the auditor's own notes.
+            ${cov.covered} of ${cov.applicable} areas are established from
+            ${Object.keys(sources).length} sources.
             ${gaps.length ? `${gaps.length} still need clarification.` : "Nothing outstanding."}
           </p>
         </div>
@@ -152,7 +167,10 @@ export function walkthrough() {
     </section>
 
     <section style="margin-top:56px;border-top:1px solid var(--line);padding-top:32px">
-      <h2 class="t-h" style="margin-bottom:14px">Where this came from</h2>
+      <h2 class="t-h" style="margin-bottom:4px">Input to this step</h2>
+      <p class="t-meta" style="margin-bottom:14px">
+        Step two is the whole input flow, not one meeting. Each route below feeds the same coverage
+        model, and each statement keeps the source it came from.</p>
       <div class="rows">
         ${Object.values(sources).map((s) => row({
           lead: dot("ok"),
@@ -162,9 +180,10 @@ export function walkthrough() {
         })).join("")}
       </div>
       <div class="acts" style="margin-top:18px">
-        ${btn("Import a transcript", "mock")}
-        ${btn("Send a questionnaire", "nav", { data: { href: "#/questionnaire" } })}
-        ${btn("Record a walkthrough", "nav", { data: { href: "#/cockpit" } })}
+        ${btn("Import an interview transcript", "mock")}
+        ${btn("Upload a document", "mock")}
+        ${btn("Open the client questionnaire", "nav", { data: { href: "#/questionnaire" } })}
+        ${btn("Live interview cockpit — concept", "nav", { variant: "plain", data: { href: "#/cockpit" } })}
       </div>
     </section>
 
@@ -176,9 +195,12 @@ export function walkthrough() {
             ? `${cov.mandatoryOpen.length} required areas are still open. The draft will say so explicitly rather than infer an answer.`
             : "Coverage is sufficient and the required areas are addressed."}
         </p>
-        ${btn("Draft the documentation", "nav", { variant: "go", size: "lg", data: { href: "#/review" } })}
+        ${btn("Draft the current understanding", "nav", { variant: "go", size: "lg", data: { href: "#/understanding" } })}
+        <p class="t-meta" style="margin-top:12px;max-width:62ch">
+          Drafting does not complete this step. The interview stays open — a questionnaire answer or a
+          second conversation still lands here, and the draft is redone from what is then known.</p>
       </section>` : ""}
   `;
 
-  return screen("walkthrough", body);
+  return screen("interview", body);
 }

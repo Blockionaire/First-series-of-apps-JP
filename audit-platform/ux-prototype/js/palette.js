@@ -5,8 +5,8 @@
    and actions. This is how the target user already navigates. */
 
 import { esc, cx } from "./ui.js";
-import { narrative, risks, controls, subProcesses, openItems } from "./data-model.js";
-import { processSteps, lineWalk } from "./data-process.js";
+import { narrative, risks, controls, subProcesses } from "./data-model.js";
+import { processSteps, variants } from "./data-process.js";
 import { sources, client } from "./data-sources.js";
 import * as st from "./state.js";
 
@@ -42,10 +42,16 @@ function index() {
     if (st.findingSummary().queue.length)
       add("Do", "Review findings", `${st.findingSummary().queue.length} to conclude`,
         () => { location.hash = "#/controls"; st.act.startFocus("findings"); });
-    if (!st.traceSummary().concluded)
-      add("Do", "Line walkthrough", st.traceSummary().started
-        ? `${st.traceSummary().done} of ${st.traceSummary().expected} steps traced` : "trace a transaction",
+    const tr = st.traceSummary();
+    if (!tr.satisfied)
+      add("Do", "Line walkthrough", tr.undecided
+        ? `${tr.undecided} variants have no walkthrough decision`
+        : `${tr.completed} of ${tr.required} required walkthroughs complete`,
         () => { location.hash = "#/trace"; });
+    if (st.controlSummary().keyControls.length && !st.testingSatisfied())
+      add("Do", "Control testing", st.testingScope().scopeDecided
+        ? "conclude the scoped test" : "decide which key controls to test",
+        () => { location.hash = "#/testing"; });
   }
   add("Do", "Guided demo", "the five-minute walkthrough", () => window.__demoStart());
   add("Do", "Keyboard shortcuts", "?", () => st.act.sheet("keys"));
@@ -73,19 +79,24 @@ function index() {
       () => { location.hash = "#/controls"; st.act.startFocus("findings"); }));
 
   if (st.S.generated) risks.forEach((r) =>
-    add("Risks (carried forward)", r.title, `${r.id} · ${r.lib || "new"}`,
+    add("Risk signals (carried forward)", r.title, `${r.id} · ${r.lib || "new"}`,
       () => { location.hash = "#/matrix"; }));
 
   subProcesses.forEach((sp) => sp.items.forEach((it) =>
     add("Coverage", it.q, `${it.id} · ${sp.name}`, () => {
-      S.disclosed.meth = true; location.hash = "#/walkthrough";
+      S.disclosed.meth = true; location.hash = "#/interview";
     })));
 
-  openItems.forEach((i) =>
-    add("Open items", i.title, `${i.id} · ${st.itemState(i)}`, () => { location.hash = "#/resolve"; }));
+  st.allOpenItems().forEach((i) =>
+    add("Open items", i.title, `${i.id} · ${st.itemState(i).replace("_", " ")}`,
+      () => { location.hash = "#/resolve"; }));
+
+  variants.forEach((v) =>
+    add("Process variants", v.name, `${v.value} · ${v.recognition}`,
+      () => { location.hash = "#/trace"; }));
 
   Object.values(sources).forEach((s) =>
-    add("Sources", s.name, s.detail, () => { location.hash = "#/walkthrough"; }));
+    add("Sources", s.name, s.detail, () => { location.hash = "#/interview"; }));
 
   add("Engagements", client.name, "FY2026 interim · Revenue", () => { location.hash = "#/engagement"; });
   add("Engagements", "Meerveld Zorggroep", "FY2026 · not started", () => { location.hash = "#/"; });

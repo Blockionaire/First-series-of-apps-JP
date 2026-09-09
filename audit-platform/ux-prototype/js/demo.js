@@ -1,54 +1,78 @@
-/* Guided demo — nine beats over the redesigned product. */
+/* Guided demo — twelve beats over the corrected workflow.
+
+   The beats follow the seven steps in order, and stop where the product
+   stops. Each `setup` puts the prototype into the state the beat describes,
+   so a beat can be entered directly without playing the ones before it. */
 
 import { esc, act as btn } from "./ui.js";
 import { S, commit, act } from "./state.js";
 import { pipeline } from "./data-model.js";
-import { lineWalk } from "./data-process.js";
+import { txnById } from "./data-process.js";
+
+/** Corroborate the first n steps of a transaction, keyed the way state does. */
+const preTrace = (txnId, n) => {
+  const t = txnById(txnId);
+  if (!t) return;
+  t.steps.slice(0, n).forEach((s) => { S.traceDecisions[`${txnId}::${s.id}`] = "corroborated"; });
+};
 
 export const STEPS = [
   { route: "#/engagement", title: "Interim sits inside an engagement",
-    say: "Client, financial year, the four audit phases, and six processes inside interim. Revenue is one process among several — the product is not a Revenue application, it is where process-level interim work happens.",
+    say: "Client, financial year, the four audit phases, and six processes inside interim. Revenue is one process among several — this is not a Revenue application, it is where process-level interim work happens.",
     setup: () => {} },
 
-  { route: "#/revenue", title: "Seven steps, and a map of the process",
-    say: "This is the whole interim workflow for one process. The map is the process as we understand it; it fills in with controls and findings as the work progresses, and gets tested against a real transaction at step five.",
-    setup: () => { S.prepared = true; S.mapStep = null; } },
+  { route: "#/revenue", title: "Seven steps, three variants, one map",
+    say: "The whole interim workflow for one process: prepare, interview, understanding, controls and findings, line walkthrough, control testing, complete. And Revenue is not one process — machines, spare parts and service contracts are three paths that converge at revenue posting.",
+    setup: () => { S.prepared = false; S.mapStep = null; } },
 
-  { route: "#/walkthrough", title: "What we still don't know",
-    say: "Step two. Plain English, not methodology — three things need clarification. The 45 coverage areas, fact keys and ISA references are one disclosure away if a methodology partner asks.",
-    setup: () => { S.disclosed.meth = false; } },
+  { route: "#/prepare", title: "Step one starts with what is already known",
+    say: "Nothing here is asked twice. The inherent risk factors, the systems, the prior-year narrative and last year's management letter all come in from planning. Confirming preparation is what starts the interview.",
+    setup: () => { S.prepared = false; } },
 
-  { route: "#/understanding", title: "The routine, separated from the judgement",
-    say: "Step three. Four statements need a person; ten sections are clean and accepted in one action. Press Enter four times to clear the queue — the contradiction first, then three unsupported claims, each with the correction already written.",
-    setup: () => { S.generated = true; S.reviewMode = "triage"; } },
+  { route: "#/interview", title: "Step two — what we still don't know",
+    say: "Plain English, not methodology: three things need clarification. The 45 coverage areas, the fact keys and the ISA references are one disclosure away when a methodology partner asks for them.",
+    setup: () => { S.prepared = true; S.disclosed.meth = false; } },
+
+  { route: "#/understanding", title: "Step three — the routine, separated from the judgement",
+    say: "Nine stages, two of them ordinary code. Validation checks that every statement cites a source and that the quote occurs in it — three did not. Then: four statements need a person, ten sections are clean and go in one action.",
+    setup: () => { S.prepared = true; S.reviewMode = "triage"; } },
+
+  { route: "#/understanding", title: "The contradiction comes first",
+    say: "Two sources disagree about who can change a credit limit. Press 1, 2 or 3 to choose a resolution — the numbers are on the options. Whichever you pick updates the statement, the fact behind it, the coverage area and the open item together. Then Enter clears the three unsupported claims.",
+    setup: () => { S.generated = true; S.genSeen = true; S.reviewMode = "focus"; S.focusKind = "claims"; S.focusIx = 0; } },
 
   { route: "#/understanding", title: "Where did this sentence come from?",
     say: "Click any sentence and the evidence opens directly beneath it — speaker, timestamp, exact words. No side panel, no navigation, the eye never leaves the line.",
-    setup: () => { S.generated = true; S.reviewMode = "read"; S.section = "N8"; S.openClaim = "N8.1"; } },
+    setup: () => { S.generated = true; S.genSeen = true; S.reviewMode = "read"; S.section = "N8"; S.openClaim = "N8.1"; } },
 
-  { route: "#/controls", title: "Controls and findings, on the process",
-    say: "Step four. The same map, now annotated: which step each control sits on, and which steps have something wrong with them. Fourteen controls reviewed one at a time, Enter to accept, N for not key.",
-    setup: () => { S.generated = true; S.reviewMode = "triage"; S.mapStep = null; } },
+  { route: "#/controls", title: "Step four — controls, and undecided is not a conclusion",
+    say: "The same map, now annotated: which step each control sits on, and which steps have something wrong with them. Enter accepts the proposal, K and N conclude, C carries one forward with a reason. Parking a control leaves it in the queue — the gate still counts it as outstanding.",
+    setup: () => { S.generated = true; S.genSeen = true; S.reviewMode = "triage"; S.mapStep = null; } },
 
-  { route: "#/trace", title: "Now test the model against reality",
-    say: "Step five, and the step that changes what this product is. Pick a real transaction and trace it end to end through the process we just documented. Expected step, expected control, expected evidence — against what actually happened.",
-    setup: () => { S.generated = true; S.traceTxn = null; S.reviewMode = "triage"; } },
+  { route: "#/trace", title: "Step five — which variants need a walkthrough",
+    say: "A machine sale tells you nothing about how a spare-part order behaves. So the requirement is decided per variant, and 'not required' is a real answer that carries a reason. Service contracts do not need one; the two goods variants do.",
+    setup: () => {
+      S.generated = true; S.genSeen = true; S.traceTxn = null;
+      S.lwRequirements = {}; S.reviewMode = "triage";
+    } },
 
   { route: "#/trace", title: "The walkthrough finds the model wrong",
     say: "The invoice went out on 15 September. The customer signed acceptance on 22 September. Revenue was recognised seven days before the performance obligation was satisfied — found by comparing two dates, not by anything anyone said in an interview.",
     setup: () => {
-      S.generated = true; S.traceTxn = "SO-24188";
-      lineWalk.steps.slice(0, 4).forEach((t) => { S.traceDecisions[t.id] = "corroborated"; });
+      S.generated = true; S.genSeen = true;
+      S.lwRequirements = { V1: { state: "required", reason: null } };
+      S.traceTxn = "SO-24188"; S.traceStarted["SO-24188"] = true;
+      preTrace("SO-24188", 4);
       S.focusKind = "trace"; S.focusIx = 0; S.reviewMode = "focus";
     } },
 
-  { route: "#/testing", title: "Identifying a control is not testing it",
-    say: "Step six, clearly marked as a future concept. Control, test setup, population and selection, evidence, results, conclusion — with the sample size always showing the firm parameter that produced it. The auditor concludes; the platform does not.",
-    setup: () => { S.generated = true; } },
+  { route: "#/testing", title: "Step six — identifying a control is not testing it",
+    say: "Conditional, and marked as a future concept. First a scope decision per key control: tested, or not tested with a reason on file. Then population, selection, evidence, results. Extending the sample is not a conclusion — only rely or do not rely closes the test.",
+    setup: () => { S.generated = true; S.genSeen = true; } },
 
-  { route: "#/complete", title: "Complete closes the process, not the audit",
-    say: "Ten conditions, each linking to the step that clears it. And then what interim hands forward: the process understanding, the matrix, the findings, the walkthrough result. Risk analysis is the next phase — deliberately not in this product.",
-    setup: () => { S.generated = true; } },
+  { route: "#/complete", title: "Step seven — complete closes the process, not the audit",
+    say: "Ready for review is not the same as complete: the preparer signs, the manager approves, and only then is the process closed. What it hands forward is the process understanding, the matrix, the findings, the walkthrough results and anything carried forward. Risk analysis is the next phase and deliberately not in this product.",
+    setup: () => { S.generated = true; S.genSeen = true; } },
 ];
 
 export function demoBar() {
@@ -67,11 +91,14 @@ export function demoBar() {
   </div>`;
 }
 
+/** The beat that first reaches step three runs the pipeline for real. */
+const PIPELINE_BEAT = 4;
+
 export function demoGo(step) {
   S.demoStep = Math.max(0, Math.min(STEPS.length - 1, step));
   const s = STEPS[S.demoStep];
-  // The understanding beat runs the pipeline the first time it is reached.
-  if (S.demoStep === 3 && !S.generated && !S.generating) {
+  if (S.demoStep === PIPELINE_BEAT && !S.generated && !S.generating) {
+    S.prepared = true;
     location.hash = s.route;
     setTimeout(() => act.startGeneration(pipeline), 260);
     return;

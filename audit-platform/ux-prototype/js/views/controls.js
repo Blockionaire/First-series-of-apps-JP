@@ -1,8 +1,16 @@
 /* Step 4 — Controls and findings.
 
    Two recommendation queues over one process. Controls are what the process
-   relies on; findings are what is wrong with it. Both are proposed by the
-   platform and concluded by the auditor, one at a time. */
+   relies on; findings are what is wrong with it. Both are *proposed* by the
+   platform and *concluded* by the auditor — and those two values are stored
+   separately, so the file always shows what the platform said and what the
+   auditor decided.
+
+   Two corrections in this pass:
+   · Undecided is not a conclusion. A control left undecided stays in the
+     queue. Moving on despite uncertainty takes an explicit carry-forward
+     with a documented reason.
+   · A finding can be modified, not only confirmed or dismissed. */
 
 import { esc, cx, act as btn, row, dot, chip, more, evidence, empty, callout, state } from "../ui.js";
 import { controls, risks, subProcesses } from "../data-model.js";
@@ -28,7 +36,7 @@ const CRIT = {
   not_redundant: "Not redundant with a stronger control",
 };
 
-const SEV = {
+export const SEV = {
   observation: "Observation",
   deficiency: "Deficiency",
   significant_deficiency_candidate: "Significant deficiency — candidate",
@@ -47,6 +55,7 @@ function triage() {
   const cs = st.controlSummary();
   const fs = st.findingSummary();
   const rs = st.riskSummary();
+  const undecided = cs.undecided;
 
   const body = `
     <div class="head">
@@ -67,34 +76,69 @@ function triage() {
         Click a step to see what controls it and what is wrong with it.</p>`}
     </section>
 
+    ${fs.fromTraceOpen.length ? `
+      <section class="triage__group" style="margin-top:36px">
+        <div class="callout callout--alert">
+          <b>The line walkthrough changed the process understanding.</b>
+          Tracing a real transaction raised ${fs.fromTraceOpen.length === 1 ? "a finding" : `${fs.fromTraceOpen.length} findings`}
+          that nobody described in the interview. ${fs.fromTraceOpen.length === 1 ? "It has" : "They have"}
+          not been concluded yet.
+          <div class="acts" style="margin-top:12px">
+            ${btn("Review it now", "start-focus", { variant: "go", data: { kind: "findings" } })}
+          </div>
+        </div>
+      </section>` : ""}
+
     ${cs.pending ? `
       <section class="triage__group" style="margin-top:36px">
         <div class="triage__n"><span class="c">${cs.pending}</span> controls to conclude</div>
         <p class="t-sub" style="margin-bottom:18px">
           ${cs.suggestedKey} suggested as key · ${cs.unassessable} where the criteria could not be
-          established · one blocked by an open item
+          established${undecided.length ? ` · <b>${undecided.length} left undecided</b>` : ""}
         </p>
+        ${undecided.length ? `<div class="callout" style="margin-bottom:18px">
+          <b>Undecided is not a conclusion.</b> ${undecided.length === 1 ? "One control is" : `${undecided.length} controls are`}
+          parked. Either conclude ${undecided.length === 1 ? "it" : "them"}, or carry
+          ${undecided.length === 1 ? "it" : "them"} forward with a documented reason — which is a
+          decision the reviewer can see.
+          <div class="rows" style="margin-top:14px">
+            ${undecided.map((c) => row({
+              lead: dot("open"),
+              title: esc(c.title),
+              detail: "Undecided — no conclusion recorded",
+              side: btn("Carry forward", "carry-control-open", { size: "sm", data: { id: c.id } }),
+            })).join("")}
+          </div>
+        </div>` : ""}
         <div class="acts">
           ${btn("Review recommendations", "start-focus", { variant: "go", data: { kind: "controls" }, key: "Enter" })}
         </div>
       </section>` : `
       <section class="triage__group" style="margin-top:36px">
         <div class="triage__n">Controls concluded</div>
-        <p class="t-sub">${cs.agreedKey} of ${cs.total} recorded as key controls.</p>
+        <p class="t-sub">${cs.agreedKey} of ${cs.total} recorded as key controls${
+          cs.carriedForward ? ` · ${cs.carriedForward} carried forward undecided, with a reason` : ""}.</p>
+        ${cs.carriedForward ? `<div class="rows" style="margin-top:14px">
+          ${controls.filter((c) => st.controlDecision(c) === "carried_forward").map((c) => row({
+            lead: dot("open"), title: esc(c.title),
+            detail: esc(S.controlCarry[c.id] || "Carried forward undecided."),
+            side: btn("Reopen", "clear-control", { size: "sm", variant: "plain", data: { id: c.id } }),
+          })).join("")}
+        </div>` : ""}
       </section>`}
 
     ${fs.pending.length ? `
       <section class="triage__group">
         <div class="triage__n"><span class="c">${fs.pending.length}</span> findings to conclude</div>
         <p class="t-sub" style="margin-bottom:16px">
-          Severity is a professional judgement and stays yours. These feed the ISA 265 communication
-          to management.${fs.fromTrace ? " One was raised by the line walkthrough." : ""}
+          Confirm, modify or dismiss each one. Severity is a professional judgement and stays yours.
+          These feed the ISA 265 communication to management.
         </p>
         <div class="rows" style="margin-bottom:18px">
           ${fs.pending.slice(0, 4).map((f) => row({
             lead: dot(f.severity === "observation" ? "warn" : "alert"),
             title: esc(f.title),
-            detail: `${esc(SEV[f.severity] || f.severity)}${f.fromTrace ? " · from the line walkthrough" : ""}`,
+            detail: `${esc(SEV[f.severity] || f.severity)}${f.fromTrace ? " · raised by the line walkthrough" : ""}`,
             side: `<span class="t-meta mono">${esc(f.id)}</span>`,
           })).join("")}
         </div>
@@ -104,16 +148,34 @@ function triage() {
       </section>` : `
       <section class="triage__group">
         <div class="triage__n">Findings concluded</div>
-        <p class="t-sub">${fs.confirmed} confirmed for the management letter.</p>
+        <p class="t-sub">${fs.confirmed} confirmed for the management letter${
+          fs.modified ? `, ${fs.modified} of them after you changed what the platform proposed` : ""}.</p>
       </section>`}
 
+    ${fs.decided ? `<section class="triage__group">
+      ${more("fdec", `Show ${fs.decided} concluded ${fs.decided === 1 ? "finding" : "findings"}`, `<div class="rows">
+        ${fs.all.filter((f) => !st.findingOpen(f)).map((f) => {
+          const o = st.findingOutcome(f);
+          return row({
+            lead: dot(o.decision === "dismissed" ? "" : o.severity === "observation" ? "warn" : "alert"),
+            title: esc(o.title),
+            detail: o.decision === "dismissed" ? "Dismissed by the auditor"
+              : o.decision === "modified" ? `Confirmed as modified · ${esc(SEV[o.severity] || o.severity)}`
+              : `Confirmed as proposed · ${esc(SEV[o.severity] || o.severity)}`,
+            side: btn("Reopen", "clear-finding", { size: "sm", variant: "plain", data: { id: f.id } }),
+          });
+        }).join("")}
+      </div>`, S.disclosed.fdec)}
+    </section>` : ""}
+
     <section class="triage__group">
-      <div class="triage__n">${rs.total} risks identified</div>
+      <div class="triage__n">${rs.total} risk signals identified</div>
       <p class="t-sub" style="margin-bottom:14px">
-        ${rs.significant} proposed as significant · ${rs.fraud} fraud-related · ${rs.newRisks} outside
-        the firm's library. <b>These are not concluded here.</b> Assessing risks of material
-        misstatement is risk analysis, which comes after the interim work — they are carried forward
-        with the process understanding and the matrix.
+        ${rs.significant} carry a system-proposed significance flag · ${rs.fraud} touch fraud
+        considerations · ${rs.newRisks} are outside the firm's library. <b>Nothing here is
+        assessed or concluded.</b> These are inputs the process work produces; assessing risks of
+        material misstatement is risk analysis, a separate phase that reads this output — it is not
+        part of this product.
       </p>
       <div class="acts">
         ${btn("See what is carried forward", "nav", { variant: "plain", data: { href: "#/matrix" } })}
@@ -135,6 +197,8 @@ function controlFocus() {
   const linked = risks.filter((r) => c.risks.includes(r.id));
   const unmet = Object.entries(c.criteria).filter(([, v]) => v !== "met");
   const step = processSteps.find((p) => p.controls.includes(c.id));
+  const parked = st.controlDecision(c) === "undecided";
+  const carrying = S.editing === `carry:${c.id}`;
 
   const body = `<div class="focus">
     ${focusBar(ix, q.length, "Controls")}
@@ -168,6 +232,9 @@ function controlFocus() {
         <b>${unmet.length === 1 ? "One criterion is not met" : `${unmet.length} criteria are not met`}.</b>
         ${unmet.map(([k]) => esc(CRIT[k].toLowerCase())).join("; ")}.
         ${c.followUp ? " " + esc(c.followUp) : ""}</div>` : ""}
+      ${parked && !carrying ? `<div class="q__flag">
+        <b>Left undecided.</b> That is a bookmark, not a conclusion — this control is still counted
+        as outstanding and still blocks the completion gate.</div>` : ""}
 
       ${more("crit", "Show the six criteria", `<div class="meth">
         ${Object.entries(c.criteria).map(([k, v]) => `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)">
@@ -179,20 +246,37 @@ function controlFocus() {
       </div>`, S.disclosed.crit)}
 
       <div class="q__sug">
-        <span class="l">Suggested</span>
+        <span class="l">Proposed by the platform</span>
         <span class="v">${c.keyProposal === true ? "Key control"
           : c.keyProposal === false ? "Not a key control" : "Cannot be assessed"}</span>
       </div>
-      <div class="q__acts">
-        ${btn(c.keyProposal === true ? "Accept — key control" : c.keyProposal === false ? "Accept — not key" : "Leave undecided",
+
+      ${carrying ? `
+        <div class="q__block" style="margin-top:18px">
+          <h4>Carry forward undecided — why</h4>
+          <p class="t-meta" style="margin-bottom:10px">This reason goes on the file and is shown to
+          the reviewer. It is what makes moving on without a conclusion defensible.</p>
+          <textarea class="field" id="ans" rows="3" placeholder="e.g. The control owner is on leave until the final audit; whether this is a key control depends on the override report we have not received.">${
+            esc(S.controlCarry[c.id] || "")}</textarea>
+          <div class="acts" style="margin-top:12px">
+            ${btn("Carry forward with this reason", "carry-control", { variant: "go", data: { id: c.id } })}
+            ${btn("Cancel", "cancel-edit", { variant: "plain" })}
+          </div>
+        </div>`
+      : `<div class="q__acts">
+        ${btn(c.keyProposal === true ? "Accept — key control" : c.keyProposal === false ? "Accept — not key" : "Record as key control",
           "decide-control", { variant: "go", key: "Enter",
-          data: { id: c.id, d: c.keyProposal === true ? "key" : c.keyProposal === false ? "not_key" : "undecided" } })}
+          data: { id: c.id, d: c.keyProposal === true ? "key" : c.keyProposal === false ? "not_key" : "key" } })}
         ${c.keyProposal !== true ? btn("Key control", "decide-control", { data: { id: c.id, d: "key" }, key: "K" }) : ""}
         ${c.keyProposal !== false ? btn("Not key", "decide-control", { data: { id: c.id, d: "not_key" }, key: "N" }) : ""}
-        ${c.keyProposal !== null ? btn("Undecided", "decide-control", { data: { id: c.id, d: "undecided" }, key: "U" }) : ""}
+        ${btn("Carry forward undecided", "carry-control-open", { data: { id: c.id }, key: "C" })}
         <span class="sp"></span>
-        ${btn("Skip", "focus-next", { variant: "plain" })}
+        ${btn(parked ? "Next" : "Park for now", parked ? "focus-next" : "park-control",
+          { variant: "plain", data: { id: c.id }, key: "U" })}
       </div>
+      <p class="t-meta" style="margin-top:14px;max-width:60ch">
+        Parking keeps the control in this queue. Only <i>key</i>, <i>not key</i> and
+        <i>carried forward with a reason</i> conclude it.</p>`}
     </div></div>
   </div>`;
 
@@ -209,6 +293,35 @@ function findingFocus() {
   const refs = refsOf((f.refs || []).filter((r) => !r.startsWith("LW:")));
   const step = processSteps.find((p) => p.id === f.step);
   const risk = f.risk ? risks.find((r) => r.id === f.risk) : null;
+  const editing = S.editingFinding === f.id;
+
+  const form = `
+    <div class="q__block" style="margin-top:18px">
+      <h4>Your conclusion — edit anything the platform got wrong</h4>
+      <p class="t-meta" style="margin-bottom:12px">The proposal above is kept as it was. What you
+      write here is recorded as the auditor's conclusion, and it is this version that goes to
+      management.</p>
+
+      <label class="t-eyebrow" for="f-title">Finding</label>
+      <input class="field" id="f-title" value="${esc(f.title)}" style="margin:6px 0 14px">
+
+      <label class="t-eyebrow" for="f-sev">Severity</label>
+      <select class="field" id="f-sev" style="margin:6px 0 14px">
+        ${Object.entries(SEV).map(([k, v]) =>
+          `<option value="${esc(k)}"${k === f.severity ? " selected" : ""}>${esc(v)}</option>`).join("")}
+      </select>
+
+      <label class="t-eyebrow" for="f-impact">Why it matters</label>
+      <textarea class="field" id="f-impact" rows="3" style="margin:6px 0 14px">${esc(f.impact)}</textarea>
+
+      <label class="t-eyebrow" for="f-rem">Suggested remediation</label>
+      <textarea class="field" id="f-rem" rows="3" style="margin:6px 0 0">${esc(f.remediation || "")}</textarea>
+
+      <div class="acts" style="margin-top:14px">
+        ${btn("Record as modified", "save-finding", { variant: "go", data: { id: f.id } })}
+        ${btn("Cancel", "cancel-finding-edit", { variant: "plain" })}
+      </div>
+    </div>`;
 
   const body = `<div class="focus">
     ${focusBar(ix, q.length, "Findings")}
@@ -229,28 +342,32 @@ function findingFocus() {
       </div>` : ""}
 
       ${risk ? `<dl class="q__facts">
-        <div class="q__fact"><dt>Related risk</dt><dd>${esc(risk.title)}</dd></div>
+        <div class="q__fact"><dt>Related risk signal</dt><dd>${esc(risk.title)}<div class="t-meta"
+          style="margin-top:3px">Carried into risk analysis. Not assessed here.</div></dd></div>
       </dl>` : ""}
 
       ${refs.length ? more("fsrc", `Supported by ${refs.length} sources`, evidence(refs), S.disclosed.fsrc) : ""}
 
       ${f.fromTrace ? `<div class="q__flag q__flag--alert">
         <b>Found by tracing a real transaction.</b> This did not come from what anyone said in the
-        walkthrough — it came from comparing two dates on one order.</div>` : ""}
+        interview — it came from comparing two dates on one order. Concluding on it here is what
+        closes the loop between step five and step four.</div>` : ""}
 
       <div class="q__sug">
-        <span class="l">Suggested severity</span>
+        <span class="l">Severity proposed by the platform</span>
         <span class="v">${esc(SEV[f.severity] || f.severity)}</span>
       </div>
-      <div class="q__acts">
-        ${btn("Confirm", "decide-finding", { variant: "go", key: "Enter", data: { id: f.id, d: "confirmed" } })}
+
+      ${editing ? form : `<div class="q__acts">
+        ${btn("Confirm as proposed", "decide-finding", { variant: "go", key: "Enter", data: { id: f.id, d: "confirmed" } })}
+        ${btn("Modify", "edit-finding", { key: "M", data: { id: f.id } })}
         ${btn("Dismiss", "decide-finding", { key: "D", data: { id: f.id, d: "dismissed" } })}
         <span class="sp"></span>
-        ${btn("Skip", "focus-next", { variant: "plain" })}
+        ${btn("Skip", "focus-next", { variant: "plain", key: "J" })}
       </div>
       <p class="t-meta" style="margin-top:14px;max-width:60ch">
         ISA 265 requires deficiencies to be communicated. Whether this one is significant is a
-        conclusion you record — the platform proposes a severity and stops there.</p>
+        conclusion you record — the platform proposes a severity and stops there.</p>`}
     </div></div>
   </div>`;
 
@@ -265,7 +382,7 @@ export function controlsStep() {
       ${empty("No controls identified yet",
         "Controls are identified from the process understanding, so the process has to be documented first.")}
       <div style="text-align:center;margin-top:-40px">
-        ${btn("Go to Understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
+        ${btn("Go to the process understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
       </div>`);
   }
   if (S.reviewMode === "focus" && S.focusKind === "controls") return controlFocus();

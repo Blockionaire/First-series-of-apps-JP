@@ -445,6 +445,201 @@ half-made decisions.
 
 ---
 
+## F-19 · A process has variants, and almost everything downstream depends on them
+
+**Priority: P1** · Engine impact: **schema change**
+
+**Observation.** The prototype modelled Revenue as one linear flow. It is not. Machine sales,
+spare part sales and service contracts share most of their steps, diverge at installation and at
+billing, and converge at revenue posting. They also have two different recognition bases. Once
+that is admitted, four things stop being process-level and become variant-level: which steps
+exist, which line walkthroughs are required, which transactions are candidates, and what
+"complete" means.
+
+**Why it matters.** A file that says "we walked through Revenue" when it walked through one
+machine sale has not covered spare parts at all, and nothing in the file says so. This is not a
+presentation problem — it is the difference between coverage and the appearance of coverage.
+
+**Suggested engine change.** A `ProcessVariant` alongside `ProcessStep`, with steps declaring
+their variant membership rather than a single ordered list:
+
+```
+ProcessVariant {
+  id, processId, name,
+  revenueStream, materiality,                    // for scoping
+  recognitionBasis: "point_in_time" | "over_time",
+  description, evidenceRefs,
+}
+
+ProcessStep {
+  ...,
+  variantIds: string[],        // which paths this step is on
+  next: string[],              // successors — the graph, not an index
+  isConvergencePoint: boolean,
+  skipReason: string | null,   // why a variant that reaches here does not use it
+}
+```
+
+The step list becomes a directed graph. Generation should propose variants from the sources (the
+transcript distinguishes them plainly) and the auditor confirms them, exactly as with everything
+else the engine proposes.
+
+---
+
+## F-20 · Line walkthrough scope is a decision with a reason, not a default
+
+**Priority: P1** · Engine impact: **new schema**
+
+**Observation.** The first version of the trace assumed one walkthrough was required and pre-seeded
+it. Whether a variant needs a line walkthrough is a methodology question answered per variant, and
+"not required" is a legitimate answer that has to carry a reason a reviewer can assess. Pre-seeding
+the answer from the pack made the platform decide.
+
+**Suggested engine change.**
+
+```
+LineWalkthroughRequirement {
+  id, engagementId, processId, variantId,
+  proposedState: "required" | "not_required",   // from the methodology pack
+  proposedRationale: string | null,
+  auditorState: "required" | "not_required" | null,
+  auditorRationale: string | null,              // mandatory when not_required
+  decidedBy, decidedAt,
+}
+```
+
+The pack proposes; the auditor decides; both are stored. The completion gate reads the auditor
+value and is unmet while it is null — which is what makes "we did not think about spare parts" a
+visible state rather than an invisible one.
+
+---
+
+## F-21 · Control testing needs a scope decision before it needs a test
+
+**Priority: P2** · Engine impact: **new schema**
+
+**Observation.** Concluding that a control is key does not mean it will be tested. Testing follows
+an intention to rely, and deciding *not* to rely — responding substantively instead — is a normal
+outcome that has to be recorded. Without that object the step is either always outstanding or
+silently skipped.
+
+**Suggested engine change.**
+
+```
+ControlTestingRequirement {
+  id, engagementId, controlId,
+  state: "required" | "not_required" | "not_decided",
+  rationale: string | null,          // mandatory when not_required
+  plannedReliance: boolean,
+  decidedBy, decidedAt,
+}
+```
+
+Two consequences for the test object itself: extending a sample must be a change to the
+`selection`, never a value of `conclusion`; and the conclusion vocabulary must be closed to
+`rely` / `do_not_rely`, so that "we extended it" cannot be mistaken for an answer.
+
+---
+
+## F-22 · Undecided is a bookmark, and the model has to say so
+
+**Priority: P1** · Engine impact: **additive fields**
+
+**Observation.** The prototype allowed a control to be set to `undecided` and treated that as
+concluded, which cleared it from the queue and from the completion gate. That is the single most
+dangerous class of bug in an audit tool: an uncompleted judgement that looks completed.
+
+**Suggested engine change.** Separate the values that conclude from the values that do not, and
+give "moving on anyway" its own explicit object:
+
+```
+CarryForwardDecision {
+  id, subjectType: "control" | "open_item" | "finding" | "coverage_item",
+  subjectId,
+  destination: "final_audit" | "risk_analysis" | "next_interim" | "group_team",
+  rationale: string,           // mandatory
+  decidedBy, decidedAt,
+}
+```
+
+Any derived "is this concluded?" predicate then reads: an explicit conclusion, or a
+`CarryForwardDecision`. Nothing else. `undecided` stays in the record as the auditor's bookmark
+and keeps the item in its queue.
+
+---
+
+## F-23 · The auditor's conclusion is a different value from the system's proposal
+
+**Priority: P1** · Engine impact: **additive fields**
+
+**Observation.** Findings could be confirmed or dismissed but not modified, so an auditor who
+disagreed with the wording or the severity had to dismiss a real finding or accept a wrong one.
+Once modification exists, the file has to hold both versions — what the platform proposed and what
+the auditor concluded — or the record of what the tool actually contributed disappears.
+
+**Suggested engine change.** On every auditor-facing generated object:
+
+```
+proposal:   { title, severity, impact, remediation, ... }   // immutable, as generated
+conclusion: { decision: "confirmed" | "modified" | "dismissed",
+              title, severity, impact, remediation,          // present when modified
+              decidedBy, decidedAt } | null
+```
+
+This also answers a question the firm will eventually ask about every AI feature: how often did
+the auditor change what it produced, and in which direction? That is not measurable unless both
+values are kept.
+
+---
+
+## F-24 · Sign-off is a state machine, not a boolean
+
+**Priority: P1** · Engine impact: **schema change** (supersedes part of F-02)
+
+**Observation.** "Signed" and "complete" were the same thing in the prototype, which made ready
+for review indistinguishable from reviewed. In the firm's actual workflow they are six states, and
+which of them are required is configuration, not code — process-level partner review applies to
+PIE and listed engagements and not to others.
+
+**Suggested engine change.**
+
+```
+SignOffState {
+  preparer: "unsigned" | "signed",
+  review:   "not_submitted" | "submitted" | "in_review" | "approved" | "reopened",
+  partner:  "not_required" | "not_submitted" | ... ,
+  signatures: [{ role, userId, at }],
+  reviewPoints: ReviewPoint[],        // what "reopened" carries
+}
+
+MethodologyConfig {
+  requiresManagerReview: boolean,
+  requiresPartnerReview: boolean,
+  partnerReviewRationale: string,
+}
+```
+
+Completion gates must declare `applicable` and be filtered by it, so a condition that does not
+apply to this engagement is absent rather than permanently unmet. A gate list that can never
+reach zero teaches auditors to ignore it.
+
+---
+
+## F-25 · A questionnaire answer is evidence, not a separate application
+
+**Priority: P2** · Engine impact: **none — wiring**
+
+**Observation.** The client questionnaire looked connected and was not: answering a question
+changed nothing in coverage, and "I don't know" and "I'd rather have a call" did nothing at all.
+All three are different states of the same fact, and the last two are new work for the auditor.
+
+**Suggested product change.** A questionnaire response resolves the `MissingFact` it was raised
+for, updates the coverage item that owns it, and closes the open item that was chasing it — one
+write, three visible consequences. A non-answer resolves nothing and raises an open item with the
+reason it could not be answered, which is genuinely more useful than a guess.
+
+---
+
 ## Summary
 
 | # | Finding | Priority | Engine impact |
@@ -467,8 +662,26 @@ half-made decisions.
 | F-16 | No process-step model to draw or trace against | P1 | New schema + generation stage |
 | F-17 | The line walkthrough has no representation | P1 | New schema; mostly deterministic |
 | F-18 | Risks are carried forward, not concluded in interim | P2 | None (product scope) |
+| F-19 | A process has variants; the step list is a graph | P1 | New schema + graph on `ProcessStep` |
+| F-20 | Line-walkthrough scope is a decision with a reason | P1 | New schema |
+| F-21 | Control testing needs a scope decision first | P2 | New schema |
+| F-22 | Undecided is a bookmark, not a conclusion | P1 | Additive fields + `CarryForwardDecision` |
+| F-23 | Proposal and conclusion are two values | P1 | Additive fields |
+| F-24 | Sign-off is a state machine, and gates are conditional | P1 | Schema change |
+| F-25 | A questionnaire answer is evidence | P2 | None (wiring) |
 
-**F-16 and F-17 are the two that change what the engine produces**, and everything V3 adds depends
-on them. Five earlier findings (F-01, F-02, F-05, F-10, F-13) are cheap now and expensive later. Four of them add
-fields to records rather than changing what the pipeline does; F-13 adds a small repair pass and
-is the one with the largest effect on how the product feels to use.
+**F-16, F-17 and F-19 are the three that change what the engine produces**, and everything the
+current prototype does downstream of step three depends on them. F-19 is the one to settle first:
+variants change the shape of `ProcessStep`, and every later object that references a step —
+walkthrough requirements, traces, coverage — inherits that shape.
+
+**F-22, F-23 and F-24 are cheap now and expensive later.** All three are additive fields that
+separate a proposal from a conclusion and an intention from a decision. Retrofitting them means
+migrating records whose meaning is already ambiguous, which is a much worse problem than adding a
+column. F-22 in particular is a correctness issue rather than a UX one: the prototype shipped a
+version in which an unmade judgement counted as a made one, and nothing in the data model
+prevented it.
+
+Five earlier findings (F-01, F-02, F-05, F-10, F-13) remain in the same category. F-24 supersedes
+the review-state half of F-02: a boolean is not enough, and the shape it should take is now known
+from building it.

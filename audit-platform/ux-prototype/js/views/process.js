@@ -6,7 +6,7 @@
 
 import { esc, cx, act as btn, row, dot, callout, empty } from "../ui.js";
 import { client, engagement, sources } from "../data-sources.js";
-import { journey } from "../data-process.js";
+import { journey, carriedContext, variants } from "../data-process.js";
 import * as st from "../state.js";
 import { idline, engContext, engScreen, screen } from "./shell.js";
 import { processMap, mapLegend, mapDetail } from "./map.js";
@@ -94,7 +94,7 @@ export function processHome() {
   const steps = st.journeyStates();
   const next = st.nextAction();
   const tr = st.traceSummary();
-  const mode = tr.started ? "trace" : S.generated ? "annotated" : "plain";
+  const mode = tr.active ? "trace" : S.generated ? "annotated" : "plain";
 
   const body = `
     <div class="head">
@@ -125,7 +125,29 @@ export function processHome() {
         Click a step to see its controls, findings and sources.</p>`}
     </section>
 
-    <section style="margin-top:48px">
+    <section style="margin-top:44px">
+      <h2 class="t-h" style="margin-bottom:4px">Process variants</h2>
+      <p class="t-meta" style="margin-bottom:16px">
+        Revenue is three materially different flows sharing most of their steps. Line walkthroughs
+        are tracked per variant.</p>
+      <div class="rows">
+        ${st.traceSummary().variants.map((v) => row({
+          lead: dot(v.state === "completed" ? "ok" : v.state === "not_required" ? "open"
+            : v.state === "in_progress" ? "warn" : "open"),
+          title: `<span class="b">${esc(v.variant.name)}</span>`,
+          detail: `${esc(v.variant.recognition)} · ${st.stepsForVariantCount(v.variant.id)} process steps`,
+          side: `<span class="t-meta" style="${v.state === "completed" ? "color:var(--ok)" : ""}">${
+            v.state === "completed" ? `walkthrough complete${v.progress?.exceptions ? ` · ${v.progress.exceptions} exception` : ""}`
+            : v.state === "not_required" ? "walkthrough not required"
+            : v.state === "in_progress" ? `${v.progress.done} of ${v.progress.expected} traced`
+            : v.state === "not_decided" ? "walkthrough not decided"
+            : "walkthrough not started"}</span>`,
+          action: "nav", data: { href: "#/trace" },
+        })).join("")}
+      </div>
+    </section>
+
+    <section style="margin-top:44px">
       <h2 class="t-h" style="margin-bottom:4px">The interim workflow</h2>
       <p class="t-meta" style="margin-bottom:16px">Seven steps. You can look ahead at any time.</p>
       <div class="rows">
@@ -177,9 +199,10 @@ export function prepare() {
     <section style="margin-top:36px">
       <h2 class="t-eyebrow" style="margin-bottom:14px">Scope</h2>
       <div class="rows">
-        ${row({ title: "Process", detail: "Revenue / order-to-cash — both streams", side: `<span class="t-meta">in scope</span>` })}
-        ${row({ title: "Machines and spare parts", detail: "EUR 41.2m · recognised on customer acceptance", side: `<span class="t-meta">point in time</span>` })}
-        ${row({ title: "Service and maintenance contracts", detail: "EUR 7.4m · straight-line over the contract term", side: `<span class="t-meta">over time</span>` })}
+        ${row({ title: "Process", detail: "Revenue — three process variants across two revenue streams", side: `<span class="t-meta">in scope</span>` })}
+        ${variants.map((v) => row({
+          title: esc(v.name), detail: `${esc(v.value)} · ${esc(v.recognition.toLowerCase())}`,
+          side: `<span class="t-meta">${v.recognition.startsWith("Over") ? "over time" : "point in time"}</span>` })).join("")}
         ${row({ title: "Methodology pack", detail: "12 sub-processes, 45 coverage areas, 10 required by ISA 240", side: `<span class="mono t-meta">revenue v0.1.0</span>` })}
       </div>
     </section>
@@ -218,6 +241,35 @@ export function prepare() {
     </section>
 
     <section style="margin-top:40px">
+      <h2 class="t-eyebrow" style="margin-bottom:4px">Context carried into interim</h2>
+      <p class="t-meta" style="margin-bottom:14px">
+        From client acceptance, entity understanding and the inherent risk factors identified in
+        planning. Read-only here — interim receives this work, it does not redo it.</p>
+      <div class="rows">
+        ${carriedContext.map((c) => row({
+          lead: dot("open"),
+          title: esc(c.t), detail: esc(c.d),
+          side: `<span class="t-meta">${esc(c.kind)}</span>`,
+        })).join("")}
+      </div>
+    </section>
+
+    <section style="margin-top:40px">
+      <h2 class="t-eyebrow" style="margin-bottom:4px">Process variants in scope</h2>
+      <p class="t-meta" style="margin-bottom:14px">
+        Revenue is not one flow. These three are materially different processes and are walked
+        through separately where the methodology requires it.</p>
+      <div class="rows">
+        ${variants.map((v) => row({
+          lead: dot("open"),
+          title: `<span class="b">${esc(v.name)}</span>`,
+          detail: `${esc(v.what)} — ${esc(v.recognition.toLowerCase())}`,
+          side: `<span class="t-meta">${esc(v.value)}</span>`,
+        })).join("")}
+      </div>
+    </section>
+
+    <section style="margin-top:40px">
       <h2 class="t-eyebrow" style="margin-bottom:14px">Known changes since last year</h2>
       <div class="rows">
         ${row({ lead: dot("warn"),
@@ -242,15 +294,19 @@ export function prepare() {
 
     <section style="margin-top:44px;border-top:1px solid var(--line);padding-top:28px">
       ${S.prepared
-        ? `<div class="acts">
-            ${btn("Go to the walkthrough", "nav", { variant: "go", size: "lg", data: { href: "#/walkthrough" } })}
+        ? `<div class="row" style="gap:16px">
+            <span class="state state--ok"><i class="dot dot--ok"></i>Preparation confirmed</span>
+            <span class="sp"></span>
+            ${btn("Edit preparation", "prepare-reopen", { variant: "plain" })}
+            ${btn("Go to the process interview", "nav", { variant: "go", data: { href: "#/interview" } })}
           </div>`
         : `<h2 class="t-h">Ready to speak to the client?</h2>
            <p class="t-sub" style="margin:6px 0 18px;max-width:62ch">
-             Confirming preparation records that the scope, participants and prior information were
-             considered before the walkthrough — which is what the file has to show.</p>
+             Confirming records that the scope, the participants, the carried context and the prior
+             information were considered before the interview — which is what the file has to show.
+             You are taken straight to the process interview.</p>
            <div class="acts">
-             ${btn("Confirm and continue", "prepare-done", { variant: "go", size: "lg", key: "Enter" })}
+             ${btn("Confirm and start the process interview", "prepare-done", { variant: "go", size: "lg", key: "Enter" })}
            </div>`}
     </section>
   `;

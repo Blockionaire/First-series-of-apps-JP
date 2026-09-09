@@ -45,7 +45,7 @@ export function cockpit() {
     <span class="idline__sp"></span>
     ${btn(S.cockpitPlaying ? "Pause" : "Play", "cockpit-play", { size: "sm", variant: S.cockpitPlaying ? "" : "go" })}
     ${btn("Next turn", "cockpit-next", { size: "sm" })}
-    ${btn("End", "nav", { size: "sm", variant: "plain", data: { href: "#/understand" } })}
+    ${btn("End", "nav", { size: "sm", variant: "plain", data: { href: "#/interview" } })}
   </div>
 
   <div class="ck">

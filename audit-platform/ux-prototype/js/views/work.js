@@ -25,14 +25,20 @@ export function work() {
     },
     cov.mandatoryOpen.length && {
       tone: "warn", t: `${cov.mandatoryOpen.length} required areas are still open`,
-      d: `${cov.mandatoryOpen.map((i) => i.plain || i.q).slice(0, 1)}`, href: "#/walkthrough",
+      d: `${cov.mandatoryOpen.map((i) => i.plain || i.q).slice(0, 1)}`, href: "#/interview",
     },
     st.S.generated && cs.pending && {
       tone: "", t: `${cs.pending} controls to conclude`,
       d: `${cs.suggestedKey} are suggested as key controls`, href: "#/controls",
     },
-    st.S.generated && !st.traceSummary().concluded && {
-      tone: "", t: "A transaction has not been traced through the process",
+    st.S.generated && st.findingSummary().fromTraceOpen.length && {
+      tone: "alert", t: "The line walkthrough raised a finding",
+      d: "Tracing a real transaction changed the documented understanding", href: "#/controls",
+    },
+    st.S.generated && !st.traceSummary().satisfied && {
+      tone: "", t: st.traceSummary().undecided
+        ? "Some Revenue variants have no line-walkthrough decision"
+        : "A required line walkthrough is outstanding",
       d: "The line walkthrough tests the process model against reality", href: "#/trace",
     },
     oi.sent && {
