@@ -9,30 +9,41 @@
    Every number on every screen is computed here from data-model.js.
    ========================================================================== */
 
-import { subProcesses, narrative, risks, controls, gaps, openItems, signOffGates } from "./data-model.js";
+import { subProcesses, narrative, risks, controls, gaps, openItems } from "./data-model.js";
+import { journey, processSteps, processFindings, traceFinding, lineWalk, lineWalkCandidates,
+         controlTest } from "./data-process.js";
 
 /* The decision state that undo restores. Everything else is view state. */
-const DECISIONS = ["blocks", "sections", "coverage", "riskDecisions", "controlDecisions", "itemStates"];
+const DECISIONS = ["blocks", "sections", "coverage", "controlDecisions", "findingDecisions",
+                   "itemStates", "traceDecisions", "traceTxn", "traceConcluded", "testConclusion",
+                   "prepared"];
 
 const initial = () => ({
   route: "#/",
   generated: false,
   generating: false,
   genStage: -1,
+  genSeen: false,          // the pipeline result has been read
 
   /* --- decisions (undoable) --- */
   blocks: {},              // claim id -> { text, edited, rejected, resolution }
   sections: {},            // section id -> "approved" | "rejected"
   coverage: {},            // coverage item id -> { state, naReason, facts }
-  riskDecisions: {},       // risk id -> "accepted" | "modified" | "rejected"
   controlDecisions: {},    // control id -> "key" | "not_key" | "undecided"
+  findingDecisions: {},    // finding id -> "confirmed" | "dismissed"
   itemStates: {},          // open item id -> "open" | "sent" | "resolved" | "dismissed"
+  traceTxn: null,          // selected transaction for the line walkthrough
+  traceDecisions: {},      // trace step id -> "corroborated" | "exception"
+  traceConcluded: false,
+  testConclusion: null,    // the control-testing concept's auditor conclusion
+  prepared: false,         // step 1 acknowledged
 
   /* --- view state --- */
   reviewMode: "triage",    // triage | focus | read
-  focusKind: null,         // claims | risks | controls
+  focusKind: null,         // claims | controls | findings | trace
   focusIx: 0,
   openClaim: null,         // claim whose evidence is expanded inline
+  mapStep: null,           // process-map step whose detail is open
   section: null,           // active section in read mode
   scrollTo: null,
   disclosed: {},           // progressive-disclosure toggles
@@ -226,20 +237,18 @@ export const claimById = (id) => narrative.flatMap((s) => s.blocks).find((b) => 
 
 /* --- Risks and controls ------------------------------------------------------ */
 
-export const riskDecision = (r) => S.riskDecisions[r.id] ?? null;
 export const controlDecision = (c) => S.controlDecisions[c.id] ?? null;
 
+/** Risks are identified during interim but concluded during risk analysis,
+ *  which is the next phase and outside this product. They are carried
+ *  forward, not decided here (V3-DESIGN-DIRECTION.md §1). */
 export function riskSummary() {
-  const pending = risks.filter((r) => !riskDecision(r));
   return {
     total: risks.length,
-    decided: risks.length - pending.length,
-    pending: pending.length,
-    queue: pending.filter((r) => !r.blocked),
-    blocked: pending.filter((r) => r.blocked),
     significant: risks.filter((r) => r.significant).length,
     fraud: risks.filter((r) => r.fraud).length,
     newRisks: risks.filter((r) => !r.lib).length,
+    blocked: risks.filter((r) => r.blocked),
   };
 }
 
@@ -254,6 +263,73 @@ export function controlSummary() {
     unassessable: controls.filter((c) => c.keyProposal === null).length,
     agreedKey: controls.filter((c) => controlDecision(c) === "key").length,
     gaps: gaps.length,
+  };
+}
+
+/* --- Findings ----------------------------------------------------------------
+   Control gaps and process observations are one auditor-facing object. The line
+   walkthrough can add to the list, which is how step 5 feeds step 4.
+   -------------------------------------------------------------------------- */
+
+export function allFindings() {
+  const fromGaps = gaps.map((g) => ({
+    id: g.id, step: stepOfSubProcess(g.sub), kind: "gap", severity: g.severity,
+    title: g.desc, detail: g.impact, remediation: g.remediation, refs: g.refs,
+    risk: g.risk, fromTrace: false,
+  }));
+  const out = [...fromGaps, ...processFindings];
+  if (S.traceConcluded && Object.values(S.traceDecisions).includes("exception")) out.push(traceFinding);
+  return out;
+}
+
+const stepOfSubProcess = (sub) => processSteps.find((p) => p.sub === sub)?.id || null;
+
+export const findingDecision = (f) => S.findingDecisions[f.id] ?? null;
+
+export function findingSummary() {
+  const all = allFindings();
+  const pending = all.filter((f) => !findingDecision(f));
+  return {
+    total: all.length, all, pending, queue: pending,
+    decided: all.length - pending.length,
+    confirmed: all.filter((f) => findingDecision(f) === "confirmed").length,
+    fromTrace: all.filter((f) => f.fromTrace).length,
+  };
+}
+
+/* --- Line walkthrough --------------------------------------------------------- */
+
+export const traceVerdict = (t) => S.traceDecisions[t.id] ?? null;
+
+export function traceSummary() {
+  const steps = lineWalk.steps;
+  const done = steps.filter(traceVerdict);
+  return {
+    expected: steps.length,
+    corroborated: steps.filter((t) => traceVerdict(t) === "corroborated").length,
+    exceptions: steps.filter((t) => traceVerdict(t) === "exception").length,
+    pending: steps.filter((t) => !traceVerdict(t)),
+    done: done.length,
+    started: !!S.traceTxn,
+    concluded: S.traceConcluded,
+    steps,
+  };
+}
+
+export const traceStepFor = (mapStepId) =>
+  lineWalk.steps.find((t) => t.step === mapStepId) || null;
+
+/* --- Control testing (future-state concept) ----------------------------------- */
+
+export function testSummary() {
+  const r = controlTest.results;
+  return {
+    control: controlTest.controlId,
+    selected: r.length,
+    corroborated: r.filter((x) => x.ok).length,
+    exceptions: r.filter((x) => !x.ok).length,
+    concluded: !!S.testConclusion,
+    conclusion: S.testConclusion,
   };
 }
 
@@ -285,66 +361,136 @@ export function rcmRows() {
   return rows;
 }
 
-/* --- Stages ------------------------------------------------------------------- */
+/* --- The process journey -------------------------------------------------------
+   Seven ordered steps, each carrying its own state. Not a tab bar: the order is
+   the order the work happens in, and a step that has not started says so.
+   -------------------------------------------------------------------------- */
 
-export function stages() {
+export function journeyStates() {
   const cov = coverageSummary();
   const n = narrativeSummary();
-  const rs = riskSummary();
   const cs = controlSummary();
-  const oi = openItemSummary();
-  const reviewOwed = S.generated ? n.attention.length + n.pending.length + rs.pending + cs.pending : 0;
-  return [
-    { id: "understand", name: "Understand", href: "#/understand",
-      count: `${cov.pct}%`, tone: cov.mandatoryOpen.length ? "warn" : cov.pct >= 85 ? "ok" : "" },
-    { id: "review", name: "Review", href: "#/review",
-      count: !S.generated ? "not generated"
-        : reviewOwed === 0 ? "done"
-        : n.attention.length ? `${n.attention.length} need you`
-        : `${rs.pending + cs.pending + n.pending} to confirm`,
-      tone: !S.generated ? "" : n.attention.length ? "warn" : reviewOwed === 0 ? "ok" : "" },
-    { id: "resolve", name: "Resolve", href: "#/resolve",
-      count: oi.open ? `${oi.open} open` : "clear",
-      tone: oi.contradictions ? "alert" : oi.open ? "" : "ok" },
-    { id: "complete", name: "Complete", href: "#/complete",
-      count: readyToSign() ? "ready" : "blocked", tone: readyToSign() ? "ok" : "" },
-  ];
+  const fs = findingSummary();
+  const tr = traceSummary();
+  const ts = testSummary();
+
+  const st = (id) => {
+    switch (id) {
+      case "prepare":
+        return S.prepared ? { s: "done", c: "ready" } : { s: "open", c: "start here" };
+      case "walkthrough":
+        return cov.mandatoryOpen.length ? { s: "open", c: `${cov.pct}%`, tone: "warn" }
+          : cov.open + cov.partial ? { s: "open", c: `${cov.pct}%` }
+          : { s: "done", c: `${cov.pct}%` };
+      case "understanding":
+        return !S.generated ? { s: "later", c: "not drafted", why: "Available once the walkthrough has established enough facts to draft from." }
+          : n.attention.length ? { s: "open", c: `${n.attention.length} need you`, tone: "warn" }
+          : n.pending ? { s: "open", c: `${n.pending} to approve` }
+          : { s: "done", c: "approved" };
+      case "controls":
+        return !S.generated ? { s: "later", c: "—", why: "Controls are identified from the process understanding." }
+          : cs.pending + fs.pending.length ? { s: "open", c: `${cs.pending + fs.pending.length} to conclude` }
+          : { s: "done", c: `${cs.agreedKey} key` };
+      case "trace":
+        return !S.generated ? { s: "later", c: "—", why: "A transaction is traced against the documented process, so the process has to be documented first." }
+          : !tr.started ? { s: "open", c: "not started" }
+          : tr.concluded ? { s: "done", c: tr.exceptions ? `${tr.exceptions} exception` : "no exceptions", tone: tr.exceptions ? "warn" : "" }
+          : { s: "open", c: `${tr.done} of ${tr.expected}` };
+      case "testing":
+        return { s: ts.concluded ? "done" : "later", c: ts.concluded ? "concluded" : "concept",
+                 why: "Control testing is a future-state concept in this prototype." };
+      case "complete":
+        return readyToSign() ? { s: "open", c: "ready", tone: "ok" }
+          : { s: "later", c: "blocked", why: "Every completion gate has to be met first." };
+    }
+    return { s: "later", c: "" };
+  };
+
+  return journey.map((j) => ({ ...j, ...st(j.id) }));
 }
+
+export const journeyStep = (id) => journeyStates().find((j) => j.id === id);
+
+/** How far through the process, for the engagement layer. */
+export function processProgress() {
+  const js = journeyStates();
+  const done = js.filter((j) => j.s === "done").length;
+  const current = js.find((j) => j.s === "open") || js[js.length - 1];
+  return { done, total: js.length, current };
+}
+
+/* --- Completion gates -----------------------------------------------------------
+   The process is complete when the process-level interim work is complete. Risk
+   analysis is deliberately not among these.
+   -------------------------------------------------------------------------- */
+
+export const completionGates = [
+  { id: "understanding", label: "Process understanding reviewed", step: "understanding" },
+  { id: "documentation", label: "Process documentation approved", step: "understanding" },
+  { id: "controls",      label: "Controls concluded", step: "controls" },
+  { id: "findings",      label: "Findings concluded", step: "controls" },
+  { id: "trace",         label: "Line walkthrough completed", step: "trace" },
+  { id: "testing",       label: "Required control testing completed", step: "testing" },
+  { id: "needsSource",   label: "No unsupported statements", step: "understanding" },
+  { id: "contradiction", label: "No unresolved contradictions", step: "walkthrough" },
+  { id: "openItems",     label: "Open matters resolved or carried forward", step: "walkthrough" },
+  { id: "signed",        label: "Prepared and reviewed", step: "complete" },
+];
 
 export function gateStates() {
-  const n = narrativeSummary(), rs = riskSummary(), cs = controlSummary();
-  const oi = openItemSummary(), cov = coverageSummary();
+  const n = narrativeSummary(), cs = controlSummary(), fs = findingSummary();
+  const oi = openItemSummary(), cov = coverageSummary(), tr = traceSummary();
   const map = {
-    narrative:     { ok: n.pending === 0, detail: `${n.approved} approved · ${n.rejected} rejected · ${n.pending} still to decide` },
-    needsSource:   { ok: n.needsSource.length === 0, detail: n.needsSource.length ? `${n.needsSource.length} statements have no support` : "Every statement is traced to a source" },
-    contradiction: { ok: n.contradiction.length === 0, detail: n.contradiction.length ? "One contradiction is unresolved" : "No unresolved contradictions" },
-    risks:         { ok: rs.pending === 0, detail: `${rs.decided} of ${rs.total} concluded` },
-    controls:      { ok: cs.pending === 0, detail: `${cs.decided} of ${cs.total} concluded` },
-    mandatory:     { ok: cov.mandatoryOpen.length === 0, detail: cov.mandatoryOpen.length ? `${cov.mandatoryOpen.length} required areas still open` : "All required areas addressed" },
-    openItems:     { ok: oi.open === 0, detail: `${oi.open} open · ${oi.resolved} resolved` },
+    understanding: { ok: S.generated && cov.mandatoryOpen.length === 0,
+      detail: !S.generated ? "Nothing drafted yet"
+        : cov.mandatoryOpen.length ? `${cov.mandatoryOpen.length} required areas still open`
+        : `${cov.covered} of ${cov.applicable} areas established` },
+    documentation: { ok: S.generated && n.pending === 0,
+      detail: !S.generated ? "Nothing drafted yet"
+        : `${n.approved} approved · ${n.rejected} rejected · ${n.pending} still to decide` },
+    controls:      { ok: S.generated && cs.pending === 0,
+      detail: S.generated ? `${cs.decided} of ${cs.total} concluded · ${cs.agreedKey} key` : "Not identified yet" },
+    findings:      { ok: S.generated && fs.pending.length === 0,
+      detail: S.generated ? `${fs.decided} of ${fs.total} concluded` : "Not identified yet" },
+    trace:         { ok: tr.concluded,
+      detail: !tr.started ? "Not started"
+        : tr.concluded ? `${tr.expected} steps · ${tr.corroborated} corroborated · ${tr.exceptions} exception${tr.exceptions === 1 ? "" : "s"}`
+        : `${tr.done} of ${tr.expected} steps traced` },
+    testing:       { ok: !!S.testConclusion,
+      detail: S.testConclusion ? "One control tested and concluded"
+        : "One control identified as requiring a test" },
+    needsSource:   { ok: S.generated && n.needsSource.length === 0,
+      detail: n.needsSource.length ? `${n.needsSource.length} statements have no support` : "Every statement is traced to a source" },
+    contradiction: { ok: n.contradiction.length === 0 && cov.facts.contradictory === 0,
+      detail: n.contradiction.length ? "One contradiction is unresolved" : "No unresolved contradictions" },
+    openItems:     { ok: oi.open === 0, detail: `${oi.open} open · ${oi.resolved} settled` },
+    signed:        { ok: false, detail: "Sign-off is the last act, and it is yours" },
   };
-  return signOffGates.map((g) => ({ ...g, ...map[g.id] }));
+  return completionGates.map((g) => ({ ...g, ...map[g.id] }));
 }
 
+/** Sign-off becomes available when every gate but the signature itself is met. */
 export function readyToSign() {
-  const n = narrativeSummary(), rs = riskSummary(), cs = controlSummary(), oi = openItemSummary();
-  const cov = coverageSummary();
-  return S.generated && n.pending === 0 && n.needsSource.length === 0 && n.contradiction.length === 0
-    && rs.pending === 0 && cs.pending === 0 && oi.open === 0 && cov.mandatoryOpen.length === 0;
+  return gateStates().filter((g) => g.id !== "signed").every((g) => g.ok);
 }
 
-/** The single most useful next action, computed. Drives the Work screen and
- *  the empty states — the product should always know what to suggest. */
+/** The single most useful next action, computed by walking the journey. */
 export function nextAction() {
-  const cov = coverageSummary(), n = narrativeSummary(), rs = riskSummary();
-  const cs = controlSummary(), oi = openItemSummary();
-  if (!S.generated) return { t: "Generate the Revenue documentation", d: `Coverage is ${cov.pct}% and the required areas are addressed.`, href: "#/review", act: "generate" };
-  if (n.attention.length) return { t: `${n.attention.length} statements need your judgement`, d: "Contradictions and unsupported claims are blocking four sections.", href: "#/review" };
-  if (n.cleanReady.length) return { t: `${n.cleanReady.length} sections are clean and ready`, d: "Every statement traced. Accept them and move on.", href: "#/review" };
-  if (rs.pending) return { t: `${rs.pending} risks to conclude`, d: "Accept, modify or reject each proposed risk.", href: "#/review" };
-  if (cs.pending) return { t: `${cs.pending} control recommendations`, d: `${cs.suggestedKey} are suggested as key controls.`, href: "#/review" };
+  const cov = coverageSummary(), n = narrativeSummary(), cs = controlSummary();
+  const fs = findingSummary(), oi = openItemSummary(), tr = traceSummary();
+
+  if (!S.prepared) return { t: "Prepare the Revenue process", d: "Scope, systems, people and what we already know.", href: "#/prepare" };
+  if (cov.facts.contradictory) return { t: "Two sources disagree about who can change a credit limit", d: "It blocks a statement, a control and a risk at once.", href: "#/walkthrough" };
+  if (cov.mandatoryOpen.length) return { t: `${cov.mandatoryOpen.length} required areas are still open`, d: "The walkthrough cannot be concluded while an ISA 240 area is unaddressed.", href: "#/walkthrough" };
+  if (!S.generated) return { t: "Draft the process understanding", d: `Coverage is ${cov.pct}% and the required areas are addressed.`, href: "#/understanding" };
+  if (n.attention.length) return { t: `${n.attention.length} statements need your judgement`, d: "Unsupported or contradictory statements are blocking their sections.", href: "#/understanding" };
+  if (n.pending) return { t: `${n.pending} sections to approve`, d: "Every statement in them is traced to a source.", href: "#/understanding" };
+  if (cs.pending) return { t: `${cs.pending} controls to conclude`, d: `${cs.suggestedKey} are suggested as key controls.`, href: "#/controls" };
+  if (fs.pending.length) return { t: `${fs.pending.length} findings to conclude`, d: "Severity is your judgement, not the model's.", href: "#/controls" };
+  if (!tr.concluded) return { t: tr.started ? "Finish the line walkthrough" : "Trace a transaction through the process", d: tr.started ? `${tr.done} of ${tr.expected} steps traced.` : "Test the process model against a real transaction.", href: "#/trace" };
+  if (!S.testConclusion) return { t: "Conclude the control test", d: "One control requires testing before it can be relied on.", href: "#/testing" };
   if (oi.open) return { t: `${oi.open} open items`, d: "Ask, record or carry each one forward.", href: "#/resolve" };
-  return { t: "Revenue is ready for sign-off", d: "Every gate is met.", href: "#/complete" };
+  return { t: "Revenue is ready for sign-off", d: "Every completion gate is met.", href: "#/complete" };
 }
 
 /* --- Actions ----------------------------------------------------------------
@@ -364,6 +510,8 @@ export const act = {
   sheet(k) { S.sheet = k; commit(); },
 
   disclose(id) { S.disclosed[id] = !S.disclosed[id]; commit(); },
+
+  readGenResult() { S.genSeen = true; commit(); },
 
   /* review modes */
   reviewMode(m) { S.reviewMode = m; S.openClaim = null; commit(); },
@@ -440,11 +588,11 @@ export const act = {
   },
 
   /* risks and controls */
-  decideRisk(id, d) {
-    checkpoint("risk concluded");
-    S.riskDecisions[id] = d;
-    if (S.reviewMode === "focus" && S.focusKind === "risks") this.afterDecision();
-    commit(`Risk ${id} ${d}`, true);
+  decideFinding(id, d) {
+    checkpoint("finding concluded");
+    S.findingDecisions[id] = d;
+    if (S.reviewMode === "focus" && S.focusKind === "findings") this.afterDecision();
+    commit(d === "confirmed" ? `${id} confirmed as a finding` : `${id} dismissed`, true);
   },
   decideControl(id, d) {
     checkpoint("control concluded");
@@ -453,7 +601,7 @@ export const act = {
     if (S.reviewMode === "focus" && S.focusKind === "controls") this.afterDecision();
     commit(`${id} ${w}`, true);
   },
-  clearRisk(id) { checkpoint("risk reopened"); delete S.riskDecisions[id]; commit(); },
+  clearFinding(id) { checkpoint("finding reopened"); delete S.findingDecisions[id]; commit(); },
   clearControl(id) { checkpoint("control reopened"); delete S.controlDecisions[id]; commit(); },
 
   /* open items */
@@ -486,13 +634,44 @@ export const act = {
   },
   openEditor(id) { S.editing = id; commit(); },
 
+  /* step 1 */
+  prepareDone() { checkpoint("preparation confirmed"); S.prepared = true; commit("Preparation confirmed", true); },
+
+  /* step 5 — the line walkthrough */
+  pickTransaction(id) {
+    checkpoint("transaction selected");
+    S.traceTxn = id; S.focusKind = "trace"; S.focusIx = 0; S.reviewMode = "focus";
+    commit("Transaction selected", true);
+  },
+  decideTrace(id, verdict) {
+    checkpoint("trace step concluded");
+    S.traceDecisions[id] = verdict;
+    const remaining = traceSummary().pending.length;
+    if (remaining === 0) { S.reviewMode = "triage"; S.focusKind = null; S.focusIx = 0; }
+    else S.focusIx = Math.min(S.focusIx, remaining - 1);
+    commit(verdict === "exception" ? "Exception recorded" : "Step corroborated", true);
+  },
+  concludeTrace() {
+    checkpoint("line walkthrough concluded");
+    S.traceConcluded = true;
+    S.reviewMode = "triage"; S.focusKind = null;
+    const ex = traceSummary().exceptions;
+    commit(ex ? `Line walkthrough concluded — ${ex} exception raised as a finding` : "Line walkthrough concluded", true);
+  },
+  reopenTrace() { checkpoint("line walkthrough reopened"); S.traceConcluded = false; commit(); },
+
+  /* step 6 — the control-testing concept */
+  concludeTest(d) { checkpoint("control test concluded"); S.testConclusion = d; commit(`Control test concluded — ${d}`, true); },
+
   /* generation */
   startGeneration(stagesList) {
     S.generating = true; S.genStage = 0; commit();
     const step = (i) => {
       if (i >= stagesList.length) {
+        // Stay on the result. The validation stage caught three ungrounded
+        // statements and the auditor has to see that, not have it flash past.
         S.generating = false; S.generated = true; S.genStage = stagesList.length;
-        S.reviewMode = "triage"; commit();
+        S.genSeen = false; S.reviewMode = "triage"; commit();
         return;
       }
       S.genStage = i; commit();
@@ -525,7 +704,8 @@ export const act = {
 
 export function focusLength() {
   if (S.focusKind === "claims") return claimQueue().length;
-  if (S.focusKind === "risks") return riskSummary().queue.length;
   if (S.focusKind === "controls") return controlSummary().queue.length;
+  if (S.focusKind === "findings") return findingSummary().queue.length;
+  if (S.focusKind === "trace") return traceSummary().pending.length;
   return 0;
 }

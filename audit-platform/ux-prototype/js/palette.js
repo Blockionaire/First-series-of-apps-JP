@@ -6,6 +6,7 @@
 
 import { esc, cx } from "./ui.js";
 import { narrative, risks, controls, subProcesses, openItems } from "./data-model.js";
+import { processSteps, lineWalk } from "./data-process.js";
 import { sources, client } from "./data-sources.js";
 import * as st from "./state.js";
 
@@ -15,11 +16,14 @@ function index() {
   const items = [];
   const add = (group, name, hint, run, keep) => items.push({ group, name, hint, run, keep });
 
-  st.stages().forEach((s) =>
-    add("Go to", s.name, s.count, () => { location.hash = s.href; }));
+  st.journeyStates().forEach((s) =>
+    add("Steps", `${s.n}. ${s.name}`, s.c, () => { location.hash = s.href; }));
 
+  add("Go to", "Revenue process home", "the map and the journey", () => { location.hash = "#/revenue"; });
+  add("Go to", "Engagement", "client, year, processes", () => { location.hash = "#/engagement"; });
+  add("Go to", "Open items", `${st.openItemSummary().open} open`, () => { location.hash = "#/resolve"; });
   add("Go to", "Read the working paper", "the full narrative",
-    () => { S.reviewMode = "read"; location.hash = "#/review"; });
+    () => { S.reviewMode = "read"; location.hash = "#/understanding"; });
   add("Go to", "Risk and control matrix", "assembled view", () => { location.hash = "#/matrix"; });
   add("Go to", "Client questionnaire", "client-facing surface", () => { location.hash = "#/questionnaire"; });
   add("Go to", "Live walkthrough cockpit", "future concept", () => { location.hash = "#/cockpit"; });
@@ -32,48 +36,58 @@ function index() {
     if (st.claimQueue().length)
       add("Do", "Start the judgement queue", `${st.claimQueue().length} statements need you`,
         () => st.act.startFocus("claims"));
-    if (st.riskSummary().pending)
-      add("Do", "Review risk recommendations", `${st.riskSummary().pending} to conclude`,
-        () => st.act.startFocus("risks"));
     if (st.controlSummary().pending)
       add("Do", "Review control recommendations", `${st.controlSummary().pending} to conclude`,
-        () => st.act.startFocus("controls"));
+        () => { location.hash = "#/controls"; st.act.startFocus("controls"); });
+    if (st.findingSummary().queue.length)
+      add("Do", "Review findings", `${st.findingSummary().queue.length} to conclude`,
+        () => { location.hash = "#/controls"; st.act.startFocus("findings"); });
+    if (!st.traceSummary().concluded)
+      add("Do", "Line walkthrough", st.traceSummary().started
+        ? `${st.traceSummary().done} of ${st.traceSummary().expected} steps traced` : "trace a transaction",
+        () => { location.hash = "#/trace"; });
   }
   add("Do", "Guided demo", "the five-minute walkthrough", () => window.__demoStart());
   add("Do", "Keyboard shortcuts", "?", () => st.act.sheet("keys"));
   add("Do", "Reset the prototype", "back to the beginning", () => st.act.reset());
 
-  if (st.S.generated) narrative.forEach((sec) =>
-    add("Sections", sec.heading, st.sectionState(sec).replace("_", " "), () => {
-      S.reviewMode = "read"; S.section = sec.id; S.scrollTo = sec.id; location.hash = "#/review";
+  processSteps.forEach((p) =>
+    add("Process steps", p.name, `${p.actor} · ${p.system}`, () => {
+      S.mapStep = p.id; location.hash = st.S.generated ? "#/controls" : "#/revenue";
     }));
 
-  if (st.S.generated) risks.forEach((r) =>
-    add("Risks", r.title, `${r.id} · ${r.lib || "new"}`, () => {
-      const q = st.riskSummary().queue; const i = q.findIndex((x) => x.id === r.id);
-      if (i >= 0) { S.focusKind = "risks"; S.focusIx = i; S.reviewMode = "focus"; }
-      location.hash = "#/review";
+  if (st.S.generated) narrative.forEach((sec) =>
+    add("Sections", sec.heading, st.sectionState(sec).replace("_", " "), () => {
+      S.reviewMode = "read"; S.section = sec.id; S.scrollTo = sec.id; location.hash = "#/understanding";
     }));
 
   if (st.S.generated) controls.forEach((c) =>
     add("Controls", c.title, `${c.id} · ${c.owner || "no owner"}`, () => {
       const q = st.controlSummary().queue; const i = q.findIndex((x) => x.id === c.id);
       if (i >= 0) { S.focusKind = "controls"; S.focusIx = i; S.reviewMode = "focus"; }
-      location.hash = "#/review";
+      location.hash = "#/controls";
     }));
+
+  if (st.S.generated) st.allFindings().forEach((f) =>
+    add("Findings", f.title, `${f.id}${f.fromTrace ? " · from the line walkthrough" : ""}`,
+      () => { location.hash = "#/controls"; st.act.startFocus("findings"); }));
+
+  if (st.S.generated) risks.forEach((r) =>
+    add("Risks (carried forward)", r.title, `${r.id} · ${r.lib || "new"}`,
+      () => { location.hash = "#/matrix"; }));
 
   subProcesses.forEach((sp) => sp.items.forEach((it) =>
     add("Coverage", it.q, `${it.id} · ${sp.name}`, () => {
-      S.disclosed.meth = true; location.hash = "#/understand";
+      S.disclosed.meth = true; location.hash = "#/walkthrough";
     })));
 
   openItems.forEach((i) =>
     add("Open items", i.title, `${i.id} · ${st.itemState(i)}`, () => { location.hash = "#/resolve"; }));
 
   Object.values(sources).forEach((s) =>
-    add("Sources", s.name, s.detail, () => { location.hash = "#/understand"; }));
+    add("Sources", s.name, s.detail, () => { location.hash = "#/walkthrough"; }));
 
-  add("Engagements", client.name, "FY2026 interim · Revenue", () => { location.hash = "#/understand"; });
+  add("Engagements", client.name, "FY2026 interim · Revenue", () => { location.hash = "#/engagement"; });
   add("Engagements", "Meerveld Zorggroep", "FY2026 · not started", () => { location.hash = "#/"; });
   add("Engagements", "Brekelmans Bouw B.V.", "FY2025 · signed", () => { location.hash = "#/"; });
 

@@ -12,8 +12,12 @@ import { palette, runPalette, matches } from "./palette.js";
 import { demoBar, demoGo, demoStart, demoExit, STEPS } from "./demo.js";
 
 import { work } from "./views/work.js";
-import { understand } from "./views/understand.js";
-import { review, prose } from "./views/review.js";
+import { engagementView, processHome, prepare } from "./views/process.js";
+import { walkthrough } from "./views/walkthrough.js";
+import { understanding } from "./views/understanding.js";
+import { controlsStep } from "./views/controls.js";
+import { trace } from "./views/trace.js";
+import { testing } from "./views/testing.js";
 import { resolve } from "./views/resolve.js";
 import { complete, matrix, clientSurface } from "./views/complete.js";
 import { cockpit } from "./views/cockpit.js";
@@ -21,15 +25,24 @@ import { cockpit } from "./views/cockpit.js";
 window.__demoStart = demoStart;
 
 const ROUTES = {
-  "#/": work,
-  "#/understand": understand,
-  "#/review": review,
+  "#/": work,                       // across engagements
+  "#/engagement": engagementView,   // engagement layer
+  "#/revenue": processHome,         // process workspace home
+  "#/prepare": prepare,             // 1
+  "#/walkthrough": walkthrough,     // 2
+  "#/understanding": understanding, // 3
+  "#/controls": controlsStep,       // 4
+  "#/trace": trace,                 // 5
+  "#/testing": testing,             // 6
+  "#/complete": complete,           // 7
   "#/resolve": resolve,
-  "#/complete": complete,
   "#/matrix": matrix,
   "#/questionnaire": clientSurface,
   "#/cockpit": cockpit,
 };
+
+/* Screens that host a focus queue; leaving one drops out of it. */
+const FOCUS_ROUTES = ["#/understanding", "#/controls", "#/trace"];
 
 /* --- Overlays -------------------------------------------------------------- */
 
@@ -67,9 +80,9 @@ let lastRoute = null;
 
 function render() {
   const hash = location.hash || "#/";
-  // Navigating away from Review leaves the focus queue, so returning always
-  // lands on triage rather than dropping the auditor mid-queue.
-  if (lastRoute === "#/review" && hash !== "#/review") {
+  // Leaving a step that hosts a focus queue drops out of it, so coming back
+  // lands on that step's overview rather than mid-queue.
+  if (FOCUS_ROUTES.includes(lastRoute) && hash !== lastRoute) {
     S.reviewMode = "triage"; S.focusKind = null; S.focusIx = 0; S.editing = null;
   }
   lastRoute = hash;
@@ -110,7 +123,7 @@ document.addEventListener("click", (e) => {
       // Activating the stage you are already on returns you to its overview —
       // the way back out of a focus queue without reaching for Escape.
       if (d.href === location.hash) {
-        if (d.href === "#/review") act.reviewMode("triage");
+        if (FOCUS_ROUTES.includes(d.href)) act.reviewMode("triage");
         else st.commit();
       } else location.hash = d.href;
       break;
@@ -133,21 +146,15 @@ document.addEventListener("click", (e) => {
     case "start-focus": act.startFocus(d.kind); break;
     case "exit-focus": act.exitFocus(); break;
     case "focus-next": act.focusNext(); break;
-    case "focus-claim": {
+    case "focus-claim": case "resolve-conflict": {
       const q = st.claimQueue();
       const i = q.findIndex((x) => x.b.id === d.claim);
       S.focusKind = "claims"; S.focusIx = Math.max(0, i); S.reviewMode = "focus";
-      if (location.hash !== "#/review") location.hash = "#/review"; else st.commit();
-      break;
-    }
-    case "resolve-conflict": {
-      const q = st.claimQueue();
-      const i = q.findIndex((x) => x.b.id === d.claim);
-      S.focusKind = "claims"; S.focusIx = Math.max(0, i); S.reviewMode = "focus";
-      if (location.hash !== "#/review") location.hash = "#/review"; else st.commit();
+      if (location.hash !== "#/understanding") location.hash = "#/understanding"; else st.commit();
       break;
     }
     case "run-pipeline": act.startGeneration(pipeline); break;
+    case "read-gen": act.readGenResult(); break;
 
     /* claims */
     case "toggle-claim": act.toggleClaim(d.claim); break;
@@ -169,9 +176,19 @@ document.addEventListener("click", (e) => {
     case "accept-clean": act.acceptClean(); break;
     case "go-section": act.selectSection(d.id); break;
 
-    /* risks and controls */
-    case "decide-risk": act.decideRisk(d.id, d.d); break;
+    /* controls, findings, the map */
     case "decide-control": act.decideControl(d.id, d.d); break;
+    case "decide-finding": act.decideFinding(d.id, d.d); break;
+    case "map-node": S.mapStep = S.mapStep === d.step || !d.step ? null : d.step; st.commit(); break;
+    case "noop": break;
+
+    /* the process workflow */
+    case "prepare-done": act.prepareDone(); break;
+    case "pick-txn": act.pickTransaction(d.id); break;
+    case "decide-trace": act.decideTrace(d.id, d.v); break;
+    case "conclude-trace": act.concludeTrace(); break;
+    case "reopen-trace": act.reopenTrace(); break;
+    case "conclude-test": act.concludeTest(d.d || null); break;
 
     /* coverage and open items */
     case "edit-item": case "edit-item-o": act.openEditor(d.item || d.id); break;
@@ -243,8 +260,17 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "ArrowLeft") { e.preventDefault(); demoGo(S.demoStep - 1); return; }
   }
 
-  if (S.route !== "#/review" || !S.generated) return;
   const k = e.key.toLowerCase();
+
+  // Enter on a step's overview starts that step's queue.
+  if (S.route === "#/prepare" && e.key === "Enter" && !S.prepared) { e.preventDefault(); act.prepareDone(); return; }
+  if (S.route === "#/understanding" && e.key === "Enter" && !S.generated && !S.generating) { e.preventDefault(); act.startGeneration(pipeline); return; }
+  if (S.route === "#/understanding" && e.key === "Enter" && S.generated && !S.genSeen) { e.preventDefault(); act.readGenResult(); return; }
+  if (S.route === "#/trace" && S.reviewMode !== "focus" && e.key === "Enter"
+      && S.traceTxn && !S.traceConcluded && !st.traceSummary().pending.length) {
+    e.preventDefault(); act.concludeTrace(); return;
+  }
+  if (!FOCUS_ROUTES.includes(S.route) || !S.generated) return;
 
   /* Focus mode: the queue is keyboard-first */
   if (S.reviewMode === "focus") {
@@ -267,15 +293,24 @@ document.addEventListener("keydown", (e) => {
       else if (k === "r") { e.preventDefault(); act.rejectClaim(b.id); }
       return;
     }
-    if (S.focusKind === "risks") {
-      const q = st.riskSummary().queue;
-      const r = q[Math.min(S.focusIx, q.length - 1)];
-      if (!r) return;
-      if (e.key === "Enter") { e.preventDefault(); act.decideRisk(r.id, "accepted"); }
-      else if (k === "m") { e.preventDefault(); act.decideRisk(r.id, "modified"); }
-      else if (k === "r") { e.preventDefault(); act.decideRisk(r.id, "rejected"); }
+    if (S.focusKind === "findings") {
+      const q = st.findingSummary().queue;
+      const f = q[Math.min(S.focusIx, q.length - 1)];
+      if (!f) return;
+      if (e.key === "Enter") { e.preventDefault(); act.decideFinding(f.id, "confirmed"); }
+      else if (k === "d") { e.preventDefault(); act.decideFinding(f.id, "dismissed"); }
       else if (k === "j") { e.preventDefault(); act.focusNext(); }
-      else if (k === "k") { e.preventDefault(); act.focusPrev(); }
+      return;
+    }
+    if (S.focusKind === "trace") {
+      const q = st.traceSummary().pending;
+      const t = q[Math.min(S.focusIx, q.length - 1)];
+      if (!t) return;
+      const suggested = t.suggested;
+      if (e.key === "Enter") { e.preventDefault(); act.decideTrace(t.id, suggested); }
+      else if (k === "x") { e.preventDefault(); act.decideTrace(t.id, "exception"); }
+      else if (k === "c") { e.preventDefault(); act.decideTrace(t.id, "corroborated"); }
+      else if (k === "j") { e.preventDefault(); act.focusNext(); }
       return;
     }
     if (S.focusKind === "controls") {
@@ -293,14 +328,16 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
-  /* Triage */
+  /* Triage: Enter starts whatever this step owes you */
   if (S.reviewMode === "triage") {
     if (e.key === "Enter") {
       e.preventDefault();
-      if (st.claimQueue().length) act.startFocus("claims");
-      else if (st.riskSummary().pending) act.startFocus("risks");
-      else if (st.controlSummary().pending) act.startFocus("controls");
-      else act.reviewMode("read");
+      if (S.route === "#/understanding") {
+        if (st.claimQueue().length) act.startFocus("claims"); else act.reviewMode("read");
+      } else if (S.route === "#/controls") {
+        if (st.controlSummary().pending) act.startFocus("controls");
+        else if (st.findingSummary().queue.length) act.startFocus("findings");
+      }
     }
     return;
   }

@@ -21,15 +21,19 @@ export function work() {
     },
     st.S.generated && n.needsSource.length && {
       tone: "warn", t: `${n.needsSource.length} statements have no support`,
-      d: "They cannot be approved until you resolve them", href: "#/review",
+      d: "They cannot be approved until you resolve them", href: "#/understanding",
     },
     cov.mandatoryOpen.length && {
       tone: "warn", t: `${cov.mandatoryOpen.length} required areas are still open`,
-      d: `${cov.mandatoryOpen.map((i) => i.plain || i.q).slice(0, 1)}`, href: "#/understand",
+      d: `${cov.mandatoryOpen.map((i) => i.plain || i.q).slice(0, 1)}`, href: "#/walkthrough",
     },
-    st.S.generated && (rs.pending || cs.pending) && {
-      tone: "", t: `${rs.pending + cs.pending} recommendations to confirm`,
-      d: `${rs.pending} risks and ${cs.pending} controls`, href: "#/review",
+    st.S.generated && cs.pending && {
+      tone: "", t: `${cs.pending} controls to conclude`,
+      d: `${cs.suggestedKey} are suggested as key controls`, href: "#/controls",
+    },
+    st.S.generated && !st.traceSummary().concluded && {
+      tone: "", t: "A transaction has not been traced through the process",
+      d: "The line walkthrough tests the process model against reality", href: "#/trace",
     },
     oi.sent && {
       tone: "", t: `${oi.sent} questions are with the client`,
@@ -76,9 +80,9 @@ export function work() {
       <div class="rows">
         ${row({
           title: `<span class="b">${esc(client.name)}</span>`,
-          detail: `FY2026 · Interim · Revenue in progress`,
-          side: `<span class="b" style="color:var(--ink-2)">${cov.pct}%</span><div class="t-meta">understood</div>`,
-          action: "nav", data: { href: "#/understand" },
+          detail: `FY2026 · Interim · Revenue — ${st.processProgress().current.name}`,
+          side: `<span class="b" style="color:var(--ink-2)">step ${st.processProgress().current.n} of 7</span><div class="t-meta">${cov.pct}% understood</div>`,
+          action: "nav", data: { href: "#/engagement" },
         })}
         ${row({
           title: `<span class="b">Meerveld Zorggroep</span>`,

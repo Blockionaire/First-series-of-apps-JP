@@ -482,6 +482,150 @@ textarea.field { font: 16px/1.7 var(--serif); resize: vertical; min-height: 110p
 .cue--hi { box-shadow: inset 3px 0 0 var(--alert); padding-left: 14px; }
 .cue--md { box-shadow: inset 3px 0 0 var(--warn); padding-left: 14px; }
 
+/* ==========================================================================
+   V3 — the process-level interim audit
+   ========================================================================== */
+
+/* --- The process journey: ordered and stateful, not a tab bar ------------- */
+
+.journey {
+  flex: 0 0 auto; display: flex; align-items: stretch;
+  padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--paper);
+  overflow-x: auto; scrollbar-width: none;
+}
+.journey::-webkit-scrollbar { display: none; }
+.journey__sp { flex: 1; }
+.journey__link {
+  align-self: center; width: 10px; height: 1px; background: var(--line-2); flex: 0 0 10px;
+}
+.jstep {
+  display: flex; flex-direction: column; gap: 1px; padding: 6px 11px 9px;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+}
+.jstep__n { font-size: 13px; font-weight: 550; color: var(--ink-3); }
+.jstep__c { font-size: 11.5px; color: var(--ink-4); }
+.jstep:hover .jstep__n { color: var(--ink); }
+.jstep.is-done .jstep__n { color: var(--ink-3); }
+.jstep.is-done .jstep__c { color: var(--ok); }
+.jstep.is-open .jstep__n { color: var(--ink); }
+.jstep.is-later .jstep__n { color: var(--ink-5); }
+.jstep.is-later .jstep__c { color: var(--ink-5); }
+.jstep.is-on { border-bottom-color: var(--ink); }
+.jstep.is-on .jstep__n { color: var(--ink); font-weight: 650; }
+.jstep__c--warn { color: var(--warn) !important; }
+.jstep__c--alert { color: var(--alert) !important; }
+.jstep__c--ok { color: var(--ok) !important; }
+
+.idline__seg { font-size: 12.5px; color: var(--ink-3); }
+.idline__seg:hover { color: var(--ink); }
+.idline__seg.is-here { color: var(--ink); font-weight: 550; }
+
+/* --- Engagement phases ---------------------------------------------------- */
+
+.phases { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); }
+.phase { padding: 16px 18px 16px 0; border-bottom: 1px solid var(--line); }
+.phase__n { font-size: 15px; font-weight: 600; color: var(--ink-5); }
+.phase__d { font-size: 12.5px; color: var(--ink-4); margin-top: 3px; }
+.phase.is-done .phase__n { color: var(--ink-3); }
+.phase.is-on .phase__n { color: var(--ink); }
+.phase.is-on { box-shadow: inset 0 -2px 0 var(--ink); }
+@media (max-width: 860px) { .phases { grid-template-columns: repeat(2, 1fr); } }
+
+/* --- Process Understanding Map -------------------------------------------- */
+
+.map {
+  display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding: 4px 0 10px;
+  scrollbar-width: thin;
+}
+.mapedge {
+  flex: 0 0 14px; align-self: center; height: 1px; background: var(--line-2); position: relative;
+}
+.mapedge::after {
+  content: ""; position: absolute; right: 0; top: -2.5px;
+  border-left: 4px solid var(--line-2); border-top: 2.5px solid transparent;
+  border-bottom: 2.5px solid transparent;
+}
+.mapnode {
+  flex: 1 1 0; min-width: 116px; display: flex; flex-direction: column; gap: 2px;
+  padding: 12px 12px 11px; border-radius: 8px; background: var(--white);
+  box-shadow: inset 0 0 0 1px var(--line-2); text-align: left;
+  transition: box-shadow .1s, background .1s;
+}
+.mapnode:hover { box-shadow: inset 0 0 0 1px var(--ink-4); }
+.mapnode.is-sel { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.mapnode__i {
+  font: 10.5px var(--mono); color: var(--ink-5);
+}
+.mapnode__t { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.mapnode__a { font-size: 11.5px; color: var(--ink-4); line-height: 1.35; }
+.mapnode__m { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.mapnode__ctl { font-size: 10px; color: var(--ink-3); letter-spacing: 1px; }
+.mapnode__none { font-size: 10.5px; color: var(--warn); }
+.mapnode__f { font-size: 10.5px; color: var(--warn); }
+.mapnode__f--alert { color: var(--alert); }
+.mapnode__v { font-size: 11px; color: var(--ink-4); margin-top: 6px; }
+.mapnode__v--ok { color: var(--ok); }
+.mapnode__v--ex { color: var(--alert); font-weight: 600; }
+.mapnode__na { font-size: 11px; color: var(--ink-5); margin-top: 6px; }
+.mapnode.is-uncontrolled { box-shadow: inset 0 0 0 1px var(--line-2), inset 0 -2px 0 var(--warn); }
+.mapnode.is-ok { box-shadow: inset 0 0 0 1px var(--ok-line); background: var(--ok-w); }
+.mapnode.is-ex { box-shadow: inset 0 0 0 1.5px var(--alert); background: var(--alert-w); }
+.mapnode.is-na { opacity: .5; }
+
+.maplegend { display: flex; gap: 16px; font-size: 11.5px; color: var(--ink-4); align-items: center; }
+.maplegend span { display: inline-flex; align-items: center; gap: 6px; }
+.maplegend b { color: var(--ink-3); }
+
+.mapdetail {
+  margin-top: 14px; padding: 20px 22px; background: var(--white); border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--line-2); animation: evin .14s ease-out;
+}
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+@media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* --- Line walkthrough ------------------------------------------------------ */
+
+.tracehead { padding: 14px 32px 12px; border-bottom: 1px solid var(--line); background: var(--paper); }
+
+.expect {
+  margin-top: 26px; padding: 18px 20px; border-radius: 8px; background: var(--sink);
+}
+.expect__r { display: flex; gap: 18px; padding: 7px 0; font-size: 14px; }
+.expect__r + .expect__r { border-top: 1px solid var(--line-2); }
+.expect__r dt { flex: 0 0 150px; color: var(--ink-4); font-size: 12.5px; padding-top: 1px; }
+.expect__r dd { flex: 1; margin: 0; color: var(--ink-2); line-height: 1.55; }
+
+.actual { margin-top: 26px; }
+.actual__e { font-size: 15.5px; color: var(--ink); line-height: 1.65; max-width: 66ch; }
+.actual__o { font-size: 15px; color: var(--ink-2); line-height: 1.65; max-width: 66ch; }
+
+.tally { display: flex; gap: 52px; padding: 26px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.tally div { display: flex; flex-direction: column; gap: 3px; }
+.tally__n { font-size: 34px; font-weight: 600; letter-spacing: -.02em; line-height: 1; }
+.tally__l { font-size: 13px; color: var(--ink-4); }
+
+/* --- Control testing ------------------------------------------------------- */
+
+.tflow { border-top: 1px solid var(--line); }
+.tstage { display: flex; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--line); }
+.tstage__h { flex: 0 0 172px; display: flex; align-items: baseline; gap: 10px; }
+.tstage__n {
+  font: 11px var(--mono); color: var(--ink-4); border: 1px solid var(--line-2);
+  border-radius: 50%; width: 20px; height: 20px; display: inline-flex;
+  align-items: center; justify-content: center; flex: 0 0 20px;
+}
+.tstage.is-done .tstage__n { border-color: var(--ok-line); color: var(--ok); }
+.tstage__t { font-size: 14px; font-weight: 600; }
+.tstage__b { flex: 1; min-width: 0; }
+@media (max-width: 860px) { .tstage { flex-direction: column; gap: 12px; } }
+
+.ticks { font-size: 14px; color: var(--ink-2); }
+.ticks li { padding: 5px 0 5px 20px; position: relative; line-height: 1.55; }
+.ticks li::before {
+  content: ""; position: absolute; left: 2px; top: 12px; width: 7px; height: 7px;
+  border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink-5);
+}
+
 </style>
 </head>
 <body>
@@ -1394,6 +1538,219 @@ const signOffGates = [
 __exp(exports, { subProcesses: () => subProcesses, narrative: () => narrative, risks: () => risks, controls: () => controls, gaps: () => gaps, openItems: () => openItems, pipeline: () => pipeline, signOffGates: () => signOffGates });
 
 };
+__defs['js/data-process.js'] = function (exports, __req, __exp) {
+/* ============================================================================
+   data-process.js — the process-level interim audit model (V3).
+
+   Three things the earlier prototype had no representation for:
+
+     processSteps  the Process Understanding Map — the process as understood,
+                   built in step 3, annotated with controls and findings in
+                   step 4, and traced against a real transaction in step 5
+     lineWalk      one real transaction, traced end to end through that map
+     controlTest   the control-testing concept, for one control, future state
+
+   Ids reference the same objects as data-model.js (C-*, G-*, R-*), so the map,
+   the trace and the matrix are views of one connected model rather than three
+   parallel data sets.
+   ========================================================================== */
+
+/* --- The seven-step interim workflow -------------------------------------- */
+
+const journey = [
+  { id: "prepare",       n: 1, name: "Prepare",          href: "#/prepare",
+    blurb: "What we already know, and who we need" },
+  { id: "walkthrough",   n: 2, name: "Walkthrough",      href: "#/walkthrough",
+    blurb: "How the process actually works" },
+  { id: "understanding", n: 3, name: "Understanding",    href: "#/understanding",
+    blurb: "Describe it, and check the description" },
+  { id: "controls",      n: 4, name: "Controls & findings", href: "#/controls",
+    blurb: "What controls it, and what is wrong" },
+  { id: "trace",         n: 5, name: "Line walkthrough", href: "#/trace",
+    blurb: "Does a real transaction behave that way?" },
+  { id: "testing",       n: 6, name: "Control testing",  href: "#/testing",
+    blurb: "Do the controls we rely on operate?", future: true },
+  { id: "complete",      n: 7, name: "Complete",         href: "#/complete",
+    blurb: "Finished and defensible" },
+];
+
+/* --- The Process Understanding Map ----------------------------------------
+   Eight steps, quotation to cash. `controls` and `findings` are ids from
+   data-model.js; the map does not duplicate their content.
+   -------------------------------------------------------------------------- */
+
+const processSteps = [
+  { id: "P1", name: "Quotation", actor: "Sales engineer", system: "Business Central",
+    what: "A quotation is configured and priced, approved above EUR 100,000, and signed by the customer.",
+    sub: "R2", controls: ["C-14"], findings: [], refs: ["T:seg-03", "Q:2"] },
+
+  { id: "P2", name: "Sales order", actor: "Sales administration", system: "Business Central",
+    what: "The signed quotation is converted into a sales order. Spare-part orders arrive by e-mail or webshop and are keyed directly.",
+    sub: "R2", controls: ["C-11", "C-01"], findings: ["G-01"], refs: ["T:seg-03", "T:seg-04", "T:seg-09"] },
+
+  { id: "P3", name: "Credit check", actor: "Credit control", system: "Business Central",
+    what: "The order is blocked automatically where exposure would exceed the customer's credit limit, and released by credit control.",
+    sub: "R3", controls: ["C-02"], findings: [], refs: ["T:seg-18", "D:note-1"], contested: true },
+
+  { id: "P4", name: "Despatch", actor: "Van Dijk Logistics", system: "Van Dijk WMS → Business Central",
+    what: "Goods are picked and despatched by the logistics provider, which transmits a daily confirmation file that posts the shipment.",
+    sub: "R4", controls: [], findings: ["G-02", "G-03"], refs: ["T:seg-19", "T:seg-21", "D:doc-so-11"] },
+
+  { id: "P5", name: "Installation & acceptance", actor: "Service engineers", system: "ServiceTrack",
+    what: "Machines are installed at the customer site and the customer signs an acceptance protocol. Revenue is recognised on acceptance.",
+    sub: "R6", controls: [], findings: ["F-01"], refs: ["T:seg-25"] },
+
+  { id: "P6", name: "Invoicing", actor: "Business Central", system: "Business Central (automated)",
+    what: "An overnight batch raises an invoice from each posted shipment, taking quantity from the shipment and price from the order.",
+    sub: "R5", controls: ["C-03", "C-04"], findings: [], refs: ["T:seg-13", "D:doc-py-3"] },
+
+  { id: "P7", name: "Revenue posting", actor: "Financial controller", system: "Business Central GL",
+    what: "The invoice posts to the revenue account. Service revenue posts from the ServiceTrack deferral schedule and is reconciled monthly.",
+    sub: "R6", controls: ["C-06", "C-13", "C-12"], findings: ["G-04", "G-05"], refs: ["T:seg-24", "T:seg-35"] },
+
+  { id: "P8", name: "Cash receipt", actor: "Credit control", system: "Business Central",
+    what: "Bank statements load daily and match automatically on the payment reference. Unmatched receipts go to a suspense list.",
+    sub: "R8", controls: ["C-08", "C-07"], findings: [], refs: ["T:seg-30"] },
+];
+
+/* --- Findings -------------------------------------------------------------
+   The control gaps from data-model.js are findings too; these are the ones
+   that are not gaps in a control but observations about the process itself.
+   -------------------------------------------------------------------------- */
+
+const processFindings = [
+  { id: "F-01", step: "P5", kind: "observation", severity: "observation",
+    title: "Where signed acceptance protocols are retained was not established",
+    detail: "Machine revenue is recognised on customer acceptance, so the acceptance protocol is the document that fixes the recognition date. We did not establish where the signed protocols are held, who holds them, or how the acceptance date reaches the accounting records.",
+    impact: "Without a retained, dated protocol the recognition date cannot be corroborated for any machine sale.",
+    refs: ["T:seg-25"], fromTrace: false },
+];
+
+/* Raised by the line walkthrough when the auditor concludes the exception. */
+const traceFinding = {
+  id: "F-02", step: "P6", kind: "exception", severity: "deficiency",
+  title: "Revenue invoiced and posted before the customer accepted the installation",
+  detail: "On order SO-24188 the invoice was raised on 15 September 2026 and posted to revenue the same day. The customer signed the acceptance protocol on 22 September 2026. Under the entity's stated policy, machine revenue is recognised on acceptance, so revenue was recognised seven days before the performance obligation was satisfied.",
+  impact: "The automated invoicing batch triggers on despatch, not on acceptance, so this is systematic rather than isolated for every machine sale where installation lags delivery. It bears directly on cut-off and on the occurrence assertion.",
+  remediation: "Suppress the automated invoice for machine sales until the acceptance protocol is recorded, or defer revenue recognition on invoices raised before acceptance and clear the deferral on acceptance.",
+  refs: ["LW:t5", "LW:t6", "T:seg-25", "T:seg-13"], fromTrace: true,
+};
+
+/* --- Line walkthrough ------------------------------------------------------ */
+
+const lineWalkCandidates = [
+  { id: "SO-24188", customer: "Bakkerij Groep Nederland B.V.", value: "EUR 284,500",
+    what: "PL-400 conveyor line, delivered and installed in September",
+    why: "The largest machine sale in the interim period, and the only one where installation spans the reporting date — the case most likely to test the recognition policy.",
+    recommended: true },
+  { id: "SO-24052", customer: "Vermeulen Voeding B.V.", value: "EUR 96,200",
+    what: "Two modular conveyors, delivered August",
+    why: "Below the quotation approval threshold, so it exercises a different control path." },
+  { id: "SO-24310", customer: "Nordvest Seafood AS", value: "EUR 31,800",
+    what: "Spare parts, ordered by e-mail",
+    why: "A spare-part order, which enters through the unreconciled mailbox channel." },
+];
+
+const lineWalk = {
+  transaction: lineWalkCandidates[0],
+  steps: [
+    { id: "t1", step: "P1", name: "Quotation",
+      expectedStep: "A quotation is configured, approved above EUR 100,000 by the Commercial Director, and signed by the customer.",
+      expectedControl: "C-14 — quotations above EUR 100,000 are approved before issue",
+      expectedEvidence: "Signed quotation carrying the approval record",
+      actualEvidence: "QUO-2026-0412, EUR 284,500, approved by B. Kuipers on 12 August 2026 and signed by the customer on 14 August 2026.",
+      observation: "The quotation exceeds the threshold and carries the Commercial Director's approval before issue.",
+      suggested: "corroborated" },
+
+    { id: "t2", step: "P2", name: "Sales order",
+      expectedStep: "Sales administration converts the signed quotation into a sales order carrying the quotation reference and price.",
+      expectedControl: "C-11 — machine orders are created only from a customer-signed quotation",
+      expectedEvidence: "Sales order referencing the quotation, at the quoted price",
+      actualEvidence: "SO-24188 created 15 August 2026, references QUO-2026-0412, value EUR 284,500. No price override recorded on any line.",
+      observation: "The order price agrees to the signed quotation and no override was applied.",
+      suggested: "corroborated" },
+
+    { id: "t3", step: "P3", name: "Credit check",
+      expectedStep: "The order is checked against the customer's credit limit and blocked if exposure would exceed it.",
+      expectedControl: "C-02 — orders exceeding the credit limit are blocked and released only by credit control",
+      expectedEvidence: "Credit check record; a release log entry if the order was blocked",
+      actualEvidence: "Customer limit EUR 400,000, exposure at order date EUR 311,700. No block was triggered and no release was required.",
+      observation: "The control did not need to operate on this transaction. Its design was evaluated separately; this trace provides no evidence about its operation.",
+      suggested: "corroborated", note: "not_triggered" },
+
+    { id: "t4", step: "P4", name: "Despatch",
+      expectedStep: "Van Dijk Logistics picks and despatches the goods and transmits a daily confirmation file that posts the shipment.",
+      expectedControl: "None identified — the despatch file is not reconciled to internal records (G-02)",
+      expectedEvidence: "Despatch note and the confirmation file entry posting the shipment",
+      actualEvidence: "DN-88214 despatched 2 September 2026; shipment posted in Business Central from the Van Dijk file of the same evening. Quantities agree to the order.",
+      observation: "The despatch posted correctly on this transaction. Because no reconciliation is performed, this trace does not evidence that the file is complete generally.",
+      suggested: "corroborated" },
+
+    { id: "t5", step: "P5", name: "Installation & acceptance",
+      expectedStep: "The machine is installed and the customer signs an acceptance protocol. Revenue is recognised on acceptance.",
+      expectedControl: "None identified — retention of the acceptance protocol was not established (F-01)",
+      expectedEvidence: "Acceptance protocol, signed and dated by the customer",
+      actualEvidence: "Acceptance protocol ACC-24188, signed by the customer's plant manager on 22 September 2026. Obtained from the project file on request; it is not held in ServiceTrack or Business Central.",
+      observation: "The customer accepted the installation on 22 September. The invoice for this order is dated 15 September — seven days earlier.",
+      suggested: "exception",
+      exception: "Revenue was recognised before the performance obligation was satisfied. Under the entity's stated policy machine revenue is recognised on acceptance, and the acceptance protocol post-dates the invoice and the revenue posting by seven days.",
+      why: "comparing the acceptance date on the protocol with the invoice date already captured at step 6 of this trace." },
+
+    { id: "t6", step: "P6", name: "Invoicing",
+      expectedStep: "The overnight batch raises an invoice from the posted shipment, taking quantity from the shipment and price from the order.",
+      expectedControl: "C-03 — invoices are generated automatically from the posted shipment without re-keying",
+      expectedEvidence: "Invoice linked to the shipment, priced from the order",
+      actualEvidence: "INV-2026-11902 dated 15 September 2026, EUR 284,500, generated automatically from shipment DN-88214. Price and quantity agree to the order and the despatch.",
+      observation: "The invoice was generated as described and agrees to the order and despatch. The control operated. The batch triggers on despatch, not on acceptance, which is what produced the exception at step 5.",
+      suggested: "corroborated" },
+
+    { id: "t7", step: "P7", name: "Revenue posting",
+      expectedStep: "The invoice posts to the revenue account in the general ledger.",
+      expectedControl: "C-06 — the revenue account is reconciled to the billing sub-ledger monthly",
+      expectedEvidence: "General ledger entry agreeing to the invoice",
+      actualEvidence: "Posted to account 8000 (Revenue — machines) on 15 September 2026, EUR 284,500, journal reference SL-09-11902.",
+      observation: "The ledger entry agrees to the invoice in amount and date.",
+      suggested: "corroborated" },
+  ],
+  notApplicable: {
+    step: "P8", name: "Cash receipt",
+    why: "The invoice falls due on 15 October 2026 and was unpaid at the date of this walkthrough. Cash receipt cannot be traced for this transaction.",
+  },
+};
+
+/* --- Control testing — future-state concept, one control ------------------ */
+
+const controlTest = {
+  controlId: "C-04",
+  objective: "Determine whether manual invoices raised outside the automated flow were approved by the financial controller before issue.",
+  nature: ["inspection", "inquiry"],
+  population: "Manual invoices posted to revenue accounts between 1 January and 30 September 2026",
+  populationSource: "Business Central invoice register, filtered to invoices with no linked shipment",
+  completeness: "Agree the register total to the revenue sub-ledger and confirm the filter captures every invoice without a shipment link",
+  populationSize: 34,
+  timing: "Interim, with a roll-forward to the year end",
+  sampleSize: 5,
+  sampleBasis: "Firm parameter table: event-driven control, higher risk — 5 items",
+  attributes: [
+    "The invoice carries an approval record naming the financial controller",
+    "The approval pre-dates the invoice issue date",
+    "The invoice amount and customer agree to the supporting settlement or milestone documentation",
+  ],
+  evidenceToRequest: ["Approval record for each selected invoice", "Supporting settlement or milestone agreement"],
+  results: [
+    { id: "INV-2026-10331", ok: true, note: "Approval recorded by R. Timmermans on 14 March, one day before issue." },
+    { id: "INV-2026-10744", ok: true, note: "Approval recorded 2 May, same day as issue." },
+    { id: "INV-2026-11085", ok: true, note: "Approval recorded 19 June, two days before issue." },
+    { id: "INV-2026-11460", ok: false, note: "No approval record located. The controller recalls approving it by e-mail; the e-mail could not be produced." },
+    { id: "INV-2026-11871", ok: true, note: "Approval recorded 9 September, same day as issue." },
+  ],
+  priorYearNote: "The control was tested in the FY2025 audit and found effective. ISA 330 permits using evidence from a previous audit for an unchanged control, provided it is tested at least once in every third audit — a decision for the auditor, not applied automatically.",
+};
+
+
+__exp(exports, { journey: () => journey, processSteps: () => processSteps, processFindings: () => processFindings, traceFinding: () => traceFinding, lineWalkCandidates: () => lineWalkCandidates, lineWalk: () => lineWalk, controlTest: () => controlTest });
+
+};
 __defs['js/state.js'] = function (exports, __req, __exp) {
 /* ============================================================================
    state.js — prototype state, derivations and actions.
@@ -1406,29 +1763,39 @@ __defs['js/state.js'] = function (exports, __req, __exp) {
    Every number on every screen is computed here from data-model.js.
    ========================================================================== */
 
-const { subProcesses, narrative, risks, controls, gaps, openItems, signOffGates } = __req('js/data-model.js');
+const { subProcesses, narrative, risks, controls, gaps, openItems } = __req('js/data-model.js');
+const { journey, processSteps, processFindings, traceFinding, lineWalk, lineWalkCandidates, controlTest } = __req('js/data-process.js');
 /* The decision state that undo restores. Everything else is view state. */
-const DECISIONS = ["blocks", "sections", "coverage", "riskDecisions", "controlDecisions", "itemStates"];
+const DECISIONS = ["blocks", "sections", "coverage", "controlDecisions", "findingDecisions",
+                   "itemStates", "traceDecisions", "traceTxn", "traceConcluded", "testConclusion",
+                   "prepared"];
 
 const initial = () => ({
   route: "#/",
   generated: false,
   generating: false,
   genStage: -1,
+  genSeen: false,          // the pipeline result has been read
 
   /* --- decisions (undoable) --- */
   blocks: {},              // claim id -> { text, edited, rejected, resolution }
   sections: {},            // section id -> "approved" | "rejected"
   coverage: {},            // coverage item id -> { state, naReason, facts }
-  riskDecisions: {},       // risk id -> "accepted" | "modified" | "rejected"
   controlDecisions: {},    // control id -> "key" | "not_key" | "undecided"
+  findingDecisions: {},    // finding id -> "confirmed" | "dismissed"
   itemStates: {},          // open item id -> "open" | "sent" | "resolved" | "dismissed"
+  traceTxn: null,          // selected transaction for the line walkthrough
+  traceDecisions: {},      // trace step id -> "corroborated" | "exception"
+  traceConcluded: false,
+  testConclusion: null,    // the control-testing concept's auditor conclusion
+  prepared: false,         // step 1 acknowledged
 
   /* --- view state --- */
   reviewMode: "triage",    // triage | focus | read
-  focusKind: null,         // claims | risks | controls
+  focusKind: null,         // claims | controls | findings | trace
   focusIx: 0,
   openClaim: null,         // claim whose evidence is expanded inline
+  mapStep: null,           // process-map step whose detail is open
   section: null,           // active section in read mode
   scrollTo: null,
   disclosed: {},           // progressive-disclosure toggles
@@ -1622,20 +1989,18 @@ const claimById = (id) => narrative.flatMap((s) => s.blocks).find((b) => b.id ==
 
 /* --- Risks and controls ------------------------------------------------------ */
 
-const riskDecision = (r) => S.riskDecisions[r.id] ?? null;
 const controlDecision = (c) => S.controlDecisions[c.id] ?? null;
 
+/** Risks are identified during interim but concluded during risk analysis,
+ *  which is the next phase and outside this product. They are carried
+ *  forward, not decided here (V3-DESIGN-DIRECTION.md §1). */
 function riskSummary() {
-  const pending = risks.filter((r) => !riskDecision(r));
   return {
     total: risks.length,
-    decided: risks.length - pending.length,
-    pending: pending.length,
-    queue: pending.filter((r) => !r.blocked),
-    blocked: pending.filter((r) => r.blocked),
     significant: risks.filter((r) => r.significant).length,
     fraud: risks.filter((r) => r.fraud).length,
     newRisks: risks.filter((r) => !r.lib).length,
+    blocked: risks.filter((r) => r.blocked),
   };
 }
 
@@ -1650,6 +2015,73 @@ function controlSummary() {
     unassessable: controls.filter((c) => c.keyProposal === null).length,
     agreedKey: controls.filter((c) => controlDecision(c) === "key").length,
     gaps: gaps.length,
+  };
+}
+
+/* --- Findings ----------------------------------------------------------------
+   Control gaps and process observations are one auditor-facing object. The line
+   walkthrough can add to the list, which is how step 5 feeds step 4.
+   -------------------------------------------------------------------------- */
+
+function allFindings() {
+  const fromGaps = gaps.map((g) => ({
+    id: g.id, step: stepOfSubProcess(g.sub), kind: "gap", severity: g.severity,
+    title: g.desc, detail: g.impact, remediation: g.remediation, refs: g.refs,
+    risk: g.risk, fromTrace: false,
+  }));
+  const out = [...fromGaps, ...processFindings];
+  if (S.traceConcluded && Object.values(S.traceDecisions).includes("exception")) out.push(traceFinding);
+  return out;
+}
+
+const stepOfSubProcess = (sub) => processSteps.find((p) => p.sub === sub)?.id || null;
+
+const findingDecision = (f) => S.findingDecisions[f.id] ?? null;
+
+function findingSummary() {
+  const all = allFindings();
+  const pending = all.filter((f) => !findingDecision(f));
+  return {
+    total: all.length, all, pending, queue: pending,
+    decided: all.length - pending.length,
+    confirmed: all.filter((f) => findingDecision(f) === "confirmed").length,
+    fromTrace: all.filter((f) => f.fromTrace).length,
+  };
+}
+
+/* --- Line walkthrough --------------------------------------------------------- */
+
+const traceVerdict = (t) => S.traceDecisions[t.id] ?? null;
+
+function traceSummary() {
+  const steps = lineWalk.steps;
+  const done = steps.filter(traceVerdict);
+  return {
+    expected: steps.length,
+    corroborated: steps.filter((t) => traceVerdict(t) === "corroborated").length,
+    exceptions: steps.filter((t) => traceVerdict(t) === "exception").length,
+    pending: steps.filter((t) => !traceVerdict(t)),
+    done: done.length,
+    started: !!S.traceTxn,
+    concluded: S.traceConcluded,
+    steps,
+  };
+}
+
+const traceStepFor = (mapStepId) =>
+  lineWalk.steps.find((t) => t.step === mapStepId) || null;
+
+/* --- Control testing (future-state concept) ----------------------------------- */
+
+function testSummary() {
+  const r = controlTest.results;
+  return {
+    control: controlTest.controlId,
+    selected: r.length,
+    corroborated: r.filter((x) => x.ok).length,
+    exceptions: r.filter((x) => !x.ok).length,
+    concluded: !!S.testConclusion,
+    conclusion: S.testConclusion,
   };
 }
 
@@ -1681,66 +2113,136 @@ function rcmRows() {
   return rows;
 }
 
-/* --- Stages ------------------------------------------------------------------- */
+/* --- The process journey -------------------------------------------------------
+   Seven ordered steps, each carrying its own state. Not a tab bar: the order is
+   the order the work happens in, and a step that has not started says so.
+   -------------------------------------------------------------------------- */
 
-function stages() {
+function journeyStates() {
   const cov = coverageSummary();
   const n = narrativeSummary();
-  const rs = riskSummary();
   const cs = controlSummary();
-  const oi = openItemSummary();
-  const reviewOwed = S.generated ? n.attention.length + n.pending.length + rs.pending + cs.pending : 0;
-  return [
-    { id: "understand", name: "Understand", href: "#/understand",
-      count: `${cov.pct}%`, tone: cov.mandatoryOpen.length ? "warn" : cov.pct >= 85 ? "ok" : "" },
-    { id: "review", name: "Review", href: "#/review",
-      count: !S.generated ? "not generated"
-        : reviewOwed === 0 ? "done"
-        : n.attention.length ? `${n.attention.length} need you`
-        : `${rs.pending + cs.pending + n.pending} to confirm`,
-      tone: !S.generated ? "" : n.attention.length ? "warn" : reviewOwed === 0 ? "ok" : "" },
-    { id: "resolve", name: "Resolve", href: "#/resolve",
-      count: oi.open ? `${oi.open} open` : "clear",
-      tone: oi.contradictions ? "alert" : oi.open ? "" : "ok" },
-    { id: "complete", name: "Complete", href: "#/complete",
-      count: readyToSign() ? "ready" : "blocked", tone: readyToSign() ? "ok" : "" },
-  ];
+  const fs = findingSummary();
+  const tr = traceSummary();
+  const ts = testSummary();
+
+  const st = (id) => {
+    switch (id) {
+      case "prepare":
+        return S.prepared ? { s: "done", c: "ready" } : { s: "open", c: "start here" };
+      case "walkthrough":
+        return cov.mandatoryOpen.length ? { s: "open", c: `${cov.pct}%`, tone: "warn" }
+          : cov.open + cov.partial ? { s: "open", c: `${cov.pct}%` }
+          : { s: "done", c: `${cov.pct}%` };
+      case "understanding":
+        return !S.generated ? { s: "later", c: "not drafted", why: "Available once the walkthrough has established enough facts to draft from." }
+          : n.attention.length ? { s: "open", c: `${n.attention.length} need you`, tone: "warn" }
+          : n.pending ? { s: "open", c: `${n.pending} to approve` }
+          : { s: "done", c: "approved" };
+      case "controls":
+        return !S.generated ? { s: "later", c: "—", why: "Controls are identified from the process understanding." }
+          : cs.pending + fs.pending.length ? { s: "open", c: `${cs.pending + fs.pending.length} to conclude` }
+          : { s: "done", c: `${cs.agreedKey} key` };
+      case "trace":
+        return !S.generated ? { s: "later", c: "—", why: "A transaction is traced against the documented process, so the process has to be documented first." }
+          : !tr.started ? { s: "open", c: "not started" }
+          : tr.concluded ? { s: "done", c: tr.exceptions ? `${tr.exceptions} exception` : "no exceptions", tone: tr.exceptions ? "warn" : "" }
+          : { s: "open", c: `${tr.done} of ${tr.expected}` };
+      case "testing":
+        return { s: ts.concluded ? "done" : "later", c: ts.concluded ? "concluded" : "concept",
+                 why: "Control testing is a future-state concept in this prototype." };
+      case "complete":
+        return readyToSign() ? { s: "open", c: "ready", tone: "ok" }
+          : { s: "later", c: "blocked", why: "Every completion gate has to be met first." };
+    }
+    return { s: "later", c: "" };
+  };
+
+  return journey.map((j) => ({ ...j, ...st(j.id) }));
 }
+
+const journeyStep = (id) => journeyStates().find((j) => j.id === id);
+
+/** How far through the process, for the engagement layer. */
+function processProgress() {
+  const js = journeyStates();
+  const done = js.filter((j) => j.s === "done").length;
+  const current = js.find((j) => j.s === "open") || js[js.length - 1];
+  return { done, total: js.length, current };
+}
+
+/* --- Completion gates -----------------------------------------------------------
+   The process is complete when the process-level interim work is complete. Risk
+   analysis is deliberately not among these.
+   -------------------------------------------------------------------------- */
+
+const completionGates = [
+  { id: "understanding", label: "Process understanding reviewed", step: "understanding" },
+  { id: "documentation", label: "Process documentation approved", step: "understanding" },
+  { id: "controls",      label: "Controls concluded", step: "controls" },
+  { id: "findings",      label: "Findings concluded", step: "controls" },
+  { id: "trace",         label: "Line walkthrough completed", step: "trace" },
+  { id: "testing",       label: "Required control testing completed", step: "testing" },
+  { id: "needsSource",   label: "No unsupported statements", step: "understanding" },
+  { id: "contradiction", label: "No unresolved contradictions", step: "walkthrough" },
+  { id: "openItems",     label: "Open matters resolved or carried forward", step: "walkthrough" },
+  { id: "signed",        label: "Prepared and reviewed", step: "complete" },
+];
 
 function gateStates() {
-  const n = narrativeSummary(), rs = riskSummary(), cs = controlSummary();
-  const oi = openItemSummary(), cov = coverageSummary();
+  const n = narrativeSummary(), cs = controlSummary(), fs = findingSummary();
+  const oi = openItemSummary(), cov = coverageSummary(), tr = traceSummary();
   const map = {
-    narrative:     { ok: n.pending === 0, detail: `${n.approved} approved · ${n.rejected} rejected · ${n.pending} still to decide` },
-    needsSource:   { ok: n.needsSource.length === 0, detail: n.needsSource.length ? `${n.needsSource.length} statements have no support` : "Every statement is traced to a source" },
-    contradiction: { ok: n.contradiction.length === 0, detail: n.contradiction.length ? "One contradiction is unresolved" : "No unresolved contradictions" },
-    risks:         { ok: rs.pending === 0, detail: `${rs.decided} of ${rs.total} concluded` },
-    controls:      { ok: cs.pending === 0, detail: `${cs.decided} of ${cs.total} concluded` },
-    mandatory:     { ok: cov.mandatoryOpen.length === 0, detail: cov.mandatoryOpen.length ? `${cov.mandatoryOpen.length} required areas still open` : "All required areas addressed" },
-    openItems:     { ok: oi.open === 0, detail: `${oi.open} open · ${oi.resolved} resolved` },
+    understanding: { ok: S.generated && cov.mandatoryOpen.length === 0,
+      detail: !S.generated ? "Nothing drafted yet"
+        : cov.mandatoryOpen.length ? `${cov.mandatoryOpen.length} required areas still open`
+        : `${cov.covered} of ${cov.applicable} areas established` },
+    documentation: { ok: S.generated && n.pending === 0,
+      detail: !S.generated ? "Nothing drafted yet"
+        : `${n.approved} approved · ${n.rejected} rejected · ${n.pending} still to decide` },
+    controls:      { ok: S.generated && cs.pending === 0,
+      detail: S.generated ? `${cs.decided} of ${cs.total} concluded · ${cs.agreedKey} key` : "Not identified yet" },
+    findings:      { ok: S.generated && fs.pending.length === 0,
+      detail: S.generated ? `${fs.decided} of ${fs.total} concluded` : "Not identified yet" },
+    trace:         { ok: tr.concluded,
+      detail: !tr.started ? "Not started"
+        : tr.concluded ? `${tr.expected} steps · ${tr.corroborated} corroborated · ${tr.exceptions} exception${tr.exceptions === 1 ? "" : "s"}`
+        : `${tr.done} of ${tr.expected} steps traced` },
+    testing:       { ok: !!S.testConclusion,
+      detail: S.testConclusion ? "One control tested and concluded"
+        : "One control identified as requiring a test" },
+    needsSource:   { ok: S.generated && n.needsSource.length === 0,
+      detail: n.needsSource.length ? `${n.needsSource.length} statements have no support` : "Every statement is traced to a source" },
+    contradiction: { ok: n.contradiction.length === 0 && cov.facts.contradictory === 0,
+      detail: n.contradiction.length ? "One contradiction is unresolved" : "No unresolved contradictions" },
+    openItems:     { ok: oi.open === 0, detail: `${oi.open} open · ${oi.resolved} settled` },
+    signed:        { ok: false, detail: "Sign-off is the last act, and it is yours" },
   };
-  return signOffGates.map((g) => ({ ...g, ...map[g.id] }));
+  return completionGates.map((g) => ({ ...g, ...map[g.id] }));
 }
 
+/** Sign-off becomes available when every gate but the signature itself is met. */
 function readyToSign() {
-  const n = narrativeSummary(), rs = riskSummary(), cs = controlSummary(), oi = openItemSummary();
-  const cov = coverageSummary();
-  return S.generated && n.pending === 0 && n.needsSource.length === 0 && n.contradiction.length === 0
-    && rs.pending === 0 && cs.pending === 0 && oi.open === 0 && cov.mandatoryOpen.length === 0;
+  return gateStates().filter((g) => g.id !== "signed").every((g) => g.ok);
 }
 
-/** The single most useful next action, computed. Drives the Work screen and
- *  the empty states — the product should always know what to suggest. */
+/** The single most useful next action, computed by walking the journey. */
 function nextAction() {
-  const cov = coverageSummary(), n = narrativeSummary(), rs = riskSummary();
-  const cs = controlSummary(), oi = openItemSummary();
-  if (!S.generated) return { t: "Generate the Revenue documentation", d: `Coverage is ${cov.pct}% and the required areas are addressed.`, href: "#/review", act: "generate" };
-  if (n.attention.length) return { t: `${n.attention.length} statements need your judgement`, d: "Contradictions and unsupported claims are blocking four sections.", href: "#/review" };
-  if (n.cleanReady.length) return { t: `${n.cleanReady.length} sections are clean and ready`, d: "Every statement traced. Accept them and move on.", href: "#/review" };
-  if (rs.pending) return { t: `${rs.pending} risks to conclude`, d: "Accept, modify or reject each proposed risk.", href: "#/review" };
-  if (cs.pending) return { t: `${cs.pending} control recommendations`, d: `${cs.suggestedKey} are suggested as key controls.`, href: "#/review" };
+  const cov = coverageSummary(), n = narrativeSummary(), cs = controlSummary();
+  const fs = findingSummary(), oi = openItemSummary(), tr = traceSummary();
+
+  if (!S.prepared) return { t: "Prepare the Revenue process", d: "Scope, systems, people and what we already know.", href: "#/prepare" };
+  if (cov.facts.contradictory) return { t: "Two sources disagree about who can change a credit limit", d: "It blocks a statement, a control and a risk at once.", href: "#/walkthrough" };
+  if (cov.mandatoryOpen.length) return { t: `${cov.mandatoryOpen.length} required areas are still open`, d: "The walkthrough cannot be concluded while an ISA 240 area is unaddressed.", href: "#/walkthrough" };
+  if (!S.generated) return { t: "Draft the process understanding", d: `Coverage is ${cov.pct}% and the required areas are addressed.`, href: "#/understanding" };
+  if (n.attention.length) return { t: `${n.attention.length} statements need your judgement`, d: "Unsupported or contradictory statements are blocking their sections.", href: "#/understanding" };
+  if (n.pending) return { t: `${n.pending} sections to approve`, d: "Every statement in them is traced to a source.", href: "#/understanding" };
+  if (cs.pending) return { t: `${cs.pending} controls to conclude`, d: `${cs.suggestedKey} are suggested as key controls.`, href: "#/controls" };
+  if (fs.pending.length) return { t: `${fs.pending.length} findings to conclude`, d: "Severity is your judgement, not the model's.", href: "#/controls" };
+  if (!tr.concluded) return { t: tr.started ? "Finish the line walkthrough" : "Trace a transaction through the process", d: tr.started ? `${tr.done} of ${tr.expected} steps traced.` : "Test the process model against a real transaction.", href: "#/trace" };
+  if (!S.testConclusion) return { t: "Conclude the control test", d: "One control requires testing before it can be relied on.", href: "#/testing" };
   if (oi.open) return { t: `${oi.open} open items`, d: "Ask, record or carry each one forward.", href: "#/resolve" };
-  return { t: "Revenue is ready for sign-off", d: "Every gate is met.", href: "#/complete" };
+  return { t: "Revenue is ready for sign-off", d: "Every completion gate is met.", href: "#/complete" };
 }
 
 /* --- Actions ----------------------------------------------------------------
@@ -1760,6 +2262,8 @@ const act = {
   sheet(k) { S.sheet = k; commit(); },
 
   disclose(id) { S.disclosed[id] = !S.disclosed[id]; commit(); },
+
+  readGenResult() { S.genSeen = true; commit(); },
 
   /* review modes */
   reviewMode(m) { S.reviewMode = m; S.openClaim = null; commit(); },
@@ -1836,11 +2340,11 @@ const act = {
   },
 
   /* risks and controls */
-  decideRisk(id, d) {
-    checkpoint("risk concluded");
-    S.riskDecisions[id] = d;
-    if (S.reviewMode === "focus" && S.focusKind === "risks") this.afterDecision();
-    commit(`Risk ${id} ${d}`, true);
+  decideFinding(id, d) {
+    checkpoint("finding concluded");
+    S.findingDecisions[id] = d;
+    if (S.reviewMode === "focus" && S.focusKind === "findings") this.afterDecision();
+    commit(d === "confirmed" ? `${id} confirmed as a finding` : `${id} dismissed`, true);
   },
   decideControl(id, d) {
     checkpoint("control concluded");
@@ -1849,7 +2353,7 @@ const act = {
     if (S.reviewMode === "focus" && S.focusKind === "controls") this.afterDecision();
     commit(`${id} ${w}`, true);
   },
-  clearRisk(id) { checkpoint("risk reopened"); delete S.riskDecisions[id]; commit(); },
+  clearFinding(id) { checkpoint("finding reopened"); delete S.findingDecisions[id]; commit(); },
   clearControl(id) { checkpoint("control reopened"); delete S.controlDecisions[id]; commit(); },
 
   /* open items */
@@ -1882,13 +2386,44 @@ const act = {
   },
   openEditor(id) { S.editing = id; commit(); },
 
+  /* step 1 */
+  prepareDone() { checkpoint("preparation confirmed"); S.prepared = true; commit("Preparation confirmed", true); },
+
+  /* step 5 — the line walkthrough */
+  pickTransaction(id) {
+    checkpoint("transaction selected");
+    S.traceTxn = id; S.focusKind = "trace"; S.focusIx = 0; S.reviewMode = "focus";
+    commit("Transaction selected", true);
+  },
+  decideTrace(id, verdict) {
+    checkpoint("trace step concluded");
+    S.traceDecisions[id] = verdict;
+    const remaining = traceSummary().pending.length;
+    if (remaining === 0) { S.reviewMode = "triage"; S.focusKind = null; S.focusIx = 0; }
+    else S.focusIx = Math.min(S.focusIx, remaining - 1);
+    commit(verdict === "exception" ? "Exception recorded" : "Step corroborated", true);
+  },
+  concludeTrace() {
+    checkpoint("line walkthrough concluded");
+    S.traceConcluded = true;
+    S.reviewMode = "triage"; S.focusKind = null;
+    const ex = traceSummary().exceptions;
+    commit(ex ? `Line walkthrough concluded — ${ex} exception raised as a finding` : "Line walkthrough concluded", true);
+  },
+  reopenTrace() { checkpoint("line walkthrough reopened"); S.traceConcluded = false; commit(); },
+
+  /* step 6 — the control-testing concept */
+  concludeTest(d) { checkpoint("control test concluded"); S.testConclusion = d; commit(`Control test concluded — ${d}`, true); },
+
   /* generation */
   startGeneration(stagesList) {
     S.generating = true; S.genStage = 0; commit();
     const step = (i) => {
       if (i >= stagesList.length) {
+        // Stay on the result. The validation stage caught three ungrounded
+        // statements and the auditor has to see that, not have it flash past.
         S.generating = false; S.generated = true; S.genStage = stagesList.length;
-        S.reviewMode = "triage"; commit();
+        S.genSeen = false; S.reviewMode = "triage"; commit();
         return;
       }
       S.genStage = i; commit();
@@ -1921,13 +2456,14 @@ const act = {
 
 function focusLength() {
   if (S.focusKind === "claims") return claimQueue().length;
-  if (S.focusKind === "risks") return riskSummary().queue.length;
   if (S.focusKind === "controls") return controlSummary().queue.length;
+  if (S.focusKind === "findings") return findingSummary().queue.length;
+  if (S.focusKind === "trace") return traceSummary().pending.length;
   return 0;
 }
 
 
-__exp(exports, { S: () => S, canUndo: () => canUndo, onChange: () => onChange, claimText: () => claimText, claimBlocking: () => claimBlocking, sectionDecision: () => sectionDecision, sectionBlockers: () => sectionBlockers, sectionEdited: () => sectionEdited, sectionApprovable: () => sectionApprovable, covState: () => covState, covFacts: () => covFacts, covReason: () => covReason, allItems: () => allItems, coverageSettled: () => coverageSettled, sectionOf: () => sectionOf, claimById: () => claimById, riskDecision: () => riskDecision, controlDecision: () => controlDecision, itemState: () => itemState, act: () => act, undo: () => undo, commit: () => commit, claimState: () => claimState, sectionState: () => sectionState, coverageCounts: () => coverageCounts, coverageSummary: () => coverageSummary, coverageGaps: () => coverageGaps, narrativeSummary: () => narrativeSummary, claimQueue: () => claimQueue, riskSummary: () => riskSummary, controlSummary: () => controlSummary, openItemSummary: () => openItemSummary, rcmRows: () => rcmRows, stages: () => stages, gateStates: () => gateStates, readyToSign: () => readyToSign, nextAction: () => nextAction, focusLength: () => focusLength });
+__exp(exports, { S: () => S, canUndo: () => canUndo, onChange: () => onChange, claimText: () => claimText, claimBlocking: () => claimBlocking, sectionDecision: () => sectionDecision, sectionBlockers: () => sectionBlockers, sectionEdited: () => sectionEdited, sectionApprovable: () => sectionApprovable, covState: () => covState, covFacts: () => covFacts, covReason: () => covReason, allItems: () => allItems, coverageSettled: () => coverageSettled, sectionOf: () => sectionOf, claimById: () => claimById, controlDecision: () => controlDecision, findingDecision: () => findingDecision, traceVerdict: () => traceVerdict, traceStepFor: () => traceStepFor, itemState: () => itemState, journeyStep: () => journeyStep, completionGates: () => completionGates, act: () => act, undo: () => undo, commit: () => commit, claimState: () => claimState, sectionState: () => sectionState, coverageCounts: () => coverageCounts, coverageSummary: () => coverageSummary, coverageGaps: () => coverageGaps, narrativeSummary: () => narrativeSummary, claimQueue: () => claimQueue, riskSummary: () => riskSummary, controlSummary: () => controlSummary, allFindings: () => allFindings, findingSummary: () => findingSummary, traceSummary: () => traceSummary, testSummary: () => testSummary, openItemSummary: () => openItemSummary, rcmRows: () => rcmRows, journeyStates: () => journeyStates, processProgress: () => processProgress, gateStates: () => gateStates, readyToSign: () => readyToSign, nextAction: () => nextAction, focusLength: () => focusLength });
 
 };
 __defs['js/data-sources.js'] = function (exports, __req, __exp) {
@@ -2208,6 +2744,7 @@ __defs['js/palette.js'] = function (exports, __req, __exp) {
 
 const { esc, cx } = __req('js/ui.js');
 const { narrative, risks, controls, subProcesses, openItems } = __req('js/data-model.js');
+const { processSteps, lineWalk } = __req('js/data-process.js');
 const { sources, client } = __req('js/data-sources.js');
 const st = __req('js/state.js');
 const S = st.S;
@@ -2216,11 +2753,14 @@ function index() {
   const items = [];
   const add = (group, name, hint, run, keep) => items.push({ group, name, hint, run, keep });
 
-  st.stages().forEach((s) =>
-    add("Go to", s.name, s.count, () => { location.hash = s.href; }));
+  st.journeyStates().forEach((s) =>
+    add("Steps", `${s.n}. ${s.name}`, s.c, () => { location.hash = s.href; }));
 
+  add("Go to", "Revenue process home", "the map and the journey", () => { location.hash = "#/revenue"; });
+  add("Go to", "Engagement", "client, year, processes", () => { location.hash = "#/engagement"; });
+  add("Go to", "Open items", `${st.openItemSummary().open} open`, () => { location.hash = "#/resolve"; });
   add("Go to", "Read the working paper", "the full narrative",
-    () => { S.reviewMode = "read"; location.hash = "#/review"; });
+    () => { S.reviewMode = "read"; location.hash = "#/understanding"; });
   add("Go to", "Risk and control matrix", "assembled view", () => { location.hash = "#/matrix"; });
   add("Go to", "Client questionnaire", "client-facing surface", () => { location.hash = "#/questionnaire"; });
   add("Go to", "Live walkthrough cockpit", "future concept", () => { location.hash = "#/cockpit"; });
@@ -2233,48 +2773,58 @@ function index() {
     if (st.claimQueue().length)
       add("Do", "Start the judgement queue", `${st.claimQueue().length} statements need you`,
         () => st.act.startFocus("claims"));
-    if (st.riskSummary().pending)
-      add("Do", "Review risk recommendations", `${st.riskSummary().pending} to conclude`,
-        () => st.act.startFocus("risks"));
     if (st.controlSummary().pending)
       add("Do", "Review control recommendations", `${st.controlSummary().pending} to conclude`,
-        () => st.act.startFocus("controls"));
+        () => { location.hash = "#/controls"; st.act.startFocus("controls"); });
+    if (st.findingSummary().queue.length)
+      add("Do", "Review findings", `${st.findingSummary().queue.length} to conclude`,
+        () => { location.hash = "#/controls"; st.act.startFocus("findings"); });
+    if (!st.traceSummary().concluded)
+      add("Do", "Line walkthrough", st.traceSummary().started
+        ? `${st.traceSummary().done} of ${st.traceSummary().expected} steps traced` : "trace a transaction",
+        () => { location.hash = "#/trace"; });
   }
   add("Do", "Guided demo", "the five-minute walkthrough", () => window.__demoStart());
   add("Do", "Keyboard shortcuts", "?", () => st.act.sheet("keys"));
   add("Do", "Reset the prototype", "back to the beginning", () => st.act.reset());
 
-  if (st.S.generated) narrative.forEach((sec) =>
-    add("Sections", sec.heading, st.sectionState(sec).replace("_", " "), () => {
-      S.reviewMode = "read"; S.section = sec.id; S.scrollTo = sec.id; location.hash = "#/review";
+  processSteps.forEach((p) =>
+    add("Process steps", p.name, `${p.actor} · ${p.system}`, () => {
+      S.mapStep = p.id; location.hash = st.S.generated ? "#/controls" : "#/revenue";
     }));
 
-  if (st.S.generated) risks.forEach((r) =>
-    add("Risks", r.title, `${r.id} · ${r.lib || "new"}`, () => {
-      const q = st.riskSummary().queue; const i = q.findIndex((x) => x.id === r.id);
-      if (i >= 0) { S.focusKind = "risks"; S.focusIx = i; S.reviewMode = "focus"; }
-      location.hash = "#/review";
+  if (st.S.generated) narrative.forEach((sec) =>
+    add("Sections", sec.heading, st.sectionState(sec).replace("_", " "), () => {
+      S.reviewMode = "read"; S.section = sec.id; S.scrollTo = sec.id; location.hash = "#/understanding";
     }));
 
   if (st.S.generated) controls.forEach((c) =>
     add("Controls", c.title, `${c.id} · ${c.owner || "no owner"}`, () => {
       const q = st.controlSummary().queue; const i = q.findIndex((x) => x.id === c.id);
       if (i >= 0) { S.focusKind = "controls"; S.focusIx = i; S.reviewMode = "focus"; }
-      location.hash = "#/review";
+      location.hash = "#/controls";
     }));
+
+  if (st.S.generated) st.allFindings().forEach((f) =>
+    add("Findings", f.title, `${f.id}${f.fromTrace ? " · from the line walkthrough" : ""}`,
+      () => { location.hash = "#/controls"; st.act.startFocus("findings"); }));
+
+  if (st.S.generated) risks.forEach((r) =>
+    add("Risks (carried forward)", r.title, `${r.id} · ${r.lib || "new"}`,
+      () => { location.hash = "#/matrix"; }));
 
   subProcesses.forEach((sp) => sp.items.forEach((it) =>
     add("Coverage", it.q, `${it.id} · ${sp.name}`, () => {
-      S.disclosed.meth = true; location.hash = "#/understand";
+      S.disclosed.meth = true; location.hash = "#/walkthrough";
     })));
 
   openItems.forEach((i) =>
     add("Open items", i.title, `${i.id} · ${st.itemState(i)}`, () => { location.hash = "#/resolve"; }));
 
   Object.values(sources).forEach((s) =>
-    add("Sources", s.name, s.detail, () => { location.hash = "#/understand"; }));
+    add("Sources", s.name, s.detail, () => { location.hash = "#/walkthrough"; }));
 
-  add("Engagements", client.name, "FY2026 interim · Revenue", () => { location.hash = "#/understand"; });
+  add("Engagements", client.name, "FY2026 interim · Revenue", () => { location.hash = "#/engagement"; });
   add("Engagements", "Meerveld Zorggroep", "FY2026 · not started", () => { location.hash = "#/"; });
   add("Engagements", "Brekelmans Bouw B.V.", "FY2025 · signed", () => { location.hash = "#/"; });
 
@@ -2349,41 +2899,50 @@ __defs['js/demo.js'] = function (exports, __req, __exp) {
 const { esc, act: btn } = __req('js/ui.js');
 const { S, commit, act } = __req('js/state.js');
 const { pipeline } = __req('js/data-model.js');
+const { lineWalk } = __req('js/data-process.js');
 const STEPS = [
-  { route: "#/", title: "One question, not a dashboard",
-    say: "No sidebar, no tabs, no metric tiles. The product opens by telling the auditor the single most useful thing to do next, and what else is waiting.",
+  { route: "#/engagement", title: "Interim sits inside an engagement",
+    say: "Client, financial year, the four audit phases, and six processes inside interim. Revenue is one process among several — the product is not a Revenue application, it is where process-level interim work happens.",
     setup: () => {} },
 
-  { route: "#/understand", title: "What we still don't know",
-    say: "Plain English, not methodology. Three things need clarification, each with its actions on the row. The 45 coverage items, fact keys and ISA references are one disclosure away — open 'Show methodology' if anyone asks.",
+  { route: "#/revenue", title: "Seven steps, and a map of the process",
+    say: "This is the whole interim workflow for one process. The map is the process as we understand it; it fills in with controls and findings as the work progresses, and gets tested against a real transaction at step five.",
+    setup: () => { S.prepared = true; S.mapStep = null; } },
+
+  { route: "#/walkthrough", title: "What we still don't know",
+    say: "Step two. Plain English, not methodology — three things need clarification. The 45 coverage areas, fact keys and ISA references are one disclosure away if a methodology partner asks.",
     setup: () => { S.disclosed.meth = false; } },
 
-  { route: "#/review", title: "Nine stages, not one prompt",
-    say: "Facts, narrative, risks, controls, the key-control criteria — then two stages of ordinary code that validate and assemble. Watch the validation stage.",
-    setup: () => {} },
-
-  { route: "#/review", title: "The routine, separated from the judgement",
-    say: "This is the core promise on one screen. Four things need a person. Ten sections are clean and can be accepted in a single action. The product has already done the sorting.",
+  { route: "#/understanding", title: "The routine, separated from the judgement",
+    say: "Step three. Four statements need a person; ten sections are clean and accepted in one action. Press Enter four times to clear the queue — the contradiction first, then three unsupported claims, each with the correction already written.",
     setup: () => { S.generated = true; S.reviewMode = "triage"; } },
 
-  { route: "#/review", title: "One judgement at a time",
-    say: "Full width, no sidebar, no modal. The statement stays in its paragraph, the problem is one sentence, and the recommended fix is written and one keystroke away. Press Enter to accept it.",
-    setup: () => { S.generated = true; S.focusKind = "claims"; S.focusIx = 0; S.reviewMode = "focus"; } },
-
-  { route: "#/review", title: "Where did this sentence come from?",
-    say: "Click any sentence and the evidence opens directly beneath it — speaker, timestamp, exact words. The eye never leaves the line. No permanent panel, no navigation.",
+  { route: "#/understanding", title: "Where did this sentence come from?",
+    say: "Click any sentence and the evidence opens directly beneath it — speaker, timestamp, exact words. No side panel, no navigation, the eye never leaves the line.",
     setup: () => { S.generated = true; S.reviewMode = "read"; S.section = "N8"; S.openClaim = "N8.1"; } },
 
-  { route: "#/review", title: "Seven decisions in under a minute",
-    say: "Not fourteen table rows. One recommendation at a time, with the reasoning in prose and the six criteria behind a disclosure. Enter accepts, N marks it not key, and it advances by itself.",
-    setup: () => { S.generated = true; S.focusKind = "controls"; S.focusIx = 0; S.reviewMode = "focus"; } },
+  { route: "#/controls", title: "Controls and findings, on the process",
+    say: "Step four. The same map, now annotated: which step each control sits on, and which steps have something wrong with them. Fourteen controls reviewed one at a time, Enter to accept, N for not key.",
+    setup: () => { S.generated = true; S.reviewMode = "triage"; S.mapStep = null; } },
 
-  { route: "#/resolve", title: "What is holding things up",
-    say: "Open items ordered by what they block, not by type. The contradiction at the top is stopping a statement, a control and a risk at once.",
-    setup: () => {} },
+  { route: "#/trace", title: "Now test the model against reality",
+    say: "Step five, and the step that changes what this product is. Pick a real transaction and trace it end to end through the process we just documented. Expected step, expected control, expected evidence — against what actually happened.",
+    setup: () => { S.generated = true; S.traceTxn = null; S.reviewMode = "triage"; } },
 
-  { route: "#/complete", title: "Nothing is signed by the machine",
-    say: "Seven conditions, each linking to the work that clears it. Sign-off is the one place in the product with a deliberate stop — everywhere else, undo replaced the confirmation dialog.",
+  { route: "#/trace", title: "The walkthrough finds the model wrong",
+    say: "The invoice went out on 15 September. The customer signed acceptance on 22 September. Revenue was recognised seven days before the performance obligation was satisfied — found by comparing two dates, not by anything anyone said in an interview.",
+    setup: () => {
+      S.generated = true; S.traceTxn = "SO-24188";
+      lineWalk.steps.slice(0, 4).forEach((t) => { S.traceDecisions[t.id] = "corroborated"; });
+      S.focusKind = "trace"; S.focusIx = 0; S.reviewMode = "focus";
+    } },
+
+  { route: "#/testing", title: "Identifying a control is not testing it",
+    say: "Step six, clearly marked as a future concept. Control, test setup, population and selection, evidence, results, conclusion — with the sample size always showing the firm parameter that produced it. The auditor concludes; the platform does not.",
+    setup: () => { S.generated = true; } },
+
+  { route: "#/complete", title: "Complete closes the process, not the audit",
+    say: "Ten conditions, each linking to the step that clears it. And then what interim hands forward: the process understanding, the matrix, the findings, the walkthrough result. Risk analysis is the next phase — deliberately not in this product.",
     setup: () => { S.generated = true; } },
 ];
 
@@ -2406,8 +2965,8 @@ function demoBar() {
 function demoGo(step) {
   S.demoStep = Math.max(0, Math.min(STEPS.length - 1, step));
   const s = STEPS[S.demoStep];
-  // Beat 3 shows the pipeline; run it if it has not been run.
-  if (S.demoStep === 2 && !S.generated && !S.generating) {
+  // The understanding beat runs the pipeline the first time it is reached.
+  if (S.demoStep === 3 && !S.generated && !S.generating) {
     location.hash = s.route;
     setTimeout(() => act.startGeneration(pipeline), 260);
     return;
@@ -2424,10 +2983,12 @@ __exp(exports, { STEPS: () => STEPS, demoBar: () => demoBar, demoGo: () => demoG
 
 };
 __defs['js/views/shell.js'] = function (exports, __req, __exp) {
-/* The entire permanent frame: one identity line and one stage spine. 64px.
-   There is no sidebar, no breadcrumb and no tab bar. */
+/* The permanent frame: one identity line and one process journey.
 
-const { esc, cx, act: btn } = __req('js/ui.js');
+   The journey is not a tab bar. It is ordered, each step carries its own state,
+   and a step that has not started says why. */
+
+const { esc, cx } = __req('js/ui.js');
 const { client, user } = __req('js/data-sources.js');
 const st = __req('js/state.js');
 function idline(context) {
@@ -2440,31 +3001,43 @@ function idline(context) {
   </header>`;
 }
 
+/** Client / FY / Interim / Revenue — each segment navigates up a layer. */
 const engContext = () => `
-  <button class="idline__who" data-act="palette-eng">${esc(client.short)}</button>
+  <button class="idline__who" data-act="nav" data-href="#/engagement">${esc(client.short)}</button>
   <span class="idline__sep">/</span>
-  <span>Revenue</span>
-  <span class="idline__sep">·</span>
-  <span>FY2026 interim</span>`;
+  <button class="idline__seg" data-act="nav" data-href="#/engagement">FY2026</button>
+  <span class="idline__sep">/</span>
+  <button class="idline__seg" data-act="nav" data-href="#/engagement">Interim</button>
+  <span class="idline__sep">/</span>
+  <button class="idline__seg is-here" data-act="nav" data-href="#/revenue">Revenue</button>`;
 
-function spine(active) {
-  return `<nav class="spine">
-    ${st.stages().map((s) => `
-      <button class="${cx("stage", s.id === active && "is-on")}" data-act="nav" data-href="${s.href}">
-        <span class="stage__n">${esc(s.name)}</span>
-        <span class="${cx("stage__c", s.tone && "stage__c--" + s.tone)}">${esc(s.count)}</span>
+function journeyBar(active) {
+  const steps = st.journeyStates();
+  return `<nav class="journey">
+    ${steps.map((j, i) => `
+      ${i ? `<span class="journey__link"></span>` : ""}
+      <button class="${cx("jstep", `is-${j.s}`, j.id === active && "is-on")}"
+        data-act="nav" data-href="${esc(j.href)}"
+        ${j.why ? `title="${esc(j.why)}"` : ""}>
+        <span class="jstep__n">${esc(j.name)}</span>
+        <span class="${cx("jstep__c", j.tone && "jstep__c--" + j.tone)}">${esc(j.c)}</span>
       </button>`).join("")}
-    <span class="spine__sp"></span>
+    <span class="journey__sp"></span>
   </nav>`;
 }
 
-/** Standard engagement screen: frame + scrolling canvas. */
-const screen = (stage, body, o = {}) =>
-  `${idline(engContext())}${spine(stage)}
+/** Standard process-workspace screen. */
+const screen = (step, body, o = {}) =>
+  `${idline(engContext())}${journeyBar(step)}
    <div class="canvas">${o.raw ? body : `<div class="${cx("wrap", o.width && "wrap--" + o.width)}">${body}</div>`}</div>`;
 
+/** A screen inside the engagement layer — no journey bar. */
+const engScreen = (body, o = {}) =>
+  `${idline(engContext())}
+   <div class="canvas"><div class="${cx("wrap", o.width && "wrap--" + o.width)}">${body}</div></div>`;
 
-__exp(exports, { engContext: () => engContext, screen: () => screen, idline: () => idline, spine: () => spine });
+
+__exp(exports, { engContext: () => engContext, screen: () => screen, engScreen: () => engScreen, idline: () => idline, journeyBar: () => journeyBar });
 
 };
 __defs['js/views/work.js'] = function (exports, __req, __exp) {
@@ -2490,15 +3063,19 @@ function work() {
     },
     st.S.generated && n.needsSource.length && {
       tone: "warn", t: `${n.needsSource.length} statements have no support`,
-      d: "They cannot be approved until you resolve them", href: "#/review",
+      d: "They cannot be approved until you resolve them", href: "#/understanding",
     },
     cov.mandatoryOpen.length && {
       tone: "warn", t: `${cov.mandatoryOpen.length} required areas are still open`,
-      d: `${cov.mandatoryOpen.map((i) => i.plain || i.q).slice(0, 1)}`, href: "#/understand",
+      d: `${cov.mandatoryOpen.map((i) => i.plain || i.q).slice(0, 1)}`, href: "#/walkthrough",
     },
-    st.S.generated && (rs.pending || cs.pending) && {
-      tone: "", t: `${rs.pending + cs.pending} recommendations to confirm`,
-      d: `${rs.pending} risks and ${cs.pending} controls`, href: "#/review",
+    st.S.generated && cs.pending && {
+      tone: "", t: `${cs.pending} controls to conclude`,
+      d: `${cs.suggestedKey} are suggested as key controls`, href: "#/controls",
+    },
+    st.S.generated && !st.traceSummary().concluded && {
+      tone: "", t: "A transaction has not been traced through the process",
+      d: "The line walkthrough tests the process model against reality", href: "#/trace",
     },
     oi.sent && {
       tone: "", t: `${oi.sent} questions are with the client`,
@@ -2545,9 +3122,9 @@ function work() {
       <div class="rows">
         ${row({
           title: `<span class="b">${esc(client.name)}</span>`,
-          detail: `FY2026 · Interim · Revenue in progress`,
-          side: `<span class="b" style="color:var(--ink-2)">${cov.pct}%</span><div class="t-meta">understood</div>`,
-          action: "nav", data: { href: "#/understand" },
+          detail: `FY2026 · Interim · Revenue — ${st.processProgress().current.name}`,
+          side: `<span class="b" style="color:var(--ink-2)">step ${st.processProgress().current.n} of 7</span><div class="t-meta">${cov.pct}% understood</div>`,
+          action: "nav", data: { href: "#/engagement" },
         })}
         ${row({
           title: `<span class="b">Meerveld Zorggroep</span>`,
@@ -2577,7 +3154,400 @@ function work() {
 __exp(exports, { work: () => work });
 
 };
-__defs['js/views/understand.js'] = function (exports, __req, __exp) {
+__defs['js/views/map.js'] = function (exports, __req, __exp) {
+/* The Process Understanding Map.
+
+   One diagram, three meanings: what happens (step 3), what controls it and what
+   is wrong with it (step 4), and whether a real transaction behaved that way
+   (step 5). The same nodes gain annotation as the process work advances. */
+
+const { esc, cx, act: btn, chip, evidence } = __req('js/ui.js');
+const { processSteps } = __req('js/data-process.js');
+const { controls } = __req('js/data-model.js');
+const { ref } = __req('js/data-sources.js');
+const st = __req('js/state.js');
+const S = st.S;
+
+/** mode: "plain" (step 3) · "annotated" (step 4) · "trace" (step 5) */
+function processMap(mode = "annotated", opts = {}) {
+  const { selected = null, onSelect = "map-node", compact = false } = opts;
+  const findings = st.allFindings();
+
+  const node = (p, i) => {
+    const ctl = p.controls.length;
+    const fnd = findings.filter((f) => f.step === p.id);
+    const t = mode === "trace" ? st.traceStepFor(p.id) : null;
+    const verdict = t ? st.traceVerdict(t) : null;
+    const na = mode === "trace" && !t;
+
+    let markers = "";
+    if (mode === "trace") {
+      markers = na
+        ? `<span class="mapnode__na">not traced</span>`
+        : verdict === "corroborated" ? `<span class="mapnode__v mapnode__v--ok">✓ corroborated</span>`
+        : verdict === "exception" ? `<span class="mapnode__v mapnode__v--ex">! exception</span>`
+        : `<span class="mapnode__v">awaiting</span>`;
+    } else if (mode === "annotated") {
+      markers = `<span class="mapnode__m">
+        ${ctl ? `<span class="mapnode__ctl" title="${ctl} control${ctl === 1 ? "" : "s"}">${"◆".repeat(Math.min(ctl, 3))}</span>` : `<span class="mapnode__none">no control</span>`}
+        ${fnd.length ? `<span class="mapnode__f">● ${fnd.length}</span>` : ""}
+        ${p.contested ? `<span class="mapnode__f mapnode__f--alert">● contested</span>` : ""}
+      </span>`;
+    }
+
+    return `<button class="${cx("mapnode",
+        selected === p.id && "is-sel",
+        mode === "trace" && verdict === "exception" && "is-ex",
+        mode === "trace" && verdict === "corroborated" && "is-ok",
+        mode === "trace" && na && "is-na",
+        mode === "annotated" && !ctl && "is-uncontrolled")}"
+      data-act="${esc(onSelect)}" data-step="${esc(p.id)}">
+      <span class="mapnode__i">${i + 1}</span>
+      <span class="mapnode__t">${esc(p.name)}</span>
+      <span class="mapnode__a">${esc(p.actor)}</span>
+      ${compact ? "" : markers}
+    </button>`;
+  };
+
+  return `<div class="map">
+    ${processSteps.map((p, i) => `${i ? `<span class="mapedge"></span>` : ""}${node(p, i)}`).join("")}
+  </div>`;
+}
+
+const mapLegend = (mode = "annotated") => mode === "plain" ? "" : mode === "trace"
+  ? `<div class="maplegend">
+      <span><i class="dot dot--ok"></i>corroborated</span>
+      <span><i class="dot dot--alert"></i>exception</span>
+      <span><i class="dot dot--open"></i>awaiting</span>
+    </div>`
+  : `<div class="maplegend">
+      <span><b>◆</b> control identified</span>
+      <span><i class="dot dot--warn"></i>finding on this step</span>
+      <span><i class="dot dot--open"></i>no control identified</span>
+    </div>`;
+
+/** The panel that opens under the map when a step is clicked. */
+function mapDetail(stepId) {
+  const p = processSteps.find((x) => x.id === stepId);
+  if (!p) return "";
+  const ctl = controls.filter((c) => p.controls.includes(c.id));
+  const fnd = st.allFindings().filter((f) => f.step === p.id);
+  const refs = p.refs.map(ref).filter(Boolean);
+  const t = st.traceStepFor(p.id);
+
+  return `<div class="mapdetail">
+    <div class="row" style="align-items:baseline;gap:12px;margin-bottom:8px">
+      <span class="t-h">${esc(p.name)}</span>
+      <span class="t-meta">${esc(p.actor)} · ${esc(p.system)}</span>
+      <span class="sp"></span>
+      <button class="b-act b-act--plain b-act--sm" data-act="map-node" data-step="">Close</button>
+    </div>
+    <p class="t-sub" style="max-width:70ch;line-height:1.6">${esc(p.what)}</p>
+
+    <div class="grid2" style="margin-top:20px">
+      <div>
+        <div class="t-eyebrow" style="margin-bottom:8px">Controls</div>
+        ${ctl.length ? ctl.map((c) => {
+          const d = st.controlDecision(c);
+          return `<div class="rw" style="padding:10px 0">
+            <span class="rw__main">
+              <span class="rw__t" style="font-size:14px">${esc(c.title)}</span>
+              <span class="rw__d">${esc(c.owner || "owner not established")} · ${
+                d === "key" ? "key control" : d === "not_key" ? "not key" : d === "undecided" ? "undecided" : "not concluded"}</span>
+            </span></div>`;
+        }).join("") : `<p class="t-sub" style="color:var(--warn)">No control identified on this step.</p>`}
+      </div>
+      <div>
+        <div class="t-eyebrow" style="margin-bottom:8px">Findings</div>
+        ${fnd.length ? fnd.map((f) => `<div class="rw" style="padding:10px 0">
+          <span class="rw__lead"><i class="dot dot--${f.severity === "observation" ? "warn" : "alert"}"></i></span>
+          <span class="rw__main"><span class="rw__t" style="font-size:14px">${esc(f.title)}</span>
+          ${f.fromTrace ? `<span class="rw__d">Raised by the line walkthrough</span>` : ""}</span>
+        </div>`).join("") : `<p class="t-sub">None recorded on this step.</p>`}
+      </div>
+    </div>
+
+    ${t && st.traceVerdict(t) ? `<div style="margin-top:18px">
+      <div class="t-eyebrow" style="margin-bottom:8px">On the traced transaction</div>
+      <p class="t-sub" style="max-width:70ch;line-height:1.6">${esc(t.observation)}</p>
+    </div>` : ""}
+
+    <div style="margin-top:18px">
+      <div class="t-eyebrow" style="margin-bottom:8px">Established from</div>
+      ${evidence(refs)}
+    </div>
+  </div>`;
+}
+
+
+__exp(exports, { mapLegend: () => mapLegend, processMap: () => processMap, mapDetail: () => mapDetail });
+
+};
+__defs['js/views/process.js'] = function (exports, __req, __exp) {
+/* The engagement layer, and the Revenue process home.
+
+   Two levels of navigation in the whole product: the engagement, and the
+   process. The process home is the map plus the journey — one screen that
+   answers "where is this process?". */
+
+const { esc, cx, act: btn, row, dot, callout, empty } = __req('js/ui.js');
+const { client, engagement, sources } = __req('js/data-sources.js');
+const { journey } = __req('js/data-process.js');
+const st = __req('js/state.js');
+const { idline, engContext, engScreen, screen } = __req('js/views/shell.js');
+const { processMap, mapLegend, mapDetail } = __req('js/views/map.js');
+const S = st.S;
+
+/* ── Engagement layer ────────────────────────────────────────────────────── */
+
+function engagementView() {
+  const prog = st.processProgress();
+  const cov = st.coverageSummary();
+
+  const later = [
+    ["Purchasing", "Purchase-to-pay"], ["Payroll", "Hire-to-retire"],
+    ["Inventory", "Stock and costing"], ["Treasury", "Cash and financing"],
+    ["Financial close", "Close and reporting"],
+  ];
+
+  const body = `
+    <div class="head">
+      <div class="head__row">
+        <div>
+          <h1 class="t-title">${esc(client.name)}</h1>
+          <p class="t-lede" style="margin-top:10px">
+            ${esc(engagement.period)} · ${esc(client.framework)} · materiality ${esc(engagement.materiality)}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <section style="margin-top:36px">
+      <h2 class="t-eyebrow" style="margin-bottom:14px">Engagement</h2>
+      <div class="phases">
+        ${[["Planning", "done", "Signed 4 July 2026"],
+           ["Interim", "on", `Revenue · step ${prog.current.n} of 7`],
+           ["Final", "later", "From 12 January 2027"],
+           ["Completion", "later", ""]].map(([n, s, d]) => `
+          <div class="${cx("phase", "is-" + s)}">
+            <div class="phase__n">${esc(n)}</div>
+            <div class="phase__d">${esc(d || "Not started")}</div>
+          </div>`).join("")}
+      </div>
+    </section>
+
+    <section style="margin-top:44px">
+      <h2 class="t-h" style="margin-bottom:4px">Interim — processes</h2>
+      <p class="t-meta" style="margin-bottom:16px">
+        Each process is carried through the full interim workflow independently.
+        Only Revenue is in scope for the current methodology pack.</p>
+      <div class="rows">
+        ${row({
+          lead: dot("ok"),
+          title: `<span class="b">Revenue / order-to-cash</span>`,
+          detail: `${prog.current.name} — ${esc(prog.current.blurb)}`,
+          side: `<span class="b" style="color:var(--ink-2)">step ${prog.current.n} of 7</span>
+                 <div class="t-meta">${cov.pct}% understood</div>`,
+          action: "nav", data: { href: "#/revenue" },
+        })}
+        ${later.map(([n, d]) => row({
+          lead: dot("open"),
+          title: `<span style="color:var(--ink-3)">${esc(n)}</span>`,
+          detail: esc(d),
+          side: `<span class="t-meta">not started</span>`,
+        })).join("")}
+      </div>
+    </section>
+
+    <section style="margin-top:44px">
+      <h2 class="t-eyebrow" style="margin-bottom:14px">Team</h2>
+      <p class="inline-list">${engagement.team.map((t) =>
+        `<b>${esc(t.name)}</b> <span class="t-meta">${esc(t.role)}</span>`).join(" · ")}</p>
+    </section>
+
+    ${callout(`<b>Where this sits.</b> Interim comes after the entity and process understanding and
+      the inherent risk factors, and before risk analysis and the final audit. This product covers
+      the interim work on a process. Risk analysis is the next phase and is deliberately outside it.`)}
+  `;
+
+  return engScreen(body);
+}
+
+/* ── Revenue process home ────────────────────────────────────────────────── */
+
+function processHome() {
+  const steps = st.journeyStates();
+  const next = st.nextAction();
+  const tr = st.traceSummary();
+  const mode = tr.started ? "trace" : S.generated ? "annotated" : "plain";
+
+  const body = `
+    <div class="head">
+      <div class="head__row">
+        <div>
+          <h1 class="t-title">Revenue</h1>
+          <p class="t-lede" style="margin-top:10px">
+            Order-to-cash, ${esc(client.short)} FY2026 interim.
+            ${S.generated ? "The process as we understand it, and how far the work has got."
+              : "The process as described so far. It fills in as the walkthrough progresses."}
+          </p>
+        </div>
+        <div style="text-align:right;padding-top:4px">
+          <div class="t-num">${st.processProgress().done}<span style="color:var(--ink-4)">/7</span></div>
+          <div class="t-meta">steps done</div>
+        </div>
+      </div>
+    </div>
+
+    <section style="margin-top:32px">
+      <div class="row" style="margin-bottom:12px">
+        <h2 class="t-eyebrow">Process understanding map</h2>
+        <span class="sp"></span>
+        ${mapLegend(mode)}
+      </div>
+      ${processMap(mode, { selected: S.mapStep })}
+      ${S.mapStep ? mapDetail(S.mapStep) : `<p class="t-meta" style="margin-top:12px">
+        Click a step to see its controls, findings and sources.</p>`}
+    </section>
+
+    <section style="margin-top:48px">
+      <h2 class="t-h" style="margin-bottom:4px">The interim workflow</h2>
+      <p class="t-meta" style="margin-bottom:16px">Seven steps. You can look ahead at any time.</p>
+      <div class="rows">
+        ${steps.map((j) => row({
+          lead: j.s === "done" ? dot("ok") : j.s === "open" ? dot(j.tone === "warn" ? "warn" : "") : dot("open"),
+          title: `<span class="${j.s === "later" ? "" : "b"}" style="${j.s === "later" ? "color:var(--ink-4)" : ""}">${j.n}. ${esc(j.name)}</span>`,
+          detail: j.s === "later" && j.why ? esc(j.why) : esc(j.blurb),
+          side: `<span class="t-meta ${j.tone === "warn" ? "" : ""}" style="${j.tone === "warn" ? "color:var(--warn)" : j.s === "done" ? "color:var(--ok)" : ""}">${esc(j.c)}</span>`,
+          action: "nav", data: { href: j.href },
+        })).join("")}
+      </div>
+    </section>
+
+    <section style="margin-top:40px">
+      <button class="rw" data-act="nav" data-href="${esc(next.href)}"
+        style="border-top:1px solid var(--line);padding:24px 4px">
+        <span class="rw__main">
+          <span class="t-eyebrow">Next</span>
+          <span class="t-h" style="display:block;margin:8px 0 5px">${esc(next.t)}</span>
+          <span class="t-sub" style="display:block">${esc(next.d)}</span>
+        </span>
+        <span class="rw__side" style="padding-top:24px;font-size:19px;color:var(--ink-5)">›</span>
+      </button>
+    </section>
+  `;
+
+  return screen(null, body, { width: "wide" });
+}
+
+/* ── Step 1 — Prepare ────────────────────────────────────────────────────── */
+
+function prepare() {
+  const cov = st.coverageSummary();
+
+  const body = `
+    <div class="head">
+      <div class="head__row">
+        <div>
+          <h1 class="t-title">Prepare</h1>
+          <p class="t-lede" style="margin-top:10px">
+            What we already know about Revenue at ${esc(client.short)}, and who we need to speak to.
+            Everything here came from the prior year, the engagement file or documents already supplied.
+          </p>
+        </div>
+        ${S.prepared ? `<span class="state state--ok" style="padding-top:12px"><i class="dot dot--ok"></i>Confirmed</span>` : ""}
+      </div>
+    </div>
+
+    <section style="margin-top:36px">
+      <h2 class="t-eyebrow" style="margin-bottom:14px">Scope</h2>
+      <div class="rows">
+        ${row({ title: "Process", detail: "Revenue / order-to-cash — both streams", side: `<span class="t-meta">in scope</span>` })}
+        ${row({ title: "Machines and spare parts", detail: "EUR 41.2m · recognised on customer acceptance", side: `<span class="t-meta">point in time</span>` })}
+        ${row({ title: "Service and maintenance contracts", detail: "EUR 7.4m · straight-line over the contract term", side: `<span class="t-meta">over time</span>` })}
+        ${row({ title: "Methodology pack", detail: "12 sub-processes, 45 coverage areas, 10 required by ISA 240", side: `<span class="mono t-meta">revenue v0.1.0</span>` })}
+      </div>
+    </section>
+
+    <section style="margin-top:40px">
+      <h2 class="t-eyebrow" style="margin-bottom:14px">Systems</h2>
+      <div class="rows">
+        ${client.systems.map((s) => row({
+          title: `<span class="b">${esc(s.name)}</span>`, detail: esc(s.role) })).join("")}
+      </div>
+    </section>
+
+    <section style="margin-top:40px">
+      <h2 class="t-eyebrow" style="margin-bottom:14px">Process owners and participants</h2>
+      <div class="rows">
+        ${client.contacts.map((c) => row({
+          lead: dot(c.tag ? "ok" : "open"),
+          title: `<span class="b">${esc(c.name)}</span>`,
+          detail: esc(c.role),
+          side: `<span class="t-meta">${esc(c.tag || "not yet contacted")}</span>`,
+        })).join("")}
+      </div>
+    </section>
+
+    <section style="margin-top:40px">
+      <h2 class="t-eyebrow" style="margin-bottom:14px">What we already have</h2>
+      <div class="rows">
+        ${Object.values(sources).map((s) => row({
+          lead: dot("ok"), title: esc(s.name), detail: esc(s.detail),
+        })).join("")}
+      </div>
+      <div class="acts" style="margin-top:16px">
+        ${btn("Add a document", "mock")}
+        ${btn("Import a transcript", "mock")}
+      </div>
+    </section>
+
+    <section style="margin-top:40px">
+      <h2 class="t-eyebrow" style="margin-bottom:14px">Known changes since last year</h2>
+      <div class="rows">
+        ${row({ lead: dot("warn"),
+          title: "Warehousing and despatch outsourced to Van Dijk Logistics in March 2026",
+          detail: "Performed in-house at Eindhoven in FY2025. A new service organisation in the middle of the revenue process.",
+          side: `<span class="t-meta">process change</span>` })}
+        ${row({ lead: dot("warn"),
+          title: "Service revenue has grown since the 2024 maintenance acquisition",
+          detail: "A second recognition basis, and a second system feeding the ledger.",
+          side: `<span class="t-meta">scale</span>` })}
+      </div>
+    </section>
+
+    <section style="margin-top:40px">
+      <h2 class="t-eyebrow" style="margin-bottom:14px">Already outstanding</h2>
+      <p class="t-sub" style="max-width:66ch">
+        ${cov.mandatoryOpen.length
+          ? `${cov.mandatoryOpen.length} required areas were not established by the documents alone and need to be covered in the walkthrough.`
+          : "Nothing outstanding from the preparation."}
+      </p>
+    </section>
+
+    <section style="margin-top:44px;border-top:1px solid var(--line);padding-top:28px">
+      ${S.prepared
+        ? `<div class="acts">
+            ${btn("Go to the walkthrough", "nav", { variant: "go", size: "lg", data: { href: "#/walkthrough" } })}
+          </div>`
+        : `<h2 class="t-h">Ready to speak to the client?</h2>
+           <p class="t-sub" style="margin:6px 0 18px;max-width:62ch">
+             Confirming preparation records that the scope, participants and prior information were
+             considered before the walkthrough — which is what the file has to show.</p>
+           <div class="acts">
+             ${btn("Confirm and continue", "prepare-done", { variant: "go", size: "lg", key: "Enter" })}
+           </div>`}
+    </section>
+  `;
+
+  return screen("prepare", body);
+}
+
+
+__exp(exports, { engagementView: () => engagementView, processHome: () => processHome, prepare: () => prepare });
+
+};
+__defs['js/views/walkthrough.js'] = function (exports, __req, __exp) {
 /* UNDERSTAND — what we know and what we still don't.
 
    The auditor's question is four words. The default answer is plain English;
@@ -2677,7 +3647,7 @@ function methodology() {
 
 /* --- screen ---------------------------------------------------------------- */
 
-function understand() {
+function walkthrough() {
   const cov = st.coverageSummary();
   const gaps = st.coverageGaps();
   const settled = st.coverageSettled();
@@ -2759,14 +3729,14 @@ function understand() {
       </section>` : ""}
   `;
 
-  return screen("understand", body);
+  return screen("walkthrough", body);
 }
 
 
-__exp(exports, { understand: () => understand });
+__exp(exports, { walkthrough: () => walkthrough });
 
 };
-__defs['js/views/review.js'] = function (exports, __req, __exp) {
+__defs['js/views/understanding.js'] = function (exports, __req, __exp) {
 /* REVIEW — the surface the product is won or lost on.
 
    Three modes:
@@ -2778,6 +3748,7 @@ __defs['js/views/review.js'] = function (exports, __req, __exp) {
 
 const { esc, cx, act: btn, row, dot, chip, more, evidence, empty, callout, link, state } = __req('js/ui.js');
 const { narrative, risks, controls, pipeline, subProcesses } = __req('js/data-model.js');
+const { processMap, mapLegend, mapDetail } = __req('js/views/map.js');
 const { ref, sources } = __req('js/data-sources.js');
 const st = __req('js/state.js');
 const { screen } = __req('js/views/shell.js');
@@ -2807,18 +3778,19 @@ const sectionOfClaim = (id) => narrative.find((s) => s.blocks.some((b) => b.id =
 
 function generateView() {
   const running = S.generating;
+  const done = S.generated && !S.genSeen;
   const cov = st.coverageSummary();
 
   const body = `
     <div class="head">
-      <h1 class="t-title">${running ? "Drafting the documentation" : "Draft the documentation"}</h1>
+      <h1 class="t-title">${done ? "Draft ready" : running ? "Drafting the process understanding" : "Draft the process understanding"}</h1>
       <p class="t-lede" style="margin-top:10px">
         Nine stages over ${Object.keys(sources).length} sources. Seven ask a model; two are ordinary
         code. Every stage is validated before the next one runs.
       </p>
     </div>
 
-    ${!running ? `
+    ${!running && !done ? `
       <div class="rows" style="margin-top:36px">
         ${row({ title: "Areas established", side: `${cov.covered} of ${cov.applicable}` })}
         ${row({ title: "Process facts", side: `${cov.facts.known} of ${cov.facts.total}` })}
@@ -2830,24 +3802,33 @@ function generateView() {
       </div>` : `
       <div style="margin-top:36px" class="rows">
         ${pipeline.map((p, i) => {
-          const done = i < S.genStage, now = i === S.genStage;
-          const warn = p.warn && done;
-          return `<div class="rw" style="opacity:${done || now ? 1 : .35};transition:opacity .3s">
+          const fin = i < S.genStage, now = i === S.genStage && running;
+          const warn = p.warn && fin;
+          return `<div class="rw" style="opacity:${fin || now ? 1 : .35};transition:opacity .3s">
             <span class="rw__lead" style="padding-top:4px;width:18px">
-              ${done ? `<span style="color:${warn ? "var(--warn)" : "var(--ok)"}">${warn ? "!" : "✓"}</span>`
+              ${fin ? `<span style="color:${warn ? "var(--warn)" : "var(--ok)"}">${warn ? "!" : "✓"}</span>`
                 : now ? `<span class="dot dot--open"></span>` : `<span class="t-meta">${i + 1}</span>`}</span>
             <span class="rw__main">
               <span class="rw__t">${esc(p.name)}</span>
               <span class="rw__d">${esc(p.desc)}</span>
-              ${done ? `<span class="rw__d" style="color:${warn ? "var(--warn)" : "var(--ink-2)"};margin-top:5px">
+              ${fin ? `<span class="rw__d" style="color:${warn ? "var(--warn)" : "var(--ink-2)"};margin-top:5px">
                 ${esc(fill(p.out))}</span>` : ""}
             </span>
             <span class="rw__side mono" style="font-size:11.5px">${esc(p.model)}</span>
           </div>`;
         }).join("")}
-      </div>`}
+      </div>
+      ${done ? `
+        <div style="margin-top:32px">
+          ${callout(`<b>Three statements could not be supported.</b> The validation stage found no
+            source for them. They are in the draft marked <b>needs support</b> and cannot be approved
+            until you deal with them — nothing was dropped quietly.`)}
+          <div class="acts" style="margin-top:22px">
+            ${btn("Review the draft", "read-gen", { variant: "go", size: "lg", key: "Enter" })}
+          </div>
+        </div>` : ""}`}
   `;
-  return screen("review", body);
+  return screen("understanding", body);
 }
 
 function fill(t) {
@@ -2862,8 +3843,6 @@ function fill(t) {
 
 function triage() {
   const n = st.narrativeSummary();
-  const rs = st.riskSummary();
-  const cs = st.controlSummary();
   const queue = st.claimQueue();
 
   const describe = (b) => {
@@ -2874,7 +3853,7 @@ function triage() {
 
   const body = `
     <div class="head">
-      <h1 class="t-title">Revenue documentation</h1>
+      <h1 class="t-title">Process understanding</h1>
       <p class="t-lede" style="margin-top:10px">
         ${n.sections} sections and ${n.blocks} statements, drawn from ${Object.keys(sources).length} sources.
         ${queue.length ? "Most of it is clean." : "Everything is traced."}
@@ -2917,49 +3896,34 @@ function triage() {
         </div>
       </section>` : ""}
 
-    ${rs.pending ? `
+    ${!queue.length && !n.cleanReady.length ? `
       <section class="triage__group">
-        <div class="triage__n"><span class="c">${rs.pending}</span> risks to conclude</div>
+        <div class="triage__n">Understanding approved</div>
         <p class="t-sub" style="margin-bottom:18px">
-          ${rs.significant} proposed as significant · ${rs.fraud} fraud-related ·
-          ${rs.newRisks} outside the firm's library${rs.blocked.length ? ` · ${rs.blocked.length} blocked by an open item` : ""}
-        </p>
+          ${n.approved} sections approved. The controls that operate over this process are
+          identified next.</p>
         <div class="acts">
-          ${btn("Review recommendations", "start-focus", { variant: "go", data: { kind: "risks" } })}
+          ${btn("Go to controls and findings", "nav", { variant: "go", data: { href: "#/controls" } })}
+          ${btn("Read the working paper", "read-mode" )}
         </div>
       </section>` : ""}
 
-    ${cs.pending ? `
-      <section class="triage__group">
-        <div class="triage__n"><span class="c">${cs.pending}</span> controls to conclude</div>
-        <p class="t-sub" style="margin-bottom:18px">
-          ${cs.suggestedKey} suggested as key controls · ${cs.unassessable} where the criteria could not
-          be established · ${cs.gaps} control gaps recorded
-        </p>
-        <div class="acts">
-          ${btn("Review recommendations", "start-focus", { variant: "go", data: { kind: "controls" } })}
-        </div>
-      </section>` : ""}
-
-    ${!queue.length && !n.cleanReady.length && !rs.pending && !cs.pending ? `
-      <section class="triage__group">
-        <div class="triage__n">Review complete</div>
-        <p class="t-sub" style="margin-bottom:18px">
-          ${n.approved} sections approved, ${st.riskSummary().decided} risks and
-          ${st.controlSummary().decided} controls concluded.</p>
-        <div class="acts">
-          ${btn("Read the working paper", "read-mode", { variant: "go" })}
-          ${btn("Go to sign-off", "nav", { data: { href: "#/complete" } })}
-        </div>
-      </section>` : ""}
+    <section style="margin-top:40px">
+      <div class="row" style="margin-bottom:12px">
+        <h2 class="t-eyebrow">The process as understood</h2>
+        <span class="sp"></span>${mapLegend("plain")}
+      </div>
+      ${processMap("plain", { selected: S.mapStep })}
+      ${S.mapStep ? mapDetail(S.mapStep) : `<p class="t-meta" style="margin-top:12px">
+        Built from the same facts as the narrative. Click a step to see where it came from.</p>`}
+    </section>
 
     <div style="margin-top:36px" class="acts">
       ${btn("Read the working paper", "read-mode", { variant: "plain" })}
-      ${btn("Risk and control matrix", "nav", { variant: "plain", data: { href: "#/matrix" } })}
     </div>
   `;
 
-  return screen("review", body);
+  return screen("understanding", body);
 }
 
 /* ── Focus: one judgement at a time ──────────────────────────────────────── */
@@ -2998,7 +3962,7 @@ function claimFocus() {
     </div></div>
   </div>`;
 
-  return screen("review", body, { raw: true });
+  return screen("understanding", body, { raw: true });
 }
 
 function unsupportedBody(b) {
@@ -3075,139 +4039,6 @@ function conflictBody(b) {
           </span>
         </button>`).join("")}
     </div>`;
-}
-
-function riskFocus() {
-  const q = st.riskSummary().queue;
-  if (!q.length) { S.reviewMode = "triage"; return triage(); }
-  const ix = Math.min(S.focusIx, q.length - 1);
-  const r = q[ix];
-  const linked = controls.filter((c) => c.risks.includes(r.id));
-  const refs = claimRefsFrom(r.refs);
-
-  const body = `<div class="focus">
-    ${focusBar(ix, q.length, "Risks")}
-    <div class="focus__body"><div class="q">
-      <h1 class="q__t">${esc(r.title)}</h1>
-      <p class="q__d">${esc(r.desc)}</p>
-
-      <div class="q__block">
-        <h4>Why this was identified here</h4>
-        <p>${esc(r.drivers)}</p>
-      </div>
-
-      ${r.newJustification ? `<div class="q__flag">
-        <b>Not in the firm's risk library.</b> ${esc(r.newJustification)}</div>` : ""}
-
-      <dl class="q__facts">
-        <div class="q__fact"><dt>Assertions</dt><dd>${r.assertions.map((a) => esc(a.replace(/_/g, " "))).join(", ")}</dd></div>
-        <div class="q__fact"><dt>Risk factors</dt><dd>${r.factors.map((a) => esc(a.replace(/_/g, " "))).join(", ")}</dd></div>
-        <div class="q__fact"><dt>Sub-process</dt><dd>${esc(subProcesses.find((s) => s.id === r.sub)?.name || r.sub)}</dd></div>
-        ${linked.length ? `<div class="q__fact"><dt>Addressed by</dt><dd>${linked.map((c) => esc(c.title)).join("; ")}</dd></div>`
-          : `<div class="q__fact"><dt>Addressed by</dt><dd style="color:var(--alert)">No control identified</dd></div>`}
-      </dl>
-
-      ${more("rsrc", `Supported by ${refs.length} sources`, evidence(refs), S.disclosed.rsrc)}
-
-      <div class="q__sug">
-        <span class="l">Suggested</span>
-        <span class="v">${r.rating === "higher" ? "Higher" : r.rating === "moderate" ? "Moderate" : "Lower"} inherent risk${
-          r.significant ? " · significant risk" : ""}</span>
-      </div>
-      <div class="q__acts">
-        ${btn("Accept", "decide-risk", { variant: "go", data: { id: r.id, d: "accepted" }, key: "Enter" })}
-        ${btn("Accept as modified", "decide-risk", { data: { id: r.id, d: "modified" }, key: "M" })}
-        ${btn("Reject", "decide-risk", { data: { id: r.id, d: "rejected" }, key: "R" })}
-        <span class="sp"></span>
-        ${btn("Skip", "focus-next", { variant: "plain" })}
-      </div>
-    </div></div>
-  </div>`;
-
-  return screen("review", body, { raw: true });
-}
-
-const CRIT = {
-  addresses_rmm: "Addresses an assessed risk at assertion level",
-  precision: "Precise enough to detect a material misstatement",
-  evidence_of_operation: "Evidence exists that it operated",
-  owner_competence_authority: "Owner has the authority to act on exceptions",
-  it_dependencies_identified: "IT dependencies and information used are identified",
-  not_redundant: "Not redundant with a stronger control",
-};
-
-function controlFocus() {
-  const q = st.controlSummary().queue;
-  if (!q.length) { S.reviewMode = "triage"; return triage(); }
-  const ix = Math.min(S.focusIx, q.length - 1);
-  const c = q[ix];
-  const refs = claimRefsFrom(c.refs);
-  const linked = risks.filter((r) => c.risks.includes(r.id));
-  const unmet = Object.entries(c.criteria).filter(([, v]) => v !== "met");
-
-  const NAT = { manual: "Manual", automated: "Automated", it_dependent_manual: "IT-dependent manual" };
-  const FRQ = { per_transaction: "Per transaction", daily: "Daily", weekly: "Weekly", monthly: "Monthly",
-    quarterly: "Quarterly", annual: "Annual", event_driven: "Event-driven" };
-
-  const body = `<div class="focus">
-    ${focusBar(ix, q.length, "Controls")}
-    <div class="focus__body"><div class="q">
-      <h1 class="q__t">${esc(c.title)}</h1>
-      <p class="q__d">${esc(c.desc)}</p>
-
-      <div class="q__block">
-        <h4>${c.keyProposal === true ? "Why this may be a key control"
-          : c.keyProposal === false ? "Why this is probably not a key control"
-          : "Why this cannot be assessed"}</h4>
-        <p>${esc(c.rationale)}</p>
-      </div>
-
-      <dl class="q__facts">
-        <div class="q__fact"><dt>Owner</dt><dd>${esc(c.owner || "Not established")}</dd></div>
-        <div class="q__fact"><dt>Type</dt><dd>${c.type === "preventive" ? "Preventive" : "Detective"} · ${esc(NAT[c.nature])} · ${esc(FRQ[c.frequency])}</dd></div>
-        <div class="q__fact"><dt>Addresses</dt><dd>${linked.length ? linked.map((r) => esc(r.title)).join("; ") : "No assessed risk linked"}</dd></div>
-        <div class="q__fact"><dt>Evidence it operated</dt><dd>${c.evidenceOfOperation ? esc(c.evidenceOfOperation)
-          : `<span style="color:var(--warn)">Not established</span>`}</dd></div>
-        ${c.ipe ? `<div class="q__fact"><dt>Information used</dt><dd>${esc(c.ipe)}${
-          c.ipeNote ? `<div class="t-meta" style="margin-top:3px">${esc(c.ipeNote)}</div>` : ""}</dd></div>` : ""}
-      </dl>
-
-      ${more("csrc", `Supported by ${refs.length} sources`, evidence(refs), S.disclosed.csrc)}
-
-      ${c.blocked ? `<div class="q__flag q__flag--alert"><b>Blocked.</b> ${esc(c.blocked)}</div>` : ""}
-      ${!c.blocked && unmet.length ? `<div class="q__flag">
-        <b>${unmet.length === 1 ? "One criterion is not met" : `${unmet.length} criteria are not met`}.</b>
-        ${unmet.map(([k]) => esc(CRIT[k].toLowerCase())).join("; ")}.
-        ${c.followUp ? " " + esc(c.followUp) : ""}</div>` : ""}
-
-      ${more("crit", "Show the six criteria", `<div class="meth">
-        ${Object.entries(c.criteria).map(([k, v]) => `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)">
-          <span style="flex:1;color:var(--ink-2)">${esc(CRIT[k])}</span>
-          ${v === "met" ? state("approved", "Met") : v === "not_met" ? state("rejected", "Not met") : state("needs_source", "Unknown")}
-        </div>`).join("")}
-        <p class="t-meta" style="margin-top:12px">A criterion that cannot be established produces a
-        follow-up question, never a lower-confidence conclusion.</p>
-      </div>`, S.disclosed.crit)}
-
-      <div class="q__sug">
-        <span class="l">Suggested</span>
-        <span class="v">${c.keyProposal === true ? "Key control"
-          : c.keyProposal === false ? "Not a key control" : "Cannot be assessed"}</span>
-      </div>
-      <div class="q__acts">
-        ${btn(c.keyProposal === true ? "Accept — key control" : c.keyProposal === false ? "Accept — not key" : "Leave undecided",
-          "decide-control", { variant: "go", key: "Enter",
-          data: { id: c.id, d: c.keyProposal === true ? "key" : c.keyProposal === false ? "not_key" : "undecided" } })}
-        ${c.keyProposal !== true ? btn("Key control", "decide-control", { data: { id: c.id, d: "key" }, key: "K" }) : ""}
-        ${c.keyProposal !== false ? btn("Not key", "decide-control", { data: { id: c.id, d: "not_key" }, key: "N" }) : ""}
-        ${c.keyProposal !== null ? btn("Undecided", "decide-control", { data: { id: c.id, d: "undecided" }, key: "U" }) : ""}
-        <span class="sp"></span>
-        ${btn("Skip", "focus-next", { variant: "plain" })}
-      </div>
-    </div></div>
-  </div>`;
-
-  return screen("review", body, { raw: true });
 }
 
 const claimRefsFrom = (ids) => ids.map(ref).filter(Boolean);
@@ -3297,8 +4128,8 @@ function readView() {
       </section>`;
     }).join("")}
     <div style="margin-top:60px;padding-top:26px;border-top:1px solid var(--line)" class="acts">
-      ${btn("Back to review", "triage-mode", { variant: "plain" })}
-      ${n.pending === 0 ? btn("Go to sign-off", "nav", { variant: "go", data: { href: "#/complete" } }) : ""}
+      ${btn("Back", "triage-mode", { variant: "plain" })}
+      ${n.pending === 0 ? btn("Go to controls and findings", "nav", { variant: "go", data: { href: "#/controls" } }) : ""}
     </div>
   </div></div>`;
 
@@ -3306,31 +4137,688 @@ function readView() {
     <div class="reader">${railHtml}${docHtml}</div>
   </div>`;
 
-  return screen("review", body, { raw: true });
+  return screen("understanding", body, { raw: true });
 }
 
 /* ── Entry ───────────────────────────────────────────────────────────────── */
 
-function review() {
-  if (!S.generated) return generateView();
-  if (S.reviewMode === "focus") {
-    if (S.focusKind === "risks") return riskFocus();
-    if (S.focusKind === "controls") return controlFocus();
-    return claimFocus();
-  }
+function understanding() {
+  if (!S.generated || !S.genSeen) return generateView();
+  if (S.reviewMode === "focus" && S.focusKind === "claims") return claimFocus();
   if (S.reviewMode === "read") return readView();
   return triage();
 }
 
 
-__exp(exports, { prose: () => prose, claimRefs: () => claimRefs, review: () => review });
+__exp(exports, { prose: () => prose, claimRefs: () => claimRefs, understanding: () => understanding });
+
+};
+__defs['js/views/controls.js'] = function (exports, __req, __exp) {
+/* Step 4 — Controls and findings.
+
+   Two recommendation queues over one process. Controls are what the process
+   relies on; findings are what is wrong with it. Both are proposed by the
+   platform and concluded by the auditor, one at a time. */
+
+const { esc, cx, act: btn, row, dot, chip, more, evidence, empty, callout, state } = __req('js/ui.js');
+const { controls, risks, subProcesses } = __req('js/data-model.js');
+const { processSteps } = __req('js/data-process.js');
+const { ref } = __req('js/data-sources.js');
+const st = __req('js/state.js');
+const { screen } = __req('js/views/shell.js');
+const { processMap, mapLegend, mapDetail } = __req('js/views/map.js');
+const S = st.S;
+const refsOf = (ids) => (ids || []).map(ref).filter(Boolean);
+
+const NAT = { manual: "Manual", automated: "Automated", it_dependent_manual: "IT-dependent manual" };
+const FRQ = { per_transaction: "Per transaction", daily: "Daily", weekly: "Weekly", monthly: "Monthly",
+  quarterly: "Quarterly", annual: "Annual", event_driven: "Event-driven" };
+
+const CRIT = {
+  addresses_rmm: "Addresses an assessed risk at assertion level",
+  precision: "Precise enough to detect a material misstatement",
+  evidence_of_operation: "Evidence exists that it operated",
+  owner_competence_authority: "Owner has the authority to act on exceptions",
+  it_dependencies_identified: "IT dependencies and information used are identified",
+  not_redundant: "Not redundant with a stronger control",
+};
+
+const SEV = {
+  observation: "Observation",
+  deficiency: "Deficiency",
+  significant_deficiency_candidate: "Significant deficiency — candidate",
+  material_weakness_candidate: "Material weakness — candidate",
+};
+
+const focusBar = (i, len, label) => `<div class="focus__bar">
+  <button class="b-act b-act--plain b-act--sm" data-act="exit-focus">← Back</button>
+  <span class="sp"></span><span>${esc(label)}</span><span class="idline__sep">·</span>
+  <span><b style="color:var(--ink-2)">${i + 1}</b> of ${len}</span>
+</div>`;
+
+/* ── Triage ──────────────────────────────────────────────────────────────── */
+
+function triage() {
+  const cs = st.controlSummary();
+  const fs = st.findingSummary();
+  const rs = st.riskSummary();
+
+  const body = `
+    <div class="head">
+      <h1 class="t-title">Controls and findings</h1>
+      <p class="t-lede" style="margin-top:10px">
+        ${cs.total} controls and ${fs.total} findings, identified from the process understanding
+        and attached to the steps they belong to.
+      </p>
+    </div>
+
+    <section style="margin-top:28px">
+      <div class="row" style="margin-bottom:12px">
+        <h2 class="t-eyebrow">The process, annotated</h2>
+        <span class="sp"></span>${mapLegend("annotated")}
+      </div>
+      ${processMap("annotated", { selected: S.mapStep })}
+      ${S.mapStep ? mapDetail(S.mapStep) : `<p class="t-meta" style="margin-top:12px">
+        Click a step to see what controls it and what is wrong with it.</p>`}
+    </section>
+
+    ${cs.pending ? `
+      <section class="triage__group" style="margin-top:36px">
+        <div class="triage__n"><span class="c">${cs.pending}</span> controls to conclude</div>
+        <p class="t-sub" style="margin-bottom:18px">
+          ${cs.suggestedKey} suggested as key · ${cs.unassessable} where the criteria could not be
+          established · one blocked by an open item
+        </p>
+        <div class="acts">
+          ${btn("Review recommendations", "start-focus", { variant: "go", data: { kind: "controls" }, key: "Enter" })}
+        </div>
+      </section>` : `
+      <section class="triage__group" style="margin-top:36px">
+        <div class="triage__n">Controls concluded</div>
+        <p class="t-sub">${cs.agreedKey} of ${cs.total} recorded as key controls.</p>
+      </section>`}
+
+    ${fs.pending.length ? `
+      <section class="triage__group">
+        <div class="triage__n"><span class="c">${fs.pending.length}</span> findings to conclude</div>
+        <p class="t-sub" style="margin-bottom:16px">
+          Severity is a professional judgement and stays yours. These feed the ISA 265 communication
+          to management.${fs.fromTrace ? " One was raised by the line walkthrough." : ""}
+        </p>
+        <div class="rows" style="margin-bottom:18px">
+          ${fs.pending.slice(0, 4).map((f) => row({
+            lead: dot(f.severity === "observation" ? "warn" : "alert"),
+            title: esc(f.title),
+            detail: `${esc(SEV[f.severity] || f.severity)}${f.fromTrace ? " · from the line walkthrough" : ""}`,
+            side: `<span class="t-meta mono">${esc(f.id)}</span>`,
+          })).join("")}
+        </div>
+        <div class="acts">
+          ${btn("Review findings", "start-focus", { variant: "go", data: { kind: "findings" } })}
+        </div>
+      </section>` : `
+      <section class="triage__group">
+        <div class="triage__n">Findings concluded</div>
+        <p class="t-sub">${fs.confirmed} confirmed for the management letter.</p>
+      </section>`}
+
+    <section class="triage__group">
+      <div class="triage__n">${rs.total} risks identified</div>
+      <p class="t-sub" style="margin-bottom:14px">
+        ${rs.significant} proposed as significant · ${rs.fraud} fraud-related · ${rs.newRisks} outside
+        the firm's library. <b>These are not concluded here.</b> Assessing risks of material
+        misstatement is risk analysis, which comes after the interim work — they are carried forward
+        with the process understanding and the matrix.
+      </p>
+      <div class="acts">
+        ${btn("See what is carried forward", "nav", { variant: "plain", data: { href: "#/matrix" } })}
+      </div>
+    </section>
+  `;
+
+  return screen("controls", body, { width: "wide" });
+}
+
+/* ── Control focus ───────────────────────────────────────────────────────── */
+
+function controlFocus() {
+  const q = st.controlSummary().queue;
+  if (!q.length) { S.reviewMode = "triage"; return triage(); }
+  const ix = Math.min(S.focusIx, q.length - 1);
+  const c = q[ix];
+  const refs = refsOf(c.refs);
+  const linked = risks.filter((r) => c.risks.includes(r.id));
+  const unmet = Object.entries(c.criteria).filter(([, v]) => v !== "met");
+  const step = processSteps.find((p) => p.controls.includes(c.id));
+
+  const body = `<div class="focus">
+    ${focusBar(ix, q.length, "Controls")}
+    <div class="focus__body"><div class="q">
+      ${step ? `<div class="t-meta" style="margin-bottom:8px">On the process at
+        <b style="color:var(--ink-2)">${esc(step.name)}</b></div>` : ""}
+      <h1 class="q__t">${esc(c.title)}</h1>
+      <p class="q__d">${esc(c.desc)}</p>
+
+      <div class="q__block">
+        <h4>${c.keyProposal === true ? "Why this may be a key control"
+          : c.keyProposal === false ? "Why this is probably not a key control"
+          : "Why this cannot be assessed"}</h4>
+        <p>${esc(c.rationale)}</p>
+      </div>
+
+      <dl class="q__facts">
+        <div class="q__fact"><dt>Owner</dt><dd>${esc(c.owner || "Not established")}</dd></div>
+        <div class="q__fact"><dt>Type</dt><dd>${c.type === "preventive" ? "Preventive" : "Detective"} · ${esc(NAT[c.nature])} · ${esc(FRQ[c.frequency])}</dd></div>
+        <div class="q__fact"><dt>Addresses</dt><dd>${linked.length ? linked.map((r) => esc(r.title)).join("; ") : "No identified risk linked"}</dd></div>
+        <div class="q__fact"><dt>Evidence it operated</dt><dd>${c.evidenceOfOperation ? esc(c.evidenceOfOperation)
+          : `<span style="color:var(--warn)">Not established</span>`}</dd></div>
+        ${c.ipe ? `<div class="q__fact"><dt>Information used</dt><dd>${esc(c.ipe)}${
+          c.ipeNote ? `<div class="t-meta" style="margin-top:3px">${esc(c.ipeNote)}</div>` : ""}</dd></div>` : ""}
+      </dl>
+
+      ${more("csrc", `Supported by ${refs.length} sources`, evidence(refs), S.disclosed.csrc)}
+
+      ${c.blocked ? `<div class="q__flag q__flag--alert"><b>Blocked.</b> ${esc(c.blocked)}</div>` : ""}
+      ${!c.blocked && unmet.length ? `<div class="q__flag">
+        <b>${unmet.length === 1 ? "One criterion is not met" : `${unmet.length} criteria are not met`}.</b>
+        ${unmet.map(([k]) => esc(CRIT[k].toLowerCase())).join("; ")}.
+        ${c.followUp ? " " + esc(c.followUp) : ""}</div>` : ""}
+
+      ${more("crit", "Show the six criteria", `<div class="meth">
+        ${Object.entries(c.criteria).map(([k, v]) => `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)">
+          <span style="flex:1;color:var(--ink-2)">${esc(CRIT[k])}</span>
+          ${v === "met" ? state("approved", "Met") : v === "not_met" ? state("rejected", "Not met") : state("needs_source", "Unknown")}
+        </div>`).join("")}
+        <p class="t-meta" style="margin-top:12px">A criterion that cannot be established produces a
+        follow-up question, never a lower-confidence conclusion.</p>
+      </div>`, S.disclosed.crit)}
+
+      <div class="q__sug">
+        <span class="l">Suggested</span>
+        <span class="v">${c.keyProposal === true ? "Key control"
+          : c.keyProposal === false ? "Not a key control" : "Cannot be assessed"}</span>
+      </div>
+      <div class="q__acts">
+        ${btn(c.keyProposal === true ? "Accept — key control" : c.keyProposal === false ? "Accept — not key" : "Leave undecided",
+          "decide-control", { variant: "go", key: "Enter",
+          data: { id: c.id, d: c.keyProposal === true ? "key" : c.keyProposal === false ? "not_key" : "undecided" } })}
+        ${c.keyProposal !== true ? btn("Key control", "decide-control", { data: { id: c.id, d: "key" }, key: "K" }) : ""}
+        ${c.keyProposal !== false ? btn("Not key", "decide-control", { data: { id: c.id, d: "not_key" }, key: "N" }) : ""}
+        ${c.keyProposal !== null ? btn("Undecided", "decide-control", { data: { id: c.id, d: "undecided" }, key: "U" }) : ""}
+        <span class="sp"></span>
+        ${btn("Skip", "focus-next", { variant: "plain" })}
+      </div>
+    </div></div>
+  </div>`;
+
+  return screen("controls", body, { raw: true });
+}
+
+/* ── Finding focus ───────────────────────────────────────────────────────── */
+
+function findingFocus() {
+  const q = st.findingSummary().queue;
+  if (!q.length) { S.reviewMode = "triage"; return triage(); }
+  const ix = Math.min(S.focusIx, q.length - 1);
+  const f = q[ix];
+  const refs = refsOf((f.refs || []).filter((r) => !r.startsWith("LW:")));
+  const step = processSteps.find((p) => p.id === f.step);
+  const risk = f.risk ? risks.find((r) => r.id === f.risk) : null;
+
+  const body = `<div class="focus">
+    ${focusBar(ix, q.length, "Findings")}
+    <div class="focus__body"><div class="q">
+      ${step ? `<div class="t-meta" style="margin-bottom:8px">On the process at
+        <b style="color:var(--ink-2)">${esc(step.name)}</b>${f.fromTrace ? " · raised by the line walkthrough" : ""}</div>` : ""}
+      <h1 class="q__t">${esc(f.title)}</h1>
+      <p class="q__d">${esc(f.detail)}</p>
+
+      <div class="q__block">
+        <h4>Why it matters</h4>
+        <p>${esc(f.impact)}</p>
+      </div>
+
+      ${f.remediation ? `<div class="q__block">
+        <h4>Suggested remediation — for the management letter</h4>
+        <p>${esc(f.remediation)}</p>
+      </div>` : ""}
+
+      ${risk ? `<dl class="q__facts">
+        <div class="q__fact"><dt>Related risk</dt><dd>${esc(risk.title)}</dd></div>
+      </dl>` : ""}
+
+      ${refs.length ? more("fsrc", `Supported by ${refs.length} sources`, evidence(refs), S.disclosed.fsrc) : ""}
+
+      ${f.fromTrace ? `<div class="q__flag q__flag--alert">
+        <b>Found by tracing a real transaction.</b> This did not come from what anyone said in the
+        walkthrough — it came from comparing two dates on one order.</div>` : ""}
+
+      <div class="q__sug">
+        <span class="l">Suggested severity</span>
+        <span class="v">${esc(SEV[f.severity] || f.severity)}</span>
+      </div>
+      <div class="q__acts">
+        ${btn("Confirm", "decide-finding", { variant: "go", key: "Enter", data: { id: f.id, d: "confirmed" } })}
+        ${btn("Dismiss", "decide-finding", { key: "D", data: { id: f.id, d: "dismissed" } })}
+        <span class="sp"></span>
+        ${btn("Skip", "focus-next", { variant: "plain" })}
+      </div>
+      <p class="t-meta" style="margin-top:14px;max-width:60ch">
+        ISA 265 requires deficiencies to be communicated. Whether this one is significant is a
+        conclusion you record — the platform proposes a severity and stops there.</p>
+    </div></div>
+  </div>`;
+
+  return screen("controls", body, { raw: true });
+}
+
+/* ── Entry ───────────────────────────────────────────────────────────────── */
+
+function controlsStep() {
+  if (!S.generated) {
+    return screen("controls", `
+      ${empty("No controls identified yet",
+        "Controls are identified from the process understanding, so the process has to be documented first.")}
+      <div style="text-align:center;margin-top:-40px">
+        ${btn("Go to Understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
+      </div>`);
+  }
+  if (S.reviewMode === "focus" && S.focusKind === "controls") return controlFocus();
+  if (S.reviewMode === "focus" && S.focusKind === "findings") return findingFocus();
+  return triage();
+}
+
+
+__exp(exports, { controlsStep: () => controlsStep });
+
+};
+__defs['js/views/trace.js'] = function (exports, __req, __exp) {
+/* Step 5 — Line walkthrough.
+
+   Testing the process model against a real transaction. The map from step 3
+   sits above the work and fills in as the trace advances, so the auditor can
+   see how far through the process they are and where it broke. */
+
+const { esc, cx, act: btn, row, dot, more, empty, callout, evidence } = __req('js/ui.js');
+const { lineWalk, lineWalkCandidates, traceFinding, processSteps } = __req('js/data-process.js');
+const { ref } = __req('js/data-sources.js');
+const st = __req('js/state.js');
+const { screen } = __req('js/views/shell.js');
+const { processMap, mapLegend } = __req('js/views/map.js');
+const S = st.S;
+
+/* --- Choosing the transaction --------------------------------------------- */
+
+function pick() {
+  const body = `
+    <div class="head">
+      <h1 class="t-title">Line walkthrough</h1>
+      <p class="t-lede" style="margin-top:10px">
+        Trace one real transaction end to end through the process we documented. It is how you find
+        out whether the process actually works the way everybody described it.
+      </p>
+    </div>
+
+    <section style="margin-top:28px">
+      <div class="row" style="margin-bottom:12px">
+        <h2 class="t-eyebrow">The process it will be traced against</h2>
+        <span class="sp"></span>${mapLegend("annotated")}
+      </div>
+      ${processMap("annotated", { compact: true, onSelect: "noop" })}
+    </section>
+
+    <section style="margin-top:44px">
+      <h2 class="t-h" style="margin-bottom:4px">Choose a transaction</h2>
+      <p class="t-meta" style="margin-bottom:18px">
+        Suggested from the period's transactions. The selection is yours, and the reason is recorded.</p>
+      <div class="rows">
+        ${lineWalkCandidates.map((t) => `
+          <button class="rw ${t.recommended ? "rw--attn" : ""}" data-act="pick-txn" data-id="${esc(t.id)}">
+            <span class="rw__lead">${dot(t.recommended ? "warn" : "open")}</span>
+            <span class="rw__main">
+              <span class="rw__t"><span class="b">${esc(t.id)}</span> — ${esc(t.customer)}</span>
+              <span class="rw__d">${esc(t.what)} · ${esc(t.value)}</span>
+              <span class="rw__d" style="margin-top:6px">${t.recommended ? "<b>Suggested.</b> " : ""}${esc(t.why)}</span>
+            </span>
+            <span class="rw__side">${t.recommended ? `<span class="t-meta" style="color:var(--warn)">suggested</span>` : ""}</span>
+          </button>`).join("")}
+      </div>
+    </section>
+  `;
+  return screen("trace", body, { width: "wide" });
+}
+
+/* --- One step of the trace ------------------------------------------------- */
+
+function stepFocus() {
+  const tr = st.traceSummary();
+  const pending = tr.pending;
+  if (!pending.length) return summary();
+
+  const ix = Math.min(S.focusIx, pending.length - 1);
+  const t = pending[ix];
+  const p = processSteps.find((x) => x.id === t.step);
+  const n = lineWalk.steps.indexOf(t) + 1;
+  const isEx = t.suggested === "exception";
+
+  const body = `
+    <div class="tracehead">
+      <div class="row" style="margin-bottom:10px">
+        <span class="t-meta"><b style="color:var(--ink-2)">${esc(lineWalk.transaction.id)}</b>
+          · ${esc(lineWalk.transaction.customer)} · ${esc(lineWalk.transaction.value)}</span>
+        <span class="sp"></span>
+        <span class="t-meta">${tr.done} of ${tr.expected} traced</span>
+        ${btn("Leave", "exit-focus", { variant: "plain", size: "sm" })}
+      </div>
+      ${processMap("trace", { selected: t.step, onSelect: "noop" })}
+    </div>
+
+    <div class="focus__body"><div class="q">
+      <div class="t-meta" style="margin-bottom:6px">Step ${n} of ${lineWalk.steps.length}</div>
+      <h1 class="q__t">${esc(t.name)}</h1>
+      <p class="t-meta" style="margin-top:6px">${esc(p ? p.actor + " · " + p.system : "")}</p>
+
+      <div class="expect">
+        <div class="expect__r"><dt>Expected step</dt><dd>${esc(t.expectedStep)}</dd></div>
+        <div class="expect__r"><dt>Expected control</dt><dd>${esc(t.expectedControl)}</dd></div>
+        <div class="expect__r"><dt>Expected evidence</dt><dd>${esc(t.expectedEvidence)}</dd></div>
+      </div>
+
+      <div class="actual">
+        <div class="t-eyebrow" style="margin-bottom:8px">Evidence obtained</div>
+        <p class="actual__e">${esc(t.actualEvidence)}</p>
+        <div class="t-eyebrow" style="margin:20px 0 8px">Observation</div>
+        <p class="actual__o">${esc(t.observation)}</p>
+      </div>
+
+      ${isEx ? `<div class="q__flag q__flag--alert" style="margin-top:22px">
+        <b>Possible exception.</b> ${esc(t.exception)}
+        <div class="t-meta" style="margin-top:8px;color:inherit;opacity:.8">Found by ${esc(t.why)}</div>
+      </div>` : ""}
+
+      ${t.note === "not_triggered" ? `<div class="q__flag" style="margin-top:22px">
+        <b>The control did not operate on this transaction.</b> Nothing was blocked, so this trace
+        gives no evidence about whether the control works. That is a corroborated step, not a tested control.
+      </div>` : ""}
+
+      <div class="q__sug">
+        <span class="l">Suggested</span>
+        <span class="v">${isEx ? "Exception" : "Corroborated"}</span>
+      </div>
+      <div class="q__acts">
+        ${btn(isEx ? "Record the exception" : "Corroborated", "decide-trace",
+          { variant: isEx ? "go" : "ok", key: "Enter", data: { id: t.id, v: isEx ? "exception" : "corroborated" } })}
+        ${btn(isEx ? "No exception" : "Raise an exception", "decide-trace",
+          { key: isEx ? "C" : "X", data: { id: t.id, v: isEx ? "corroborated" : "exception" } })}
+        <span class="sp"></span>
+        ${btn("Skip", "focus-next", { variant: "plain" })}
+      </div>
+    </div></div>
+  `;
+
+  return screen("trace", `<div class="focus">${body}</div>`, { raw: true });
+}
+
+/* --- The result ------------------------------------------------------------ */
+
+function summary() {
+  const tr = st.traceSummary();
+  const na = lineWalk.notApplicable;
+  const exSteps = lineWalk.steps.filter((t) => st.traceVerdict(t) === "exception");
+
+  const body = `
+    <div class="head">
+      <div class="head__row">
+        <div>
+          <h1 class="t-title">${tr.concluded ? "Line walkthrough complete" : "Every step traced"}</h1>
+          <p class="t-lede" style="margin-top:10px">
+            ${esc(lineWalk.transaction.id)} — ${esc(lineWalk.transaction.customer)},
+            ${esc(lineWalk.transaction.what)}, ${esc(lineWalk.transaction.value)}.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tally">
+      <div><span class="tally__n">${tr.expected}</span><span class="tally__l">steps expected</span></div>
+      <div><span class="tally__n" style="color:var(--ok)">${tr.corroborated}</span><span class="tally__l">corroborated</span></div>
+      <div><span class="tally__n" style="color:${tr.exceptions ? "var(--alert)" : "var(--ink-4)"}">${tr.exceptions}</span>
+        <span class="tally__l">exception${tr.exceptions === 1 ? "" : "s"}</span></div>
+    </div>
+
+    <section style="margin-top:36px">
+      <div class="row" style="margin-bottom:12px">
+        <h2 class="t-eyebrow">Against the process map</h2>
+        <span class="sp"></span>${mapLegend("trace")}
+      </div>
+      ${processMap("trace", { selected: S.mapStep })}
+    </section>
+
+    ${exSteps.length ? `
+      <section style="margin-top:40px">
+        <h2 class="t-h" style="margin-bottom:14px">Exception</h2>
+        ${exSteps.map((t) => `<div class="rw rw--conflict" style="display:block">
+          <div class="rw__t"><span class="b">${esc(t.name)}</span></div>
+          <div class="rw__d" style="margin-top:6px;max-width:74ch">${esc(t.exception)}</div>
+          <div class="rw__d" style="margin-top:8px">${esc(t.actualEvidence)}</div>
+        </div>`).join("")}
+        ${tr.concluded ? callout(`<b>Raised as finding ${esc(traceFinding.id)}.</b>
+          ${esc(traceFinding.title)} — now in Controls &amp; findings, attached to the invoicing step
+          of the process map.`, "") : ""}
+      </section>` : ""}
+
+    <section style="margin-top:40px">
+      <h2 class="t-h" style="margin-bottom:14px">Every step</h2>
+      <div class="rows">
+        ${lineWalk.steps.map((t, i) => {
+          const v = st.traceVerdict(t);
+          return row({
+            lead: dot(v === "exception" ? "alert" : v ? "ok" : "open"),
+            title: `<span class="b">${i + 1}. ${esc(t.name)}</span>`,
+            detail: esc(t.actualEvidence),
+            side: `<span class="t-meta" style="${v === "exception" ? "color:var(--alert)" : v ? "color:var(--ok)" : ""}">${
+              v === "exception" ? "exception" : v ? "corroborated" : "not traced"}</span>`,
+            mod: v === "exception" ? "conflict" : "",
+          });
+        }).join("")}
+        ${row({
+          lead: dot("open"),
+          title: `<span style="color:var(--ink-3)">${esc(na.name)}</span>`,
+          detail: esc(na.why),
+          side: `<span class="t-meta">not applicable</span>`,
+        })}
+      </div>
+    </section>
+
+    <section style="margin-top:40px;border-top:1px solid var(--line);padding-top:28px">
+      ${tr.concluded
+        ? `<div class="acts">
+            ${btn("Go to control testing", "nav", { variant: "go", data: { href: "#/testing" } })}
+            ${btn("Reopen the walkthrough", "reopen-trace", { variant: "plain" })}
+          </div>`
+        : `<h2 class="t-h">Conclude</h2>
+           <p class="t-sub" style="margin:6px 0 18px;max-width:64ch">
+             Concluding records the result in the file${tr.exceptions ? ` and raises the exception as a
+             finding against the process` : ""}. The documentation is drafted from the trace; you review it
+             like everything else.</p>
+           <div class="acts">
+             ${btn("Conclude the line walkthrough", "conclude-trace", { variant: "go", size: "lg", key: "Enter" })}
+           </div>`}
+    </section>
+  `;
+
+  return screen("trace", body, { width: "wide" });
+}
+
+/* --- Entry ----------------------------------------------------------------- */
+
+function trace() {
+  if (!S.generated) {
+    return screen("trace", `
+      ${empty("Nothing to trace against yet",
+        "A line walkthrough tests a real transaction against the documented process, so the process has to be documented first.")}
+      <div style="text-align:center;margin-top:-40px">
+        ${btn("Go to Understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
+      </div>`);
+  }
+  if (!S.traceTxn) return pick();
+  if (S.reviewMode === "focus" && S.focusKind === "trace" && st.traceSummary().pending.length) return stepFocus();
+  return summary();
+}
+
+
+__exp(exports, { trace: () => trace });
+
+};
+__defs['js/views/testing.js'] = function (exports, __req, __exp) {
+/* Step 6 — Control testing. A labelled future-state concept, shown once.
+
+   Control identification and control testing are different objects. A control
+   exists in the process; a test is a procedure performed on it, with a
+   population, a selection, evidence and a conclusion. */
+
+const { esc, cx, act: btn, row, dot, more, callout, empty } = __req('js/ui.js');
+const { controlTest } = __req('js/data-process.js');
+const { controls } = __req('js/data-model.js');
+const st = __req('js/state.js');
+const { screen } = __req('js/views/shell.js');
+const S = st.S;
+
+function testing() {
+  const c = controls.find((x) => x.id === controlTest.controlId);
+  const t = controlTest;
+  const ts = st.testSummary();
+  const keyControls = controls.filter((x) => st.controlDecision(x) === "key");
+
+  const stage = (n, name, body, done = true) => `
+    <div class="tstage ${done ? "is-done" : ""}">
+      <div class="tstage__h"><span class="tstage__n">${n}</span><span class="tstage__t">${esc(name)}</span></div>
+      <div class="tstage__b">${body}</div>
+    </div>`;
+
+  const body = `
+    <div class="callout callout--future" style="margin-bottom:28px">
+      <b>Future concept.</b> Control testing is not built. This is one worked example of how the
+      workflow would run, shown so the shape is visible — real populations, sampling, evidence
+      upload and test workpapers are all out of scope for this prototype.
+    </div>
+
+    <div class="head">
+      <div class="head__row">
+        <div>
+          <h1 class="t-title">Control testing</h1>
+          <p class="t-lede" style="margin-top:10px">
+            ${keyControls.length
+              ? `${keyControls.length} controls have been concluded as key. Where you intend to rely on
+                 one, it has to be tested — identifying a control is not testing it.`
+              : `Controls concluded as key in step 4 appear here. Identifying a control and testing it
+                 are different pieces of work, and the product keeps them apart.`}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    ${keyControls.length ? `
+      <section style="margin-top:32px">
+        <h2 class="t-eyebrow" style="margin-bottom:14px">Key controls</h2>
+        <div class="rows">
+          ${keyControls.map((k) => row({
+            lead: dot(k.id === t.controlId ? "warn" : "open"),
+            title: esc(k.title),
+            detail: `${esc(k.owner || "owner not established")} · ${k.nature === "automated" ? "automated" : k.nature === "manual" ? "manual" : "IT-dependent manual"}`,
+            side: k.id === t.controlId
+              ? `<span class="t-meta" style="color:var(--warn)">test drafted</span>`
+              : `<span class="t-meta">not tested</span>`,
+          })).join("")}
+        </div>
+      </section>` : ""}
+
+    <section style="margin-top:44px">
+      <h2 class="t-h" style="margin-bottom:4px">${esc(c ? c.title : t.controlId)}</h2>
+      <p class="t-meta" style="margin-bottom:22px">
+        <span class="mono">${esc(t.controlId)}</span> · the one control with a drafted test</p>
+
+      <div class="tflow">
+        ${stage(1, "Test setup", `
+          <div class="expect">
+            <div class="expect__r"><dt>Objective</dt><dd>${esc(t.objective)}</dd></div>
+            <div class="expect__r"><dt>Nature</dt><dd>${t.nature.map(esc).join(", ")}</dd></div>
+            <div class="expect__r"><dt>Timing</dt><dd>${esc(t.timing)}</dd></div>
+          </div>`)}
+
+        ${stage(2, "Population and selection", `
+          <div class="expect">
+            <div class="expect__r"><dt>Population</dt><dd>${esc(t.population)} — <b>${t.populationSize} items</b></dd></div>
+            <div class="expect__r"><dt>Source</dt><dd>${esc(t.populationSource)}</dd></div>
+            <div class="expect__r"><dt>Completeness</dt><dd>${esc(t.completeness)}</dd></div>
+            <div class="expect__r"><dt>Sample</dt><dd><b>${t.sampleSize} items</b> — ${esc(t.sampleBasis)}</dd></div>
+          </div>
+          <p class="t-meta" style="margin-top:10px">The number always shows the firm parameter that
+          produced it, never a number the model chose.</p>`)}
+
+        ${stage(3, "Evidence", `
+          <p class="t-sub" style="margin-bottom:10px">What to inspect on each selected item:</p>
+          <ul class="ticks">${t.attributes.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>
+          <p class="t-meta" style="margin-top:12px">Requested from the client:
+            ${t.evidenceToRequest.map(esc).join("; ")}.</p>`)}
+
+        ${stage(4, "Results", `
+          <div class="rows">
+            ${t.results.map((r) => row({
+              lead: dot(r.ok ? "ok" : "alert"),
+              title: `<span class="mono">${esc(r.id)}</span>`,
+              detail: esc(r.note),
+              side: `<span class="t-meta" style="${r.ok ? "color:var(--ok)" : "color:var(--alert)"}">${r.ok ? "attributes met" : "exception"}</span>`,
+              mod: r.ok ? "" : "conflict",
+            })).join("")}
+          </div>
+          <p class="t-sub" style="margin-top:14px">
+            <b>${ts.corroborated} of ${ts.selected}</b> items met every attribute.
+            ${ts.exceptions} exception.</p>`)}
+
+        ${stage(5, "Conclusion", `
+          ${callout(`<b>One exception in a sample of five.</b> The consequence is a matter of
+            professional judgement: an isolated documentation lapse, or evidence that the control
+            does not operate consistently enough to rely on. The platform will not decide that.`)}
+          ${more("pynote", "Prior-year consideration", `<div class="meth">
+            <p style="color:var(--ink-2);line-height:1.65">${esc(t.priorYearNote)}</p></div>`, S.disclosed.pynote)}
+          <div class="q__sug" style="margin-top:22px">
+            <span class="l">Auditor conclusion</span>
+            <span class="v">${ts.conclusion
+              ? esc(ts.conclusion === "rely" ? "Control operates — reliance placed"
+                  : ts.conclusion === "no_rely" ? "Not relied upon — substantive response instead"
+                  : "Extend the sample")
+              : "required"}</span>
+          </div>
+          <div class="q__acts">
+            ${ts.conclusion
+              ? btn("Change", "conclude-test", { variant: "plain", data: { d: "" } })
+              : `${btn("Extend the sample", "conclude-test", { variant: "go", data: { d: "extend" } })}
+                 ${btn("Rely on the control", "conclude-test", { data: { d: "rely" } })}
+                 ${btn("Do not rely", "conclude-test", { data: { d: "no_rely" } })}`}
+          </div>`, !!ts.conclusion)}
+      </div>
+    </section>
+
+    <section style="margin-top:40px;border-top:1px solid var(--line);padding-top:28px">
+      <div class="acts">
+        ${btn("Go to completion", "nav", { variant: ts.conclusion ? "go" : "", data: { href: "#/complete" } })}
+      </div>
+    </section>
+  `;
+
+  return screen("testing", body);
+}
+
+
+__exp(exports, { testing: () => testing });
 
 };
 __defs['js/views/resolve.js'] = function (exports, __req, __exp) {
 /* RESOLVE — everything still open, ordered by what it blocks. */
 
 const { esc, cx, act: btn, row, dot, chip, more, empty, callout, evidence } = __req('js/ui.js');
-const { openItems, gaps, risks } = __req('js/data-model.js');
+const { openItems } = __req('js/data-model.js');
 const { ref } = __req('js/data-sources.js');
 const st = __req('js/state.js');
 const { screen } = __req('js/views/shell.js');
@@ -3433,34 +4921,9 @@ function resolve() {
         ${more("doneitems", `Show ${done.length} settled`, `<div class="rows">${done.map(itemRow).join("")}</div>`, S.disclosed.doneitems)}
       </section>` : ""}
 
-    <section style="margin-top:52px;border-top:1px solid var(--line);padding-top:32px">
-      <h2 class="t-h" style="margin-bottom:4px">Control gaps</h2>
-      <p class="t-meta" style="margin-bottom:16px">
-        Raw material for the ISA 265 communication to management. Severity is your judgement.</p>
-      <div class="rows">
-        ${gaps.map((g) => {
-          const r = risks.find((x) => x.id === g.risk);
-          return `<div class="rw" style="display:block">
-            <div class="row row--top" style="gap:20px">
-              <span class="rw__lead" style="padding-top:5px">${dot(g.severity === "deficiency" ? "warn" : "alert")}</span>
-              <span class="rw__main">
-                <span class="rw__t">${esc(g.desc)}</span>
-                <span class="rw__d" style="margin-top:5px">${esc(g.impact)}</span>
-              </span>
-              <span class="rw__side"><span class="t-meta">${g.severity === "deficiency"
-                ? "Deficiency" : "Significant — candidate"}</span></span>
-            </div>
-            ${more("gap" + g.id, "Suggested remediation", `<div class="meth" style="margin-left:37px">
-              <p style="color:var(--ink-2);line-height:1.65">${esc(g.remediation)}</p>
-              <p class="t-meta" style="margin-top:10px">Related risk: ${esc(r ? r.title : g.risk)}</p>
-            </div>`, S.disclosed["gap" + g.id])}
-          </div>`;
-        }).join("")}
-      </div>
-    </section>
   `;
 
-  return screen("resolve", body);
+  return screen(null, body);
 }
 
 
@@ -3491,11 +4954,11 @@ function complete() {
     <div class="head">
       <div class="head__row">
         <div>
-          <h1 class="t-title">${ready ? "Ready for sign-off" : "Not ready yet"}</h1>
+          <h1 class="t-title">${ready ? "Revenue is ready to close" : "Revenue is not complete"}</h1>
           <p class="t-lede" style="margin-top:10px">
             ${ready
-              ? "Every condition is met. The platform never signs — you do."
-              : `${open.length} of ${gates.length} conditions are still open. Each one links to the work that clears it.`}
+              ? "Every condition on the process-level interim work is met. The platform never signs — you do."
+              : `${open.length} of ${gates.length} conditions are still open. Each links to the step that clears it.`}
           </p>
         </div>
         <div style="text-align:right;padding-top:4px">
@@ -3513,7 +4976,7 @@ function complete() {
           detail: esc(g.detail),
           side: g.ok ? `<span class="t-meta" style="color:var(--ok)">met</span>`
             : `<span class="t-meta" style="color:var(--warn)">open</span>`,
-          ...(g.ok ? {} : { action: "nav", data: { href: gateHref(g.id) } }),
+          ...(g.ok || g.id === "signed" ? {} : { action: "nav", data: { href: gateHref(g) } }),
         })).join("")}
       </div>
     </section>
@@ -3553,6 +5016,31 @@ function complete() {
       </div>
     </section>
 
+    <section style="margin-top:48px">
+      <h2 class="t-h" style="margin-bottom:4px">Carried forward to risk analysis</h2>
+      <p class="t-meta" style="margin-bottom:16px">
+        Completing Revenue closes the process-level interim work. It does not assess risks of
+        material misstatement — that is the next phase, and these are its inputs.</p>
+      <div class="rows">
+        ${row({ lead: dot("ok"), title: "<span class=\"b\">Process understanding</span>",
+          detail: "The approved narrative, the process map, and the facts behind both",
+          side: `<span class="t-meta">${n.approved} sections</span>` })}
+        ${row({ lead: dot("ok"), title: "<span class=\"b\">Risk and control matrix</span>",
+          detail: `${st.riskSummary().total} identified risks against ${st.controlSummary().total} controls, with provenance`,
+          side: `<span class="t-meta">${st.rcmRows().length} rows</span>`,
+          action: "nav", data: { href: "#/matrix" } })}
+        ${row({ lead: dot("ok"), title: "<span class=\"b\">Findings</span>",
+          detail: "Deficiencies and observations for the ISA 265 communication to management",
+          side: `<span class="t-meta">${st.findingSummary().confirmed} confirmed</span>` })}
+        ${row({ lead: dot(st.traceSummary().exceptions ? "alert" : "ok"),
+          title: "<span class=\"b\">Line walkthrough result</span>",
+          detail: st.traceSummary().concluded
+            ? `${st.traceSummary().expected} steps traced · ${st.traceSummary().exceptions} exception`
+            : "Not yet concluded",
+          side: `<span class="t-meta">${st.traceSummary().concluded ? "concluded" : "open"}</span>` })}
+      </div>
+    </section>
+
     <section style="margin-top:44px">
       ${more("footer", "What the export footer records", `<div class="meth"><dl>
         <dt>entity</dt><dd>${esc(client.name)}</dd>
@@ -3570,10 +5058,12 @@ function complete() {
   return screen("complete", body);
 }
 
-const gateHref = (id) => ({
-  narrative: "#/review", needsSource: "#/review", contradiction: "#/resolve",
-  risks: "#/review", controls: "#/review", mandatory: "#/understand", openItems: "#/resolve",
-}[id] || "#/review");
+/* Each gate links to the step that clears it. */
+const STEP_HREF = {
+  prepare: "#/prepare", walkthrough: "#/walkthrough", understanding: "#/understanding",
+  controls: "#/controls", trace: "#/trace", testing: "#/testing", complete: "#/complete",
+};
+const gateHref = (g) => STEP_HREF[g.step] || "#/revenue";
 
 /* ── Matrix — a view reached by ⌘K, not a permanent destination ──────────── */
 
@@ -3585,14 +5075,15 @@ function matrix() {
     <div class="head">
       <h1 class="t-title">Risk and control matrix</h1>
       <p class="t-lede" style="margin-top:10px">
-        Assembled, not generated. Every line comes from a risk or control you have already seen,
-        carrying the decision you recorded. No model produces this view.
+        Assembled, not generated. The controls carry the conclusions you recorded. The risks are
+        identified but not concluded — assessing them is risk analysis, which comes after the interim
+        work. This matrix is one of the things Revenue hands forward.
       </p>
     </div>
 
     <div class="rows" style="margin-top:32px">
       ${rows.map(({ risk: r, control: c, gap: g }) => {
-        const rd = st.riskDecision(r), cd = c ? st.controlDecision(c) : null;
+        const cd = c ? st.controlDecision(c) : null;
         return `<div class="rw" style="display:block">
           <div class="row row--top" style="gap:20px">
             <span class="rw__lead" style="padding-top:5px">${dot(
@@ -3609,7 +5100,7 @@ function matrix() {
               </span>
             </span>
             <span class="rw__side">
-              <div>${rd ? `<span class="state state--ok">${esc(rd)}</span>` : `<span class="t-meta">to conclude</span>`}</div>
+              <div class="t-meta">${esc(r.rating)}${r.significant ? " · significant" : ""}</div>
               ${c ? `<div class="t-meta" style="margin-top:4px">${cd === "key" ? "key control"
                 : cd === "not_key" ? "not key" : cd === "undecided" ? "undecided"
                 : `suggested: ${c.keyProposal === true ? "key" : c.keyProposal === false ? "not key" : "unclear"}`}</div>` : ""}
@@ -3810,23 +5301,36 @@ const { S, act, undo, canUndo } = __req('js/state.js');
 const { palette, runPalette, matches } = __req('js/palette.js');
 const { demoBar, demoGo, demoStart, demoExit, STEPS } = __req('js/demo.js');
 const { work } = __req('js/views/work.js');
-const { understand } = __req('js/views/understand.js');
-const { review, prose } = __req('js/views/review.js');
+const { engagementView, processHome, prepare } = __req('js/views/process.js');
+const { walkthrough } = __req('js/views/walkthrough.js');
+const { understanding } = __req('js/views/understanding.js');
+const { controlsStep } = __req('js/views/controls.js');
+const { trace } = __req('js/views/trace.js');
+const { testing } = __req('js/views/testing.js');
 const { resolve } = __req('js/views/resolve.js');
 const { complete, matrix, clientSurface } = __req('js/views/complete.js');
 const { cockpit } = __req('js/views/cockpit.js');
 window.__demoStart = demoStart;
 
 const ROUTES = {
-  "#/": work,
-  "#/understand": understand,
-  "#/review": review,
+  "#/": work,                       // across engagements
+  "#/engagement": engagementView,   // engagement layer
+  "#/revenue": processHome,         // process workspace home
+  "#/prepare": prepare,             // 1
+  "#/walkthrough": walkthrough,     // 2
+  "#/understanding": understanding, // 3
+  "#/controls": controlsStep,       // 4
+  "#/trace": trace,                 // 5
+  "#/testing": testing,             // 6
+  "#/complete": complete,           // 7
   "#/resolve": resolve,
-  "#/complete": complete,
   "#/matrix": matrix,
   "#/questionnaire": clientSurface,
   "#/cockpit": cockpit,
 };
+
+/* Screens that host a focus queue; leaving one drops out of it. */
+const FOCUS_ROUTES = ["#/understanding", "#/controls", "#/trace"];
 
 /* --- Overlays -------------------------------------------------------------- */
 
@@ -3864,9 +5368,9 @@ let lastRoute = null;
 
 function render() {
   const hash = location.hash || "#/";
-  // Navigating away from Review leaves the focus queue, so returning always
-  // lands on triage rather than dropping the auditor mid-queue.
-  if (lastRoute === "#/review" && hash !== "#/review") {
+  // Leaving a step that hosts a focus queue drops out of it, so coming back
+  // lands on that step's overview rather than mid-queue.
+  if (FOCUS_ROUTES.includes(lastRoute) && hash !== lastRoute) {
     S.reviewMode = "triage"; S.focusKind = null; S.focusIx = 0; S.editing = null;
   }
   lastRoute = hash;
@@ -3907,7 +5411,7 @@ document.addEventListener("click", (e) => {
       // Activating the stage you are already on returns you to its overview —
       // the way back out of a focus queue without reaching for Escape.
       if (d.href === location.hash) {
-        if (d.href === "#/review") act.reviewMode("triage");
+        if (FOCUS_ROUTES.includes(d.href)) act.reviewMode("triage");
         else st.commit();
       } else location.hash = d.href;
       break;
@@ -3930,21 +5434,15 @@ document.addEventListener("click", (e) => {
     case "start-focus": act.startFocus(d.kind); break;
     case "exit-focus": act.exitFocus(); break;
     case "focus-next": act.focusNext(); break;
-    case "focus-claim": {
+    case "focus-claim": case "resolve-conflict": {
       const q = st.claimQueue();
       const i = q.findIndex((x) => x.b.id === d.claim);
       S.focusKind = "claims"; S.focusIx = Math.max(0, i); S.reviewMode = "focus";
-      if (location.hash !== "#/review") location.hash = "#/review"; else st.commit();
-      break;
-    }
-    case "resolve-conflict": {
-      const q = st.claimQueue();
-      const i = q.findIndex((x) => x.b.id === d.claim);
-      S.focusKind = "claims"; S.focusIx = Math.max(0, i); S.reviewMode = "focus";
-      if (location.hash !== "#/review") location.hash = "#/review"; else st.commit();
+      if (location.hash !== "#/understanding") location.hash = "#/understanding"; else st.commit();
       break;
     }
     case "run-pipeline": act.startGeneration(pipeline); break;
+    case "read-gen": act.readGenResult(); break;
 
     /* claims */
     case "toggle-claim": act.toggleClaim(d.claim); break;
@@ -3966,9 +5464,19 @@ document.addEventListener("click", (e) => {
     case "accept-clean": act.acceptClean(); break;
     case "go-section": act.selectSection(d.id); break;
 
-    /* risks and controls */
-    case "decide-risk": act.decideRisk(d.id, d.d); break;
+    /* controls, findings, the map */
     case "decide-control": act.decideControl(d.id, d.d); break;
+    case "decide-finding": act.decideFinding(d.id, d.d); break;
+    case "map-node": S.mapStep = S.mapStep === d.step || !d.step ? null : d.step; st.commit(); break;
+    case "noop": break;
+
+    /* the process workflow */
+    case "prepare-done": act.prepareDone(); break;
+    case "pick-txn": act.pickTransaction(d.id); break;
+    case "decide-trace": act.decideTrace(d.id, d.v); break;
+    case "conclude-trace": act.concludeTrace(); break;
+    case "reopen-trace": act.reopenTrace(); break;
+    case "conclude-test": act.concludeTest(d.d || null); break;
 
     /* coverage and open items */
     case "edit-item": case "edit-item-o": act.openEditor(d.item || d.id); break;
@@ -4040,8 +5548,17 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "ArrowLeft") { e.preventDefault(); demoGo(S.demoStep - 1); return; }
   }
 
-  if (S.route !== "#/review" || !S.generated) return;
   const k = e.key.toLowerCase();
+
+  // Enter on a step's overview starts that step's queue.
+  if (S.route === "#/prepare" && e.key === "Enter" && !S.prepared) { e.preventDefault(); act.prepareDone(); return; }
+  if (S.route === "#/understanding" && e.key === "Enter" && !S.generated && !S.generating) { e.preventDefault(); act.startGeneration(pipeline); return; }
+  if (S.route === "#/understanding" && e.key === "Enter" && S.generated && !S.genSeen) { e.preventDefault(); act.readGenResult(); return; }
+  if (S.route === "#/trace" && S.reviewMode !== "focus" && e.key === "Enter"
+      && S.traceTxn && !S.traceConcluded && !st.traceSummary().pending.length) {
+    e.preventDefault(); act.concludeTrace(); return;
+  }
+  if (!FOCUS_ROUTES.includes(S.route) || !S.generated) return;
 
   /* Focus mode: the queue is keyboard-first */
   if (S.reviewMode === "focus") {
@@ -4064,15 +5581,24 @@ document.addEventListener("keydown", (e) => {
       else if (k === "r") { e.preventDefault(); act.rejectClaim(b.id); }
       return;
     }
-    if (S.focusKind === "risks") {
-      const q = st.riskSummary().queue;
-      const r = q[Math.min(S.focusIx, q.length - 1)];
-      if (!r) return;
-      if (e.key === "Enter") { e.preventDefault(); act.decideRisk(r.id, "accepted"); }
-      else if (k === "m") { e.preventDefault(); act.decideRisk(r.id, "modified"); }
-      else if (k === "r") { e.preventDefault(); act.decideRisk(r.id, "rejected"); }
+    if (S.focusKind === "findings") {
+      const q = st.findingSummary().queue;
+      const f = q[Math.min(S.focusIx, q.length - 1)];
+      if (!f) return;
+      if (e.key === "Enter") { e.preventDefault(); act.decideFinding(f.id, "confirmed"); }
+      else if (k === "d") { e.preventDefault(); act.decideFinding(f.id, "dismissed"); }
       else if (k === "j") { e.preventDefault(); act.focusNext(); }
-      else if (k === "k") { e.preventDefault(); act.focusPrev(); }
+      return;
+    }
+    if (S.focusKind === "trace") {
+      const q = st.traceSummary().pending;
+      const t = q[Math.min(S.focusIx, q.length - 1)];
+      if (!t) return;
+      const suggested = t.suggested;
+      if (e.key === "Enter") { e.preventDefault(); act.decideTrace(t.id, suggested); }
+      else if (k === "x") { e.preventDefault(); act.decideTrace(t.id, "exception"); }
+      else if (k === "c") { e.preventDefault(); act.decideTrace(t.id, "corroborated"); }
+      else if (k === "j") { e.preventDefault(); act.focusNext(); }
       return;
     }
     if (S.focusKind === "controls") {
@@ -4090,14 +5616,16 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
-  /* Triage */
+  /* Triage: Enter starts whatever this step owes you */
   if (S.reviewMode === "triage") {
     if (e.key === "Enter") {
       e.preventDefault();
-      if (st.claimQueue().length) act.startFocus("claims");
-      else if (st.riskSummary().pending) act.startFocus("risks");
-      else if (st.controlSummary().pending) act.startFocus("controls");
-      else act.reviewMode("read");
+      if (S.route === "#/understanding") {
+        if (st.claimQueue().length) act.startFocus("claims"); else act.reviewMode("read");
+      } else if (S.route === "#/controls") {
+        if (st.controlSummary().pending) act.startFocus("controls");
+        else if (st.findingSummary().queue.length) act.startFocus("findings");
+      }
     }
     return;
   }

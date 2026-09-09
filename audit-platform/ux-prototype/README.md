@@ -3,10 +3,12 @@
 A high-fidelity, clickable prototype of the future Audit AI interim platform, built so that
 auditors and design partners can experience the product before any production frontend exists.
 
-**Second iteration.** The first version proved the product logic but felt like enterprise audit
-software: a permanent sidebar, ten tabs exposing the data model, twenty decision tables and
-forty-five bordered panels. `NEXT-GEN-UX-DIRECTION.md` is the critique and the direction that
-replaced it. The first iteration is preserved at git tag `ux-v1` if you want to compare.
+**Third iteration.** V1 proved the product logic and looked like enterprise audit software. V2
+fixed how it feels — calm, exception-driven, keyboard-first. V3 fixes *what it is*: not an AI
+documentation generator, but the workspace in which an auditor performs the **interim audit of a
+business process**, end to end. `V3-DESIGN-DIRECTION.md` is that reframing;
+`NEXT-GEN-UX-DIRECTION.md` is the V2 critique whose interaction philosophy still holds. V1 is at
+git tag `ux-v1`.
 
 **This is not the Audit Intelligence Engine.** The engine lives in `../audit-engine/` and is
 untouched by this track. This directory is removable without affecting it.
@@ -56,8 +58,9 @@ browser against mock data: no model is called, no request leaves the page, nothi
 
 | File | What it is |
 |---|---|
-| `NEXT-GEN-UX-DIRECTION.md` | The critique of iteration one and the direction that replaced it. **Read this first.** |
-| `UX-PLAN.md` | Iteration one's plan. Still the reference for scope, provenance rules and what is excluded |
+| `V3-DESIGN-DIRECTION.md` | The product scope: the full process-level interim audit. **Read this first.** |
+| `NEXT-GEN-UX-DIRECTION.md` | The V2 critique — the interaction philosophy, still in force |
+| `UX-PLAN.md` | V1's plan. Still the reference for provenance rules and what is excluded |
 | `DEMO-SCRIPT.md` | The nine-beat design-partner path, with presenter notes and the questions you will get |
 | `UX-FINDINGS.md` | Twelve product and data-model gaps found while building, written for the engine track. No engine file was changed |
 | **`audit-ai-prototype.html`** | **The whole prototype in one file. Download, double-click, done. Generated — do not edit** |
@@ -65,48 +68,57 @@ browser against mock data: no model is called, no request leaves the page, nothi
 | `index.html` · `app.css` | Shell and the design system (tokens, primitives, components) |
 | `js/data-sources.js` | The evidence base: walkthrough transcript, client questionnaire, three documents, auditor notes |
 | `js/data-model.js` | Coverage (45 items), narrative (14 sections), 11 risks, 14 controls, 5 gaps, 10 open items |
+| `js/data-process.js` | The process map (8 steps), the line walkthrough (7 traced steps), the control-testing concept |
 | `js/state.js` | State, derivations, the exception model and the undo stack. Every headline number is computed here |
 | `js/palette.js` | ⌘K — the navigation |
 | `js/views/` | One module per stage |
 
-## The journey
+## The workflow
 
-Four stages, not ten tabs:
+Two layers. The **engagement** — client, year, phases, six processes — and the **process
+workspace**, where Revenue is carried through seven steps:
 
 ```
-UNDERSTAND ──▶ REVIEW ──▶ RESOLVE ──▶ COMPLETE
-what we know   the judgements   what is    sign-off
-and what we    the drafting     blocking   and export
-still don't    could not make   us
+PREPARE ─▶ WALKTHROUGH ─▶ UNDERSTANDING ─▶ CONTROLS & ─▶ LINE ─▶ CONTROL ─▶ COMPLETE
+                                           FINDINGS      WALKTHROUGH  TESTING
 ```
+
+The journey bar is ordered and stateful, not a tab bar: each step shows what it still owes, and a
+step that has not started says why. Inside every step the rhythm is the same four beats —
+understand, review, resolve, complete — which is why the product only teaches them once.
 
 Everything else — the matrix, the working paper, the questionnaire, the future cockpit, any
-section, risk, control, coverage area or source — is two keystrokes away on **⌘K**.
+process step, section, control, finding, coverage area or source — is two keystrokes away on **⌘K**.
 
-Off the spine: the **client questionnaire** (a separate, plainer client surface) and the
-**live walkthrough cockpit**, explicitly labelled as a future-state concept.
+Risk analysis is deliberately **outside** this product. Interim hands the process understanding,
+the matrix and the findings forward to it.
 
 **Start with the guided demo** — the link on the Work screen, or `⌘K → Guided demo`. It sets each
 screen up and puts the line to say at the bottom. `→` and `←` move between beats, `Esc` exits.
 
 ## Things worth doing
 
-- **Understand.** Three gaps in plain English. Then open *Show methodology* to see the 45
-  coverage items, fact keys, triggers and ISA references underneath. The engine is complex; the
-  surface is not.
-- **Review → Start.** Nine pipeline stages; watch the validation stage fail three statements.
-- **Review, once drafted.** *Four need your judgement · ten sections are clean.* The whole
-  product promise on one screen, before anything is asked of you.
-- **Press Enter four times.** The contradiction first, with both sources side by side, then the
-  three unsupported statements. Each has the correction pre-written.
-- **Read the working paper, then click any sentence.** Evidence opens directly beneath it.
-- **Review recommendations (controls).** Fourteen decisions as a queue, not a table. `Enter`
-  accepts, `N` marks it not key. Try clearing all fourteen without the mouse.
-- **⌘K.** Type `cut`, `override`, `credit`, or the name of any risk or control.
-- **⌘Z.** Every decision is reversible. Nothing in the product asks "are you sure?" except
-  sign-off.
+- **Revenue home.** The Process Understanding Map plus the seven-step journey. Click any step to
+  see its controls, findings and sources.
+- **Walkthrough.** Three gaps in plain English; *Show methodology* reveals the 45 coverage items,
+  fact keys, triggers and ISA references underneath.
+- **Understanding → Start.** Nine pipeline stages. The validation stage catches three unsupported
+  statements and the result waits for you to read it.
+- **Then press Enter four times.** The contradiction first, with both sources side by side, then
+  the three unsupported claims, each with the correction pre-written.
+- **Read the working paper and click any sentence.** Evidence opens directly beneath it.
+- **Controls & findings.** The same map, now annotated — which step each control sits on and
+  which steps have something wrong. Fourteen controls as a queue: `Enter` accepts, `N` not key.
+- **Line walkthrough.** The one to watch. Pick SO-24188 and press `Enter` through seven steps.
+  Expected step, expected control, expected evidence — against what actually happened. Step 5
+  finds that the invoice went out seven days before the customer signed acceptance. Concluding it
+  raises a finding that appears back in step 4, on the invoicing node of the map.
+- **Control testing.** A labelled future concept: control → setup → population → evidence →
+  results → conclusion, with the sample size showing the firm parameter that produced it.
+- **⌘K.** Type `acceptance`, `override`, `credit`, or any process step, control or finding.
+- **⌘Z.** Every decision is reversible. Nothing asks "are you sure?" except sign-off.
 
-Press `?` for the full keyboard sheet. ⌘K → *Reset the prototype* starts over.
+Press `?` for the keyboard sheet. ⌘K → *Reset the prototype* starts over.
 
 ---
 
@@ -119,8 +131,9 @@ No real entity, person or engagement is depicted.
 It is built to exercise the states the product has to handle: an ERP-driven order-to-cash flow,
 warehousing outsourced mid-year to a third party, price overrides nobody reviews, reciprocal
 approval of manual journals, an undocumented cut-off review, a consignment arrangement disclosed
-only in a questionnaire, one contradictory answer across two sources, and one AI claim that no
-source supports.
+only in a questionnaire, one contradictory answer across two sources, one drafted claim no source
+supports — and one real transaction whose invoice date precedes the customer's acceptance,
+which only the line walkthrough finds.
 
 Coverage items, risk ids (`RSK-REV-*`) and control ids (`CTL-REV-*`) are the real ids from
 methodology pack `revenue v0.1.0` in `../audit-engine/packages/methodology/`.

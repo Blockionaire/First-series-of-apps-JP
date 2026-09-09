@@ -1,7 +1,9 @@
-/* The entire permanent frame: one identity line and one stage spine. 64px.
-   There is no sidebar, no breadcrumb and no tab bar. */
+/* The permanent frame: one identity line and one process journey.
 
-import { esc, cx, act as btn } from "../ui.js";
+   The journey is not a tab bar. It is ordered, each step carries its own state,
+   and a step that has not started says why. */
+
+import { esc, cx } from "../ui.js";
 import { client, user } from "../data-sources.js";
 import * as st from "../state.js";
 
@@ -15,25 +17,37 @@ export function idline(context) {
   </header>`;
 }
 
+/** Client / FY / Interim / Revenue — each segment navigates up a layer. */
 export const engContext = () => `
-  <button class="idline__who" data-act="palette-eng">${esc(client.short)}</button>
+  <button class="idline__who" data-act="nav" data-href="#/engagement">${esc(client.short)}</button>
   <span class="idline__sep">/</span>
-  <span>Revenue</span>
-  <span class="idline__sep">·</span>
-  <span>FY2026 interim</span>`;
+  <button class="idline__seg" data-act="nav" data-href="#/engagement">FY2026</button>
+  <span class="idline__sep">/</span>
+  <button class="idline__seg" data-act="nav" data-href="#/engagement">Interim</button>
+  <span class="idline__sep">/</span>
+  <button class="idline__seg is-here" data-act="nav" data-href="#/revenue">Revenue</button>`;
 
-export function spine(active) {
-  return `<nav class="spine">
-    ${st.stages().map((s) => `
-      <button class="${cx("stage", s.id === active && "is-on")}" data-act="nav" data-href="${s.href}">
-        <span class="stage__n">${esc(s.name)}</span>
-        <span class="${cx("stage__c", s.tone && "stage__c--" + s.tone)}">${esc(s.count)}</span>
+export function journeyBar(active) {
+  const steps = st.journeyStates();
+  return `<nav class="journey">
+    ${steps.map((j, i) => `
+      ${i ? `<span class="journey__link"></span>` : ""}
+      <button class="${cx("jstep", `is-${j.s}`, j.id === active && "is-on")}"
+        data-act="nav" data-href="${esc(j.href)}"
+        ${j.why ? `title="${esc(j.why)}"` : ""}>
+        <span class="jstep__n">${esc(j.name)}</span>
+        <span class="${cx("jstep__c", j.tone && "jstep__c--" + j.tone)}">${esc(j.c)}</span>
       </button>`).join("")}
-    <span class="spine__sp"></span>
+    <span class="journey__sp"></span>
   </nav>`;
 }
 
-/** Standard engagement screen: frame + scrolling canvas. */
-export const screen = (stage, body, o = {}) =>
-  `${idline(engContext())}${spine(stage)}
+/** Standard process-workspace screen. */
+export const screen = (step, body, o = {}) =>
+  `${idline(engContext())}${journeyBar(step)}
    <div class="canvas">${o.raw ? body : `<div class="${cx("wrap", o.width && "wrap--" + o.width)}">${body}</div>`}</div>`;
+
+/** A screen inside the engagement layer — no journey bar. */
+export const engScreen = (body, o = {}) =>
+  `${idline(engContext())}
+   <div class="canvas"><div class="${cx("wrap", o.width && "wrap--" + o.width)}">${body}</div></div>`;

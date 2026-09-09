@@ -22,11 +22,11 @@ export function complete() {
     <div class="head">
       <div class="head__row">
         <div>
-          <h1 class="t-title">${ready ? "Ready for sign-off" : "Not ready yet"}</h1>
+          <h1 class="t-title">${ready ? "Revenue is ready to close" : "Revenue is not complete"}</h1>
           <p class="t-lede" style="margin-top:10px">
             ${ready
-              ? "Every condition is met. The platform never signs — you do."
-              : `${open.length} of ${gates.length} conditions are still open. Each one links to the work that clears it.`}
+              ? "Every condition on the process-level interim work is met. The platform never signs — you do."
+              : `${open.length} of ${gates.length} conditions are still open. Each links to the step that clears it.`}
           </p>
         </div>
         <div style="text-align:right;padding-top:4px">
@@ -44,7 +44,7 @@ export function complete() {
           detail: esc(g.detail),
           side: g.ok ? `<span class="t-meta" style="color:var(--ok)">met</span>`
             : `<span class="t-meta" style="color:var(--warn)">open</span>`,
-          ...(g.ok ? {} : { action: "nav", data: { href: gateHref(g.id) } }),
+          ...(g.ok || g.id === "signed" ? {} : { action: "nav", data: { href: gateHref(g) } }),
         })).join("")}
       </div>
     </section>
@@ -84,6 +84,31 @@ export function complete() {
       </div>
     </section>
 
+    <section style="margin-top:48px">
+      <h2 class="t-h" style="margin-bottom:4px">Carried forward to risk analysis</h2>
+      <p class="t-meta" style="margin-bottom:16px">
+        Completing Revenue closes the process-level interim work. It does not assess risks of
+        material misstatement — that is the next phase, and these are its inputs.</p>
+      <div class="rows">
+        ${row({ lead: dot("ok"), title: "<span class=\"b\">Process understanding</span>",
+          detail: "The approved narrative, the process map, and the facts behind both",
+          side: `<span class="t-meta">${n.approved} sections</span>` })}
+        ${row({ lead: dot("ok"), title: "<span class=\"b\">Risk and control matrix</span>",
+          detail: `${st.riskSummary().total} identified risks against ${st.controlSummary().total} controls, with provenance`,
+          side: `<span class="t-meta">${st.rcmRows().length} rows</span>`,
+          action: "nav", data: { href: "#/matrix" } })}
+        ${row({ lead: dot("ok"), title: "<span class=\"b\">Findings</span>",
+          detail: "Deficiencies and observations for the ISA 265 communication to management",
+          side: `<span class="t-meta">${st.findingSummary().confirmed} confirmed</span>` })}
+        ${row({ lead: dot(st.traceSummary().exceptions ? "alert" : "ok"),
+          title: "<span class=\"b\">Line walkthrough result</span>",
+          detail: st.traceSummary().concluded
+            ? `${st.traceSummary().expected} steps traced · ${st.traceSummary().exceptions} exception`
+            : "Not yet concluded",
+          side: `<span class="t-meta">${st.traceSummary().concluded ? "concluded" : "open"}</span>` })}
+      </div>
+    </section>
+
     <section style="margin-top:44px">
       ${more("footer", "What the export footer records", `<div class="meth"><dl>
         <dt>entity</dt><dd>${esc(client.name)}</dd>
@@ -101,10 +126,12 @@ export function complete() {
   return screen("complete", body);
 }
 
-const gateHref = (id) => ({
-  narrative: "#/review", needsSource: "#/review", contradiction: "#/resolve",
-  risks: "#/review", controls: "#/review", mandatory: "#/understand", openItems: "#/resolve",
-}[id] || "#/review");
+/* Each gate links to the step that clears it. */
+const STEP_HREF = {
+  prepare: "#/prepare", walkthrough: "#/walkthrough", understanding: "#/understanding",
+  controls: "#/controls", trace: "#/trace", testing: "#/testing", complete: "#/complete",
+};
+const gateHref = (g) => STEP_HREF[g.step] || "#/revenue";
 
 /* ── Matrix — a view reached by ⌘K, not a permanent destination ──────────── */
 
@@ -116,14 +143,15 @@ export function matrix() {
     <div class="head">
       <h1 class="t-title">Risk and control matrix</h1>
       <p class="t-lede" style="margin-top:10px">
-        Assembled, not generated. Every line comes from a risk or control you have already seen,
-        carrying the decision you recorded. No model produces this view.
+        Assembled, not generated. The controls carry the conclusions you recorded. The risks are
+        identified but not concluded — assessing them is risk analysis, which comes after the interim
+        work. This matrix is one of the things Revenue hands forward.
       </p>
     </div>
 
     <div class="rows" style="margin-top:32px">
       ${rows.map(({ risk: r, control: c, gap: g }) => {
-        const rd = st.riskDecision(r), cd = c ? st.controlDecision(c) : null;
+        const cd = c ? st.controlDecision(c) : null;
         return `<div class="rw" style="display:block">
           <div class="row row--top" style="gap:20px">
             <span class="rw__lead" style="padding-top:5px">${dot(
@@ -140,7 +168,7 @@ export function matrix() {
               </span>
             </span>
             <span class="rw__side">
-              <div>${rd ? `<span class="state state--ok">${esc(rd)}</span>` : `<span class="t-meta">to conclude</span>`}</div>
+              <div class="t-meta">${esc(r.rating)}${r.significant ? " · significant" : ""}</div>
               ${c ? `<div class="t-meta" style="margin-top:4px">${cd === "key" ? "key control"
                 : cd === "not_key" ? "not key" : cd === "undecided" ? "undecided"
                 : `suggested: ${c.keyProposal === true ? "key" : c.keyProposal === false ? "not key" : "unclear"}`}</div>` : ""}

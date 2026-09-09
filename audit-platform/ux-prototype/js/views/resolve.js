@@ -1,7 +1,7 @@
 /* RESOLVE — everything still open, ordered by what it blocks. */
 
 import { esc, cx, act as btn, row, dot, chip, more, empty, callout, evidence } from "../ui.js";
-import { openItems, gaps, risks } from "../data-model.js";
+import { openItems } from "../data-model.js";
 import { ref } from "../data-sources.js";
 import * as st from "../state.js";
 import { screen } from "./shell.js";
@@ -105,32 +105,7 @@ export function resolve() {
         ${more("doneitems", `Show ${done.length} settled`, `<div class="rows">${done.map(itemRow).join("")}</div>`, S.disclosed.doneitems)}
       </section>` : ""}
 
-    <section style="margin-top:52px;border-top:1px solid var(--line);padding-top:32px">
-      <h2 class="t-h" style="margin-bottom:4px">Control gaps</h2>
-      <p class="t-meta" style="margin-bottom:16px">
-        Raw material for the ISA 265 communication to management. Severity is your judgement.</p>
-      <div class="rows">
-        ${gaps.map((g) => {
-          const r = risks.find((x) => x.id === g.risk);
-          return `<div class="rw" style="display:block">
-            <div class="row row--top" style="gap:20px">
-              <span class="rw__lead" style="padding-top:5px">${dot(g.severity === "deficiency" ? "warn" : "alert")}</span>
-              <span class="rw__main">
-                <span class="rw__t">${esc(g.desc)}</span>
-                <span class="rw__d" style="margin-top:5px">${esc(g.impact)}</span>
-              </span>
-              <span class="rw__side"><span class="t-meta">${g.severity === "deficiency"
-                ? "Deficiency" : "Significant — candidate"}</span></span>
-            </div>
-            ${more("gap" + g.id, "Suggested remediation", `<div class="meth" style="margin-left:37px">
-              <p style="color:var(--ink-2);line-height:1.65">${esc(g.remediation)}</p>
-              <p class="t-meta" style="margin-top:10px">Related risk: ${esc(r ? r.title : g.risk)}</p>
-            </div>`, S.disclosed["gap" + g.id])}
-          </div>`;
-        }).join("")}
-      </div>
-    </section>
   `;
 
-  return screen("resolve", body);
+  return screen(null, body);
 }

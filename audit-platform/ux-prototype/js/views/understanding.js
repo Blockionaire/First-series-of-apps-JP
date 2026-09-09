@@ -9,6 +9,7 @@
 
 import { esc, cx, act as btn, row, dot, chip, more, evidence, empty, callout, link, state } from "../ui.js";
 import { narrative, risks, controls, pipeline, subProcesses } from "../data-model.js";
+import { processMap, mapLegend, mapDetail } from "./map.js";
 import { ref, sources } from "../data-sources.js";
 import * as st from "../state.js";
 import { screen } from "./shell.js";
@@ -39,18 +40,19 @@ const sectionOfClaim = (id) => narrative.find((s) => s.blocks.some((b) => b.id =
 
 function generateView() {
   const running = S.generating;
+  const done = S.generated && !S.genSeen;
   const cov = st.coverageSummary();
 
   const body = `
     <div class="head">
-      <h1 class="t-title">${running ? "Drafting the documentation" : "Draft the documentation"}</h1>
+      <h1 class="t-title">${done ? "Draft ready" : running ? "Drafting the process understanding" : "Draft the process understanding"}</h1>
       <p class="t-lede" style="margin-top:10px">
         Nine stages over ${Object.keys(sources).length} sources. Seven ask a model; two are ordinary
         code. Every stage is validated before the next one runs.
       </p>
     </div>
 
-    ${!running ? `
+    ${!running && !done ? `
       <div class="rows" style="margin-top:36px">
         ${row({ title: "Areas established", side: `${cov.covered} of ${cov.applicable}` })}
         ${row({ title: "Process facts", side: `${cov.facts.known} of ${cov.facts.total}` })}
@@ -62,24 +64,33 @@ function generateView() {
       </div>` : `
       <div style="margin-top:36px" class="rows">
         ${pipeline.map((p, i) => {
-          const done = i < S.genStage, now = i === S.genStage;
-          const warn = p.warn && done;
-          return `<div class="rw" style="opacity:${done || now ? 1 : .35};transition:opacity .3s">
+          const fin = i < S.genStage, now = i === S.genStage && running;
+          const warn = p.warn && fin;
+          return `<div class="rw" style="opacity:${fin || now ? 1 : .35};transition:opacity .3s">
             <span class="rw__lead" style="padding-top:4px;width:18px">
-              ${done ? `<span style="color:${warn ? "var(--warn)" : "var(--ok)"}">${warn ? "!" : "✓"}</span>`
+              ${fin ? `<span style="color:${warn ? "var(--warn)" : "var(--ok)"}">${warn ? "!" : "✓"}</span>`
                 : now ? `<span class="dot dot--open"></span>` : `<span class="t-meta">${i + 1}</span>`}</span>
             <span class="rw__main">
               <span class="rw__t">${esc(p.name)}</span>
               <span class="rw__d">${esc(p.desc)}</span>
-              ${done ? `<span class="rw__d" style="color:${warn ? "var(--warn)" : "var(--ink-2)"};margin-top:5px">
+              ${fin ? `<span class="rw__d" style="color:${warn ? "var(--warn)" : "var(--ink-2)"};margin-top:5px">
                 ${esc(fill(p.out))}</span>` : ""}
             </span>
             <span class="rw__side mono" style="font-size:11.5px">${esc(p.model)}</span>
           </div>`;
         }).join("")}
-      </div>`}
+      </div>
+      ${done ? `
+        <div style="margin-top:32px">
+          ${callout(`<b>Three statements could not be supported.</b> The validation stage found no
+            source for them. They are in the draft marked <b>needs support</b> and cannot be approved
+            until you deal with them — nothing was dropped quietly.`)}
+          <div class="acts" style="margin-top:22px">
+            ${btn("Review the draft", "read-gen", { variant: "go", size: "lg", key: "Enter" })}
+          </div>
+        </div>` : ""}`}
   `;
-  return screen("review", body);
+  return screen("understanding", body);
 }
 
 function fill(t) {
@@ -94,8 +105,6 @@ function fill(t) {
 
 function triage() {
   const n = st.narrativeSummary();
-  const rs = st.riskSummary();
-  const cs = st.controlSummary();
   const queue = st.claimQueue();
 
   const describe = (b) => {
@@ -106,7 +115,7 @@ function triage() {
 
   const body = `
     <div class="head">
-      <h1 class="t-title">Revenue documentation</h1>
+      <h1 class="t-title">Process understanding</h1>
       <p class="t-lede" style="margin-top:10px">
         ${n.sections} sections and ${n.blocks} statements, drawn from ${Object.keys(sources).length} sources.
         ${queue.length ? "Most of it is clean." : "Everything is traced."}
@@ -149,49 +158,34 @@ function triage() {
         </div>
       </section>` : ""}
 
-    ${rs.pending ? `
+    ${!queue.length && !n.cleanReady.length ? `
       <section class="triage__group">
-        <div class="triage__n"><span class="c">${rs.pending}</span> risks to conclude</div>
+        <div class="triage__n">Understanding approved</div>
         <p class="t-sub" style="margin-bottom:18px">
-          ${rs.significant} proposed as significant · ${rs.fraud} fraud-related ·
-          ${rs.newRisks} outside the firm's library${rs.blocked.length ? ` · ${rs.blocked.length} blocked by an open item` : ""}
-        </p>
+          ${n.approved} sections approved. The controls that operate over this process are
+          identified next.</p>
         <div class="acts">
-          ${btn("Review recommendations", "start-focus", { variant: "go", data: { kind: "risks" } })}
+          ${btn("Go to controls and findings", "nav", { variant: "go", data: { href: "#/controls" } })}
+          ${btn("Read the working paper", "read-mode" )}
         </div>
       </section>` : ""}
 
-    ${cs.pending ? `
-      <section class="triage__group">
-        <div class="triage__n"><span class="c">${cs.pending}</span> controls to conclude</div>
-        <p class="t-sub" style="margin-bottom:18px">
-          ${cs.suggestedKey} suggested as key controls · ${cs.unassessable} where the criteria could not
-          be established · ${cs.gaps} control gaps recorded
-        </p>
-        <div class="acts">
-          ${btn("Review recommendations", "start-focus", { variant: "go", data: { kind: "controls" } })}
-        </div>
-      </section>` : ""}
-
-    ${!queue.length && !n.cleanReady.length && !rs.pending && !cs.pending ? `
-      <section class="triage__group">
-        <div class="triage__n">Review complete</div>
-        <p class="t-sub" style="margin-bottom:18px">
-          ${n.approved} sections approved, ${st.riskSummary().decided} risks and
-          ${st.controlSummary().decided} controls concluded.</p>
-        <div class="acts">
-          ${btn("Read the working paper", "read-mode", { variant: "go" })}
-          ${btn("Go to sign-off", "nav", { data: { href: "#/complete" } })}
-        </div>
-      </section>` : ""}
+    <section style="margin-top:40px">
+      <div class="row" style="margin-bottom:12px">
+        <h2 class="t-eyebrow">The process as understood</h2>
+        <span class="sp"></span>${mapLegend("plain")}
+      </div>
+      ${processMap("plain", { selected: S.mapStep })}
+      ${S.mapStep ? mapDetail(S.mapStep) : `<p class="t-meta" style="margin-top:12px">
+        Built from the same facts as the narrative. Click a step to see where it came from.</p>`}
+    </section>
 
     <div style="margin-top:36px" class="acts">
       ${btn("Read the working paper", "read-mode", { variant: "plain" })}
-      ${btn("Risk and control matrix", "nav", { variant: "plain", data: { href: "#/matrix" } })}
     </div>
   `;
 
-  return screen("review", body);
+  return screen("understanding", body);
 }
 
 /* ── Focus: one judgement at a time ──────────────────────────────────────── */
@@ -230,7 +224,7 @@ function claimFocus() {
     </div></div>
   </div>`;
 
-  return screen("review", body, { raw: true });
+  return screen("understanding", body, { raw: true });
 }
 
 function unsupportedBody(b) {
@@ -307,139 +301,6 @@ function conflictBody(b) {
           </span>
         </button>`).join("")}
     </div>`;
-}
-
-function riskFocus() {
-  const q = st.riskSummary().queue;
-  if (!q.length) { S.reviewMode = "triage"; return triage(); }
-  const ix = Math.min(S.focusIx, q.length - 1);
-  const r = q[ix];
-  const linked = controls.filter((c) => c.risks.includes(r.id));
-  const refs = claimRefsFrom(r.refs);
-
-  const body = `<div class="focus">
-    ${focusBar(ix, q.length, "Risks")}
-    <div class="focus__body"><div class="q">
-      <h1 class="q__t">${esc(r.title)}</h1>
-      <p class="q__d">${esc(r.desc)}</p>
-
-      <div class="q__block">
-        <h4>Why this was identified here</h4>
-        <p>${esc(r.drivers)}</p>
-      </div>
-
-      ${r.newJustification ? `<div class="q__flag">
-        <b>Not in the firm's risk library.</b> ${esc(r.newJustification)}</div>` : ""}
-
-      <dl class="q__facts">
-        <div class="q__fact"><dt>Assertions</dt><dd>${r.assertions.map((a) => esc(a.replace(/_/g, " "))).join(", ")}</dd></div>
-        <div class="q__fact"><dt>Risk factors</dt><dd>${r.factors.map((a) => esc(a.replace(/_/g, " "))).join(", ")}</dd></div>
-        <div class="q__fact"><dt>Sub-process</dt><dd>${esc(subProcesses.find((s) => s.id === r.sub)?.name || r.sub)}</dd></div>
-        ${linked.length ? `<div class="q__fact"><dt>Addressed by</dt><dd>${linked.map((c) => esc(c.title)).join("; ")}</dd></div>`
-          : `<div class="q__fact"><dt>Addressed by</dt><dd style="color:var(--alert)">No control identified</dd></div>`}
-      </dl>
-
-      ${more("rsrc", `Supported by ${refs.length} sources`, evidence(refs), S.disclosed.rsrc)}
-
-      <div class="q__sug">
-        <span class="l">Suggested</span>
-        <span class="v">${r.rating === "higher" ? "Higher" : r.rating === "moderate" ? "Moderate" : "Lower"} inherent risk${
-          r.significant ? " · significant risk" : ""}</span>
-      </div>
-      <div class="q__acts">
-        ${btn("Accept", "decide-risk", { variant: "go", data: { id: r.id, d: "accepted" }, key: "Enter" })}
-        ${btn("Accept as modified", "decide-risk", { data: { id: r.id, d: "modified" }, key: "M" })}
-        ${btn("Reject", "decide-risk", { data: { id: r.id, d: "rejected" }, key: "R" })}
-        <span class="sp"></span>
-        ${btn("Skip", "focus-next", { variant: "plain" })}
-      </div>
-    </div></div>
-  </div>`;
-
-  return screen("review", body, { raw: true });
-}
-
-const CRIT = {
-  addresses_rmm: "Addresses an assessed risk at assertion level",
-  precision: "Precise enough to detect a material misstatement",
-  evidence_of_operation: "Evidence exists that it operated",
-  owner_competence_authority: "Owner has the authority to act on exceptions",
-  it_dependencies_identified: "IT dependencies and information used are identified",
-  not_redundant: "Not redundant with a stronger control",
-};
-
-function controlFocus() {
-  const q = st.controlSummary().queue;
-  if (!q.length) { S.reviewMode = "triage"; return triage(); }
-  const ix = Math.min(S.focusIx, q.length - 1);
-  const c = q[ix];
-  const refs = claimRefsFrom(c.refs);
-  const linked = risks.filter((r) => c.risks.includes(r.id));
-  const unmet = Object.entries(c.criteria).filter(([, v]) => v !== "met");
-
-  const NAT = { manual: "Manual", automated: "Automated", it_dependent_manual: "IT-dependent manual" };
-  const FRQ = { per_transaction: "Per transaction", daily: "Daily", weekly: "Weekly", monthly: "Monthly",
-    quarterly: "Quarterly", annual: "Annual", event_driven: "Event-driven" };
-
-  const body = `<div class="focus">
-    ${focusBar(ix, q.length, "Controls")}
-    <div class="focus__body"><div class="q">
-      <h1 class="q__t">${esc(c.title)}</h1>
-      <p class="q__d">${esc(c.desc)}</p>
-
-      <div class="q__block">
-        <h4>${c.keyProposal === true ? "Why this may be a key control"
-          : c.keyProposal === false ? "Why this is probably not a key control"
-          : "Why this cannot be assessed"}</h4>
-        <p>${esc(c.rationale)}</p>
-      </div>
-
-      <dl class="q__facts">
-        <div class="q__fact"><dt>Owner</dt><dd>${esc(c.owner || "Not established")}</dd></div>
-        <div class="q__fact"><dt>Type</dt><dd>${c.type === "preventive" ? "Preventive" : "Detective"} · ${esc(NAT[c.nature])} · ${esc(FRQ[c.frequency])}</dd></div>
-        <div class="q__fact"><dt>Addresses</dt><dd>${linked.length ? linked.map((r) => esc(r.title)).join("; ") : "No assessed risk linked"}</dd></div>
-        <div class="q__fact"><dt>Evidence it operated</dt><dd>${c.evidenceOfOperation ? esc(c.evidenceOfOperation)
-          : `<span style="color:var(--warn)">Not established</span>`}</dd></div>
-        ${c.ipe ? `<div class="q__fact"><dt>Information used</dt><dd>${esc(c.ipe)}${
-          c.ipeNote ? `<div class="t-meta" style="margin-top:3px">${esc(c.ipeNote)}</div>` : ""}</dd></div>` : ""}
-      </dl>
-
-      ${more("csrc", `Supported by ${refs.length} sources`, evidence(refs), S.disclosed.csrc)}
-
-      ${c.blocked ? `<div class="q__flag q__flag--alert"><b>Blocked.</b> ${esc(c.blocked)}</div>` : ""}
-      ${!c.blocked && unmet.length ? `<div class="q__flag">
-        <b>${unmet.length === 1 ? "One criterion is not met" : `${unmet.length} criteria are not met`}.</b>
-        ${unmet.map(([k]) => esc(CRIT[k].toLowerCase())).join("; ")}.
-        ${c.followUp ? " " + esc(c.followUp) : ""}</div>` : ""}
-
-      ${more("crit", "Show the six criteria", `<div class="meth">
-        ${Object.entries(c.criteria).map(([k, v]) => `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)">
-          <span style="flex:1;color:var(--ink-2)">${esc(CRIT[k])}</span>
-          ${v === "met" ? state("approved", "Met") : v === "not_met" ? state("rejected", "Not met") : state("needs_source", "Unknown")}
-        </div>`).join("")}
-        <p class="t-meta" style="margin-top:12px">A criterion that cannot be established produces a
-        follow-up question, never a lower-confidence conclusion.</p>
-      </div>`, S.disclosed.crit)}
-
-      <div class="q__sug">
-        <span class="l">Suggested</span>
-        <span class="v">${c.keyProposal === true ? "Key control"
-          : c.keyProposal === false ? "Not a key control" : "Cannot be assessed"}</span>
-      </div>
-      <div class="q__acts">
-        ${btn(c.keyProposal === true ? "Accept — key control" : c.keyProposal === false ? "Accept — not key" : "Leave undecided",
-          "decide-control", { variant: "go", key: "Enter",
-          data: { id: c.id, d: c.keyProposal === true ? "key" : c.keyProposal === false ? "not_key" : "undecided" } })}
-        ${c.keyProposal !== true ? btn("Key control", "decide-control", { data: { id: c.id, d: "key" }, key: "K" }) : ""}
-        ${c.keyProposal !== false ? btn("Not key", "decide-control", { data: { id: c.id, d: "not_key" }, key: "N" }) : ""}
-        ${c.keyProposal !== null ? btn("Undecided", "decide-control", { data: { id: c.id, d: "undecided" }, key: "U" }) : ""}
-        <span class="sp"></span>
-        ${btn("Skip", "focus-next", { variant: "plain" })}
-      </div>
-    </div></div>
-  </div>`;
-
-  return screen("review", body, { raw: true });
 }
 
 const claimRefsFrom = (ids) => ids.map(ref).filter(Boolean);
@@ -529,8 +390,8 @@ function readView() {
       </section>`;
     }).join("")}
     <div style="margin-top:60px;padding-top:26px;border-top:1px solid var(--line)" class="acts">
-      ${btn("Back to review", "triage-mode", { variant: "plain" })}
-      ${n.pending === 0 ? btn("Go to sign-off", "nav", { variant: "go", data: { href: "#/complete" } }) : ""}
+      ${btn("Back", "triage-mode", { variant: "plain" })}
+      ${n.pending === 0 ? btn("Go to controls and findings", "nav", { variant: "go", data: { href: "#/controls" } }) : ""}
     </div>
   </div></div>`;
 
@@ -538,18 +399,14 @@ function readView() {
     <div class="reader">${railHtml}${docHtml}</div>
   </div>`;
 
-  return screen("review", body, { raw: true });
+  return screen("understanding", body, { raw: true });
 }
 
 /* ── Entry ───────────────────────────────────────────────────────────────── */
 
-export function review() {
-  if (!S.generated) return generateView();
-  if (S.reviewMode === "focus") {
-    if (S.focusKind === "risks") return riskFocus();
-    if (S.focusKind === "controls") return controlFocus();
-    return claimFocus();
-  }
+export function understanding() {
+  if (!S.generated || !S.genSeen) return generateView();
+  if (S.reviewMode === "focus" && S.focusKind === "claims") return claimFocus();
   if (S.reviewMode === "read") return readView();
   return triage();
 }

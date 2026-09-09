@@ -98,7 +98,7 @@ function methodology() {
 
 /* --- screen ---------------------------------------------------------------- */
 
-export function understand() {
+export function walkthrough() {
   const cov = st.coverageSummary();
   const gaps = st.coverageGaps();
   const settled = st.coverageSettled();
@@ -180,5 +180,5 @@ export function understand() {
       </section>` : ""}
   `;
 
-  return screen("understand", body);
+  return screen("walkthrough", body);
 }

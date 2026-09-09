@@ -350,6 +350,101 @@ current object state on every read; positions in it are identified by object id,
 
 ---
 
+# Findings from the third iteration
+
+Reframing the product around the full process-level interim audit
+(`V3-DESIGN-DIRECTION.md`) surfaced two structural gaps, both about objects the engine has no
+representation for at all.
+
+## F-16 · There is no process-step model, so there is nothing to draw or to test against
+
+**Priority: P1** · Engine impact: **new schema + a generation stage**
+
+**Observation.** The engine emits `NarrativeBlock`s grouped by sub-process and `FlowStep`s with a
+sequence number, actor, system and action. `FlowStep` is close, but it is a flow *of the
+narrative*, not a model of the process: it has no stable identity across runs, nothing attaches
+controls or findings to it, and it is not the unit anything else refers to.
+
+The prototype needed a `ProcessStep` — a named stage of the process, with its actor, its system,
+the controls that operate on it and the findings recorded against it — to build the Process
+Understanding Map, to annotate that map with controls in step 4, and to trace a transaction
+against it in step 5. All three of V3's new surfaces stand on this one object.
+
+**Why it matters.** Without it, the map is a picture the application draws from prose, which
+means it can drift from the documentation it claims to represent, and the line walkthrough has
+nothing stable to trace against. It also happens to be the object that makes the product legible
+in ten seconds to someone who will not read a narrative.
+
+**Suggested product change.**
+
+```ts
+ProcessStep = {
+  id, engagementId, seq,
+  name, actor, system,
+  description,                 // one sentence, grounded
+  subProcess,                  // the methodology unit it belongs to
+  controlIds: string[],
+  findingIds: string[],
+  evidenceRefs: EvidenceRef[],
+}
+```
+
+Generated once alongside the narrative, from the same facts, so the two cannot disagree.
+
+## F-17 · The line walkthrough has no representation at all
+
+**Priority: P1** · Engine impact: **new schema; a stage that is mostly deterministic**
+
+**Observation.** Nothing in `packages/domain` expresses *expected versus actual*. A line
+walkthrough compares, for each process step, what should have happened and what evidence should
+exist against what was actually obtained, and concludes corroborated or exception.
+
+**Why it matters.** It is the step that tests the process model against reality — in the mock
+engagement it is what finds that the invoice preceded customer acceptance by seven days, which no
+amount of interviewing surfaced. It is also the strongest demonstration that the product is an
+audit workspace rather than a documentation generator, and the engine currently cannot produce
+any part of it.
+
+**Suggested product change.**
+
+```ts
+LineWalkthrough = {
+  id, engagementId, transactionRef, selectionRationale,
+  steps: [{
+    processStepId,
+    expectedStep, expectedControlId, expectedEvidence,   // derived from the process model
+    actualEvidence, evidenceRefs,                        // obtained
+    observation,
+    proposedVerdict: "corroborated" | "exception",
+    auditorVerdict: ... | null,
+    exceptionDescription: string | null,
+  }],
+  notApplicableSteps: [{ processStepId, reason }],
+  conclusion, raisedFindingIds: string[],
+}
+```
+
+Most of this is deterministic once the process model exists: the *expected* columns come straight
+from `ProcessStep` and its controls. The model's contribution is comparing supplied evidence
+against expectation and proposing a verdict — and, in the mock case, noticing that two dates on
+one order are the wrong way round.
+
+## F-18 · Concluding on risks belongs to the next phase, not to interim
+
+**Priority: P2** · Engine impact: **none — product scope**
+
+**Observation.** V2 asked the auditor to accept, modify or reject each identified risk. That is
+risk assessment, which happens after the process work with the process understanding as an input.
+V3 removed the queue: risks are still identified, library-mapped and exported in the matrix, but
+they are carried forward rather than concluded.
+
+**Why it matters worth recording:** the engine's `Risk` output is unchanged and still valuable —
+what changed is who consumes it and when. If a later product covers risk analysis, the interim
+product's job is to hand over a complete, provenance-carrying set of candidate risks, not a set of
+half-made decisions.
+
+---
+
 ## Summary
 
 | # | Finding | Priority | Engine impact |
@@ -369,7 +464,11 @@ current object state on every read; positions in it are identified by object id,
 | F-13 | Emit the statement the evidence *does* support | P1 | A repair pass after validation |
 | F-14 | Coverage items need a plain-language gap statement | P2 | Pack content |
 | F-15 | The exception set is a derived view, not a list | P3 | None (product spec) |
+| F-16 | No process-step model to draw or trace against | P1 | New schema + generation stage |
+| F-17 | The line walkthrough has no representation | P1 | New schema; mostly deterministic |
+| F-18 | Risks are carried forward, not concluded in interim | P2 | None (product scope) |
 
-Five findings (F-01, F-02, F-05, F-10, F-13) are cheap now and expensive later. Four of them add
+**F-16 and F-17 are the two that change what the engine produces**, and everything V3 adds depends
+on them. Five earlier findings (F-01, F-02, F-05, F-10, F-13) are cheap now and expensive later. Four of them add
 fields to records rather than changing what the pipeline does; F-13 adds a small repair pass and
 is the one with the largest effect on how the product feels to use.

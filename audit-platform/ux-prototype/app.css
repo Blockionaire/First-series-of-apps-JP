@@ -472,3 +472,147 @@ textarea.field { font: 16px/1.7 var(--serif); resize: vertical; min-height: 110p
 .cue__w { font-size: 12.5px; color: var(--ink-4); line-height: 1.5; }
 .cue--hi { box-shadow: inset 3px 0 0 var(--alert); padding-left: 14px; }
 .cue--md { box-shadow: inset 3px 0 0 var(--warn); padding-left: 14px; }
+
+/* ==========================================================================
+   V3 — the process-level interim audit
+   ========================================================================== */
+
+/* --- The process journey: ordered and stateful, not a tab bar ------------- */
+
+.journey {
+  flex: 0 0 auto; display: flex; align-items: stretch;
+  padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--paper);
+  overflow-x: auto; scrollbar-width: none;
+}
+.journey::-webkit-scrollbar { display: none; }
+.journey__sp { flex: 1; }
+.journey__link {
+  align-self: center; width: 10px; height: 1px; background: var(--line-2); flex: 0 0 10px;
+}
+.jstep {
+  display: flex; flex-direction: column; gap: 1px; padding: 6px 11px 9px;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+}
+.jstep__n { font-size: 13px; font-weight: 550; color: var(--ink-3); }
+.jstep__c { font-size: 11.5px; color: var(--ink-4); }
+.jstep:hover .jstep__n { color: var(--ink); }
+.jstep.is-done .jstep__n { color: var(--ink-3); }
+.jstep.is-done .jstep__c { color: var(--ok); }
+.jstep.is-open .jstep__n { color: var(--ink); }
+.jstep.is-later .jstep__n { color: var(--ink-5); }
+.jstep.is-later .jstep__c { color: var(--ink-5); }
+.jstep.is-on { border-bottom-color: var(--ink); }
+.jstep.is-on .jstep__n { color: var(--ink); font-weight: 650; }
+.jstep__c--warn { color: var(--warn) !important; }
+.jstep__c--alert { color: var(--alert) !important; }
+.jstep__c--ok { color: var(--ok) !important; }
+
+.idline__seg { font-size: 12.5px; color: var(--ink-3); }
+.idline__seg:hover { color: var(--ink); }
+.idline__seg.is-here { color: var(--ink); font-weight: 550; }
+
+/* --- Engagement phases ---------------------------------------------------- */
+
+.phases { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); }
+.phase { padding: 16px 18px 16px 0; border-bottom: 1px solid var(--line); }
+.phase__n { font-size: 15px; font-weight: 600; color: var(--ink-5); }
+.phase__d { font-size: 12.5px; color: var(--ink-4); margin-top: 3px; }
+.phase.is-done .phase__n { color: var(--ink-3); }
+.phase.is-on .phase__n { color: var(--ink); }
+.phase.is-on { box-shadow: inset 0 -2px 0 var(--ink); }
+@media (max-width: 860px) { .phases { grid-template-columns: repeat(2, 1fr); } }
+
+/* --- Process Understanding Map -------------------------------------------- */
+
+.map {
+  display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding: 4px 0 10px;
+  scrollbar-width: thin;
+}
+.mapedge {
+  flex: 0 0 14px; align-self: center; height: 1px; background: var(--line-2); position: relative;
+}
+.mapedge::after {
+  content: ""; position: absolute; right: 0; top: -2.5px;
+  border-left: 4px solid var(--line-2); border-top: 2.5px solid transparent;
+  border-bottom: 2.5px solid transparent;
+}
+.mapnode {
+  flex: 1 1 0; min-width: 116px; display: flex; flex-direction: column; gap: 2px;
+  padding: 12px 12px 11px; border-radius: 8px; background: var(--white);
+  box-shadow: inset 0 0 0 1px var(--line-2); text-align: left;
+  transition: box-shadow .1s, background .1s;
+}
+.mapnode:hover { box-shadow: inset 0 0 0 1px var(--ink-4); }
+.mapnode.is-sel { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.mapnode__i {
+  font: 10.5px var(--mono); color: var(--ink-5);
+}
+.mapnode__t { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.mapnode__a { font-size: 11.5px; color: var(--ink-4); line-height: 1.35; }
+.mapnode__m { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.mapnode__ctl { font-size: 10px; color: var(--ink-3); letter-spacing: 1px; }
+.mapnode__none { font-size: 10.5px; color: var(--warn); }
+.mapnode__f { font-size: 10.5px; color: var(--warn); }
+.mapnode__f--alert { color: var(--alert); }
+.mapnode__v { font-size: 11px; color: var(--ink-4); margin-top: 6px; }
+.mapnode__v--ok { color: var(--ok); }
+.mapnode__v--ex { color: var(--alert); font-weight: 600; }
+.mapnode__na { font-size: 11px; color: var(--ink-5); margin-top: 6px; }
+.mapnode.is-uncontrolled { box-shadow: inset 0 0 0 1px var(--line-2), inset 0 -2px 0 var(--warn); }
+.mapnode.is-ok { box-shadow: inset 0 0 0 1px var(--ok-line); background: var(--ok-w); }
+.mapnode.is-ex { box-shadow: inset 0 0 0 1.5px var(--alert); background: var(--alert-w); }
+.mapnode.is-na { opacity: .5; }
+
+.maplegend { display: flex; gap: 16px; font-size: 11.5px; color: var(--ink-4); align-items: center; }
+.maplegend span { display: inline-flex; align-items: center; gap: 6px; }
+.maplegend b { color: var(--ink-3); }
+
+.mapdetail {
+  margin-top: 14px; padding: 20px 22px; background: var(--white); border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--line-2); animation: evin .14s ease-out;
+}
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+@media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* --- Line walkthrough ------------------------------------------------------ */
+
+.tracehead { padding: 14px 32px 12px; border-bottom: 1px solid var(--line); background: var(--paper); }
+
+.expect {
+  margin-top: 26px; padding: 18px 20px; border-radius: 8px; background: var(--sink);
+}
+.expect__r { display: flex; gap: 18px; padding: 7px 0; font-size: 14px; }
+.expect__r + .expect__r { border-top: 1px solid var(--line-2); }
+.expect__r dt { flex: 0 0 150px; color: var(--ink-4); font-size: 12.5px; padding-top: 1px; }
+.expect__r dd { flex: 1; margin: 0; color: var(--ink-2); line-height: 1.55; }
+
+.actual { margin-top: 26px; }
+.actual__e { font-size: 15.5px; color: var(--ink); line-height: 1.65; max-width: 66ch; }
+.actual__o { font-size: 15px; color: var(--ink-2); line-height: 1.65; max-width: 66ch; }
+
+.tally { display: flex; gap: 52px; padding: 26px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.tally div { display: flex; flex-direction: column; gap: 3px; }
+.tally__n { font-size: 34px; font-weight: 600; letter-spacing: -.02em; line-height: 1; }
+.tally__l { font-size: 13px; color: var(--ink-4); }
+
+/* --- Control testing ------------------------------------------------------- */
+
+.tflow { border-top: 1px solid var(--line); }
+.tstage { display: flex; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--line); }
+.tstage__h { flex: 0 0 172px; display: flex; align-items: baseline; gap: 10px; }
+.tstage__n {
+  font: 11px var(--mono); color: var(--ink-4); border: 1px solid var(--line-2);
+  border-radius: 50%; width: 20px; height: 20px; display: inline-flex;
+  align-items: center; justify-content: center; flex: 0 0 20px;
+}
+.tstage.is-done .tstage__n { border-color: var(--ok-line); color: var(--ok); }
+.tstage__t { font-size: 14px; font-weight: 600; }
+.tstage__b { flex: 1; min-width: 0; }
+@media (max-width: 860px) { .tstage { flex-direction: column; gap: 12px; } }
+
+.ticks { font-size: 14px; color: var(--ink-2); }
+.ticks li { padding: 5px 0 5px 20px; position: relative; line-height: 1.55; }
+.ticks li::before {
+  content: ""; position: absolute; left: 2px; top: 12px; width: 7px; height: 7px;
+  border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink-5);
+}
