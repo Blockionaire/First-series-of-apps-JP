@@ -129,13 +129,15 @@ export function complete() {
       ${so.preparer === "signed" && st.reviewRequired() && ["not_submitted", "reopened"].includes(so.review) ? `
         <div class="acts" style="margin-top:20px">
           ${btn(so.review === "reopened" ? "Resubmit for review" : "Submit for manager review",
-            "submit-review", { variant: "go", size: "lg", key: "Enter" })}
-        </div>` : ""}
+            "submit-review", { variant: "go", size: "lg", key: "Enter",
+              disabled: !st.canResubmit() })}
+        </div>
+        ${!st.canResubmit() ? `<p class="t-meta" style="margin-top:10px">
+          ${st.openReviewPoints().length} review point${st.openReviewPoints().length === 1 ? "" : "s"}
+          still ${st.openReviewPoints().length === 1 ? "needs" : "need"} an answer. The file does not
+          go back to the reviewer until ${st.openReviewPoints().length === 1 ? "it does" : "they do"}.</p>` : ""}` : ""}
 
-      ${so.review === "reopened" ? callout(`<b>Sent back with review points.</b> In the product the
-        points would be listed here as their own queue, each attached to the statement, control or
-        finding it concerns. Clearing them and resubmitting is the same loop as any other queue in
-        this file.`, "alert") : ""}
+      ${so.review === "reopened" || st.reviewPoints().length ? reviewPointSection() : ""}
 
       ${["submitted", "in_review"].includes(so.review) ? `
         <div style="margin-top:26px;padding-top:20px;border-top:1px dashed var(--line-2)">
@@ -227,6 +229,72 @@ export function complete() {
   `;
 
   return screen("complete", body);
+}
+
+/* ── Review points ────────────────────────────────────────────────────────
+   One worked example, connected for real: reopening raises it, an unanswered
+   point blocks resubmission, and answering it releases the file.
+   ------------------------------------------------------------------------- */
+
+function reviewPointSection() {
+  const pts = st.reviewPoints();
+  const open = st.openReviewPoints();
+
+  return `<div style="margin-top:24px">
+    ${callout(`<b>${open.length ? `${open.length} review point${open.length === 1 ? "" : "s"} to answer`
+      : "Every review point has been answered"}.</b>
+      ${open.length ? "The reviewer sent Revenue back. Answer each point on the file, then resubmit."
+        : "The file can go back to the reviewer."}`, open.length ? "alert" : "ok")}
+
+    <div class="rows" style="margin-top:16px">
+      ${pts.map((p) => {
+        const isOpen = S.openPoint === p.id;
+        const editing = S.editing === `rp:${p.id}`;
+        return `<div class="${cx("rw", p.state !== "addressed" && "rw--attn")}" style="display:block">
+          <div class="row row--top" style="gap:20px">
+            <span class="rw__lead" style="padding-top:5px">${dot(p.state === "addressed" ? "ok" : "alert")}</span>
+            <span class="rw__main">
+              <span class="rw__t">${esc(p.subject)}</span>
+              <span class="rw__d">${esc(p.reviewer)}, ${esc(p.role)} · ${esc(p.raisedOn)}</span>
+            </span>
+            <span class="rw__side">
+              <span class="t-meta mono">${esc(p.id)}</span>
+              <div class="t-meta" style="margin-top:3px;${p.state === "addressed" ? "color:var(--ok)" : "color:var(--alert)"}">${
+                p.state === "addressed" ? "addressed" : "open"}</div>
+            </span>
+          </div>
+
+          ${isOpen ? `<div style="margin:12px 0 4px 37px;max-width:74ch">
+            <div class="q__block" style="margin-top:0">
+              <h4>What the reviewer wrote</h4>
+              <p>${esc(p.comment)}</p>
+            </div>
+            <p class="t-meta" style="margin-top:10px">Expects: ${esc(p.expects)}</p>
+            ${p.response ? `<div class="q__block">
+              <h4>Your response · ${esc(p.respondedAt || "")}</h4>
+              <p>${esc(p.response)}</p>
+            </div>` : ""}
+            ${editing ? `<div style="margin-top:14px">
+              <textarea class="field" id="ans" rows="4" style="font:15px/1.6 var(--sans)"
+                placeholder="What you did about it, or why the conclusion stands."></textarea>
+              <div class="acts" style="margin-top:10px">
+                ${btn("Record and mark addressed", "answer-point", { variant: "go", size: "sm", data: { id: p.id } })}
+                ${btn("Cancel", "cancel-edit", { variant: "plain", size: "sm" })}
+              </div>
+            </div>` : `<div class="acts" style="margin-top:12px">
+              ${p.target ? btn(`Open ${p.target.id}`, "nav", { size: "sm", data: { href: p.target.href } }) : ""}
+              ${p.state === "addressed"
+                ? btn("Reopen this point", "reopen-point", { variant: "plain", size: "sm", data: { id: p.id } })
+                : btn("Respond", "answer-point-open", { variant: "go", size: "sm", data: { id: p.id } })}
+            </div>`}
+          </div>` : `<div class="acts" style="margin:11px 0 2px 37px">
+            ${btn(p.state === "addressed" ? "Show" : "Open the review point", "open-point",
+              { variant: p.state === "addressed" ? "plain" : "go", size: "sm", data: { id: p.id } })}
+          </div>`}
+        </div>`;
+      }).join("")}
+    </div>
+  </div>`;
 }
 
 /* Each gate links to the step that clears it. */

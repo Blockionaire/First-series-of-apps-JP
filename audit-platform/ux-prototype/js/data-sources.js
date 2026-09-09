@@ -259,5 +259,32 @@ docExcerpts.forEach((d) => { evidence[`D:${d.id}`] = fromDoc(d); });
 evidence["T:seg-17"].conflict = true;
 evidence["Q:6"].conflict = true;
 
-export const ref = (id) => evidence[id] || null;
+/* --- Evidence created during the session ------------------------------------
+   A questionnaire answer submitted now is a source like any other. It has to
+   enter the evidence registry, not sit in a private fact override, or a
+   statement that later rests on it has no provenance to show.
+   -------------------------------------------------------------------------- */
+
+export const sessionEvidence = {};
+
+/** Register a submitted questionnaire answer as evidence. Returns its id. */
+export function recordAnswerEvidence(q, text, submittedAt) {
+  const id = `Q:${q.n}`;
+  sessionEvidence[id] = {
+    id, kind: "client_answer", sourceId: "SRC-2",
+    short: `Q ${q.n}`, locator: `Question ${q.n} · answered ${submittedAt}`,
+    sourceName: "Client questionnaire — B. Kuipers",
+    speaker: "Bas Kuipers (Commercial Director)",
+    question: q.q, quote: text,
+    submittedAt, thisSession: true,
+  };
+  return id;
+}
+
+export function clearSessionEvidence() {
+  Object.keys(sessionEvidence).forEach((k) => delete sessionEvidence[k]);
+}
+
+/** Session evidence wins: an answer given now supersedes the unanswered stub. */
+export const ref = (id) => sessionEvidence[id] || evidence[id] || null;
 export const refs = (ids) => ids.map(ref).filter(Boolean);

@@ -27,15 +27,15 @@ export function work() {
       tone: "warn", t: `${cov.mandatoryOpen.length} required areas are still open`,
       d: `${cov.mandatoryOpen.map((i) => i.plain || i.q).slice(0, 1)}`, href: "#/interview",
     },
-    st.S.generated && cs.pending && {
+    st.S.analysed && cs.pending && {
       tone: "", t: `${cs.pending} controls to conclude`,
       d: `${cs.suggestedKey} are suggested as key controls`, href: "#/controls",
     },
-    st.S.generated && st.findingSummary().fromTraceOpen.length && {
+    st.S.analysed && st.findingSummary().fromTraceOpen.length && {
       tone: "alert", t: "The line walkthrough raised a finding",
       d: "Tracing a real transaction changed the documented understanding", href: "#/controls",
     },
-    st.S.generated && !st.traceSummary().satisfied && {
+    st.S.analysed && !st.traceSummary().satisfied && {
       tone: "", t: st.traceSummary().undecided
         ? "Some Revenue variants have no line-walkthrough decision"
         : "A required line walkthrough is outstanding",

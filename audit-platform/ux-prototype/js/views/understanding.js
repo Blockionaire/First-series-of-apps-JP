@@ -8,7 +8,7 @@
    No table, no permanent source panel, no modal. */
 
 import { esc, cx, act as btn, row, dot, chip, more, evidence, empty, callout, link, state } from "../ui.js";
-import { narrative, risks, controls, pipeline, subProcesses } from "../data-model.js";
+import { narrative, risks, controls, gaps, pipeline, subProcesses } from "../data-model.js";
 import { processMap, mapLegend, mapDetail } from "./map.js";
 import { ref, sources } from "../data-sources.js";
 import * as st from "../state.js";
@@ -47,8 +47,10 @@ function generateView() {
     <div class="head">
       <h1 class="t-title">${done ? "Draft ready" : running ? "Drafting the process understanding" : "Draft the process understanding"}</h1>
       <p class="t-lede" style="margin-top:10px">
-        Nine stages over ${Object.keys(sources).length} sources. Seven ask a model; two are ordinary
-        code. Every stage is validated before the next one runs.
+        ${pipeline.length} stages over ${Object.keys(sources).length} sources, five of which ask a
+        model. This step establishes <em>how the process works</em> and nothing else — what controls
+        it and what is wrong with it is step 4, and it runs against the understanding once you have
+        reviewed it.
       </p>
     </div>
 
@@ -88,6 +90,10 @@ function generateView() {
           <div class="acts" style="margin-top:22px">
             ${btn("Review the draft", "read-gen", { variant: "go", size: "lg", key: "Enter" })}
           </div>
+          <p class="t-meta" style="margin-top:14px;max-width:64ch">
+            Nothing has been concluded. No control has been identified, no finding proposed and no
+            risk signal raised — that analysis is step 4, and it needs an understanding you have
+            accepted.</p>
         </div>` : ""}`}
   `;
   return screen("understanding", body);
@@ -96,9 +102,12 @@ function generateView() {
 function fill(t) {
   const cov = st.coverageSummary();
   return t.replace("FACTS_KNOWN", cov.facts.known).replace("FACTS_UNKNOWN", cov.facts.unknown + cov.facts.contradictory)
+    .replace("COV_COVERED", cov.covered).replace("COV_APPLICABLE", cov.applicable)
+    .replace("MANDATORY_OPEN", cov.mandatoryOpen.length)
     .replace("RISK_COUNT", risks.length).replace("CONTROL_COUNT", controls.length)
-    .replace("GAP_COUNT", st.controlSummary().gaps).replace("KEY_COUNT", st.controlSummary().suggestedKey)
-    .replace("RCM_ROWS", st.rcmRows().length).replace("OPEN_COUNT", 10);
+    .replace("FINDING_COUNT", gaps.length + 1)
+    .replace("GAP_COUNT", gaps.length).replace("KEY_COUNT", controls.filter((c) => c.keyProposal === true).length)
+    .replace("RCM_ROWS", 15).replace("OPEN_COUNT", 10);
 }
 
 /* ── Triage ──────────────────────────────────────────────────────────────── */

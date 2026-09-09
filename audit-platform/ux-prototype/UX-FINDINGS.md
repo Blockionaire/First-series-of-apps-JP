@@ -640,6 +640,86 @@ reason it could not be answered, which is genuinely more useful than a guess.
 
 ---
 
+## F-26 · Documenting a process and analysing it are two pipeline runs, not one
+
+**Priority: P1** · Engine impact: **pipeline split**
+
+**Observation.** The generation pipeline ran nine stages in one pass, four of which identified
+risks, identified controls and gaps, assessed the six key-control criteria, and assembled the RCM.
+So by the time the auditor first saw the process narrative, the platform had already proposed
+conclusions drawn from a draft nobody had read. The review of the understanding was then
+ceremonial: whatever the auditor changed, the analysis behind it was already made.
+
+**Why it matters.** It inverts the order of the audit work. An auditor establishes how a process
+works, satisfies themselves that the description is right, and *then* asks what controls it. Doing
+both at once also wastes the most expensive stages on a draft that may be substantially rewritten.
+
+**Suggested engine change.** Two entry points over the same objects:
+
+```
+runUnderstanding(engagementId, processId)
+  → sources, facts, coverage, variants, narrative, map, clarifications, grounding, workpaper
+
+runAnalysis(engagementId, processId)     // precondition: understanding accepted
+  → controls, gaps, findings, riskSignals, riskControlMap, keyCriteria, matrix
+```
+
+`runAnalysis` should refuse to run against an understanding with unreviewed sections, and should
+record which version of the understanding it read — so that regenerating the narrative invalidates
+the analysis drawn from it rather than silently leaving it stale. That version link is F-09.
+
+Sharing a model call between the two is an implementation decision. The separation is a product
+requirement.
+
+---
+
+## F-27 · Control test state must be per control
+
+**Priority: P1** · Engine impact: **schema shape**
+
+**Observation.** Testing scope was stored per control but the test result was global: one
+`conclusion` field for the whole process. Two controls could be scoped for testing and concluding
+either one satisfied the completion gate for both. The gate said testing was complete when half of
+it had not been done.
+
+**Suggested engine change.** `ControlTest` is keyed by control and carries its own lifecycle —
+selection, evidence, results, extensions and conclusion. The step-level derivation is then
+"every control scoped for testing has its own concluded test", never "a conclusion exists".
+
+The same shape applies to anything else that could be mistaken for process-level state: a
+walkthrough conclusion belongs to a transaction, a test conclusion to a control. Any field that
+answers "is this done?" at the process level, when the work is done per object, is the same bug.
+
+---
+
+## F-28 · Reopening a file must carry work, not a status
+
+**Priority: P2** · Engine impact: **new schema**
+
+**Observation.** The reviewer could send a file back, which changed the state to "reopened" and
+nothing else. There was nothing to answer and nothing preventing an immediate resubmission, so the
+loop was decorative.
+
+**Suggested engine change.**
+
+```
+ReviewPoint {
+  id, engagementId, processId,
+  reviewer, raisedAt,
+  subject, comment, expects,
+  target: { kind: "control" | "statement" | "finding" | "coverage_item", id },
+  state: "open" | "addressed",
+  response: string | null, respondedAt, respondedBy,
+}
+```
+
+Two derived rules matter more than the schema: resubmission is blocked while any point is open —
+enforced in the transition, not only in the interface — and the next-action logic must name the
+review point rather than reporting that the file is awaiting review. A file sitting with the
+preparer that says "awaiting manager review" is how work stalls for a week.
+
+---
+
 ## Summary
 
 | # | Finding | Priority | Engine impact |
@@ -668,7 +748,10 @@ reason it could not be answered, which is genuinely more useful than a guess.
 | F-22 | Undecided is a bookmark, not a conclusion | P1 | Additive fields + `CarryForwardDecision` |
 | F-23 | Proposal and conclusion are two values | P1 | Additive fields |
 | F-24 | Sign-off is a state machine, and gates are conditional | P1 | Schema change |
-| F-25 | A questionnaire answer is evidence | P2 | None (wiring) |
+| F-25 | A questionnaire answer is evidence | P2 | Evidence registry write |
+| F-26 | Understanding and analysis are two runs | P1 | Pipeline split + precondition |
+| F-27 | Control test state must be per control | P1 | Schema shape |
+| F-28 | Reopening must carry review points | P2 | New schema + transition guard |
 
 **F-16, F-17 and F-19 are the three that change what the engine produces**, and everything the
 current prototype does downstream of step three depends on them. F-19 is the one to settle first:
@@ -684,4 +767,15 @@ prevented it.
 
 Five earlier findings (F-01, F-02, F-05, F-10, F-13) remain in the same category. F-24 supersedes
 the review-state half of F-02: a boolean is not enough, and the shape it should take is now known
-from building it.
+from building it. **F-26 is the largest single change to how the engine is called**, and it is
+cheapest to make before the pipeline has callers.
+
+F-25 changed on implementation: it is not only wiring. A questionnaire answer has to be written
+into the evidence registry as a source record, so that a fact it establishes cites it like any
+other fact. Storing it as a value on the fact would have left "no claim without a source" true only
+for content the engine generated, and false for everything established afterwards.
+
+Three of these findings — F-22, F-27 and the resubmission guard in F-28 — are the same mistake in
+different places: a derived "is this complete?" that reads one value when the work is done per
+object, or that treats an intention as a decision. It is worth stating as a rule for the engine's
+own derivations rather than fixing case by case.

@@ -1507,50 +1507,372 @@ const openItems = [
     origin: "deterministic_trigger", blocks: ["C-10", "N14.2"], refs: ["T:seg-37"], owner: "Unassigned" },
 ];
 
-/* --- Generation pipeline (07 §7; 06 §6.1 stage map) ------------------------ */
+/* --- Generation, in two stages ----------------------------------------------
+   Step 3 establishes and documents how the process works. Step 4 analyses what
+   controls it and what is wrong with it. They are separate runs because they
+   are separate pieces of audit work: the auditor reviews the understanding
+   before anything is concluded from it.
 
+   An implementation may reuse one model call across both — this split is the
+   product model, not a deployment constraint.
+   -------------------------------------------------------------------------- */
+
+/* Step 3 — process understanding. */
 const pipeline = [
-  { id: "S2", name: "Normalising sources", model: "claude-haiku-4-5",
+  { id: "U1", name: "Normalising sources", model: "claude-haiku-4-5",
     desc: "Segmenting the transcript, the questionnaire answers and the document chunks, and attaching a stable locator to each.",
     out: "6 sources · 38 transcript segments · 12 answers · 134 document chunks", ms: 900 },
-  { id: "S3", name: "Extracting process facts", model: "claude-sonnet-5",
+  { id: "U2", name: "Extracting process facts", model: "claude-sonnet-5",
     desc: "Mapping what was said onto the must-know facts of the 45 coverage items in pack revenue v0.1.0. Every fact carries at least one evidence reference.",
-    out: "FACTS_KNOWN facts extracted across 45 coverage items · FACTS_UNKNOWN not established", ms: 2600 },
-  { id: "S4", name: "Generating the narrative", model: "claude-opus-5",
+    out: "FACTS_KNOWN facts extracted across 45 coverage items · FACTS_UNKNOWN not established", ms: 2400 },
+  { id: "U3", name: "Evaluating methodology coverage", model: "deterministic",
+    desc: "Code, not the model. Comparing the extracted facts against the pack's required areas and marking what is established, partial, unknown or contradictory.",
+    out: "COV_COVERED of COV_APPLICABLE areas established · MANDATORY_OPEN required areas still open", ms: 700 },
+  { id: "U4", name: "Structuring the process and its variants", model: "claude-opus-5",
+    desc: "Separating the flows that are materially different processes, and ordering the steps of each. Machines, spare parts and service contracts share a spine and diverge.",
+    out: "3 variants · 11 process steps · 2 divergence points · 1 convergence point", ms: 2800 },
+  { id: "U5", name: "Generating the process narrative", model: "claude-opus-5",
     desc: "Drafting the process narrative in firm house style, sub-process by sub-process, with an evidence reference on every block.",
     out: "14 sections · 41 blocks", ms: 3400 },
-  { id: "S5", name: "Identifying risks", model: "claude-opus-5",
-    desc: "Mapping the facts onto the 30-entry revenue risk library at assertion level, with inherent risk factors and drivers specific to this entity.",
-    out: "RISK_COUNT risks · 10 from the library · 1 new, with justification", ms: 3100 },
-  { id: "S6", name: "Identifying controls and gaps", model: "claude-opus-5",
-    desc: "Mapping described controls onto the 33-entry control library, then testing each identified risk for an addressing control.",
-    out: "CONTROL_COUNT controls · GAP_COUNT control gaps", ms: 3000 },
-  { id: "S7", name: "Assessing key control criteria", model: "claude-opus-5",
+  { id: "U6", name: "Assembling the process map", model: "deterministic",
+    desc: "Code, not the model. Laying out the steps from their variant membership and successors — the map and the model cannot disagree.",
+    out: "11 nodes across 2 lanes · every node traced to a source", ms: 600 },
+  { id: "U7", name: "Identifying statements needing clarification", model: "claude-sonnet-5",
+    desc: "Flagging where two sources disagree and where the pack requires a fact that nothing established, then generating the follow-up each one needs.",
+    out: "1 contradiction · 3 required areas open · 4 follow-ups drafted", ms: 1600 },
+  { id: "U8", name: "Validating source references", model: "deterministic",
+    desc: "Code, not the model. Every quote must occur in the source it cites, and every generated statement must carry at least one evidence reference.",
+    out: "38 of 41 narrative blocks grounded · 3 could not be validated → marked Needs support",
+    warn: true, ms: 1100 },
+  { id: "U9", name: "Assembling the process-understanding workpaper", model: "deterministic",
+    desc: "Building the narrative, the map and the coverage assessment into one reviewable document. No model call, and nothing is concluded.",
+    out: "Understanding workpaper assembled · nothing concluded", ms: 700 },
+];
+
+/* Step 4 — controls and findings. Runs against the *reviewed* understanding,
+   which is why it is a second run and not nine more stages of the first. */
+const analysisPipeline = [
+  { id: "A1", name: "Identifying controls", model: "claude-opus-5",
+    desc: "Mapping the controls described in the reviewed understanding onto the 33-entry control library, and attaching each to the process step it sits on.",
+    out: "CONTROL_COUNT controls identified · 11 from the library · 3 not in it", ms: 2900 },
+  { id: "A2", name: "Identifying control gaps and process findings", model: "claude-opus-5",
+    desc: "Looking for steps with nothing controlling them, and for things wrong with the process that are not control gaps.",
+    out: "GAP_COUNT control gaps · 1 process observation", ms: 2400 },
+  { id: "A3", name: "Identifying risk signals", model: "claude-opus-5",
+    desc: "Mapping the facts onto the 30-entry revenue risk library at assertion level. Signals for the risk analysis phase — nothing here is an assessed risk of material misstatement.",
+    out: "RISK_COUNT risk signals · 10 from the library · 1 outside it, with justification", ms: 2900 },
+  { id: "A4", name: "Mapping controls to risk signals", model: "deterministic",
+    desc: "Code, not the model. Pairing each identified control with the signals it addresses, and flagging every signal with nothing against it.",
+    out: "RCM_ROWS pairs · GAP_COUNT signals with no control", ms: 600 },
+  { id: "A5", name: "Evaluating the firm's key-control criteria", model: "claude-opus-5",
     desc: "Testing each control against the six key-control criteria. A criterion that cannot be established produces a follow-up question, not a lower-confidence conclusion.",
     out: "KEY_COUNT proposed as key · 2 could not be assessed", ms: 2400 },
-  { id: "S8", name: "Validating source references", model: "deterministic",
-    desc: "Code, not the model. Every quote must occur in the source it cites, every library reference must exist in the loaded pack, and every generated object must carry at least one evidence reference.",
-    out: "38 of 41 narrative blocks grounded · 3 could not be validated → marked Needs source",
-    warn: true, ms: 1100 },
-  { id: "S9", name: "Assembling the working paper", model: "deterministic",
-    desc: "Building the risk and control matrix, the coverage assessment and the open item list from the reviewed objects. No model call.",
-    out: "RCM_ROWS matrix rows · OPEN_COUNT open items · working paper assembled", ms: 800 },
-];
-
-/* --- Sign-off gates -------------------------------------------------------- */
-
-const signOffGates = [
-  { id: "narrative", label: "Narrative approved", detail: "Every section approved or rejected with a reason" },
-  { id: "needsSource", label: "No unsupported statements", detail: "No block remains in Needs source" },
-  { id: "contradiction", label: "No unresolved contradictions", detail: "Every contradiction resolved or documented" },
-  { id: "risks", label: "Risks concluded", detail: "Every risk accepted, modified or rejected by the auditor" },
-  { id: "controls", label: "Controls concluded", detail: "A key control decision recorded for every control" },
-  { id: "mandatory", label: "Mandatory items addressed", detail: "No ISA 240 mandatory coverage item left open without a documented reason" },
-  { id: "openItems", label: "Open items resolved or carried forward", detail: "Each open item resolved, or explicitly carried to final" },
+  { id: "A6", name: "Validating source references", model: "deterministic",
+    desc: "Code, not the model. Every proposed control, gap and signal must cite the part of the understanding it came from.",
+    out: "All proposals traced to the reviewed understanding", ms: 800 },
+  { id: "A7", name: "Assembling the matrix and the review queues", model: "deterministic",
+    desc: "Building the risk and control matrix and the two recommendation queues. Every proposal is a proposal until you conclude it.",
+    out: "RCM_ROWS matrix rows · CONTROL_COUNT controls and FINDING_COUNT findings to conclude", ms: 700 },
 ];
 
 
-__exp(exports, { subProcesses: () => subProcesses, narrative: () => narrative, risks: () => risks, controls: () => controls, gaps: () => gaps, openItems: () => openItems, pipeline: () => pipeline, signOffGates: () => signOffGates });
+__exp(exports, { subProcesses: () => subProcesses, narrative: () => narrative, risks: () => risks, controls: () => controls, gaps: () => gaps, openItems: () => openItems, pipeline: () => pipeline, analysisPipeline: () => analysisPipeline });
+
+};
+__defs['js/data-sources.js'] = function (exports, __req, __exp) {
+/* ============================================================================
+   data-sources.js — the evidence base.
+
+   Everything the engine would have ingested: a walkthrough transcript, a client
+   questionnaire, three documents and one set of auditor notes. Every generated
+   claim elsewhere in the prototype points into this file by evidence id, the
+   same way `EvidenceRef` in packages/domain points at a segment or a chunk.
+
+   Fictional client. No real entity, person or engagement is depicted.
+   ========================================================================== */
+
+const firm = {
+  name: "Kuyper & Bergman Accountants",
+  packName: "revenue",
+  packVersion: "0.1.0",
+  methodology: "K&B Audit Methodology 2026.1",
+};
+
+const user = { name: "Sanne Bakker", role: "Audit senior", initials: "SB" };
+
+const client = {
+  id: "CL-0142",
+  name: "Vandersteen Industrial Systems B.V.",
+  short: "Vandersteen",
+  seat: "Eindhoven, Netherlands",
+  sector: "Industrial machinery — conveyor and material-handling systems for food processing",
+  framework: "EU-IFRS",
+  employees: 184,
+  fy: "FY2026",
+  yearEnd: "31 December 2026",
+  since: "Client since 2019",
+  revenuePY: "48.6",
+  streams: [
+    { name: "Machines and spare parts", amount: "41.2", basis: "Point in time — on customer acceptance" },
+    { name: "Service and maintenance contracts", amount: "7.4", basis: "Over time — straight-line over the contract term" },
+  ],
+  systems: [
+    { name: "Microsoft Dynamics 365 Business Central", role: "Quotation, order, shipment, invoice, general ledger" },
+    { name: "ServiceTrack", role: "Service contracts, field service, deferral schedule" },
+    { name: "Van Dijk Logistics WMS", role: "Warehousing and despatch (outsourced since March 2026)" },
+  ],
+  contacts: [
+    { name: "Ruud Timmermans", role: "Financial Controller", tag: "Walkthrough participant" },
+    { name: "Bas Kuipers", role: "Commercial Director", tag: "Questionnaire completed" },
+    { name: "Ingrid Molenaar", role: "Credit Control", tag: "Follow-up call held" },
+    { name: "Fatima El Amrani", role: "Sales Administration lead", tag: "Not yet contacted" },
+    { name: "Pieter Halsema", role: "IT Manager", tag: "Evidence requested" },
+    { name: "Marc de Wit", role: "Chief Financial Officer", tag: "" },
+  ],
+};
+
+const engagement = {
+  id: "ENG-2026-0142",
+  title: "FY2026 statutory audit — Vandersteen Industrial Systems B.V.",
+  period: "1 January 2026 – 31 December 2026",
+  interimAt: "Interim as at 30 September 2026",
+  materiality: "EUR 620,000 (performance materiality EUR 415,000)",
+  team: [
+    { name: "Marieke de Groot RA", role: "Engagement partner", initials: "MG" },
+    { name: "Sander Willemsen RA", role: "Manager", initials: "SW" },
+    { name: "Sanne Bakker", role: "Senior — in charge", initials: "SB" },
+    { name: "Tim Vos", role: "Assistant", initials: "TV" },
+  ],
+  phases: [
+    { id: "planning", name: "Planning", state: "Complete", detail: "Signed 4 July 2026" },
+    { id: "interim", name: "Interim", state: "In progress", detail: "Revenue active · 5 processes not started" },
+    { id: "final", name: "Final", state: "Not started", detail: "Planned from 12 January 2027" },
+    { id: "completion", name: "Completion", state: "Not started", detail: "" },
+  ],
+  processes: [
+    { id: "revenue", name: "Revenue / order-to-cash", state: "active" },
+    { id: "purchases", name: "Purchases and payables", state: "later" },
+    { id: "payroll", name: "Payroll", state: "later" },
+    { id: "inventory", name: "Inventory", state: "later" },
+    { id: "cash", name: "Cash and treasury", state: "later" },
+    { id: "itgc", name: "IT general controls", state: "later" },
+  ],
+};
+
+/* --- Sources --------------------------------------------------------------- */
+
+const sources = {
+  "SRC-1": {
+    id: "SRC-1", kind: "transcript", short: "T",
+    name: "Revenue walkthrough — transcript",
+    detail: "18 September 2026, 09:30 · 52 minutes · imported from Microsoft Teams (VTT)",
+    participants: "Ruud Timmermans (Financial Controller) · Sanne Bakker (Audit senior)",
+    ingest: "Indexed · 38 segments · 6,240 words",
+  },
+  "SRC-2": {
+    id: "SRC-2", kind: "client_answer", short: "Q",
+    name: "Client questionnaire — commercial",
+    detail: "Completed 15 September 2026 by Bas Kuipers (Commercial Director)",
+    participants: "12 of 14 questions answered",
+    ingest: "Indexed · 12 answers",
+  },
+  "SRC-3": {
+    id: "SRC-3", kind: "prior_year", short: "PY",
+    name: "FY2025 revenue process narrative",
+    detail: "Approved working paper, 12 February 2026 · 9 pages",
+    participants: "Prepared by J. Aarts · reviewed by S. Willemsen RA",
+    ingest: "Indexed · 9 pages · 31 chunks",
+  },
+  "SRC-4": {
+    id: "SRC-4", kind: "document", short: "AL",
+    name: "Business Central access listing — pricing and customer master data",
+    detail: "Extracted 12 September 2026 by P. Halsema (IT Manager) · 3 pages",
+    participants: "Requested as part of walkthrough preparation",
+    ingest: "Indexed · 3 pages",
+  },
+  "SRC-5": {
+    id: "SRC-5", kind: "document", short: "SO",
+    name: "Van Dijk Logistics — ISAE 3402 Type II report FY2025",
+    detail: "Service organisation report · 34 pages · period to 31 December 2025",
+    participants: "Provided by the client 2 September 2026",
+    ingest: "Indexed · 34 pages · 96 chunks",
+  },
+  "SRC-6": {
+    id: "SRC-6", kind: "auditor_input", short: "N",
+    name: "Auditor notes — cut-off and credit control",
+    detail: "Call with Ingrid Molenaar (Credit Control), 19 September 2026",
+    participants: "Recorded by S. Bakker",
+    ingest: "Indexed · 1 note",
+  },
+};
+
+/* --- Transcript ------------------------------------------------------------ */
+
+const A = "Sanne Bakker", AR = "Audit senior";
+const R = "Ruud Timmermans", RR = "Financial Controller";
+
+const transcript = [
+  { id: "seg-01", t: "00:40", who: A, role: AR, text: "Thanks for the time. I would like to follow a sale from the point the customer places an order all the way to the revenue line in the ledger, and understand where the controls sit. Can we start with what you actually sell?" },
+  { id: "seg-02", t: "01:35", who: R, role: RR, text: "Two streams. Machines and spare parts, that is about forty-one million, and service contracts, around seven and a half. The service side has grown a lot since we bought the maintenance business in 2024." },
+  { id: "seg-03", t: "03:20", who: R, role: RR, text: "Machine orders start as a quotation from the sales engineers, built in the configurator in Business Central. The customer signs it and sales administration converts the quotation into a sales order. Spare parts come in by email and through the webshop. Service is different, that runs in ServiceTrack." },
+  { id: "seg-04", t: "04:55", who: R, role: RR, text: "For spare parts, if an email never gets keyed we would hear about it from the customer. There is no reconciliation between the mailbox and the orders in the system." },
+  { id: "seg-05", t: "06:15", who: R, role: RR, text: "Sales administration creates the customer record. Fatima's team. They need a Chamber of Commerce extract and a VAT number before they can open the account." },
+  { id: "seg-06", t: "06:48", who: A, role: AR, text: "Does anybody outside sales administration approve a new customer before it is opened?" },
+  { id: "seg-07", t: "07:02", who: R, role: RR, text: "Not formally, no. It is meant to be a four-eyes thing within the team, but I could not show you evidence that it happened on any particular account." },
+  { id: "seg-08", t: "08:30", who: R, role: RR, text: "Machine prices come off the signed quotation. Spare parts take the price from the customer price list in Business Central — each trade customer has an agreed list and there is a standard list for everyone else." },
+  { id: "seg-09", t: "09:40", who: R, role: RR, text: "Sales can change the line price on an order. There is a mandatory reason code, and Business Central logs who changed it. There is a price override report you can run out of the system." },
+  { id: "seg-10", t: "10:20", who: A, role: AR, text: "Who reviews that report?" },
+  { id: "seg-11", t: "10:31", who: R, role: RR, text: "I do not think anyone runs it monthly. It is not on anyone's list as far as I know." },
+  { id: "seg-12", t: "11:05", who: R, role: RR, text: "Anything over twelve per cent discount blocks the order until Bas releases it. That is a hard block in the system and it has been there since we went live." },
+  { id: "seg-13", t: "12:04", who: R, role: RR, text: "Business Central raises the invoice automatically overnight from the posted shipment. Quantity comes from the shipment, price from the order. Nobody re-keys anything." },
+  { id: "seg-14", t: "13:30", who: R, role: RR, text: "Finance can raise a manual invoice — for a settlement, or a milestone on a large project. That needs my approval before it goes out." },
+  { id: "seg-15", t: "15:10", who: R, role: RR, text: "Ingrid in credit control sets the limits. She uses a Graydon report and the payment history on the account." },
+  { id: "seg-16", t: "15:48", who: A, role: AR, text: "Can anybody change a credit limit outside credit control?" },
+  { id: "seg-17", t: "16:02", who: R, role: RR, text: "No. It is Ingrid, and above two hundred and fifty thousand it needs the CFO to agree." },
+  { id: "seg-18", t: "17:20", who: R, role: RR, text: "If an order breaches the limit the system blocks it and only credit control can release it. There is a log of the releases in Business Central." },
+  { id: "seg-19", t: "19:00", who: R, role: RR, text: "Since March, Van Dijk Logistics runs the warehouse for us. They pick, pack and ship, and they send a despatch file every evening that posts the shipments in Business Central." },
+  { id: "seg-20", t: "20:15", who: A, role: AR, text: "What happens if that file arrives but is incomplete?" },
+  { id: "seg-21", t: "20:28", who: R, role: RR, text: "If the file fails to load we get an error and IT picks it up. If it loads but is short a few lines, I am honestly not sure we would pick that up." },
+  { id: "seg-22", t: "21:40", who: R, role: RR, text: "There is a standard delivered-not-invoiced report in Business Central. We do not run it." },
+  { id: "seg-23", t: "24:10", who: R, role: RR, text: "Service contracts are billed quarterly in advance and recognised straight-line over the contract period. ServiceTrack holds the contract and posts the deferral schedule into Business Central every month." },
+  { id: "seg-24", t: "25:30", who: R, role: RR, text: "The ServiceTrack to Business Central interface runs nightly and Pieter's team gets an alert if it fails. I reconcile the service revenue account at month end." },
+  { id: "seg-25", t: "28:00", who: R, role: RR, text: "Machines are recognised when they are installed and the customer signs the acceptance protocol. For a straightforward conveyor that is the same week as delivery; for a full line it can be six weeks later." },
+  { id: "seg-26", t: "30:20", who: R, role: RR, text: "Sales administration raises the credit note, the sales manager approves it, and it has to reference the original invoice." },
+  { id: "seg-27", t: "32:00", who: R, role: RR, text: "Three OEM customers have volume rebates. I calculate the accrual at month end from the contract terms and the year-to-date volume." },
+  { id: "seg-28", t: "32:40", who: A, role: AR, text: "Does anyone review that calculation?" },
+  { id: "seg-29", t: "32:49", who: R, role: RR, text: "Not really. It is my spreadsheet." },
+  { id: "seg-30", t: "35:15", who: R, role: RR, text: "Bank statements load daily and match automatically on the payment reference. Anything unmatched goes to a suspense list and Ingrid clears it. The ageing is reviewed monthly with Marc." },
+  { id: "seg-31", t: "37:00", who: R, role: RR, text: "A write-off above ten thousand euro needs the CFO to approve it." },
+  { id: "seg-32", t: "39:30", who: R, role: RR, text: "At the end of the month I look at the shipments in the last few days either side of the cut-off and check the invoice dates line up." },
+  { id: "seg-33", t: "40:10", who: A, role: AR, text: "Is that documented anywhere?" },
+  { id: "seg-34", t: "40:18", who: R, role: RR, text: "No. It is something I do." },
+  { id: "seg-35", t: "43:00", who: R, role: RR, text: "Manual journals to revenue accounts — that is me or Marc. We approve each other's." },
+  { id: "seg-36", t: "46:00", who: R, role: RR, text: "The sales engineers get commission on invoiced revenue. Bas has a turnover component in his bonus. And we have an EBITDA covenant with the bank that is tested half-yearly." },
+  { id: "seg-37", t: "48:20", who: R, role: RR, text: "I review revenue and gross margin by stream against budget every month and go through it with Marc. I chase anything over about two hundred and fifty thousand." },
+  { id: "seg-38", t: "49:40", who: R, role: RR, text: "Fatima's team can change customer master data and the price lists, and Pieter could as well. There is no periodic review of who holds that access." },
+];
+
+/* --- Client questionnaire -------------------------------------------------- */
+
+const questionnaire = [
+  { n: 1, coverage: "R1.4", q: "Which kinds of revenue does the company have, and roughly how large is each?",
+    a: "Machines and spare parts, and service contracts. Machines are much the larger part. Service has been growing since 2024.", state: "answered" },
+  { n: 2, coverage: "R2.2", q: "Who signs off a quotation before it goes to the customer?",
+    a: "I do, for anything above a hundred thousand. Below that the sales engineer sends it directly.", state: "answered" },
+  { n: 3, coverage: "R2.2", q: "Who can give a discount, and up to what level?",
+    a: "Sales engineers up to twelve per cent. Above that it comes to me and the system blocks the order until I release it.", state: "answered" },
+  { n: 4, coverage: "R1.3", q: "Are there customer arrangements outside your standard terms — consignment, bill-and-hold, a right of return, or side letters?",
+    a: "Two OEM customers have volume rebate agreements. One distributor in Germany holds stock on consignment at their own site.", state: "answered", flag: "new_topic" },
+  { n: 5, coverage: "R1.1", q: "Who approves a new customer before the account is opened?",
+    a: "Sales administration sets them up. I see the bigger ones.", state: "answered" },
+  { n: 6, coverage: "R3.1", q: "Can a customer's credit limit be changed, and by whom?",
+    a: "Credit control sets them, but I can raise a limit up to fifty thousand myself if an order is stuck and I know the customer.", state: "answered", flag: "contradiction" },
+  { n: 7, coverage: "R2.3", q: "What happens when an order is blocked because of credit?",
+    a: "It sits in the blocked list until credit control releases it. Sometimes I chase them.", state: "answered" },
+  { n: 8, coverage: "R10.4", q: "Who maintains the customer price lists?",
+    a: "Sales administration maintain them. I approve the annual price increase.", state: "answered" },
+  { n: 9, coverage: "R11.3", q: "Are sales staff targets or bonuses linked to revenue?",
+    a: "Commission on invoiced revenue for the engineers, and I have a turnover component in my own bonus.", state: "answered" },
+  { n: 10, coverage: "R7.1", q: "Who can approve a credit note?",
+    a: "The sales manager. For big ones I would expect finance to look at it.", state: "answered", flag: "vague" },
+  { n: 11, coverage: "R7.2", q: "What is your returns policy?",
+    a: "We do not take machines back. Spare parts occasionally, within thirty days, but it almost never happens.", state: "answered" },
+  { n: 12, coverage: "R6.4", q: "Do you sell through agents, or on a bill-and-hold basis?",
+    a: "No agents. No bill-and-hold.", state: "answered" },
+  { n: 13, coverage: "R5.3", q: "Who reviews the price override report, and how often?",
+    a: null, state: "sent", sentOn: "20 September 2026", origin: "deterministic_trigger" },
+  { n: 14, coverage: "R9.3", q: "How is the consignment stock at the German distributor treated at period end — when is revenue recognised on it?",
+    a: null, state: "sent", sentOn: "20 September 2026", origin: "model_proposed" },
+];
+
+/* --- Document excerpts ------------------------------------------------------ */
+
+const docExcerpts = [
+  { id: "doc-py-3", src: "SRC-3", loc: "p. 3", text: "Invoices are raised automatically from the posted shipment. No manual intervention occurs in the standard order-to-invoice flow." },
+  { id: "doc-py-5", src: "SRC-3", loc: "p. 5", text: "Credit notes are raised by sales administration and approved by the sales manager. The credit note references the original invoice number." },
+  { id: "doc-py-7", src: "SRC-3", loc: "p. 7", text: "Warehouse operations, including picking and despatch, are performed in-house at the Eindhoven site." },
+  { id: "doc-al-1", src: "SRC-4", loc: "p. 1", text: "Permission set SALES-PRICE-MOD (Price List – Modify): 14 users. Permission set CUST-CARD-MOD (Customer Card – Modify): 9 users, including two IT service accounts." },
+  { id: "doc-so-11", src: "SRC-5", loc: "p. 11", text: "Complementary user entity control: the user entity is responsible for reconciling the daily despatch confirmation file received from Van Dijk Logistics to its own order and shipment records." },
+  { id: "doc-so-4", src: "SRC-5", loc: "p. 4", text: "The scope of this report covers warehousing, picking, packing and despatch services performed at the Tilburg distribution centre for the period 1 January 2025 to 31 December 2025." },
+  { id: "note-1", src: "SRC-6", loc: "note 1", text: "Ingrid Molenaar confirmed that she sets and changes all credit limits and keeps a log of block releases. She stated she was not aware of anyone outside credit control being able to change a limit." },
+  { id: "note-2", src: "SRC-6", loc: "note 2", text: "Ingrid Molenaar confirmed there is no written cut-off procedure and that the month-end shipment review is performed by the financial controller alone." },
+];
+
+/* --- Evidence registry -----------------------------------------------------
+   Every generated object elsewhere refers to one of these ids. This is the
+   prototype's stand-in for `EvidenceRef` + the provenance index.
+   -------------------------------------------------------------------------- */
+
+function fromTranscript(seg) {
+  return {
+    id: `T:${seg.id}`, kind: "transcript", sourceId: "SRC-1",
+    short: `T ${seg.t}`, locator: `18 Sep · ${seg.t}`,
+    sourceName: "Revenue walkthrough transcript",
+    speaker: `${seg.who} (${seg.role})`,
+    quote: seg.text, segId: seg.id,
+  };
+}
+
+function fromQuestion(q) {
+  return {
+    id: `Q:${q.n}`, kind: "client_answer", sourceId: "SRC-2",
+    short: `Q ${q.n}`, locator: `Question ${q.n}`,
+    sourceName: "Client questionnaire — B. Kuipers",
+    speaker: "Bas Kuipers (Commercial Director)",
+    quote: q.a || "(not yet answered)", question: q.q,
+  };
+}
+
+function fromDoc(d) {
+  const s = sources[d.src];
+  return {
+    id: `D:${d.id}`, kind: s.kind, sourceId: d.src,
+    short: `${s.short} ${d.loc.replace("p. ", "p.")}`, locator: d.loc,
+    sourceName: s.name, speaker: "", quote: d.text,
+  };
+}
+
+const evidence = {};
+transcript.forEach((s) => { evidence[`T:${s.id}`] = fromTranscript(s); });
+questionnaire.forEach((q) => { if (q.a) evidence[`Q:${q.n}`] = fromQuestion(q); });
+docExcerpts.forEach((d) => { evidence[`D:${d.id}`] = fromDoc(d); });
+
+/** Mark the two refs that sit either side of the credit-limit contradiction. */
+evidence["T:seg-17"].conflict = true;
+evidence["Q:6"].conflict = true;
+
+/* --- Evidence created during the session ------------------------------------
+   A questionnaire answer submitted now is a source like any other. It has to
+   enter the evidence registry, not sit in a private fact override, or a
+   statement that later rests on it has no provenance to show.
+   -------------------------------------------------------------------------- */
+
+const sessionEvidence = {};
+
+/** Register a submitted questionnaire answer as evidence. Returns its id. */
+function recordAnswerEvidence(q, text, submittedAt) {
+  const id = `Q:${q.n}`;
+  sessionEvidence[id] = {
+    id, kind: "client_answer", sourceId: "SRC-2",
+    short: `Q ${q.n}`, locator: `Question ${q.n} · answered ${submittedAt}`,
+    sourceName: "Client questionnaire — B. Kuipers",
+    speaker: "Bas Kuipers (Commercial Director)",
+    question: q.q, quote: text,
+    submittedAt, thisSession: true,
+  };
+  return id;
+}
+
+function clearSessionEvidence() {
+  Object.keys(sessionEvidence).forEach((k) => delete sessionEvidence[k]);
+}
+
+/** Session evidence wins: an answer given now supersedes the unanswered stub. */
+const ref = (id) => sessionEvidence[id] || evidence[id] || null;
+const refs = (ids) => ids.map(ref).filter(Boolean);
+
+
+__exp(exports, { firm: () => firm, user: () => user, client: () => client, engagement: () => engagement, sources: () => sources, transcript: () => transcript, questionnaire: () => questionnaire, docExcerpts: () => docExcerpts, evidence: () => evidence, sessionEvidence: () => sessionEvidence, ref: () => ref, refs: () => refs, recordAnswerEvidence: () => recordAnswerEvidence, clearSessionEvidence: () => clearSessionEvidence });
 
 };
 __defs['js/data-process.js'] = function (exports, __req, __exp) {
@@ -1887,6 +2209,27 @@ const controlTest = {
   priorYearNote: "The control was tested in the FY2025 audit and found effective. ISA 330 permits using evidence from a previous audit for an unchanged control, provided it is tested at least once in every third audit — a decision for the auditor, not applied automatically.",
 };
 
+/* --- Review points --------------------------------------------------------
+   Not a review-notes module — one worked example, so the state architecture can
+   be shown to support the real prepare → review → reopen → resolve → resubmit
+   loop rather than only its status labels.
+   -------------------------------------------------------------------------- */
+
+const reviewPointLibrary = [
+  { id: "RP-01",
+    reviewer: "M. de Waal",
+    role: "Manager",
+    raisedOn: "2 October 2026",
+    subject: "Credit limit override, and the control conclusion on C-02",
+    target: { kind: "control", id: "C-02", href: "#/controls" },
+    comment: "You have concluded C-02 as a control the audit can rely on, on the basis that credit " +
+      "control sets and releases every limit. The Commercial Director's questionnaire answer says he " +
+      "can raise a limit by up to EUR 50,000 himself. Explain why that does not change the conclusion, " +
+      "or change it. If the second route exists in the system, the control as documented is not the " +
+      "control that operates.",
+    expects: "A written response on the file, and either a reason the conclusion stands or a revised one." },
+];
+
 /* --- Context carried into interim from earlier engagement work ------------ */
 
 const carriedContext = [
@@ -1905,7 +2248,7 @@ const carriedContext = [
 ];
 
 
-__exp(exports, { journey: () => journey, methodologyConfig: () => methodologyConfig, variants: () => variants, processSteps: () => processSteps, stepsForVariant: () => stepsForVariant, processFindings: () => processFindings, traceFindings: () => traceFindings, lineWalkRequirements: () => lineWalkRequirements, transactions: () => transactions, txnById: () => txnById, controlTest: () => controlTest, carriedContext: () => carriedContext });
+__exp(exports, { journey: () => journey, methodologyConfig: () => methodologyConfig, variants: () => variants, processSteps: () => processSteps, stepsForVariant: () => stepsForVariant, processFindings: () => processFindings, traceFindings: () => traceFindings, lineWalkRequirements: () => lineWalkRequirements, transactions: () => transactions, txnById: () => txnById, controlTest: () => controlTest, reviewPointLibrary: () => reviewPointLibrary, carriedContext: () => carriedContext });
 
 };
 __defs['js/state.js'] = function (exports, __req, __exp) {
@@ -1921,20 +2264,29 @@ __defs['js/state.js'] = function (exports, __req, __exp) {
    ========================================================================== */
 
 const { subProcesses, narrative, risks, controls, gaps, openItems } = __req('js/data-model.js');
-const { journey, processSteps, processFindings, traceFindings, transactions, txnById, variants, stepsForVariant, lineWalkRequirements, controlTest, methodologyConfig } = __req('js/data-process.js');
+const { questionnaire, recordAnswerEvidence, clearSessionEvidence, sessionEvidence } = __req('js/data-sources.js');
+const { journey, processSteps, processFindings, traceFindings, transactions, txnById, variants, stepsForVariant, lineWalkRequirements, controlTest: controlTestPack, reviewPointLibrary, methodologyConfig } = __req('js/data-process.js');
 /* The decision state that undo restores. Everything else is view state. */
 const DECISIONS = ["blocks", "sections", "coverage", "factOverrides", "controlDecisions",
                    "controlCarry", "findingDecisions", "itemStates", "itemCarry",
                    "traceDecisions", "traceTxn", "traceStarted", "traceConcluded", "lwRequirements",
-                   "testScope", "testExtended", "testConclusion", "answers", "signOff",
+                   "testScope", "controlTests", "answers", "signOff", "reviewPoints",
                    "prepared"];
 
 const initial = () => ({
   route: "#/",
+  /* Step 3 — the process understanding is drafted. */
   generated: false,
   generating: false,
   genStage: -1,
-  genSeen: false,          // the pipeline result has been read
+  genSeen: false,          // the step 3 result has been read
+
+  /* Step 4 — controls and findings are analysed. A separate run against the
+     reviewed understanding: step 3 documents the process, step 4 analyses it. */
+  analysed: false,
+  analysing: false,
+  anaStage: -1,
+  anaSeen: false,
 
   /* --- decisions (undoable) --- */
   blocks: {},              // claim id -> { text, edited, rejected, resolution }
@@ -1952,16 +2304,18 @@ const initial = () => ({
   traceConcluded: {},      // txnId -> true
   lwRequirements: {},      // variant id -> { state, reason }
   testScope: {},           // control id -> { state: required|not_required|deferred, reason }
-  testExtended: false,     // the sample has been extended
-  testConclusion: null,    // "rely" | "no_rely"  (extending is not a conclusion)
-  answers: {},             // questionnaire: question n -> { kind, text }
+  /* Per control, never global: concluding one test must not close another. */
+  controlTests: {},        // control id -> { started, extended, conclusion, note }
+  answers: {},             // questionnaire: question n -> { kind, text, evidenceId }
   signOff: { preparer: "unsigned", review: "not_submitted" },
+  reviewPoints: {},        // review point id -> { state, response, respondedAt }
   prepared: false,         // step 1 confirmed
 
   /* --- view state --- */
   reviewMode: "triage",    // triage | focus | read
   focusKind: null,         // claims | controls | findings | trace
   editingFinding: null,    // finding id open in the modify form
+  openPoint: null,         // review point whose detail is open
   focusIx: 0,
   openClaim: null,         // claim whose evidence is expanded inline
   mapStep: null,           // process-map step whose detail is open
@@ -2007,6 +2361,11 @@ function undo() {
   const last = undoStack.pop();
   if (!last) return;
   DECISIONS.forEach((k) => { S[k] = last.before[k]; });
+  // Evidence created by an answer that has just been undone must go with it.
+  Object.keys(sessionEvidence).forEach((id) => {
+    const n = Number(id.split(":")[1]);
+    if (S.answers[n]?.kind !== "answer") delete sessionEvidence[id];
+  });
   S.toast = { label: `Undone — ${last.label}`, undoable: false };
   scheduleToastClear();
   commit();
@@ -2184,6 +2543,7 @@ const controlDecision = (c) => S.controlDecisions[c.id] ?? null;
  *  which is the next phase and outside this product. They are carried
  *  forward, not decided here (V3-DESIGN-DIRECTION.md §1). */
 function riskSummary() {
+  if (!S.analysed) return { total: 0, significant: 0, fraud: 0, newRisks: 0, blocked: [] };
   return {
     total: risks.length,
     significant: risks.filter((r) => r.significant).length,
@@ -2199,6 +2559,11 @@ const CONCLUDED_CONTROL = ["key", "not_key", "carried_forward"];
 const controlOpen = (c) => !CONCLUDED_CONTROL.includes(controlDecision(c));
 
 function controlSummary() {
+  if (!S.analysed) {
+    return { total: 0, decided: 0, pending: 0, queue: [], undecided: [], carriedForward: 0,
+             suggestedKey: 0, unassessable: 0, agreedKey: 0, keyControls: [], gaps: 0,
+             identified: controls.length };
+  }
   const open = controls.filter(controlOpen);
   const undecided = controls.filter((c) => controlDecision(c) === "undecided");
   return {
@@ -2213,6 +2578,7 @@ function controlSummary() {
     agreedKey: controls.filter((c) => controlDecision(c) === "key").length,
     keyControls: controls.filter((c) => controlDecision(c) === "key"),
     gaps: gaps.length,
+    identified: controls.length,
   };
 }
 
@@ -2226,6 +2592,7 @@ const stepOfSubProcess = (sub) => processSteps.find((p) => p.sub === sub)?.id ||
 /** Every finding, including any the line walkthrough raised. The system
  *  proposal and the auditor's conclusion are kept as separate values. */
 function allFindings() {
+  if (!S.analysed) return [];      // step 4 has not been run
   const fromGaps = gaps.map((g) => ({
     id: g.id, step: stepOfSubProcess(g.sub), kind: "gap", severity: g.severity,
     title: g.desc, detail: g.impact, remediation: g.remediation, refs: g.refs,
@@ -2334,14 +2701,24 @@ const traceStepFor = (txnId, mapStepId) =>
 
 const testScopeFor = (cid) => S.testScope[cid] ?? { state: "deferred", reason: null };
 
+/** Test state for one control. Never global — concluding C-04 says nothing
+ *  about any other control that was scoped for testing. */
+const controlTest = (cid) =>
+  S.controlTests[cid] ?? { started: false, extended: false, conclusion: null };
+
+/** Only this control carries a worked example in the prototype. */
+const hasWorkpaper = (cid) => cid === controlTestPack.controlId;
+
 function testingScope() {
   const keys = controlSummary().keyControls;
-  const rows = keys.map((c) => ({ control: c, scope: testScopeFor(c.id) }));
+  const rows = keys.map((c) => ({ control: c, scope: testScopeFor(c.id), test: controlTest(c.id) }));
   const required = rows.filter((r) => r.scope.state === "required");
   const deferred = rows.filter((r) => r.scope.state === "deferred");
+  const concluded = required.filter((r) => !!r.test.conclusion);
   return {
     rows, keys,
-    required, deferred,
+    required, deferred, concluded,
+    outstanding: required.filter((r) => !r.test.conclusion),
     notRequired: rows.filter((r) => r.scope.state === "not_required"),
     decided: rows.length - deferred.length,
     // Nothing to test is a legitimate outcome, provided it was decided.
@@ -2350,37 +2727,60 @@ function testingScope() {
   };
 }
 
-function testSummary() {
-  const base = controlTest.results;
-  const ext = S.testExtended ? controlTest.extendedResults : [];
+/** The worked test, for the one control that has a workpaper. */
+function testSummary(cid = controlTestPack.controlId) {
+  const t = controlTest(cid);
+  if (!hasWorkpaper(cid)) {
+    return { control: cid, workpaper: false, results: [], selected: 0, corroborated: 0,
+             exceptions: 0, extended: false, concluded: !!t.conclusion, conclusion: t.conclusion };
+  }
+  const base = controlTestPack.results;
+  const ext = t.extended ? controlTestPack.extendedResults : [];
   const all = [...base, ...ext];
   return {
-    control: controlTest.controlId,
+    control: cid, workpaper: true,
     results: all,
     selected: all.length,
     corroborated: all.filter((x) => x.ok).length,
     exceptions: all.filter((x) => !x.ok).length,
-    extended: S.testExtended,
+    extended: t.extended,
     // Extending is not concluding.
-    concluded: !!S.testConclusion,
-    conclusion: S.testConclusion,
+    concluded: !!t.conclusion,
+    conclusion: t.conclusion,
   };
 }
 
-/** Step 6 is satisfied when the scope is decided and every required test concluded. */
+/** Step 6 is satisfied when every key control has been scoped, and every
+ *  control scoped as requiring a test has its *own* conclusion. */
 function testingSatisfied() {
   const sc = testingScope();
   if (!sc.keys.length) return true;             // nothing concluded key yet
   if (!sc.scopeDecided) return false;
-  if (!sc.applicable) return true;              // decided that no test is required
-  return !!S.testConclusion;
+  return sc.outstanding.length === 0;
 }
 
-/* --- Sign-off ------------------------------------------------------------------ */
+/* --- Sign-off and review points ------------------------------------------------
+   Reopening is only real if it carries something to do. A review point has to be
+   answered before the file can go back to the reviewer.
+   -------------------------------------------------------------------------- */
 
 const signOff = () => S.signOff;
 const reviewRequired = () => methodologyConfig.requiresManagerReview;
 const partnerRequired = () => methodologyConfig.requiresPartnerReview;
+
+/** Review points exist once the reviewer has raised them, not before. */
+function reviewPoints() {
+  return reviewPointLibrary
+    .filter((p) => S.reviewPoints[p.id])
+    .map((p) => ({ ...p, ...S.reviewPoints[p.id] }));
+}
+const openReviewPoints = () => reviewPoints().filter((p) => p.state !== "addressed");
+const reviewPointById = (id) =>
+  reviewPoints().find((p) => p.id === id) || null;
+
+/** The file goes back to the reviewer only when every point has an answer. */
+const canResubmit = () =>
+  S.signOff.preparer === "signed" && openReviewPoints().length === 0;
 
 /** Everything except the signatures themselves. */
 function workComplete() {
@@ -2421,6 +2821,7 @@ function openItemSummary() {
 /* --- RCM ---------------------------------------------------------------------- */
 
 function rcmRows() {
+  if (!S.analysed) return [];
   const rows = [];
   risks.forEach((r) => {
     const linked = controls.filter((c) => c.risks.includes(r.id));
@@ -2442,6 +2843,18 @@ const QUESTION_FACTS = {
         value: "Recognised on sale to the end customer, not on despatch to the distributor." },
 };
 
+/** Facts established during this session, with the evidence behind each — the
+ *  answer to "where did that come from?" for anything settled after the draft. */
+function sessionFacts() {
+  return Object.entries(S.factOverrides)
+    .filter(([, v]) => v.refs && v.refs.length)
+    .map(([key, v]) => {
+      const [itemId, factKey] = key.split("::");
+      const item = allItems().find((i) => i.id === itemId);
+      return { itemId, factKey, item, ...v };
+    });
+}
+
 const questionState = (q) => S.answers[q.n]?.kind
   ?? (q.a ? "answer" : q.state === "sent" ? "sent" : "open");
 const questionAnswer = (q) => S.answers[q.n]?.text ?? q.a ?? null;
@@ -2461,6 +2874,14 @@ function questionnaireItems() {
         : "The client would rather discuss this than answer in writing. Schedule the follow-up.",
       blocks: [], refs: [], owner: "Unassigned", fromQuestionnaire: true,
     }));
+}
+
+/** Evidence that settled an open item, when a questionnaire answer did it. */
+function itemEvidence(i) {
+  const entry = Object.entries(QUESTION_FACTS).find(([, m]) => m.openItem === i.id);
+  if (!entry) return [];
+  const a = S.answers[Number(entry[0])];
+  return a && a.kind === "answer" && a.evidenceId ? [a.evidenceId] : [];
 }
 
 /* --- Open items: carry-forward carries a destination and a reason ------------ */
@@ -2496,13 +2917,15 @@ function journeyStates() {
           : { s: "done", c: "approved" };
       case "controls": {
         const owed = cs.pending + fs.pending.length;
-        return !S.generated ? { s: "later", c: "—", why: "Controls are identified from the process understanding." }
+        return !S.generated ? { s: "later", c: "—", why: "Controls are analysed from the process understanding, so the process has to be documented first." }
+          : n.pending ? { s: "later", c: "—", why: "The analysis runs against the reviewed understanding. Finish reviewing the draft first." }
+          : !S.analysed ? { s: "open", c: "not analysed" }
           : fs.fromTraceOpen.length ? { s: "open", c: "new finding", tone: "alert" }
           : owed ? { s: "open", c: `${owed} to conclude` }
           : { s: "done", c: `${cs.agreedKey} key` };
       }
       case "trace":
-        return !S.generated ? { s: "later", c: "—", why: "A transaction is traced against the documented process, so the process has to be documented first." }
+        return !S.analysed ? { s: "later", c: "—", why: "A transaction is traced against the documented process and the controls identified on it, so step 4 has to run first." }
           : tr.undecided ? { s: "open", c: "scope undecided" }
           : tr.satisfied ? { s: "done", c: tr.exceptions ? `${tr.exceptions} exception` : "no exceptions", tone: tr.exceptions ? "warn" : "" }
           : { s: "open", c: `${tr.completed} of ${tr.required}` };
@@ -2510,10 +2933,11 @@ function journeyStates() {
         if (!cs.keyControls.length) return { s: "later", c: "—", why: "Controls concluded as key appear here." };
         if (!sc.scopeDecided) return { s: "open", c: "decide scope" };
         if (!sc.applicable) return { s: "done", c: "not required" };
-        return S.testConclusion ? { s: "done", c: "concluded" }
-          : { s: "open", c: S.testExtended ? "sample extended" : "1 to test" };
+        return sc.outstanding.length === 0 ? { s: "done", c: `${sc.concluded.length} concluded` }
+          : { s: "open", c: `${sc.outstanding.length} to conclude` };
       case "complete":
         return ps.id === "complete" ? { s: "done", c: "complete", tone: "ok" }
+          : ps.id === "reopened" ? { s: "open", c: "review points", tone: "alert" }
           : ps.id === "wip" ? { s: "later", c: "blocked", why: "Every applicable gate has to be met first." }
           : { s: "open", c: ps.label.toLowerCase(), tone: "ok" };
     }
@@ -2574,19 +2998,31 @@ function gateStates() {
       ok: S.generated && n.needsSource.length === 0,
       detail: n.needsSource.length ? `${n.needsSource.length} statements have no support` : "Every statement is traced to a source" },
 
-    { id: "contradiction", label: "Contradictions resolved or carried forward", step: "interview", applicable: true,
+    /* Carrying a contradiction forward preserves it — it does not resolve it,
+       and it does not clear this gate. The label has to say that. */
+    { id: "contradiction", label: "No unresolved contradictions", step: "interview", applicable: true,
       ok: n.contradiction.length === 0 && cov.facts.contradictory === 0,
-      detail: cov.facts.contradictory || n.contradiction.length ? "One contradiction is unresolved" : "No unresolved contradictions" },
+      detail: cov.facts.contradictory || n.contradiction.length
+        ? (openItems.some((i) => itemState(i) === "carried_forward" && i.kind === "contradiction")
+            ? "Carried forward, which preserves the conflict — it does not resolve it"
+            : "One contradiction is unresolved")
+        : "Every contradiction is resolved on the evidence" },
+
+    { id: "analysed", label: "Controls and findings analysed", step: "controls", applicable: true,
+      ok: S.analysed,
+      detail: S.analysed ? `${cs.total} controls and ${fs.total} findings identified from the reviewed understanding`
+        : n.pending ? "The analysis runs against the reviewed understanding, which is not finished"
+        : "Not analysed yet" },
 
     { id: "controls", label: "Controls concluded", step: "controls", applicable: true,
-      ok: S.generated && cs.pending === 0,
-      detail: !S.generated ? "Not identified yet"
+      ok: S.analysed && cs.pending === 0,
+      detail: !S.analysed ? "Not analysed yet"
         : cs.undecided.length ? `${cs.undecided.length} left undecided — carry forward or conclude`
         : `${cs.decided} of ${cs.total} concluded · ${cs.agreedKey} key` },
 
     { id: "findings", label: "Findings concluded", step: "controls", applicable: true,
-      ok: S.generated && fs.pending.length === 0,
-      detail: !S.generated ? "Not identified yet"
+      ok: S.analysed && fs.pending.length === 0,
+      detail: !S.analysed ? "Not analysed yet"
         : fs.fromTraceOpen.length ? "A finding raised by the line walkthrough needs review"
         : `${fs.decided} of ${fs.total} concluded` },
 
@@ -2600,10 +3036,10 @@ function gateStates() {
       applicable: cs.keyControls.length > 0, ok: testingSatisfied(),
       detail: !cs.keyControls.length ? "No key controls concluded yet"
         : !sc.scopeDecided ? `${sc.deferred.length} key controls have no testing decision`
-        : !sc.applicable ? "No reliance planned — no testing required, reason on file"
-        : S.testConclusion ? "Tested and concluded"
-        : S.testExtended ? "Sample extended — a conclusion is still required"
-        : `${sc.required.length} control to test` },
+        : !sc.applicable ? "No reliance planned on any key control — no testing required, reasons on file"
+        : sc.outstanding.length ? `${sc.concluded.length} of ${sc.required.length} scoped tests concluded · ${
+            sc.outstanding.map((r) => r.control.id).join(", ")} outstanding`
+        : `${sc.concluded.length} of ${sc.required.length} scoped tests concluded` },
 
     { id: "openItems", label: "Open matters resolved or carried forward", step: "interview", applicable: true,
       ok: oi.open === 0, detail: `${oi.open} open · ${oi.resolved} settled · ${carried} carried forward` },
@@ -2616,7 +3052,8 @@ function gateStates() {
       applicable: methodologyConfig.requiresManagerReview, signature: true,
       ok: so.review === "approved",
       detail: so.review === "approved" ? "Approved"
-        : so.review === "reopened" ? "Reopened with review points"
+        : so.review === "reopened" ? `Reopened · ${openReviewPoints().length} review point${
+            openReviewPoints().length === 1 ? "" : "s"} to answer before it can go back`
         : so.review === "in_review" ? "With the reviewer"
         : so.review === "submitted" ? "Submitted, awaiting review"
         : "Not yet submitted" },
@@ -2639,18 +3076,34 @@ function nextAction() {
   if (!S.prepared) return { t: "Prepare the Revenue process", d: "Scope, systems, people and the context carried in from planning.", href: "#/prepare" };
   if (cov.facts.contradictory) return { t: "Two sources disagree about who can change a credit limit", d: "It blocks a statement, a control and a coverage area at once.", href: "#/interview" };
   if (cov.mandatoryOpen.length) return { t: `${cov.mandatoryOpen.length} required areas are still open`, d: "The process interview cannot be concluded while an ISA 240 area is unaddressed.", href: "#/interview" };
-  if (!S.generated) return { t: "Draft the current understanding", d: `Coverage is ${cov.pct}% and the required areas are addressed.`, href: "#/understanding" };
+  if (!S.generated) return { t: "Draft the process understanding", d: `Coverage is ${cov.pct}% and the required areas are addressed.`, href: "#/understanding" };
   if (n.attention.length) return { t: `${n.attention.length} statements need your judgement`, d: "Unsupported or contradictory statements are blocking their sections.", href: "#/understanding" };
-  if (n.pending) return { t: `${n.pending} sections to approve`, d: "Every statement in them is traced to a source.", href: "#/understanding" };
+  if (n.pending) return { t: `${n.pending} sections to approve`, d: "Every statement in them is traced to a source. Nothing is analysed until the understanding is reviewed.", href: "#/understanding" };
+  if (!S.analysed) return { t: "Analyse controls and findings", d: "The understanding is reviewed. Step 4 identifies what controls this process and what is wrong with it.", href: "#/controls" };
   if (fs.fromTraceOpen.length) return { t: "The line walkthrough raised a finding", d: "Testing a real transaction changed the documented understanding. Review it before moving on.", href: "#/controls" };
   if (cs.pending) return { t: `${cs.pending} controls to conclude`, d: cs.undecided.length ? `${cs.undecided.length} are undecided — conclude them or carry them forward with a reason.` : `${cs.suggestedKey} are suggested as key controls.`, href: "#/controls" };
   if (fs.pending.length) return { t: `${fs.pending.length} findings to conclude`, d: "Confirm, modify or dismiss each one. Severity is your judgement.", href: "#/controls" };
   if (tr.undecided) return { t: "Decide which variants need a line walkthrough", d: "Revenue has three process variants and they do not all need one.", href: "#/trace" };
   if (!tr.satisfied) return { t: `${tr.required - tr.completed} required line walkthroughs outstanding`, d: "Trace a real transaction through each variant that needs one.", href: "#/trace" };
   if (cs.keyControls.length && !sc.scopeDecided) return { t: "Decide which controls require testing", d: `${sc.deferred.length} key controls have no testing decision.`, href: "#/testing" };
-  if (cs.keyControls.length && sc.applicable && !S.testConclusion) return { t: S.testExtended ? "Conclude the extended control test" : "Perform the required control test", d: S.testExtended ? "The sample was extended; a conclusion is still required." : "One control is scoped for testing.", href: "#/testing" };
+  if (sc.outstanding.length) {
+    const r = sc.outstanding[0];
+    return { t: sc.outstanding.length === 1
+        ? `Conclude the control test on ${r.control.id}`
+        : `${sc.outstanding.length} control tests still to conclude`,
+      d: r.test.extended ? "The sample was extended; a conclusion is still required."
+        : `Each control scoped for testing needs its own conclusion — ${sc.outstanding.map((x) => x.control.id).join(", ")}.`,
+      href: "#/testing" };
+  }
   if (oi.open) return { t: `${oi.open} open matters`, d: "Resolve each one, or carry it forward with a destination and a reason.", href: "#/resolve" };
   if (so.preparer !== "signed") return { t: "Sign as preparer", d: "Every applicable gate is met. Signing makes Revenue ready for review.", href: "#/complete" };
+  /* Reopened work comes back to the preparer, and says so. */
+  if (openReviewPoints().length) {
+    const n2 = openReviewPoints().length;
+    return { t: `${n2} review point${n2 === 1 ? "" : "s"} need${n2 === 1 ? "s" : ""} your attention`,
+      d: `The reviewer sent Revenue back. ${openReviewPoints()[0].subject}.`, href: "#/complete" };
+  }
+  if (methodologyConfig.requiresManagerReview && so.review === "reopened") return { t: "Resubmit for manager review", d: "Every review point has been answered.", href: "#/complete" };
   if (methodologyConfig.requiresManagerReview && so.review === "not_submitted") return { t: "Submit for manager review", d: "The preparer has signed. The process is not complete until the reviewer approves.", href: "#/complete" };
   if (methodologyConfig.requiresManagerReview && so.review !== "approved") return { t: "Awaiting manager review", d: "The reviewer approves, or reopens with review points.", href: "#/complete" };
   return { t: "Revenue is complete", d: "Handed forward to risk analysis.", href: "#/complete" };
@@ -2907,18 +3360,25 @@ const act = {
     commit(state === "required" ? "Test required for this control"
       : state === "not_required" ? "No reliance planned — no test required" : "Decision deferred", true);
   },
-  extendSample() {
+  extendSample(cid) {
     checkpoint("sample extended");
-    S.testExtended = true;
+    S.controlTests[cid] = { ...controlTest(cid), started: true, extended: true };
     // Extending is not concluding: the test stays open and the gate stays blocked.
-    commit("Sample extended to 10 items — a conclusion is still required", true);
+    commit(`${cid} — sample extended to 10 items, a conclusion is still required`, true);
   },
-  concludeTest(d) {
+  concludeTest(cid, d, note) {
     checkpoint("control test concluded");
-    S.testConclusion = d;
-    commit(d === "rely" ? "Concluded — reliance placed on the control" : "Concluded — no reliance placed", true);
+    S.controlTests[cid] = { ...controlTest(cid), started: true, conclusion: d, note: note || null };
+    S.editing = null;
+    const left = testingScope().outstanding.length;
+    commit(`${cid} — ${d === "rely" ? "reliance placed" : "no reliance placed"}${
+      left ? `; ${left} other control${left === 1 ? "" : "s"} still to conclude` : ""}`, true);
   },
-  reopenTest() { checkpoint("control test reopened"); S.testConclusion = null; commit(); },
+  reopenTest(cid) {
+    checkpoint("control test reopened");
+    S.controlTests[cid] = { ...controlTest(cid), conclusion: null, note: null };
+    commit();
+  },
 
   /* step 7 — sign-off */
   signPreparer() {
@@ -2927,6 +3387,11 @@ const act = {
     commit("Signed as preparer — Revenue is ready for review", true);
   },
   submitForReview() {
+    // Guarded, not just labelled: an unanswered review point blocks resubmission.
+    if (!canResubmit()) {
+      commit(`${openReviewPoints().length} review point${openReviewPoints().length === 1 ? "" : "s"} still to answer`);
+      return;
+    }
     checkpoint("submitted for review");
     S.signOff = { ...S.signOff, review: "submitted" };
     commit("Submitted for manager review", true);
@@ -2934,11 +3399,38 @@ const act = {
   reviewerAction(d) {
     checkpoint("reviewer decision");
     S.signOff = { ...S.signOff, review: d };
-    commit(d === "approved" ? "Approved — Revenue is complete"
-      : d === "reopened" ? "Reopened with review points" : "In review", true);
+    if (d === "reopened") {
+      // Reopening carries work, not only a status. The point is raised here.
+      reviewPointLibrary.forEach((p) => {
+        if (!S.reviewPoints[p.id]) S.reviewPoints[p.id] = { state: "open", response: null };
+      });
+      const n = openReviewPoints().length;
+      commit(`Reopened — ${n} review point${n === 1 ? "" : "s"} for the preparer`, true);
+      return;
+    }
+    commit(d === "approved" ? "Approved — Revenue is complete" : "In review", true);
+  },
+  openPoint(id) { S.openPoint = S.openPoint === id ? null : id; S.editing = null; commit(); },
+  answerPoint(id, response) {
+    checkpoint("review point answered");
+    S.reviewPoints[id] = { state: "addressed", response: response || "No response recorded.",
+                           respondedAt: "3 October 2026" };
+    S.editing = null; S.openPoint = null;
+    const left = openReviewPoints().length;
+    commit(left ? `${id} addressed — ${left} still open`
+      : `${id} addressed — the file can go back to the reviewer`, true);
+  },
+  reopenPoint(id) {
+    checkpoint("review point reopened");
+    S.reviewPoints[id] = { ...(S.reviewPoints[id] || {}), state: "open" };
+    commit();
   },
 
-  /* generation */
+  /* --- The two generation runs -------------------------------------------
+     Step 3 documents the process. Step 4 analyses it, against the reviewed
+     understanding. Two runs because they are two pieces of audit work, and the
+     auditor reviews the first before anything is concluded from it.
+     -------------------------------------------------------------------- */
   startGeneration(stagesList) {
     S.generating = true; S.genStage = 0; commit();
     const step = (i) => {
@@ -2954,31 +3446,60 @@ const act = {
     };
     step(0);
   },
+  startAnalysis(stagesList) {
+    S.analysing = true; S.anaStage = 0; commit();
+    const step = (i) => {
+      if (i >= stagesList.length) {
+        S.analysing = false; S.analysed = true; S.anaStage = stagesList.length;
+        S.anaSeen = false; S.reviewMode = "triage"; commit();
+        return;
+      }
+      S.anaStage = i; commit();
+      setTimeout(() => step(i + 1), stagesList[i].ms);
+    };
+    step(0);
+  },
+  readAnalysis() { S.anaSeen = true; commit(); },
 
   /* peripheral */
   setMode(m) { S.mode = m; commit(); },
   /** Send / I don't know / Rather have a call are three different outcomes. */
   answerQuestion(n, kind, text) {
     checkpoint("questionnaire answered");
-    S.answers[n] = { kind, text: text || null };
+    S.answers[n] = { kind, text: text || null, evidenceId: null };
     const map = QUESTION_FACTS[n];
     if (kind === "answer") {
+      // The answer becomes a source first. Everything downstream then cites it,
+      // rather than resting on an unexplained internal override.
+      const q = questionnaire.find((x) => x.n === n);
+      const evidenceId = q ? recordAnswerEvidence(q, text || map?.value || "", "3 October 2026") : null;
+      S.answers[n] = { kind, text: text || null, evidenceId };
       // One answer, three consequences: the fact, the coverage area it belongs
       // to, and the open item that was raised to chase it.
       if (map) {
-        S.factOverrides[`${map.item}::${map.fact}`] =
-          { status: "known", value: text || map.value, resolution: "Established by the client questionnaire." };
-        if (map.openItem) S.itemStates[map.openItem] = "resolved";
+        S.factOverrides[`${map.item}::${map.fact}`] = {
+          status: "known",
+          value: text || map.value,
+          resolution: `Established by the client's answer to questionnaire question ${n}.`,
+          refs: evidenceId ? [evidenceId] : [],
+          via: "client_questionnaire",
+          question: n,
+        };
+        if (map.openItem) {
+          S.itemStates[map.openItem] = "resolved";
+          S.itemCarry[map.openItem] = null;
+        }
       }
-      commit("Answer recorded — coverage and the open item it was chasing both update", true);
+      commit("Answer recorded as evidence — the fact, the coverage area and the open item all update", true);
     } else if (kind === "unknown") {
+      // Not evidence. Nothing is established, and the fact stays unknown.
       S.itemStates[`QQ-${n}`] = "open";
       if (map?.openItem) S.itemStates[map.openItem] = "open";   // back off "sent"
-      commit("Recorded as unable to answer — raised for the auditor", true);
+      commit("Recorded as unable to answer — nothing established, raised for the auditor", true);
     } else {
       S.itemStates[`QQ-${n}`] = "open";
       if (map?.openItem) S.itemStates[map.openItem] = "open";
-      commit("Follow-up call requested — raised for the auditor", true);
+      commit("Follow-up call requested — nothing established, raised for the auditor", true);
     }
   },
   cockpitAdvance() { S.cockpitTurn = Math.min(S.cockpitTurn + 1, 14); commit(); },
@@ -2994,6 +3515,7 @@ const act = {
 
   reset() {
     undoStack.length = 0;
+    clearSessionEvidence();
     Object.assign(S, initial());
     location.hash = "#/";
     commit("Reset");
@@ -3009,276 +3531,7 @@ function focusLength() {
 }
 
 
-__exp(exports, { S: () => S, canUndo: () => canUndo, onChange: () => onChange, claimText: () => claimText, claimBlocking: () => claimBlocking, sectionDecision: () => sectionDecision, sectionBlockers: () => sectionBlockers, sectionEdited: () => sectionEdited, sectionApprovable: () => sectionApprovable, covFacts: () => covFacts, factSettled: () => factSettled, factContradictory: () => factContradictory, covReason: () => covReason, stepsForVariantCount: () => stepsForVariantCount, allItems: () => allItems, coverageSettled: () => coverageSettled, sectionOf: () => sectionOf, claimById: () => claimById, controlDecision: () => controlDecision, CONCLUDED_CONTROL: () => CONCLUDED_CONTROL, controlOpen: () => controlOpen, findingDecision: () => findingDecision, findingOutcome: () => findingOutcome, findingOpen: () => findingOpen, lwRequirement: () => lwRequirement, lwProposal: () => lwProposal, traceVerdict: () => traceVerdict, traceConcluded: () => traceConcluded, txnForVariant: () => txnForVariant, traceStepFor: () => traceStepFor, testScopeFor: () => testScopeFor, signOff: () => signOff, reviewRequired: () => reviewRequired, partnerRequired: () => partnerRequired, itemState: () => itemState, allOpenItems: () => allOpenItems, QUESTION_FACTS: () => QUESTION_FACTS, questionState: () => questionState, questionAnswer: () => questionAnswer, itemCarry: () => itemCarry, journeyStep: () => journeyStep, readyToSign: () => readyToSign, act: () => act, undo: () => undo, commit: () => commit, claimState: () => claimState, sectionState: () => sectionState, covState: () => covState, coverageCounts: () => coverageCounts, coverageSummary: () => coverageSummary, coverageGaps: () => coverageGaps, narrativeSummary: () => narrativeSummary, claimQueue: () => claimQueue, riskSummary: () => riskSummary, controlSummary: () => controlSummary, allFindings: () => allFindings, findingSummary: () => findingSummary, traceProgress: () => traceProgress, variantWalkthroughs: () => variantWalkthroughs, traceSummary: () => traceSummary, testingScope: () => testingScope, testSummary: () => testSummary, testingSatisfied: () => testingSatisfied, workComplete: () => workComplete, processState: () => processState, openItemSummary: () => openItemSummary, rcmRows: () => rcmRows, questionnaireItems: () => questionnaireItems, journeyStates: () => journeyStates, interviewComplete: () => interviewComplete, processProgress: () => processProgress, gateStates: () => gateStates, nextAction: () => nextAction, focusLength: () => focusLength });
-
-};
-__defs['js/data-sources.js'] = function (exports, __req, __exp) {
-/* ============================================================================
-   data-sources.js — the evidence base.
-
-   Everything the engine would have ingested: a walkthrough transcript, a client
-   questionnaire, three documents and one set of auditor notes. Every generated
-   claim elsewhere in the prototype points into this file by evidence id, the
-   same way `EvidenceRef` in packages/domain points at a segment or a chunk.
-
-   Fictional client. No real entity, person or engagement is depicted.
-   ========================================================================== */
-
-const firm = {
-  name: "Kuyper & Bergman Accountants",
-  packName: "revenue",
-  packVersion: "0.1.0",
-  methodology: "K&B Audit Methodology 2026.1",
-};
-
-const user = { name: "Sanne Bakker", role: "Audit senior", initials: "SB" };
-
-const client = {
-  id: "CL-0142",
-  name: "Vandersteen Industrial Systems B.V.",
-  short: "Vandersteen",
-  seat: "Eindhoven, Netherlands",
-  sector: "Industrial machinery — conveyor and material-handling systems for food processing",
-  framework: "EU-IFRS",
-  employees: 184,
-  fy: "FY2026",
-  yearEnd: "31 December 2026",
-  since: "Client since 2019",
-  revenuePY: "48.6",
-  streams: [
-    { name: "Machines and spare parts", amount: "41.2", basis: "Point in time — on customer acceptance" },
-    { name: "Service and maintenance contracts", amount: "7.4", basis: "Over time — straight-line over the contract term" },
-  ],
-  systems: [
-    { name: "Microsoft Dynamics 365 Business Central", role: "Quotation, order, shipment, invoice, general ledger" },
-    { name: "ServiceTrack", role: "Service contracts, field service, deferral schedule" },
-    { name: "Van Dijk Logistics WMS", role: "Warehousing and despatch (outsourced since March 2026)" },
-  ],
-  contacts: [
-    { name: "Ruud Timmermans", role: "Financial Controller", tag: "Walkthrough participant" },
-    { name: "Bas Kuipers", role: "Commercial Director", tag: "Questionnaire completed" },
-    { name: "Ingrid Molenaar", role: "Credit Control", tag: "Follow-up call held" },
-    { name: "Fatima El Amrani", role: "Sales Administration lead", tag: "Not yet contacted" },
-    { name: "Pieter Halsema", role: "IT Manager", tag: "Evidence requested" },
-    { name: "Marc de Wit", role: "Chief Financial Officer", tag: "" },
-  ],
-};
-
-const engagement = {
-  id: "ENG-2026-0142",
-  title: "FY2026 statutory audit — Vandersteen Industrial Systems B.V.",
-  period: "1 January 2026 – 31 December 2026",
-  interimAt: "Interim as at 30 September 2026",
-  materiality: "EUR 620,000 (performance materiality EUR 415,000)",
-  team: [
-    { name: "Marieke de Groot RA", role: "Engagement partner", initials: "MG" },
-    { name: "Sander Willemsen RA", role: "Manager", initials: "SW" },
-    { name: "Sanne Bakker", role: "Senior — in charge", initials: "SB" },
-    { name: "Tim Vos", role: "Assistant", initials: "TV" },
-  ],
-  phases: [
-    { id: "planning", name: "Planning", state: "Complete", detail: "Signed 4 July 2026" },
-    { id: "interim", name: "Interim", state: "In progress", detail: "Revenue active · 5 processes not started" },
-    { id: "final", name: "Final", state: "Not started", detail: "Planned from 12 January 2027" },
-    { id: "completion", name: "Completion", state: "Not started", detail: "" },
-  ],
-  processes: [
-    { id: "revenue", name: "Revenue / order-to-cash", state: "active" },
-    { id: "purchases", name: "Purchases and payables", state: "later" },
-    { id: "payroll", name: "Payroll", state: "later" },
-    { id: "inventory", name: "Inventory", state: "later" },
-    { id: "cash", name: "Cash and treasury", state: "later" },
-    { id: "itgc", name: "IT general controls", state: "later" },
-  ],
-};
-
-/* --- Sources --------------------------------------------------------------- */
-
-const sources = {
-  "SRC-1": {
-    id: "SRC-1", kind: "transcript", short: "T",
-    name: "Revenue walkthrough — transcript",
-    detail: "18 September 2026, 09:30 · 52 minutes · imported from Microsoft Teams (VTT)",
-    participants: "Ruud Timmermans (Financial Controller) · Sanne Bakker (Audit senior)",
-    ingest: "Indexed · 38 segments · 6,240 words",
-  },
-  "SRC-2": {
-    id: "SRC-2", kind: "client_answer", short: "Q",
-    name: "Client questionnaire — commercial",
-    detail: "Completed 15 September 2026 by Bas Kuipers (Commercial Director)",
-    participants: "12 of 14 questions answered",
-    ingest: "Indexed · 12 answers",
-  },
-  "SRC-3": {
-    id: "SRC-3", kind: "prior_year", short: "PY",
-    name: "FY2025 revenue process narrative",
-    detail: "Approved working paper, 12 February 2026 · 9 pages",
-    participants: "Prepared by J. Aarts · reviewed by S. Willemsen RA",
-    ingest: "Indexed · 9 pages · 31 chunks",
-  },
-  "SRC-4": {
-    id: "SRC-4", kind: "document", short: "AL",
-    name: "Business Central access listing — pricing and customer master data",
-    detail: "Extracted 12 September 2026 by P. Halsema (IT Manager) · 3 pages",
-    participants: "Requested as part of walkthrough preparation",
-    ingest: "Indexed · 3 pages",
-  },
-  "SRC-5": {
-    id: "SRC-5", kind: "document", short: "SO",
-    name: "Van Dijk Logistics — ISAE 3402 Type II report FY2025",
-    detail: "Service organisation report · 34 pages · period to 31 December 2025",
-    participants: "Provided by the client 2 September 2026",
-    ingest: "Indexed · 34 pages · 96 chunks",
-  },
-  "SRC-6": {
-    id: "SRC-6", kind: "auditor_input", short: "N",
-    name: "Auditor notes — cut-off and credit control",
-    detail: "Call with Ingrid Molenaar (Credit Control), 19 September 2026",
-    participants: "Recorded by S. Bakker",
-    ingest: "Indexed · 1 note",
-  },
-};
-
-/* --- Transcript ------------------------------------------------------------ */
-
-const A = "Sanne Bakker", AR = "Audit senior";
-const R = "Ruud Timmermans", RR = "Financial Controller";
-
-const transcript = [
-  { id: "seg-01", t: "00:40", who: A, role: AR, text: "Thanks for the time. I would like to follow a sale from the point the customer places an order all the way to the revenue line in the ledger, and understand where the controls sit. Can we start with what you actually sell?" },
-  { id: "seg-02", t: "01:35", who: R, role: RR, text: "Two streams. Machines and spare parts, that is about forty-one million, and service contracts, around seven and a half. The service side has grown a lot since we bought the maintenance business in 2024." },
-  { id: "seg-03", t: "03:20", who: R, role: RR, text: "Machine orders start as a quotation from the sales engineers, built in the configurator in Business Central. The customer signs it and sales administration converts the quotation into a sales order. Spare parts come in by email and through the webshop. Service is different, that runs in ServiceTrack." },
-  { id: "seg-04", t: "04:55", who: R, role: RR, text: "For spare parts, if an email never gets keyed we would hear about it from the customer. There is no reconciliation between the mailbox and the orders in the system." },
-  { id: "seg-05", t: "06:15", who: R, role: RR, text: "Sales administration creates the customer record. Fatima's team. They need a Chamber of Commerce extract and a VAT number before they can open the account." },
-  { id: "seg-06", t: "06:48", who: A, role: AR, text: "Does anybody outside sales administration approve a new customer before it is opened?" },
-  { id: "seg-07", t: "07:02", who: R, role: RR, text: "Not formally, no. It is meant to be a four-eyes thing within the team, but I could not show you evidence that it happened on any particular account." },
-  { id: "seg-08", t: "08:30", who: R, role: RR, text: "Machine prices come off the signed quotation. Spare parts take the price from the customer price list in Business Central — each trade customer has an agreed list and there is a standard list for everyone else." },
-  { id: "seg-09", t: "09:40", who: R, role: RR, text: "Sales can change the line price on an order. There is a mandatory reason code, and Business Central logs who changed it. There is a price override report you can run out of the system." },
-  { id: "seg-10", t: "10:20", who: A, role: AR, text: "Who reviews that report?" },
-  { id: "seg-11", t: "10:31", who: R, role: RR, text: "I do not think anyone runs it monthly. It is not on anyone's list as far as I know." },
-  { id: "seg-12", t: "11:05", who: R, role: RR, text: "Anything over twelve per cent discount blocks the order until Bas releases it. That is a hard block in the system and it has been there since we went live." },
-  { id: "seg-13", t: "12:04", who: R, role: RR, text: "Business Central raises the invoice automatically overnight from the posted shipment. Quantity comes from the shipment, price from the order. Nobody re-keys anything." },
-  { id: "seg-14", t: "13:30", who: R, role: RR, text: "Finance can raise a manual invoice — for a settlement, or a milestone on a large project. That needs my approval before it goes out." },
-  { id: "seg-15", t: "15:10", who: R, role: RR, text: "Ingrid in credit control sets the limits. She uses a Graydon report and the payment history on the account." },
-  { id: "seg-16", t: "15:48", who: A, role: AR, text: "Can anybody change a credit limit outside credit control?" },
-  { id: "seg-17", t: "16:02", who: R, role: RR, text: "No. It is Ingrid, and above two hundred and fifty thousand it needs the CFO to agree." },
-  { id: "seg-18", t: "17:20", who: R, role: RR, text: "If an order breaches the limit the system blocks it and only credit control can release it. There is a log of the releases in Business Central." },
-  { id: "seg-19", t: "19:00", who: R, role: RR, text: "Since March, Van Dijk Logistics runs the warehouse for us. They pick, pack and ship, and they send a despatch file every evening that posts the shipments in Business Central." },
-  { id: "seg-20", t: "20:15", who: A, role: AR, text: "What happens if that file arrives but is incomplete?" },
-  { id: "seg-21", t: "20:28", who: R, role: RR, text: "If the file fails to load we get an error and IT picks it up. If it loads but is short a few lines, I am honestly not sure we would pick that up." },
-  { id: "seg-22", t: "21:40", who: R, role: RR, text: "There is a standard delivered-not-invoiced report in Business Central. We do not run it." },
-  { id: "seg-23", t: "24:10", who: R, role: RR, text: "Service contracts are billed quarterly in advance and recognised straight-line over the contract period. ServiceTrack holds the contract and posts the deferral schedule into Business Central every month." },
-  { id: "seg-24", t: "25:30", who: R, role: RR, text: "The ServiceTrack to Business Central interface runs nightly and Pieter's team gets an alert if it fails. I reconcile the service revenue account at month end." },
-  { id: "seg-25", t: "28:00", who: R, role: RR, text: "Machines are recognised when they are installed and the customer signs the acceptance protocol. For a straightforward conveyor that is the same week as delivery; for a full line it can be six weeks later." },
-  { id: "seg-26", t: "30:20", who: R, role: RR, text: "Sales administration raises the credit note, the sales manager approves it, and it has to reference the original invoice." },
-  { id: "seg-27", t: "32:00", who: R, role: RR, text: "Three OEM customers have volume rebates. I calculate the accrual at month end from the contract terms and the year-to-date volume." },
-  { id: "seg-28", t: "32:40", who: A, role: AR, text: "Does anyone review that calculation?" },
-  { id: "seg-29", t: "32:49", who: R, role: RR, text: "Not really. It is my spreadsheet." },
-  { id: "seg-30", t: "35:15", who: R, role: RR, text: "Bank statements load daily and match automatically on the payment reference. Anything unmatched goes to a suspense list and Ingrid clears it. The ageing is reviewed monthly with Marc." },
-  { id: "seg-31", t: "37:00", who: R, role: RR, text: "A write-off above ten thousand euro needs the CFO to approve it." },
-  { id: "seg-32", t: "39:30", who: R, role: RR, text: "At the end of the month I look at the shipments in the last few days either side of the cut-off and check the invoice dates line up." },
-  { id: "seg-33", t: "40:10", who: A, role: AR, text: "Is that documented anywhere?" },
-  { id: "seg-34", t: "40:18", who: R, role: RR, text: "No. It is something I do." },
-  { id: "seg-35", t: "43:00", who: R, role: RR, text: "Manual journals to revenue accounts — that is me or Marc. We approve each other's." },
-  { id: "seg-36", t: "46:00", who: R, role: RR, text: "The sales engineers get commission on invoiced revenue. Bas has a turnover component in his bonus. And we have an EBITDA covenant with the bank that is tested half-yearly." },
-  { id: "seg-37", t: "48:20", who: R, role: RR, text: "I review revenue and gross margin by stream against budget every month and go through it with Marc. I chase anything over about two hundred and fifty thousand." },
-  { id: "seg-38", t: "49:40", who: R, role: RR, text: "Fatima's team can change customer master data and the price lists, and Pieter could as well. There is no periodic review of who holds that access." },
-];
-
-/* --- Client questionnaire -------------------------------------------------- */
-
-const questionnaire = [
-  { n: 1, coverage: "R1.4", q: "Which kinds of revenue does the company have, and roughly how large is each?",
-    a: "Machines and spare parts, and service contracts. Machines are much the larger part. Service has been growing since 2024.", state: "answered" },
-  { n: 2, coverage: "R2.2", q: "Who signs off a quotation before it goes to the customer?",
-    a: "I do, for anything above a hundred thousand. Below that the sales engineer sends it directly.", state: "answered" },
-  { n: 3, coverage: "R2.2", q: "Who can give a discount, and up to what level?",
-    a: "Sales engineers up to twelve per cent. Above that it comes to me and the system blocks the order until I release it.", state: "answered" },
-  { n: 4, coverage: "R1.3", q: "Are there customer arrangements outside your standard terms — consignment, bill-and-hold, a right of return, or side letters?",
-    a: "Two OEM customers have volume rebate agreements. One distributor in Germany holds stock on consignment at their own site.", state: "answered", flag: "new_topic" },
-  { n: 5, coverage: "R1.1", q: "Who approves a new customer before the account is opened?",
-    a: "Sales administration sets them up. I see the bigger ones.", state: "answered" },
-  { n: 6, coverage: "R3.1", q: "Can a customer's credit limit be changed, and by whom?",
-    a: "Credit control sets them, but I can raise a limit up to fifty thousand myself if an order is stuck and I know the customer.", state: "answered", flag: "contradiction" },
-  { n: 7, coverage: "R2.3", q: "What happens when an order is blocked because of credit?",
-    a: "It sits in the blocked list until credit control releases it. Sometimes I chase them.", state: "answered" },
-  { n: 8, coverage: "R10.4", q: "Who maintains the customer price lists?",
-    a: "Sales administration maintain them. I approve the annual price increase.", state: "answered" },
-  { n: 9, coverage: "R11.3", q: "Are sales staff targets or bonuses linked to revenue?",
-    a: "Commission on invoiced revenue for the engineers, and I have a turnover component in my own bonus.", state: "answered" },
-  { n: 10, coverage: "R7.1", q: "Who can approve a credit note?",
-    a: "The sales manager. For big ones I would expect finance to look at it.", state: "answered", flag: "vague" },
-  { n: 11, coverage: "R7.2", q: "What is your returns policy?",
-    a: "We do not take machines back. Spare parts occasionally, within thirty days, but it almost never happens.", state: "answered" },
-  { n: 12, coverage: "R6.4", q: "Do you sell through agents, or on a bill-and-hold basis?",
-    a: "No agents. No bill-and-hold.", state: "answered" },
-  { n: 13, coverage: "R5.3", q: "Who reviews the price override report, and how often?",
-    a: null, state: "sent", sentOn: "20 September 2026", origin: "deterministic_trigger" },
-  { n: 14, coverage: "R9.3", q: "How is the consignment stock at the German distributor treated at period end — when is revenue recognised on it?",
-    a: null, state: "sent", sentOn: "20 September 2026", origin: "model_proposed" },
-];
-
-/* --- Document excerpts ------------------------------------------------------ */
-
-const docExcerpts = [
-  { id: "doc-py-3", src: "SRC-3", loc: "p. 3", text: "Invoices are raised automatically from the posted shipment. No manual intervention occurs in the standard order-to-invoice flow." },
-  { id: "doc-py-5", src: "SRC-3", loc: "p. 5", text: "Credit notes are raised by sales administration and approved by the sales manager. The credit note references the original invoice number." },
-  { id: "doc-py-7", src: "SRC-3", loc: "p. 7", text: "Warehouse operations, including picking and despatch, are performed in-house at the Eindhoven site." },
-  { id: "doc-al-1", src: "SRC-4", loc: "p. 1", text: "Permission set SALES-PRICE-MOD (Price List – Modify): 14 users. Permission set CUST-CARD-MOD (Customer Card – Modify): 9 users, including two IT service accounts." },
-  { id: "doc-so-11", src: "SRC-5", loc: "p. 11", text: "Complementary user entity control: the user entity is responsible for reconciling the daily despatch confirmation file received from Van Dijk Logistics to its own order and shipment records." },
-  { id: "doc-so-4", src: "SRC-5", loc: "p. 4", text: "The scope of this report covers warehousing, picking, packing and despatch services performed at the Tilburg distribution centre for the period 1 January 2025 to 31 December 2025." },
-  { id: "note-1", src: "SRC-6", loc: "note 1", text: "Ingrid Molenaar confirmed that she sets and changes all credit limits and keeps a log of block releases. She stated she was not aware of anyone outside credit control being able to change a limit." },
-  { id: "note-2", src: "SRC-6", loc: "note 2", text: "Ingrid Molenaar confirmed there is no written cut-off procedure and that the month-end shipment review is performed by the financial controller alone." },
-];
-
-/* --- Evidence registry -----------------------------------------------------
-   Every generated object elsewhere refers to one of these ids. This is the
-   prototype's stand-in for `EvidenceRef` + the provenance index.
-   -------------------------------------------------------------------------- */
-
-function fromTranscript(seg) {
-  return {
-    id: `T:${seg.id}`, kind: "transcript", sourceId: "SRC-1",
-    short: `T ${seg.t}`, locator: `18 Sep · ${seg.t}`,
-    sourceName: "Revenue walkthrough transcript",
-    speaker: `${seg.who} (${seg.role})`,
-    quote: seg.text, segId: seg.id,
-  };
-}
-
-function fromQuestion(q) {
-  return {
-    id: `Q:${q.n}`, kind: "client_answer", sourceId: "SRC-2",
-    short: `Q ${q.n}`, locator: `Question ${q.n}`,
-    sourceName: "Client questionnaire — B. Kuipers",
-    speaker: "Bas Kuipers (Commercial Director)",
-    quote: q.a || "(not yet answered)", question: q.q,
-  };
-}
-
-function fromDoc(d) {
-  const s = sources[d.src];
-  return {
-    id: `D:${d.id}`, kind: s.kind, sourceId: d.src,
-    short: `${s.short} ${d.loc.replace("p. ", "p.")}`, locator: d.loc,
-    sourceName: s.name, speaker: "", quote: d.text,
-  };
-}
-
-const evidence = {};
-transcript.forEach((s) => { evidence[`T:${s.id}`] = fromTranscript(s); });
-questionnaire.forEach((q) => { if (q.a) evidence[`Q:${q.n}`] = fromQuestion(q); });
-docExcerpts.forEach((d) => { evidence[`D:${d.id}`] = fromDoc(d); });
-
-/** Mark the two refs that sit either side of the credit-limit contradiction. */
-evidence["T:seg-17"].conflict = true;
-evidence["Q:6"].conflict = true;
-
-const ref = (id) => evidence[id] || null;
-const refs = (ids) => ids.map(ref).filter(Boolean);
-
-
-__exp(exports, { firm: () => firm, user: () => user, client: () => client, engagement: () => engagement, sources: () => sources, transcript: () => transcript, questionnaire: () => questionnaire, docExcerpts: () => docExcerpts, evidence: () => evidence, ref: () => ref, refs: () => refs });
+__exp(exports, { S: () => S, canUndo: () => canUndo, onChange: () => onChange, claimText: () => claimText, claimBlocking: () => claimBlocking, sectionDecision: () => sectionDecision, sectionBlockers: () => sectionBlockers, sectionEdited: () => sectionEdited, sectionApprovable: () => sectionApprovable, covFacts: () => covFacts, factSettled: () => factSettled, factContradictory: () => factContradictory, covReason: () => covReason, stepsForVariantCount: () => stepsForVariantCount, allItems: () => allItems, coverageSettled: () => coverageSettled, sectionOf: () => sectionOf, claimById: () => claimById, controlDecision: () => controlDecision, CONCLUDED_CONTROL: () => CONCLUDED_CONTROL, controlOpen: () => controlOpen, findingDecision: () => findingDecision, findingOutcome: () => findingOutcome, findingOpen: () => findingOpen, lwRequirement: () => lwRequirement, lwProposal: () => lwProposal, traceVerdict: () => traceVerdict, traceConcluded: () => traceConcluded, txnForVariant: () => txnForVariant, traceStepFor: () => traceStepFor, testScopeFor: () => testScopeFor, controlTest: () => controlTest, hasWorkpaper: () => hasWorkpaper, signOff: () => signOff, reviewRequired: () => reviewRequired, partnerRequired: () => partnerRequired, openReviewPoints: () => openReviewPoints, reviewPointById: () => reviewPointById, canResubmit: () => canResubmit, itemState: () => itemState, allOpenItems: () => allOpenItems, QUESTION_FACTS: () => QUESTION_FACTS, questionState: () => questionState, questionAnswer: () => questionAnswer, itemCarry: () => itemCarry, journeyStep: () => journeyStep, readyToSign: () => readyToSign, act: () => act, undo: () => undo, commit: () => commit, claimState: () => claimState, sectionState: () => sectionState, covState: () => covState, coverageCounts: () => coverageCounts, coverageSummary: () => coverageSummary, coverageGaps: () => coverageGaps, narrativeSummary: () => narrativeSummary, claimQueue: () => claimQueue, riskSummary: () => riskSummary, controlSummary: () => controlSummary, allFindings: () => allFindings, findingSummary: () => findingSummary, traceProgress: () => traceProgress, variantWalkthroughs: () => variantWalkthroughs, traceSummary: () => traceSummary, testingScope: () => testingScope, testSummary: () => testSummary, testingSatisfied: () => testingSatisfied, reviewPoints: () => reviewPoints, workComplete: () => workComplete, processState: () => processState, openItemSummary: () => openItemSummary, rcmRows: () => rcmRows, sessionFacts: () => sessionFacts, questionnaireItems: () => questionnaireItems, itemEvidence: () => itemEvidence, journeyStates: () => journeyStates, interviewComplete: () => interviewComplete, processProgress: () => processProgress, gateStates: () => gateStates, nextAction: () => nextAction, focusLength: () => focusLength });
 
 };
 __defs['js/palette.js'] = function (exports, __req, __exp) {
@@ -3319,6 +3572,9 @@ function index() {
     if (st.claimQueue().length)
       add("Do", "Start the judgement queue", `${st.claimQueue().length} statements need you`,
         () => st.act.startFocus("claims"));
+    if (!st.S.analysed && !st.narrativeSummary().pending)
+      add("Do", "Analyse controls and findings", "step 4, against the reviewed understanding",
+        () => { location.hash = "#/controls"; });
     if (st.controlSummary().pending)
       add("Do", "Review control recommendations", `${st.controlSummary().pending} to conclude`,
         () => { location.hash = "#/controls"; st.act.startFocus("controls"); });
@@ -3350,18 +3606,18 @@ function index() {
       S.reviewMode = "read"; S.section = sec.id; S.scrollTo = sec.id; location.hash = "#/understanding";
     }));
 
-  if (st.S.generated) controls.forEach((c) =>
+  if (st.S.analysed) controls.forEach((c) =>
     add("Controls", c.title, `${c.id} · ${c.owner || "no owner"}`, () => {
       const q = st.controlSummary().queue; const i = q.findIndex((x) => x.id === c.id);
       if (i >= 0) { S.focusKind = "controls"; S.focusIx = i; S.reviewMode = "focus"; }
       location.hash = "#/controls";
     }));
 
-  if (st.S.generated) st.allFindings().forEach((f) =>
+  if (st.S.analysed) st.allFindings().forEach((f) =>
     add("Findings", f.title, `${f.id}${f.fromTrace ? " · from the line walkthrough" : ""}`,
       () => { location.hash = "#/controls"; st.act.startFocus("findings"); }));
 
-  if (st.S.generated) risks.forEach((r) =>
+  if (st.S.analysed) risks.forEach((r) =>
     add("Risk signals (carried forward)", r.title, `${r.id} · ${r.lib || "new"}`,
       () => { location.hash = "#/matrix"; }));
 
@@ -3459,7 +3715,8 @@ __defs['js/demo.js'] = function (exports, __req, __exp) {
 
 const { esc, act: btn } = __req('js/ui.js');
 const { S, commit, act } = __req('js/state.js');
-const { pipeline } = __req('js/data-model.js');
+const st = __req('js/state.js');
+const { pipeline, analysisPipeline, narrative } = __req('js/data-model.js');
 const { txnById } = __req('js/data-process.js');
 /** Corroborate the first n steps of a transaction, keyed the way state does. */
 const preTrace = (txnId, n) => {
@@ -3485,8 +3742,8 @@ const STEPS = [
     say: "Plain English, not methodology: three things need clarification. The 45 coverage areas, the fact keys and the ISA references are one disclosure away when a methodology partner asks for them.",
     setup: () => { S.prepared = true; S.disclosed.meth = false; } },
 
-  { route: "#/understanding", title: "Step three — the routine, separated from the judgement",
-    say: "Nine stages, two of them ordinary code. Validation checks that every statement cites a source and that the quote occurs in it — three did not. Then: four statements need a person, ten sections are clean and go in one action.",
+  { route: "#/understanding", title: "Step three — how the process works, and nothing more",
+    say: "Nine stages, four of them ordinary code — and every one of them about how the process works. It documents the process and stops there: no control identified, no finding proposed, no risk signal raised. Validation checks that every statement cites a source and that the quote occurs in it — three did not. Then four statements need a person and ten sections go in one action.",
     setup: () => { S.prepared = true; S.reviewMode = "triage"; } },
 
   { route: "#/understanding", title: "The contradiction comes first",
@@ -3497,21 +3754,26 @@ const STEPS = [
     say: "Click any sentence and the evidence opens directly beneath it — speaker, timestamp, exact words. No side panel, no navigation, the eye never leaves the line.",
     setup: () => { S.generated = true; S.genSeen = true; S.reviewMode = "read"; S.section = "N8"; S.openClaim = "N8.1"; } },
 
-  { route: "#/controls", title: "Step four — controls, and undecided is not a conclusion",
-    say: "The same map, now annotated: which step each control sits on, and which steps have something wrong with them. Enter accepts the proposal, K and N conclude, C carries one forward with a reason. Parking a control leaves it in the queue — the gate still counts it as outstanding.",
+  { route: "#/controls", title: "Step four is its own analysis",
+    say: "Only now does anything get proposed about controls. Seven stages against the understanding you just approved — controls, gaps, risk signals, the key-control criteria, the matrix. Proposing any of this from a draft nobody had read would put the analysis ahead of the judgement it depends on.",
     setup: () => { S.generated = true; S.genSeen = true; S.reviewMode = "triage"; S.mapStep = null; } },
+
+  { route: "#/controls", title: "Controls, and undecided is not a conclusion",
+    say: "The same map, now annotated: which step each control sits on, and which steps have something wrong with them. Enter accepts the proposal, K and N conclude, C carries one forward with a reason. Parking a control leaves it in the queue — the gate still counts it as outstanding.",
+    setup: () => { S.generated = true; S.genSeen = true; S.analysed = true; S.anaSeen = true;
+                   S.reviewMode = "triage"; S.mapStep = null; } },
 
   { route: "#/trace", title: "Step five — which variants need a walkthrough",
     say: "A machine sale tells you nothing about how a spare-part order behaves. So the requirement is decided per variant, and 'not required' is a real answer that carries a reason. Service contracts do not need one; the two goods variants do.",
     setup: () => {
-      S.generated = true; S.genSeen = true; S.traceTxn = null;
-      S.lwRequirements = {}; S.reviewMode = "triage";
+      S.generated = true; S.genSeen = true; S.analysed = true; S.anaSeen = true;
+      S.traceTxn = null; S.lwRequirements = {}; S.reviewMode = "triage";
     } },
 
   { route: "#/trace", title: "The walkthrough finds the model wrong",
     say: "The invoice went out on 15 September. The customer signed acceptance on 22 September. Revenue was recognised seven days before the performance obligation was satisfied — found by comparing two dates, not by anything anyone said in an interview.",
     setup: () => {
-      S.generated = true; S.genSeen = true;
+      S.generated = true; S.genSeen = true; S.analysed = true; S.anaSeen = true;
       S.lwRequirements = { V1: { state: "required", reason: null } };
       S.traceTxn = "SO-24188"; S.traceStarted["SO-24188"] = true;
       preTrace("SO-24188", 4);
@@ -3519,12 +3781,17 @@ const STEPS = [
     } },
 
   { route: "#/testing", title: "Step six — identifying a control is not testing it",
-    say: "Conditional, and marked as a future concept. First a scope decision per key control: tested, or not tested with a reason on file. Then population, selection, evidence, results. Extending the sample is not a conclusion — only rely or do not rely closes the test.",
-    setup: () => { S.generated = true; S.genSeen = true; } },
+    say: "Conditional, and marked as a future concept. First a scope decision per key control: tested, or not tested with a reason on file. Then population, selection, evidence, results. Extending the sample is not a conclusion — and concluding one control's test says nothing about any other one.",
+    setup: () => { S.generated = true; S.genSeen = true; S.analysed = true; S.anaSeen = true; } },
 
-  { route: "#/complete", title: "Step seven — complete closes the process, not the audit",
-    say: "Ready for review is not the same as complete: the preparer signs, the manager approves, and only then is the process closed. What it hands forward is the process understanding, the matrix, the findings, the walkthrough results and anything carried forward. Risk analysis is the next phase and deliberately not in this product.",
-    setup: () => { S.generated = true; S.genSeen = true; } },
+  { route: "#/complete", title: "Step seven — reviewed, not just finished",
+    say: "Ready for review is not the same as complete. The preparer signs, the manager reviews — and if it comes back, it comes back with a review point that has to be answered before the file can go anywhere. Only the reviewer's approval closes the process.",
+    setup: () => { S.generated = true; S.genSeen = true; S.analysed = true; S.anaSeen = true; } },
+
+  { route: "#/complete", title: "What interim hands forward",
+    say: "The process understanding, the matrix, the findings, the walkthrough results and anything carried forward with its destination and its reason. Risk analysis is the next phase, reads all of this, and is deliberately not in this product.",
+    setup: () => { S.generated = true; S.genSeen = true; S.analysed = true; S.anaSeen = true;
+                   S.disclosed.footer = true; } },
 ];
 
 function demoBar() {
@@ -3543,16 +3810,35 @@ function demoBar() {
   </div>`;
 }
 
-/** The beat that first reaches step three runs the pipeline for real. */
-const PIPELINE_BEAT = 4;
+/** Two beats run a pipeline for real: step 3 documents, step 4 analyses. */
+const UNDERSTANDING_BEAT = 4;
+const ANALYSIS_BEAT = 7;
 
 function demoGo(step) {
   S.demoStep = Math.max(0, Math.min(STEPS.length - 1, step));
   const s = STEPS[S.demoStep];
-  if (S.demoStep === PIPELINE_BEAT && !S.generated && !S.generating) {
+  if (S.demoStep === UNDERSTANDING_BEAT && !S.generated && !S.generating) {
     S.prepared = true;
     location.hash = s.route;
     setTimeout(() => act.startGeneration(pipeline), 260);
+    return;
+  }
+  if (S.demoStep === ANALYSIS_BEAT && !S.analysed && !S.analysing) {
+    // Step 4 runs against a *reviewed* understanding, so if the presenter
+    // skipped the review beats, take the proposed resolution for each item.
+    S.generated = true; S.genSeen = true;
+    st.claimQueue().forEach(({ b }) => {
+      if (st.claimState(b) === "contradiction" && b.options?.[0]) {
+        act.resolveConflict(b.id, b.options[0].choice, b.options[0].text);
+      } else {
+        act.saveClaim(b.id, b.suggestion || b.text);
+      }
+    });
+    act.acceptClean();
+    narrative.forEach((sec) => { if (st.sectionApprovable(sec)) act.approveSection(sec.id); });
+    S.reviewMode = "triage"; S.focusKind = null;
+    location.hash = s.route;
+    setTimeout(() => act.startAnalysis(analysisPipeline), 260);
     return;
   }
   s.setup();
@@ -3653,15 +3939,15 @@ function work() {
       tone: "warn", t: `${cov.mandatoryOpen.length} required areas are still open`,
       d: `${cov.mandatoryOpen.map((i) => i.plain || i.q).slice(0, 1)}`, href: "#/interview",
     },
-    st.S.generated && cs.pending && {
+    st.S.analysed && cs.pending && {
       tone: "", t: `${cs.pending} controls to conclude`,
       d: `${cs.suggestedKey} are suggested as key controls`, href: "#/controls",
     },
-    st.S.generated && st.findingSummary().fromTraceOpen.length && {
+    st.S.analysed && st.findingSummary().fromTraceOpen.length && {
       tone: "alert", t: "The line walkthrough raised a finding",
       d: "Tracing a real transaction changed the documented understanding", href: "#/controls",
     },
-    st.S.generated && !st.traceSummary().satisfied && {
+    st.S.analysed && !st.traceSummary().satisfied && {
       tone: "", t: st.traceSummary().undecided
         ? "Some Revenue variants have no line-walkthrough decision"
         : "A required line walkthrough is outstanding",
@@ -4056,7 +4342,7 @@ function processHome() {
   const steps = st.journeyStates();
   const next = st.nextAction();
   const tr = st.traceSummary();
-  const mode = tr.active ? "trace" : S.generated ? "annotated" : "plain";
+  const mode = tr.active ? "trace" : S.analysed ? "annotated" : "plain";
 
   const body = `
     <div class="head">
@@ -4065,7 +4351,7 @@ function processHome() {
           <h1 class="t-title">Revenue</h1>
           <p class="t-lede" style="margin-top:10px">
             Order-to-cash, ${esc(client.short)} FY2026 interim.
-            ${S.generated ? "The process as we understand it, and how far the work has got."
+            ${S.analysed ? "The process as we understand it, and how far the work has got."
               : "The process as described so far. It fills in as the walkthrough progresses."}
           </p>
         </div>
@@ -4291,9 +4577,9 @@ __defs['js/views/interview.js'] = function (exports, __req, __exp) {
    default answer is plain English; the 45 items, fact keys, triggers and ISA
    references live one disclosure deeper. */
 
-const { esc, cx, act: btn, row, dot, chip, more, bar, callout, link, empty } = __req('js/ui.js');
+const { esc, cx, act: btn, row, dot, chip, more, bar, callout, link, empty, evidence } = __req('js/ui.js');
 const { subProcesses } = __req('js/data-model.js');
-const { sources, ref, client } = __req('js/data-sources.js');
+const { sources, ref, refs, client } = __req('js/data-sources.js');
 const st = __req('js/state.js');
 const { screen } = __req('js/views/shell.js');
 const S = st.S;
@@ -4397,6 +4683,7 @@ function interview() {
   const gaps = st.coverageGaps();
   const settled = st.coverageSettled();
   const na = st.allItems().filter((i) => st.covState(i) === "na");
+  const sf = st.sessionFacts();
 
   const body = `
     <div class="head">
@@ -4430,6 +4717,32 @@ function interview() {
         <h2 class="t-h">Nothing outstanding</h2>
         <p class="t-sub" style="margin-top:6px">Every applicable area has been established.</p>
       </section>`}
+
+    ${sf.length ? `
+      <section style="margin-top:44px">
+        <h2 class="t-h" style="margin-bottom:4px">Established since the draft</h2>
+        <p class="t-meta" style="margin-bottom:16px">
+          Facts settled after the process understanding was drafted, each with the source it came
+          from. Nothing here is an internal override — it is evidence, and anything that later
+          rests on it cites this.</p>
+        <div class="rows">
+          ${sf.map((x) => `<div class="rw" style="display:block">
+            <div class="row row--top" style="gap:20px">
+              <span class="rw__lead" style="padding-top:5px">${dot("ok")}</span>
+              <span class="rw__main">
+                <span class="rw__t">${esc(x.value)}</span>
+                <span class="rw__d">${esc(x.item ? x.item.plain || x.item.q : x.itemId)}</span>
+                <span class="rw__d" style="margin-top:6px">
+                  <span class="mono">${esc(x.itemId)}.${esc(x.factKey)}</span> · ${esc(x.resolution)}</span>
+              </span>
+              <span class="rw__side"><span class="t-meta">${esc(
+                x.via === "client_questionnaire" ? "client questionnaire" : "auditor")}</span></span>
+            </div>
+            ${x.refs && x.refs.length ? `<div style="margin:10px 0 2px 37px">
+              ${evidence(refs(x.refs))}</div>` : ""}
+          </div>`).join("")}
+        </div>
+      </section>` : ""}
 
     ${settled.length ? `
       <section style="margin-top:48px">
@@ -4502,7 +4815,7 @@ __defs['js/views/understanding.js'] = function (exports, __req, __exp) {
    No table, no permanent source panel, no modal. */
 
 const { esc, cx, act: btn, row, dot, chip, more, evidence, empty, callout, link, state } = __req('js/ui.js');
-const { narrative, risks, controls, pipeline, subProcesses } = __req('js/data-model.js');
+const { narrative, risks, controls, gaps, pipeline, subProcesses } = __req('js/data-model.js');
 const { processMap, mapLegend, mapDetail } = __req('js/views/map.js');
 const { ref, sources } = __req('js/data-sources.js');
 const st = __req('js/state.js');
@@ -4540,8 +4853,10 @@ function generateView() {
     <div class="head">
       <h1 class="t-title">${done ? "Draft ready" : running ? "Drafting the process understanding" : "Draft the process understanding"}</h1>
       <p class="t-lede" style="margin-top:10px">
-        Nine stages over ${Object.keys(sources).length} sources. Seven ask a model; two are ordinary
-        code. Every stage is validated before the next one runs.
+        ${pipeline.length} stages over ${Object.keys(sources).length} sources, five of which ask a
+        model. This step establishes <em>how the process works</em> and nothing else — what controls
+        it and what is wrong with it is step 4, and it runs against the understanding once you have
+        reviewed it.
       </p>
     </div>
 
@@ -4581,6 +4896,10 @@ function generateView() {
           <div class="acts" style="margin-top:22px">
             ${btn("Review the draft", "read-gen", { variant: "go", size: "lg", key: "Enter" })}
           </div>
+          <p class="t-meta" style="margin-top:14px;max-width:64ch">
+            Nothing has been concluded. No control has been identified, no finding proposed and no
+            risk signal raised — that analysis is step 4, and it needs an understanding you have
+            accepted.</p>
         </div>` : ""}`}
   `;
   return screen("understanding", body);
@@ -4589,9 +4908,12 @@ function generateView() {
 function fill(t) {
   const cov = st.coverageSummary();
   return t.replace("FACTS_KNOWN", cov.facts.known).replace("FACTS_UNKNOWN", cov.facts.unknown + cov.facts.contradictory)
+    .replace("COV_COVERED", cov.covered).replace("COV_APPLICABLE", cov.applicable)
+    .replace("MANDATORY_OPEN", cov.mandatoryOpen.length)
     .replace("RISK_COUNT", risks.length).replace("CONTROL_COUNT", controls.length)
-    .replace("GAP_COUNT", st.controlSummary().gaps).replace("KEY_COUNT", st.controlSummary().suggestedKey)
-    .replace("RCM_ROWS", st.rcmRows().length).replace("OPEN_COUNT", 10);
+    .replace("FINDING_COUNT", gaps.length + 1)
+    .replace("GAP_COUNT", gaps.length).replace("KEY_COUNT", controls.filter((c) => c.keyProposal === true).length)
+    .replace("RCM_ROWS", 15).replace("OPEN_COUNT", 10);
 }
 
 /* ── Triage ──────────────────────────────────────────────────────────────── */
@@ -4924,7 +5246,7 @@ __defs['js/views/controls.js'] = function (exports, __req, __exp) {
    · A finding can be modified, not only confirmed or dismissed. */
 
 const { esc, cx, act: btn, row, dot, chip, more, evidence, empty, callout, state } = __req('js/ui.js');
-const { controls, risks, subProcesses } = __req('js/data-model.js');
+const { controls, risks, gaps, subProcesses, analysisPipeline } = __req('js/data-model.js');
 const { processSteps } = __req('js/data-process.js');
 const { ref } = __req('js/data-sources.js');
 const st = __req('js/state.js');
@@ -4958,6 +5280,81 @@ const focusBar = (i, len, label) => `<div class="focus__bar">
   <span class="sp"></span><span>${esc(label)}</span><span class="idline__sep">·</span>
   <span><b style="color:var(--ink-2)">${i + 1}</b> of ${len}</span>
 </div>`;
+
+/* ── The analysis run ─────────────────────────────────────────────────────
+   Step 4 is its own piece of work. It reads the understanding the auditor has
+   just reviewed and proposes what controls the process and what is wrong with
+   it. Step 3 deliberately did none of this.
+   ------------------------------------------------------------------------- */
+
+function fill(t) {
+  return t.replace("CONTROL_COUNT", controls.length)
+    .replace("FINDING_COUNT", gaps.length + 1)
+    .replace("GAP_COUNT", gaps.length)
+    .replace("RISK_COUNT", risks.length)
+    .replace("KEY_COUNT", controls.filter((c) => c.keyProposal === true).length)
+    .replace("RCM_ROWS", 15);
+}
+
+function analysisView() {
+  const running = S.analysing;
+  const done = S.analysed && !S.anaSeen;
+  const n = st.narrativeSummary();
+
+  const body = `
+    <div class="head">
+      <h1 class="t-title">${done ? "Analysis ready" : running ? "Analysing controls and findings"
+        : "Analyse controls and findings"}</h1>
+      <p class="t-lede" style="margin-top:10px">
+        ${analysisPipeline.length} stages against the understanding you approved. This is where
+        controls, gaps and risk signals are identified — none of it happened in step 3, because none
+        of it should be proposed from a draft nobody has read.
+      </p>
+    </div>
+
+    ${!running && !done ? `
+      <div class="rows" style="margin-top:36px">
+        ${row({ title: "Process understanding", side: `${n.approved} sections approved` })}
+        ${row({ title: "Process steps to analyse", side: `${processSteps.length} across 3 variants` })}
+        ${row({ title: "Control library", side: "33 entries · revenue v0.1.0" })}
+        ${row({ title: "Risk library", side: "30 entries · revenue v0.1.0" })}
+      </div>
+      <div style="margin-top:30px">
+        ${btn("Start the analysis", "run-analysis", { variant: "go", size: "lg", key: "Enter" })}
+      </div>
+      <p class="t-meta" style="margin-top:14px;max-width:64ch">
+        Everything it produces is a proposal. Nothing is concluded until you conclude it, one item
+        at a time.</p>` : `
+      <div style="margin-top:36px" class="rows">
+        ${analysisPipeline.map((p, i) => {
+          const fin = i < S.anaStage, now = i === S.anaStage && running;
+          return `<div class="rw" style="opacity:${fin || now ? 1 : .35};transition:opacity .3s">
+            <span class="rw__lead" style="padding-top:4px;width:18px">
+              ${fin ? `<span style="color:var(--ok)">✓</span>`
+                : now ? `<span class="dot dot--open"></span>` : `<span class="t-meta">${i + 1}</span>`}</span>
+            <span class="rw__main">
+              <span class="rw__t">${esc(p.name)}</span>
+              <span class="rw__d">${esc(p.desc)}</span>
+              ${fin ? `<span class="rw__d" style="color:var(--ink-2);margin-top:5px">${esc(fill(p.out))}</span>` : ""}
+            </span>
+            <span class="rw__side mono" style="font-size:11.5px">${esc(p.model)}</span>
+          </div>`;
+        }).join("")}
+      </div>
+      ${done ? `
+        <div style="margin-top:32px">
+          ${callout(`<b>${controls.length} controls and ${gaps.length + 1} findings proposed.</b>
+            Every one cites the part of the understanding it came from, and every one is a proposal
+            until you conclude it. ${controls.filter((c) => c.keyProposal === null).length} controls
+            could not be assessed against the key-control criteria at all — those are questions, not
+            low-confidence answers.`)}
+          <div class="acts" style="margin-top:22px">
+            ${btn("Review the proposals", "read-analysis", { variant: "go", size: "lg", key: "Enter" })}
+          </div>
+        </div>` : ""}`}
+  `;
+  return screen("controls", body);
+}
 
 /* ── Triage ──────────────────────────────────────────────────────────────── */
 
@@ -5066,14 +5463,22 @@ function triage() {
       ${more("fdec", `Show ${fs.decided} concluded ${fs.decided === 1 ? "finding" : "findings"}`, `<div class="rows">
         ${fs.all.filter((f) => !st.findingOpen(f)).map((f) => {
           const o = st.findingOutcome(f);
-          return row({
-            lead: dot(o.decision === "dismissed" ? "" : o.severity === "observation" ? "warn" : "alert"),
-            title: esc(o.title),
-            detail: o.decision === "dismissed" ? "Dismissed by the auditor"
-              : o.decision === "modified" ? `Confirmed as modified · ${esc(SEV[o.severity] || o.severity)}`
-              : `Confirmed as proposed · ${esc(SEV[o.severity] || o.severity)}`,
-            side: btn("Reopen", "clear-finding", { size: "sm", variant: "plain", data: { id: f.id } }),
-          });
+          const changed = o.decision === "modified";
+          return `<div class="rw" style="display:block">
+            <div class="row row--top" style="gap:20px">
+              <span class="rw__lead" style="padding-top:5px">${dot(
+                o.decision === "dismissed" ? "" : o.severity === "observation" ? "warn" : "alert")}</span>
+              <span class="rw__main">
+                <span class="rw__t">${esc(o.title)}</span>
+                <span class="rw__d">${o.decision === "dismissed" ? "Dismissed by the auditor"
+                  : changed ? `Your conclusion · ${esc(SEV[o.severity] || o.severity)}`
+                  : `Confirmed as proposed · ${esc(SEV[o.severity] || o.severity)}`}</span>
+                ${changed ? `<span class="rw__d" style="margin-top:6px;color:var(--ink-4)">
+                  Platform proposed: &ldquo;${esc(f.title)}&rdquo; · ${esc(SEV[f.severity] || f.severity)}</span>` : ""}
+              </span>
+              <span class="rw__side">${btn("Reopen", "clear-finding", { size: "sm", variant: "plain", data: { id: f.id } })}</span>
+            </div>
+          </div>`;
         }).join("")}
       </div>`, S.disclosed.fdec)}
     </section>` : ""}
@@ -5215,6 +5620,9 @@ function findingFocus() {
       <label class="t-eyebrow" for="f-title">Finding</label>
       <input class="field" id="f-title" value="${esc(f.title)}" style="margin:6px 0 14px">
 
+      <label class="t-eyebrow" for="f-detail">What was found</label>
+      <textarea class="field" id="f-detail" rows="4" style="margin:6px 0 14px">${esc(f.detail)}</textarea>
+
       <label class="t-eyebrow" for="f-sev">Severity</label>
       <select class="field" id="f-sev" style="margin:6px 0 14px">
         ${Object.entries(SEV).map(([k, v]) =>
@@ -5289,12 +5697,22 @@ function findingFocus() {
 function controlsStep() {
   if (!S.generated) {
     return screen("controls", `
-      ${empty("No controls identified yet",
-        "Controls are identified from the process understanding, so the process has to be documented first.")}
+      ${empty("The process is not documented yet",
+        "Controls are analysed from the process understanding, so step 3 has to run first.")}
       <div style="text-align:center;margin-top:-40px">
         ${btn("Go to the process understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
       </div>`);
   }
+  const n = st.narrativeSummary();
+  if (n.pending) {
+    return screen("controls", `
+      ${empty(`${n.pending} sections of the understanding are still unreviewed`,
+        "Step 4 analyses the understanding you have accepted. Proposing controls from a draft nobody has read would put the analysis ahead of the judgement it depends on.")}
+      <div style="text-align:center;margin-top:-40px">
+        ${btn("Finish reviewing the understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
+      </div>`);
+  }
+  if (!S.analysed || !S.anaSeen) return analysisView();
   if (S.reviewMode === "focus" && S.focusKind === "controls") return controlFocus();
   if (S.reviewMode === "focus" && S.focusKind === "findings") return findingFocus();
   return triage();
@@ -5676,6 +6094,14 @@ function trace() {
         ${btn("Go to the process understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
       </div>`);
   }
+  if (!S.analysed) {
+    return screen("trace", `
+      ${empty("The controls to trace against have not been identified yet",
+        "A line walkthrough compares a real transaction with the documented process and the controls identified on it, so step 4 has to run first.")}
+      <div style="text-align:center;margin-top:-40px">
+        ${btn("Go to controls and findings", "nav", { variant: "go", data: { href: "#/controls" } })}
+      </div>`);
+  }
   if (!S.traceTxn) return overview();
   if (S.reviewMode === "focus" && S.focusKind === "trace") return stepFocus();
   return txnSummary();
@@ -5700,7 +6126,7 @@ __defs['js/views/testing.js'] = function (exports, __req, __exp) {
      leaves the test open. */
 
 const { esc, cx, act: btn, row, dot, more, callout, empty } = __req('js/ui.js');
-const { controlTest } = __req('js/data-process.js');
+const { controlTest: controlTestPack } = __req('js/data-process.js');
 const { controls } = __req('js/data-model.js');
 const st = __req('js/state.js');
 const { screen } = __req('js/views/shell.js');
@@ -5719,14 +6145,16 @@ function scopeSection(sc) {
       A control is tested because you intend to rely on it. Deciding not to rely, and taking a
       substantive response instead, is a legitimate answer — it just has to be an answer.</p>
 
-    ${sc.rows.map(({ control: c, scope }) => {
+    ${sc.rows.map(({ control: c, scope, test }) => {
       const editing = S.editing === `ts:${c.id}`;
       return `<section class="vcard">
         <div class="row" style="align-items:baseline;gap:12px">
           <h3 class="t-h" style="font-size:16px">${esc(c.title)}</h3>
           <span class="sp"></span>
           <span class="t-meta">${
-            scope.state === "required" ? "test required"
+            scope.state === "required"
+              ? (test.conclusion ? (test.conclusion === "rely" ? "tested · reliance placed" : "tested · no reliance")
+                 : test.extended ? "sample extended — open" : "test required, not concluded")
             : scope.state === "not_required" ? "no test — reason on file"
             : "no decision recorded"}</span>
         </div>
@@ -5757,21 +6185,55 @@ function scopeSection(sc) {
           </div>
         </div>` : ""}
 
-        ${scope.state === "required" && c.id !== controlTest.controlId ? `
-          <p class="t-sub" style="margin-top:14px;color:var(--ink-4)">
-            Scoped for testing. No test has been drafted for this control in the prototype — only
-            ${esc(controlTest.controlId)} carries a worked example.</p>` : ""}
+        ${scope.state === "required" ? placeholder(c, test) : ""}
       </section>`;
     }).join("")}
   </section>`;
 }
 
+/* --- Controls scoped for testing that have no workpaper in the prototype ----
+   A placeholder, not a shortcut: the control still needs its own conclusion,
+   and step 6 stays open until it has one.
+   -------------------------------------------------------------------------- */
+
+function placeholder(c, test) {
+  if (st.hasWorkpaper(c.id)) {
+    return `<p class="t-sub" style="margin-top:14px;color:var(--ink-4)">
+      Scoped for testing. The worked test is below.</p>`;
+  }
+  const editing = S.editing === `tc:${c.id}`;
+  return `<div class="callout" style="margin-top:14px">
+    <b>Scoped for testing.</b> No test workpaper has been drafted for this control in the
+    prototype — only <span class="mono">${esc(controlTestPack.controlId)}</span> carries a worked
+    example. The conclusion is still this control's own, and step 6 stays open without it.
+    ${test.conclusion ? `<div class="t-meta" style="margin-top:10px">
+      <b style="color:var(--ink-2)">${esc(test.conclusion === "rely"
+        ? "Concluded — reliance placed on this control." : "Concluded — no reliance placed.")}</b>
+      ${test.note ? " " + esc(test.note) : ""}</div>
+      <div class="acts" style="margin-top:10px">
+        ${btn("Reopen this conclusion", "reopen-test", { variant: "plain", size: "sm", data: { id: c.id } })}
+      </div>`
+    : editing ? `<div style="margin-top:12px">
+        <textarea class="field" id="ans" rows="2"
+          placeholder="What the test found, in one line."></textarea>
+        <div class="acts" style="margin-top:10px">
+          ${btn("Rely on the control", "conclude-test", { variant: "go", size: "sm", data: { id: c.id, d: "rely" } })}
+          ${btn("Do not rely", "conclude-test", { size: "sm", data: { id: c.id, d: "no_rely" } })}
+          ${btn("Cancel", "cancel-edit", { variant: "plain", size: "sm" })}
+        </div>
+      </div>`
+    : `<div class="acts" style="margin-top:10px">
+        ${btn("Record this control's conclusion", "test-conclude-open", { size: "sm", data: { id: c.id } })}
+      </div>`}
+  </div>`;
+}
+
 /* --- The worked test ------------------------------------------------------- */
 
 function testSection() {
-  const c = controls.find((x) => x.id === controlTest.controlId);
-  const t = controlTest;
-  const ts = st.testSummary();
+  const c = controls.find((x) => x.id === controlTestPack.controlId);
+  const t = controlTestPack;
+  const ts = st.testSummary(t.controlId);
 
   const stage = (n, name, body, done = true) => `
     <div class="tstage ${done ? "is-done" : ""}">
@@ -5823,7 +6285,7 @@ function testSection() {
           <b>${ts.corroborated} of ${ts.selected}</b> items met every attribute.
           ${ts.exceptions} exception${ts.exceptions === 1 ? "" : "s"}.</p>
         ${!ts.extended ? `<div class="acts" style="margin-top:16px">
-          ${btn("Extend the sample to 10", "extend-sample", { data: { d: "extend" } })}
+          ${btn("Extend the sample to 10", "extend-sample", { data: { id: t.controlId } })}
         </div>
         <p class="t-meta" style="margin-top:10px">Extending changes the selection. It does not
         conclude the test, and the step stays open until you do.</p>` : `
@@ -5851,14 +6313,14 @@ function testSection() {
         </div>
         <div class="q__acts">
           ${ts.conclusion
-            ? btn("Reopen the conclusion", "reopen-test", { variant: "plain" })
-            : `${btn("Rely on the control", "conclude-test", { variant: "go", data: { d: "rely" } })}
-               ${btn("Do not rely — respond substantively", "conclude-test", { data: { d: "no_rely" } })}`}
+            ? btn("Reopen the conclusion", "reopen-test", { variant: "plain", data: { id: t.controlId } })
+            : `${btn("Rely on the control", "conclude-test", { variant: "go", data: { id: t.controlId, d: "rely" } })}
+               ${btn("Do not rely — respond substantively", "conclude-test", { data: { id: t.controlId, d: "no_rely" } })}`}
         </div>
         ${!ts.conclusion ? `<p class="t-meta" style="margin-top:12px;max-width:64ch">
           Only these two answers close the test. Everything else — extending, requesting more
           evidence, going back to the client — leaves it open, which is what the completion gate
-          reads.</p>` : ""}`, !!ts.conclusion)}
+          reads. And this conclusion closes <i>this</i> control only.</p>` : ""}`, !!ts.conclusion)}
     </div>
   </section>`;
 }
@@ -5867,7 +6329,6 @@ function testSection() {
 
 function testing() {
   const sc = st.testingScope();
-  const ts = st.testSummary();
 
   const intro = `
     <div class="callout callout--future" style="margin-bottom:28px">
@@ -5887,7 +6348,7 @@ function testing() {
   }
 
   const showTest = sc.rows.some(
-    (r) => r.control.id === controlTest.controlId && r.scope.state === "required");
+    (r) => r.control.id === controlTestPack.controlId && r.scope.state === "required");
 
   const body = `${intro}
     <div class="head">
@@ -5922,8 +6383,10 @@ function testing() {
       ${!st.testingSatisfied() ? `<p class="t-meta" style="margin-top:10px">
         ${!sc.scopeDecided
           ? `${sc.deferred.length} key control${sc.deferred.length === 1 ? " has" : "s have"} no testing decision.`
-          : ts.extended ? "The extended test has not been concluded."
-          : "The scoped test has not been concluded."}
+          : `${sc.outstanding.length} of ${sc.required.length} scoped test${sc.required.length === 1 ? "" : "s"}
+             ${sc.outstanding.length === 1 ? "is" : "are"} not concluded —
+             ${esc(sc.outstanding.map((r) => r.control.id).join(", "))}. Concluding one control
+             says nothing about another.`}
         Completion reads this.</p>` : ""}
     </section>
   `;
@@ -5939,7 +6402,7 @@ __defs['js/views/resolve.js'] = function (exports, __req, __exp) {
 /* RESOLVE — everything still open, ordered by what it blocks. */
 
 const { esc, cx, act: btn, row, dot, chip, more, empty, callout, evidence } = __req('js/ui.js');
-const { ref } = __req('js/data-sources.js');
+const { ref, refs } = __req('js/data-sources.js');
 const st = __req('js/state.js');
 const { screen } = __req('js/views/shell.js');
 const S = st.S;
@@ -5961,6 +6424,7 @@ function itemRow(i) {
   const editing = S.editing === i.id;
   const carrying = S.editing === `carry-item:${i.id}`;
   const carry = st.itemCarry(i);
+  const ev = st.itemEvidence(i);
 
   return `<div class="${cx("rw", !done && i.kind === "contradiction" && "rw--conflict",
       !done && blocking && i.kind !== "contradiction" && "rw--attn")}"
@@ -5985,6 +6449,13 @@ function itemRow(i) {
           : `<span class="t-meta">${esc(KIND[i.kind])}</span>`}
       </span>
     </div>
+
+    ${s === "resolved" && ev.length ? `<div style="margin:10px 0 2px 37px;max-width:74ch">
+      <div class="t-meta" style="margin-bottom:8px"><b style="color:var(--ink-2)">Settled by the
+        client's answer.</b> It is on the file as evidence, and anything that rests on it cites
+        this.</div>
+      ${evidence(refs(ev))}
+    </div>` : ""}
 
     ${carried && carry ? `<div style="margin:10px 0 2px 37px;max-width:74ch">
       <div class="t-meta"><b style="color:var(--ink-2)">Carried to ${esc(carry.destination)}.</b>
@@ -6230,13 +6701,15 @@ function complete() {
       ${so.preparer === "signed" && st.reviewRequired() && ["not_submitted", "reopened"].includes(so.review) ? `
         <div class="acts" style="margin-top:20px">
           ${btn(so.review === "reopened" ? "Resubmit for review" : "Submit for manager review",
-            "submit-review", { variant: "go", size: "lg", key: "Enter" })}
-        </div>` : ""}
+            "submit-review", { variant: "go", size: "lg", key: "Enter",
+              disabled: !st.canResubmit() })}
+        </div>
+        ${!st.canResubmit() ? `<p class="t-meta" style="margin-top:10px">
+          ${st.openReviewPoints().length} review point${st.openReviewPoints().length === 1 ? "" : "s"}
+          still ${st.openReviewPoints().length === 1 ? "needs" : "need"} an answer. The file does not
+          go back to the reviewer until ${st.openReviewPoints().length === 1 ? "it does" : "they do"}.</p>` : ""}` : ""}
 
-      ${so.review === "reopened" ? callout(`<b>Sent back with review points.</b> In the product the
-        points would be listed here as their own queue, each attached to the statement, control or
-        finding it concerns. Clearing them and resubmitting is the same loop as any other queue in
-        this file.`, "alert") : ""}
+      ${so.review === "reopened" || st.reviewPoints().length ? reviewPointSection() : ""}
 
       ${["submitted", "in_review"].includes(so.review) ? `
         <div style="margin-top:26px;padding-top:20px;border-top:1px dashed var(--line-2)">
@@ -6328,6 +6801,72 @@ function complete() {
   `;
 
   return screen("complete", body);
+}
+
+/* ── Review points ────────────────────────────────────────────────────────
+   One worked example, connected for real: reopening raises it, an unanswered
+   point blocks resubmission, and answering it releases the file.
+   ------------------------------------------------------------------------- */
+
+function reviewPointSection() {
+  const pts = st.reviewPoints();
+  const open = st.openReviewPoints();
+
+  return `<div style="margin-top:24px">
+    ${callout(`<b>${open.length ? `${open.length} review point${open.length === 1 ? "" : "s"} to answer`
+      : "Every review point has been answered"}.</b>
+      ${open.length ? "The reviewer sent Revenue back. Answer each point on the file, then resubmit."
+        : "The file can go back to the reviewer."}`, open.length ? "alert" : "ok")}
+
+    <div class="rows" style="margin-top:16px">
+      ${pts.map((p) => {
+        const isOpen = S.openPoint === p.id;
+        const editing = S.editing === `rp:${p.id}`;
+        return `<div class="${cx("rw", p.state !== "addressed" && "rw--attn")}" style="display:block">
+          <div class="row row--top" style="gap:20px">
+            <span class="rw__lead" style="padding-top:5px">${dot(p.state === "addressed" ? "ok" : "alert")}</span>
+            <span class="rw__main">
+              <span class="rw__t">${esc(p.subject)}</span>
+              <span class="rw__d">${esc(p.reviewer)}, ${esc(p.role)} · ${esc(p.raisedOn)}</span>
+            </span>
+            <span class="rw__side">
+              <span class="t-meta mono">${esc(p.id)}</span>
+              <div class="t-meta" style="margin-top:3px;${p.state === "addressed" ? "color:var(--ok)" : "color:var(--alert)"}">${
+                p.state === "addressed" ? "addressed" : "open"}</div>
+            </span>
+          </div>
+
+          ${isOpen ? `<div style="margin:12px 0 4px 37px;max-width:74ch">
+            <div class="q__block" style="margin-top:0">
+              <h4>What the reviewer wrote</h4>
+              <p>${esc(p.comment)}</p>
+            </div>
+            <p class="t-meta" style="margin-top:10px">Expects: ${esc(p.expects)}</p>
+            ${p.response ? `<div class="q__block">
+              <h4>Your response · ${esc(p.respondedAt || "")}</h4>
+              <p>${esc(p.response)}</p>
+            </div>` : ""}
+            ${editing ? `<div style="margin-top:14px">
+              <textarea class="field" id="ans" rows="4" style="font:15px/1.6 var(--sans)"
+                placeholder="What you did about it, or why the conclusion stands."></textarea>
+              <div class="acts" style="margin-top:10px">
+                ${btn("Record and mark addressed", "answer-point", { variant: "go", size: "sm", data: { id: p.id } })}
+                ${btn("Cancel", "cancel-edit", { variant: "plain", size: "sm" })}
+              </div>
+            </div>` : `<div class="acts" style="margin-top:12px">
+              ${p.target ? btn(`Open ${p.target.id}`, "nav", { size: "sm", data: { href: p.target.href } }) : ""}
+              ${p.state === "addressed"
+                ? btn("Reopen this point", "reopen-point", { variant: "plain", size: "sm", data: { id: p.id } })
+                : btn("Respond", "answer-point-open", { variant: "go", size: "sm", data: { id: p.id } })}
+            </div>`}
+          </div>` : `<div class="acts" style="margin:11px 0 2px 37px">
+            ${btn(p.state === "addressed" ? "Show" : "Open the review point", "open-point",
+              { variant: p.state === "addressed" ? "plain" : "go", size: "sm", data: { id: p.id } })}
+          </div>`}
+        </div>`;
+      }).join("")}
+    </div>
+  </div>`;
 }
 
 /* Each gate links to the step that clears it. */
@@ -6599,7 +7138,8 @@ __defs['js/app.js'] = function (exports, __req, __exp) {
    ========================================================================== */
 
 const { esc, act: btn } = __req('js/ui.js');
-const { pipeline, narrative } = __req('js/data-model.js');
+const { pipeline, analysisPipeline, narrative } = __req('js/data-model.js');
+const { ref: srcRef } = __req('js/data-sources.js');
 const st = __req('js/state.js');
 const { S, act, undo, canUndo } = __req('js/state.js');
 const { palette, runPalette, matches } = __req('js/palette.js');
@@ -6615,12 +7155,14 @@ const { resolve } = __req('js/views/resolve.js');
 const { complete, matrix, clientSurface } = __req('js/views/complete.js');
 const { cockpit } = __req('js/views/cockpit.js');
 window.__demoStart = demoStart;
+window.__demoSteps = STEPS.length;
 /* Test hooks. Read-only in practice; the smoke, route-integrity and
    state-integrity tests drive the app through them rather than through the DOM. */
 window.__S = S;
 window.__st = st;
 window.__act = act;
 window.__narrative = narrative;
+window.__refs = (ids) => ids.map((id) => srcRef(id)).filter(Boolean);
 
 const ROUTES = {
   "#/": work,                       // across engagements
@@ -6776,6 +7318,8 @@ document.addEventListener("click", (e) => {
     }
     case "run-pipeline": act.startGeneration(pipeline); break;
     case "read-gen": act.readGenResult(); break;
+    case "run-analysis": act.startAnalysis(analysisPipeline); break;
+    case "read-analysis": act.readAnalysis(); break;
 
     /* claims */
     case "toggle-claim": act.toggleClaim(d.claim); break;
@@ -6808,7 +7352,7 @@ document.addEventListener("click", (e) => {
     case "cancel-finding-edit": act.cancelFindingEdit(); break;
     case "clear-finding": act.clearFinding(d.id); break;
     case "save-finding": act.decideFinding(d.id, "modified", {
-      title: val("f-title"), severity: sel("f-sev"),
+      title: val("f-title"), detail: val("f-detail"), severity: sel("f-sev"),
       impact: val("f-impact"), remediation: val("f-rem") || null,
     }); break;
     case "map-node": S.mapStep = S.mapStep === d.step || !d.step ? null : d.step; st.commit(); break;
@@ -6833,14 +7377,19 @@ document.addEventListener("click", (e) => {
     case "test-not-open": act.openEditor("ts:" + d.id); break;
     case "test-not-required": act.setTestScope(d.id, "not_required", val("ans") || "No reason recorded."); break;
     case "test-reopen-scope": act.setTestScope(d.id, "deferred", null); break;
-    case "extend-sample": act.extendSample(); break;
-    case "conclude-test": act.concludeTest(d.d || null); break;
-    case "reopen-test": act.reopenTest(); break;
+    case "extend-sample": act.extendSample(d.id); break;
+    case "test-conclude-open": act.openEditor("tc:" + d.id); break;
+    case "conclude-test": act.concludeTest(d.id, d.d || null, val("ans")); break;
+    case "reopen-test": act.reopenTest(d.id); break;
 
     /* step 7 — sign-off */
     case "sign-preparer": act.signPreparer(); break;
     case "submit-review": act.submitForReview(); break;
     case "reviewer": act.reviewerAction(d.d); break;
+    case "open-point": act.openPoint(d.id); break;
+    case "answer-point-open": act.openEditor("rp:" + d.id); break;
+    case "answer-point": act.answerPoint(d.id, val("ans")); break;
+    case "reopen-point": act.reopenPoint(d.id); break;
     case "prepare-reopen": act.prepareReopen(); break;
     case "carry-item-open": act.openEditor("carry-item:" + d.id); break;
     case "carry-item": act.carryItem(d.id, sel("carry-dest") || "Final audit", val("ans")); break;
@@ -6923,6 +7472,9 @@ document.addEventListener("keydown", (e) => {
   if (S.route === "#/prepare" && e.key === "Enter" && !S.prepared) { e.preventDefault(); act.prepareDone(); return; }
   if (S.route === "#/understanding" && e.key === "Enter" && !S.generated && !S.generating) { e.preventDefault(); act.startGeneration(pipeline); return; }
   if (S.route === "#/understanding" && e.key === "Enter" && S.generated && !S.genSeen) { e.preventDefault(); act.readGenResult(); return; }
+  if (S.route === "#/controls" && e.key === "Enter" && S.generated && !st.narrativeSummary().pending
+      && !S.analysed && !S.analysing) { e.preventDefault(); act.startAnalysis(analysisPipeline); return; }
+  if (S.route === "#/controls" && e.key === "Enter" && S.analysed && !S.anaSeen) { e.preventDefault(); act.readAnalysis(); return; }
   if (S.route === "#/trace" && S.reviewMode !== "focus" && e.key === "Enter" && S.traceTxn) {
     const prog = st.traceProgress(S.traceTxn);
     if (prog && !prog.concluded) {
@@ -6932,6 +7484,7 @@ document.addEventListener("keydown", (e) => {
     }
   }
   if (!FOCUS_ROUTES.includes(S.route) || !S.generated) return;
+  if (S.route === "#/controls" && (!S.analysed || !S.anaSeen)) return;
 
   /* Focus mode: the queue is keyboard-first */
   if (S.reviewMode === "focus") {

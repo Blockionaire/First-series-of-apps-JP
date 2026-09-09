@@ -1,7 +1,7 @@
 /* RESOLVE — everything still open, ordered by what it blocks. */
 
 import { esc, cx, act as btn, row, dot, chip, more, empty, callout, evidence } from "../ui.js";
-import { ref } from "../data-sources.js";
+import { ref, refs } from "../data-sources.js";
 import * as st from "../state.js";
 import { screen } from "./shell.js";
 
@@ -24,6 +24,7 @@ function itemRow(i) {
   const editing = S.editing === i.id;
   const carrying = S.editing === `carry-item:${i.id}`;
   const carry = st.itemCarry(i);
+  const ev = st.itemEvidence(i);
 
   return `<div class="${cx("rw", !done && i.kind === "contradiction" && "rw--conflict",
       !done && blocking && i.kind !== "contradiction" && "rw--attn")}"
@@ -48,6 +49,13 @@ function itemRow(i) {
           : `<span class="t-meta">${esc(KIND[i.kind])}</span>`}
       </span>
     </div>
+
+    ${s === "resolved" && ev.length ? `<div style="margin:10px 0 2px 37px;max-width:74ch">
+      <div class="t-meta" style="margin-bottom:8px"><b style="color:var(--ink-2)">Settled by the
+        client's answer.</b> It is on the file as evidence, and anything that rests on it cites
+        this.</div>
+      ${evidence(refs(ev))}
+    </div>` : ""}
 
     ${carried && carry ? `<div style="margin:10px 0 2px 37px;max-width:74ch">
       <div class="t-meta"><b style="color:var(--ink-2)">Carried to ${esc(carry.destination)}.</b>

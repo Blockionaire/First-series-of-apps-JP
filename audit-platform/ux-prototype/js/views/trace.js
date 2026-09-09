@@ -370,6 +370,14 @@ export function trace() {
         ${btn("Go to the process understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
       </div>`);
   }
+  if (!S.analysed) {
+    return screen("trace", `
+      ${empty("The controls to trace against have not been identified yet",
+        "A line walkthrough compares a real transaction with the documented process and the controls identified on it, so step 4 has to run first.")}
+      <div style="text-align:center;margin-top:-40px">
+        ${btn("Go to controls and findings", "nav", { variant: "go", data: { href: "#/controls" } })}
+      </div>`);
+  }
   if (!S.traceTxn) return overview();
   if (S.reviewMode === "focus" && S.focusKind === "trace") return stepFocus();
   return txnSummary();

@@ -1,4 +1,4 @@
-# Design Partner Demo — twelve beats, 10–14 minutes
+# Design Partner Demo — fourteen beats, 12–16 minutes
 
 The in-app version runs from the Work screen (*start the guided demo*) or `⌘K → Guided demo`.
 `→` and `←` move between beats, `Esc` exits.
@@ -9,7 +9,7 @@ client is fictional and nothing leaves the browser, then stop talking about the 
 **The framing, in one line:** *"This is where an auditor does the interim work on a process — not
 a tool that writes the documentation, the place the work happens."*
 
-**If you only have four minutes,** do beats 8, 10 and 11. The line walkthrough is the product.
+**If you only have four minutes,** do beats 9, 11 and 12. The line walkthrough is the product.
 
 ---
 
@@ -61,13 +61,17 @@ The engine is as complex as your methodology. The screen isn't."
 
 ---
 
-## Beat 5 — The routine, separated from the judgement · `#/understanding`
+## Beat 5 — How the process works, and nothing more · `#/understanding`
 
 **Show:** run the pipeline, wait for it to finish, and stop on the result.
 
-**Say:** "Nine stages; two of them are ordinary code. That one is validation — every statement has
+**Say:** "Nine stages; four of them are ordinary code. That one is validation — every statement has
 to cite a source and the quote has to occur in it. Three didn't, and the screen waits here until
 you've seen that."
+
+**Point at what is not in the list.** "No control identified. No finding proposed. No risk signal
+raised. This step establishes how the process works and stops. That is deliberate, and beat 9 is
+why."
 
 **Then Review the draft.** "Four statements need a person. Ten sections are clean and go in one
 action. That is the whole promise, and it happens before anything is asked of you."
@@ -96,9 +100,23 @@ In a file review that question takes twenty minutes of scrolling. Here it is two
 
 ---
 
-## Beat 8 — Controls, and what 'undecided' actually means · `#/controls`
+## Beat 8 — Step four is its own analysis · `#/controls`
 
-**Say:** "Step four. Same map, now annotated: which step each control sits on, and which steps
+**Say:** "Only now does anything get proposed about controls. Seven more stages — controls, gaps,
+risk signals, the key-control criteria, the matrix — and they run against the understanding you
+just approved, not against the draft.
+
+That ordering is the point. If the tool proposes controls from a draft nobody has read, the
+auditor is reviewing an analysis of something they haven't accepted yet, and the review of the
+understanding becomes ceremonial. Most tools do it in one pass because it demos better."
+
+**Run it.** Then Review the proposals.
+
+---
+
+## Beat 9 — Controls, and what 'undecided' actually means
+
+**Say:** "Same map, now annotated: which step each control sits on, and which steps
 have something wrong with them. Look at despatch and at installation — no control identified.
 
 Fourteen controls as a queue, not a table. Enter accepts what's proposed, K and N conclude."
@@ -113,7 +131,7 @@ misstatement is risk analysis — that comes after the interim work. They are ca
 
 ---
 
-## Beat 9 — Which variants need a walkthrough · `#/trace`
+## Beat 10 — Which variants need a walkthrough · `#/trace`
 
 **Say:** "Step five, and it starts with a question rather than a transaction. A machine sale tells
 you nothing about how a spare-part order behaves. So the requirement is decided per variant.
@@ -124,7 +142,7 @@ It's a proposal. The decision, and the reason, are yours and they're both on the
 
 ---
 
-## Beat 10 — Now test the model against reality · SO-24188
+## Beat 11 — Now test the model against reality · SO-24188
 
 **Say:** "Everything so far is what people told us. A line walkthrough takes one real transaction
 and traces it end to end through the process we just documented."
@@ -134,7 +152,7 @@ happened. Press Enter to corroborate."
 
 ---
 
-## Beat 11 — The walkthrough finds the model wrong · step 5 of the trace
+## Beat 12 — The walkthrough finds the model wrong · step 5 of the trace
 
 **Let them read it.** Then:
 
@@ -158,7 +176,7 @@ order-to-cash coverage it doesn't have."
 
 ---
 
-## Beat 12 — Identifying a control is not testing it · `#/testing`
+## Beat 13 — Identifying a control is not testing it · `#/testing`
 
 **Say:** "Step six, clearly marked as a future concept, and conditional — it starts with a scope
 decision per key control. Do you intend to rely on this? If not, say why and it's done; a
@@ -168,18 +186,30 @@ For the one we do test: control, population, selection, evidence, results. The s
 shows the firm parameter that produced it — never a number the model chose. One exception in five.
 
 **Extend the sample.** Watch the step. It's still open. Extending changes the selection, it doesn't
-answer the question. Only 'rely' or 'do not rely' closes it, and that's yours."
+answer the question. Only 'rely' or 'do not rely' closes it, and that's yours.
+
+And scope a second control for testing. Concluding the first one does nothing to it — every
+control scoped for testing needs its own conclusion, and step six stays open until each has one."
 
 ---
 
-## Beat 13 — Complete closes the process, not the audit · `#/complete`
+## Beat 14 — Reviewed, not just finished · `#/complete`
 
 **Say:** "Every condition, each linking to the step that clears it — and only the ones that apply
 to this engagement. Partner review isn't listed, because this isn't a PIE.
 
 Then the sequence: the preparer signs, and that gives you *ready for review*, which is not the
-same as complete. Submit, and the manager approves or sends it back with points. The process closes
-when the reviewer approves it, not when the work stops.
+same as complete."
+
+**Submit it, then send it back as the reviewer.** "And here is what 'sent back' actually means. A
+review point, on the file, against the control it concerns — the Commercial Director can raise a
+credit limit himself, so is C-02 really the control that operates?
+
+Notice resubmit is disabled. You cannot push it back to the manager until that point has an
+answer. Write one, mark it addressed, and the file is released."
+
+**Resubmit and approve.** "The process closes when the reviewer approves it, not when the work
+stops.
 
 And then what interim hands forward: the process understanding, the matrix, the findings, the
 walkthrough results, and anything carried forward with its destination and its reason.
@@ -230,8 +260,15 @@ will be wrong, so the question is whether being wrong is visible and cheap.
 
 **"Can I overrule it?"**
 On every object, and the file keeps both versions. Confirm, modify or dismiss a finding — modify
-and you edit the wording and the severity, and what's stored is the platform's proposal *and* your
-conclusion, separately. We want to know how often you change it and in which direction.
+and you rewrite the finding, the description, the severity, the impact and the remediation, and
+what's stored is the platform's proposal *and* your conclusion, separately. We want to know how
+often you change it and in which direction.
+
+**"What happens to a questionnaire answer?"**
+It becomes a source. Not a value in a database somewhere — an evidence record with the question,
+the answer, who said it and when, which the fact then cites. Ask "where did that come from?" of
+anything it supports and you get the answer back, in the client's words. "I don't know" creates no
+evidence at all, because nothing was established.
 
 **"Will my seniors use it?"**
 That's the one we care about. Built for someone with no training: ⌘K, keyboard decisions, undo

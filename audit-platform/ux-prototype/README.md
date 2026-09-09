@@ -58,21 +58,23 @@ browser against mock data: no model is called, no request leaves the page, nothi
 
 | File | What it is |
 |---|---|
-| `V3-DESIGN-DIRECTION.md` | The product scope: the full process-level interim audit. **Read this first.** |
+| **`PRE-DESIGN-FUNCTIONAL-FREEZE.md`** | **The canonical functional model the V3 design must preserve. Read this first.** |
+| `V3-DESIGN-DIRECTION.md` | The product scope: the full process-level interim audit |
 | `NEXT-GEN-UX-DIRECTION.md` | The V2 critique — the interaction philosophy, still in force |
 | `UX-PLAN.md` | V1's plan. Still the reference for provenance rules and what is excluded |
-| `PRE-V3-FUNCTIONAL-CORRECTIONS.md` | The functional/IA correction pass over the workflow, and what it fixed |
-| `DEMO-SCRIPT.md` | The twelve-beat design-partner path, with presenter notes and the questions you will get |
+| `PRE-V3-FUNCTIONAL-CORRECTIONS.md` | The first functional/IA correction pass, and what it fixed |
+| `DEMO-SCRIPT.md` | The fourteen-beat design-partner path, with presenter notes and the questions you will get |
 | `UX-FINDINGS.md` | Twenty-five product and data-model gaps found while building, written for the engine track. No engine file was changed |
 | **`audit-ai-prototype.html`** | **The whole prototype in one file. Download, double-click, done. Generated — do not edit** |
 | `build-standalone.py` | Regenerates the file above from the source |
 | `index.html` · `app.css` | Shell and the design system (tokens, primitives, components) |
 | `js/data-sources.js` | The evidence base: interview transcript, client questionnaire, three documents, auditor notes |
-| `js/data-model.js` | Coverage (45 items), narrative (14 sections), 11 risks, 14 controls, 5 gaps, 10 open items |
+| `js/data-model.js` | Coverage (45 items), narrative (14 sections), 11 risk signals, 14 controls, 5 gaps, 10 open items, and the two generation pipelines |
 | `js/data-process.js` | The three Revenue variants, the process map as a branching graph (11 steps), two traced transactions, the control-testing concept |
 | `js/state.js` | State, derivations, the exception model and the undo stack. Every headline number is computed here |
 | `js/palette.js` | ⌘K — the navigation |
 | `js/views/` | One module per stage |
+| `tests/` | Four Playwright suites — route integrity, state model, UI walkthrough, standalone bundle |
 
 ## The workflow
 
@@ -109,13 +111,17 @@ screen up and puts the line to say at the bottom. `→` and `←` move between b
 - **Process interview.** The whole input flow, not one meeting. Three gaps in plain English;
   *Show methodology* reveals the 45 coverage items, fact keys, triggers and ISA references
   underneath.
-- **Understanding → Start.** Nine pipeline stages. The validation stage catches three unsupported
-  statements and the result waits for you to read it.
+- **Understanding → Start.** Nine pipeline stages, all of them about how the process works. The
+  validation stage catches three unsupported statements and the result waits for you to read it.
+  Nothing is concluded here: no control, no finding, no risk signal.
 - **Then work the queue.** The contradiction comes first, with both sources side by side — press
   `1`, `2` or `3` to resolve it, and watch the statement, the two facts, the coverage area and the
   open item all move together. Then `Enter` three times for the unsupported claims.
 - **Read the working paper and click any sentence.** Evidence opens directly beneath it.
-- **Controls & findings.** The same map, now annotated — which step each control sits on and
+- **Controls & findings → Start the analysis.** Step 4 is its own run, against the understanding
+  you approved — seven stages that identify controls, gaps, risk signals and the key-control
+  criteria. It will not run while sections of the understanding are unreviewed.
+- **Then the queues.** The same map, now annotated — which step each control sits on and
   which steps have something wrong. Fourteen controls as a queue: `Enter` accepts, `K`/`N`
   conclude, `C` carries one forward with a reason. Press `U` to park one and watch it *stay* in
   the queue — undecided is a bookmark, not a conclusion. Findings offer Modify as well as Confirm
@@ -130,9 +136,11 @@ screen up and puts the line to say at the bottom. `→` and `←` move between b
 - **Control testing.** A labelled future concept, and conditional: it starts with a scope decision
   per key control, because testing follows an intention to rely. Then setup → population →
   evidence → results → conclusion, with the sample size showing the firm parameter that produced
-  it. Extend the sample and watch the step stay open — extending is not concluding.
+  it. Extend the sample and watch the step stay open — extending is not concluding. Scope a second
+  control and watch that concluding the first does nothing to it.
 - **Complete.** Sign as preparer and the process becomes *ready for review*, which is not the same
-  as complete. Submit it, then approve or send it back as the reviewer.
+  as complete. Submit it, then send it back as the reviewer: a real review point appears, resubmit
+  is disabled until you answer it, and only the reviewer's approval closes the process.
 - **⌘K.** Type `acceptance`, `override`, `credit`, or any process step, control or finding.
 - **⌘Z.** Every decision is reversible. Nothing asks "are you sure?" except sign-off.
 

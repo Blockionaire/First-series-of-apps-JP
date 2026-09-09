@@ -331,6 +331,27 @@ export const controlTest = {
   priorYearNote: "The control was tested in the FY2025 audit and found effective. ISA 330 permits using evidence from a previous audit for an unchanged control, provided it is tested at least once in every third audit — a decision for the auditor, not applied automatically.",
 };
 
+/* --- Review points --------------------------------------------------------
+   Not a review-notes module — one worked example, so the state architecture can
+   be shown to support the real prepare → review → reopen → resolve → resubmit
+   loop rather than only its status labels.
+   -------------------------------------------------------------------------- */
+
+export const reviewPointLibrary = [
+  { id: "RP-01",
+    reviewer: "M. de Waal",
+    role: "Manager",
+    raisedOn: "2 October 2026",
+    subject: "Credit limit override, and the control conclusion on C-02",
+    target: { kind: "control", id: "C-02", href: "#/controls" },
+    comment: "You have concluded C-02 as a control the audit can rely on, on the basis that credit " +
+      "control sets and releases every limit. The Commercial Director's questionnaire answer says he " +
+      "can raise a limit by up to EUR 50,000 himself. Explain why that does not change the conclusion, " +
+      "or change it. If the second route exists in the system, the control as documented is not the " +
+      "control that operates.",
+    expects: "A written response on the file, and either a reason the conclusion stands or a revised one." },
+];
+
 /* --- Context carried into interim from earlier engagement work ------------ */
 
 export const carriedContext = [

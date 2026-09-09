@@ -724,44 +724,70 @@ export const openItems = [
     origin: "deterministic_trigger", blocks: ["C-10", "N14.2"], refs: ["T:seg-37"], owner: "Unassigned" },
 ];
 
-/* --- Generation pipeline (07 §7; 06 §6.1 stage map) ------------------------ */
+/* --- Generation, in two stages ----------------------------------------------
+   Step 3 establishes and documents how the process works. Step 4 analyses what
+   controls it and what is wrong with it. They are separate runs because they
+   are separate pieces of audit work: the auditor reviews the understanding
+   before anything is concluded from it.
 
+   An implementation may reuse one model call across both — this split is the
+   product model, not a deployment constraint.
+   -------------------------------------------------------------------------- */
+
+/* Step 3 — process understanding. */
 export const pipeline = [
-  { id: "S2", name: "Normalising sources", model: "claude-haiku-4-5",
+  { id: "U1", name: "Normalising sources", model: "claude-haiku-4-5",
     desc: "Segmenting the transcript, the questionnaire answers and the document chunks, and attaching a stable locator to each.",
     out: "6 sources · 38 transcript segments · 12 answers · 134 document chunks", ms: 900 },
-  { id: "S3", name: "Extracting process facts", model: "claude-sonnet-5",
+  { id: "U2", name: "Extracting process facts", model: "claude-sonnet-5",
     desc: "Mapping what was said onto the must-know facts of the 45 coverage items in pack revenue v0.1.0. Every fact carries at least one evidence reference.",
-    out: "FACTS_KNOWN facts extracted across 45 coverage items · FACTS_UNKNOWN not established", ms: 2600 },
-  { id: "S4", name: "Generating the narrative", model: "claude-opus-5",
+    out: "FACTS_KNOWN facts extracted across 45 coverage items · FACTS_UNKNOWN not established", ms: 2400 },
+  { id: "U3", name: "Evaluating methodology coverage", model: "deterministic",
+    desc: "Code, not the model. Comparing the extracted facts against the pack's required areas and marking what is established, partial, unknown or contradictory.",
+    out: "COV_COVERED of COV_APPLICABLE areas established · MANDATORY_OPEN required areas still open", ms: 700 },
+  { id: "U4", name: "Structuring the process and its variants", model: "claude-opus-5",
+    desc: "Separating the flows that are materially different processes, and ordering the steps of each. Machines, spare parts and service contracts share a spine and diverge.",
+    out: "3 variants · 11 process steps · 2 divergence points · 1 convergence point", ms: 2800 },
+  { id: "U5", name: "Generating the process narrative", model: "claude-opus-5",
     desc: "Drafting the process narrative in firm house style, sub-process by sub-process, with an evidence reference on every block.",
     out: "14 sections · 41 blocks", ms: 3400 },
-  { id: "S5", name: "Identifying risks", model: "claude-opus-5",
-    desc: "Mapping the facts onto the 30-entry revenue risk library at assertion level, with inherent risk factors and drivers specific to this entity.",
-    out: "RISK_COUNT risks · 10 from the library · 1 new, with justification", ms: 3100 },
-  { id: "S6", name: "Identifying controls and gaps", model: "claude-opus-5",
-    desc: "Mapping described controls onto the 33-entry control library, then testing each identified risk for an addressing control.",
-    out: "CONTROL_COUNT controls · GAP_COUNT control gaps", ms: 3000 },
-  { id: "S7", name: "Assessing key control criteria", model: "claude-opus-5",
-    desc: "Testing each control against the six key-control criteria. A criterion that cannot be established produces a follow-up question, not a lower-confidence conclusion.",
-    out: "KEY_COUNT proposed as key · 2 could not be assessed", ms: 2400 },
-  { id: "S8", name: "Validating source references", model: "deterministic",
-    desc: "Code, not the model. Every quote must occur in the source it cites, every library reference must exist in the loaded pack, and every generated object must carry at least one evidence reference.",
-    out: "38 of 41 narrative blocks grounded · 3 could not be validated → marked Needs source",
+  { id: "U6", name: "Assembling the process map", model: "deterministic",
+    desc: "Code, not the model. Laying out the steps from their variant membership and successors — the map and the model cannot disagree.",
+    out: "11 nodes across 2 lanes · every node traced to a source", ms: 600 },
+  { id: "U7", name: "Identifying statements needing clarification", model: "claude-sonnet-5",
+    desc: "Flagging where two sources disagree and where the pack requires a fact that nothing established, then generating the follow-up each one needs.",
+    out: "1 contradiction · 3 required areas open · 4 follow-ups drafted", ms: 1600 },
+  { id: "U8", name: "Validating source references", model: "deterministic",
+    desc: "Code, not the model. Every quote must occur in the source it cites, and every generated statement must carry at least one evidence reference.",
+    out: "38 of 41 narrative blocks grounded · 3 could not be validated → marked Needs support",
     warn: true, ms: 1100 },
-  { id: "S9", name: "Assembling the working paper", model: "deterministic",
-    desc: "Building the risk and control matrix, the coverage assessment and the open item list from the reviewed objects. No model call.",
-    out: "RCM_ROWS matrix rows · OPEN_COUNT open items · working paper assembled", ms: 800 },
+  { id: "U9", name: "Assembling the process-understanding workpaper", model: "deterministic",
+    desc: "Building the narrative, the map and the coverage assessment into one reviewable document. No model call, and nothing is concluded.",
+    out: "Understanding workpaper assembled · nothing concluded", ms: 700 },
 ];
 
-/* --- Sign-off gates -------------------------------------------------------- */
-
-export const signOffGates = [
-  { id: "narrative", label: "Narrative approved", detail: "Every section approved or rejected with a reason" },
-  { id: "needsSource", label: "No unsupported statements", detail: "No block remains in Needs source" },
-  { id: "contradiction", label: "No unresolved contradictions", detail: "Every contradiction resolved or documented" },
-  { id: "risks", label: "Risks concluded", detail: "Every risk accepted, modified or rejected by the auditor" },
-  { id: "controls", label: "Controls concluded", detail: "A key control decision recorded for every control" },
-  { id: "mandatory", label: "Mandatory items addressed", detail: "No ISA 240 mandatory coverage item left open without a documented reason" },
-  { id: "openItems", label: "Open items resolved or carried forward", detail: "Each open item resolved, or explicitly carried to final" },
+/* Step 4 — controls and findings. Runs against the *reviewed* understanding,
+   which is why it is a second run and not nine more stages of the first. */
+export const analysisPipeline = [
+  { id: "A1", name: "Identifying controls", model: "claude-opus-5",
+    desc: "Mapping the controls described in the reviewed understanding onto the 33-entry control library, and attaching each to the process step it sits on.",
+    out: "CONTROL_COUNT controls identified · 11 from the library · 3 not in it", ms: 2900 },
+  { id: "A2", name: "Identifying control gaps and process findings", model: "claude-opus-5",
+    desc: "Looking for steps with nothing controlling them, and for things wrong with the process that are not control gaps.",
+    out: "GAP_COUNT control gaps · 1 process observation", ms: 2400 },
+  { id: "A3", name: "Identifying risk signals", model: "claude-opus-5",
+    desc: "Mapping the facts onto the 30-entry revenue risk library at assertion level. Signals for the risk analysis phase — nothing here is an assessed risk of material misstatement.",
+    out: "RISK_COUNT risk signals · 10 from the library · 1 outside it, with justification", ms: 2900 },
+  { id: "A4", name: "Mapping controls to risk signals", model: "deterministic",
+    desc: "Code, not the model. Pairing each identified control with the signals it addresses, and flagging every signal with nothing against it.",
+    out: "RCM_ROWS pairs · GAP_COUNT signals with no control", ms: 600 },
+  { id: "A5", name: "Evaluating the firm's key-control criteria", model: "claude-opus-5",
+    desc: "Testing each control against the six key-control criteria. A criterion that cannot be established produces a follow-up question, not a lower-confidence conclusion.",
+    out: "KEY_COUNT proposed as key · 2 could not be assessed", ms: 2400 },
+  { id: "A6", name: "Validating source references", model: "deterministic",
+    desc: "Code, not the model. Every proposed control, gap and signal must cite the part of the understanding it came from.",
+    out: "All proposals traced to the reviewed understanding", ms: 800 },
+  { id: "A7", name: "Assembling the matrix and the review queues", model: "deterministic",
+    desc: "Building the risk and control matrix and the two recommendation queues. Every proposal is a proposal until you conclude it.",
+    out: "RCM_ROWS matrix rows · CONTROL_COUNT controls and FINDING_COUNT findings to conclude", ms: 700 },
 ];

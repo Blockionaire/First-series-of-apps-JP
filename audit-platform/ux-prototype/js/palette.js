@@ -36,6 +36,9 @@ function index() {
     if (st.claimQueue().length)
       add("Do", "Start the judgement queue", `${st.claimQueue().length} statements need you`,
         () => st.act.startFocus("claims"));
+    if (!st.S.analysed && !st.narrativeSummary().pending)
+      add("Do", "Analyse controls and findings", "step 4, against the reviewed understanding",
+        () => { location.hash = "#/controls"; });
     if (st.controlSummary().pending)
       add("Do", "Review control recommendations", `${st.controlSummary().pending} to conclude`,
         () => { location.hash = "#/controls"; st.act.startFocus("controls"); });
@@ -67,18 +70,18 @@ function index() {
       S.reviewMode = "read"; S.section = sec.id; S.scrollTo = sec.id; location.hash = "#/understanding";
     }));
 
-  if (st.S.generated) controls.forEach((c) =>
+  if (st.S.analysed) controls.forEach((c) =>
     add("Controls", c.title, `${c.id} · ${c.owner || "no owner"}`, () => {
       const q = st.controlSummary().queue; const i = q.findIndex((x) => x.id === c.id);
       if (i >= 0) { S.focusKind = "controls"; S.focusIx = i; S.reviewMode = "focus"; }
       location.hash = "#/controls";
     }));
 
-  if (st.S.generated) st.allFindings().forEach((f) =>
+  if (st.S.analysed) st.allFindings().forEach((f) =>
     add("Findings", f.title, `${f.id}${f.fromTrace ? " · from the line walkthrough" : ""}`,
       () => { location.hash = "#/controls"; st.act.startFocus("findings"); }));
 
-  if (st.S.generated) risks.forEach((r) =>
+  if (st.S.analysed) risks.forEach((r) =>
     add("Risk signals (carried forward)", r.title, `${r.id} · ${r.lib || "new"}`,
       () => { location.hash = "#/matrix"; }));
 

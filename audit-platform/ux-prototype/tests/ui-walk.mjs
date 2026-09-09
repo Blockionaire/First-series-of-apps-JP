@@ -37,8 +37,23 @@ await p.evaluate(() => { const A=window.__act, st=window.__st; A.acceptClean();
   (window.__narrative||[]).forEach(s=>{ if(st.sectionApprovable(s)) A.approveSection(s.id); }); });
 await p.waitForTimeout(250);
 
-// 3 — Controls: park, then carry forward with a reason; modify a finding
-await p.evaluate(() => location.hash = '#/controls'); await p.waitForTimeout(300);
+// 3 — Step 4 is its own analysis run
+await p.evaluate(() => location.hash = '#/controls'); await p.waitForTimeout(350);
+ok('step 4 offers its own analysis rather than showing step 3 results',
+   await has('Analyse controls and findings'));
+ok('and nothing was concluded in step 3',
+   await p.evaluate(() => window.__st.controlSummary().total === 0
+                       && window.__st.allFindings().length === 0
+                       && window.__st.riskSummary().total === 0));
+await shot('w5a-analysis');
+await p.click('[data-act="run-analysis"]');
+await p.waitForSelector('[data-act="read-analysis"]', { timeout: 40000 });
+ok('the analysis result waits to be read', await has('proposed'));
+await shot('w5b-analysis-done');
+await p.click('[data-act="read-analysis"]'); await p.waitForTimeout(300);
+ok('only now do controls and findings exist',
+   await p.evaluate(() => window.__st.controlSummary().total > 0
+                       && window.__st.allFindings().length > 0));
 await shot('w5-controls');
 await p.click('[data-act="start-focus"][data-kind="controls"]'); await p.waitForTimeout(300);
 ok('the control focus offers Carry forward undecided', await has('Carry forward undecided'));
@@ -58,11 +73,22 @@ ok('the finding focus offers Modify', await has('Modify'));
 await p.click('[data-act="edit-finding"]'); await p.waitForTimeout(250);
 ok('modify opens an editable form', await p.locator('#f-title').count() === 1);
 await shot('w7-modify');
+ok('the modify form includes the description', await p.locator('#f-detail').count() === 1);
 await p.fill('#f-title', 'Acceptance protocols are not retained in any system');
+await p.fill('#f-detail', 'Rewritten by the auditor: the signed protocol exists in the project file but is held by the project manager, not in ServiceTrack or Business Central, and no register of them is maintained.');
 await p.selectOption('#f-sev', 'significant_deficiency_candidate');
 await p.click('[data-act="save-finding"]'); await p.waitForTimeout(300);
 const mod = await p.evaluate(() => { const d = Object.values(window.__S.findingDecisions).find(x => x.decision === 'modified'); return d && d.fields; });
 ok('the modified finding stores the auditor version', !!mod && mod.severity === 'significant_deficiency_candidate', JSON.stringify(mod && mod.title));
+ok('including the rewritten description', !!mod && /Rewritten by the auditor/.test(mod.detail));
+const prop = await p.evaluate(() => {
+  const f = window.__st.allFindings().find(x => window.__st.findingDecision(x)?.decision === 'modified');
+  const o = window.__st.findingOutcome(f);
+  return { proposedTitle: f.title, proposedDetail: f.detail, concludedTitle: o.title, concludedDetail: o.detail };
+});
+ok('the platform proposal is preserved alongside it',
+   prop.proposedTitle !== prop.concludedTitle && prop.proposedDetail !== prop.concludedDetail,
+   prop.proposedTitle.slice(0, 40));
 await p.evaluate(() => { const A=window.__act, st=window.__st;
   st.findingSummary().queue.slice().forEach(f => A.decideFinding(f.id, 'confirmed')); });
 
@@ -117,10 +143,23 @@ ok('extending says a conclusion is still required', t4.toLowerCase().includes('s
 ok('and the step is not satisfied', await p.evaluate(() => window.__st.testingSatisfied()) === false);
 await shot('w14-testing-extended');
 await p.click('[data-act="conclude-test"][data-d="no_rely"]'); await p.waitForTimeout(300);
-ok('do not rely records the conclusion', await p.evaluate(() => window.__S.testConclusion) === 'no_rely');
+ok('do not rely records the conclusion on that control',
+   await p.evaluate(() => window.__st.controlTest('C-04').conclusion) === 'no_rely');
 ok('but the step is still open while other key controls have no scope decision',
    await p.evaluate(() => window.__st.testingSatisfied()) === false,
    'deferred=' + await p.evaluate(() => window.__st.testingScope().deferred.length));
+// a second control scoped for testing must not be closed by C-04's conclusion
+await p.evaluate(() => window.__act.setTestScope('C-01','required')); await p.waitForTimeout(300);
+ok('a second scoped control shows a placeholder, not the worked test',
+   await has('No test workpaper has been drafted'));
+ok('and step 6 is not satisfied by C-04 alone',
+   await p.evaluate(() => window.__st.testingSatisfied()) === false);
+await shot('w13b-second-control');
+await p.click('[data-act="test-conclude-open"]'); await p.waitForTimeout(250);
+await p.fill('#ans', 'Three releases inspected against the blocked-order log; all approved by the Commercial Director before release.');
+await p.click('[data-act="conclude-test"][data-d="rely"]'); await p.waitForTimeout(300);
+ok('its own conclusion is recorded separately',
+   await p.evaluate(() => window.__st.controlTest('C-01').conclusion) === 'rely');
 
 // 7 — Complete: stateful sign-off
 await p.evaluate(() => { const A=window.__act, st=window.__st;
@@ -139,6 +178,25 @@ ok('signing gives ready for review, not complete', (await p.locator('h1').first(
 await p.click('[data-act="submit-review"]'); await p.waitForTimeout(300);
 ok('submitting shows the reviewer actions', await has('Acting as the reviewer'));
 await shot('w16-submitted');
+// send it back first, and prove the loop is real
+await p.click('[data-act="reviewer"][data-d="reopened"]'); await p.waitForTimeout(350);
+ok('sending it back raises a review point', await has('review point'));
+ok('and the process shows review points', (await p.locator('h1').first().innerText()).toLowerCase().includes('review point'));
+await shot('w16b-reopened');
+ok('resubmission is blocked', await p.evaluate(() =>
+  document.querySelector('[data-act="submit-review"]')?.disabled === true));
+await p.click('[data-act="open-point"]'); await p.waitForTimeout(250);
+ok('the review point shows what the reviewer wrote', await has('What the reviewer wrote'));
+ok('and links to the object it concerns', await p.locator('[data-act="nav"][data-href="#/controls"]').count() > 0);
+await shot('w16c-review-point');
+await p.click('[data-act="answer-point-open"]'); await p.waitForTimeout(250);
+await p.fill('#ans', 'The second route exists in Business Central. C-02 is reconcluded as not key and the exposure is carried into the risk analysis handover.');
+await p.click('[data-act="answer-point"]'); await p.waitForTimeout(350);
+ok('answering it releases the file', await p.evaluate(() => window.__st.canResubmit()) === true);
+ok('and the response is on the file', await p.evaluate(() =>
+  /Business Central/.test(window.__st.reviewPointById('RP-01').response || '')));
+await p.click('[data-act="submit-review"]'); await p.waitForTimeout(300);
+ok('resubmission now works', await p.evaluate(() => window.__st.processState().id) === 'submitted');
 await p.click('[data-act="reviewer"][data-d="approved"]'); await p.waitForTimeout(300);
 ok('approval completes it', (await p.locator('h1').first().innerText()).includes('complete'));
 await shot('w17-complete');
@@ -146,9 +204,9 @@ await shot('w17-complete');
 // 8 — the demo
 await p.evaluate(() => { window.__act.reset(); }); await p.waitForTimeout(300);
 await p.evaluate(() => window.__demoStart()); await p.waitForTimeout(400);
-let beats = 0;
-for (let i=0;i<11;i++){ await p.keyboard.press('ArrowRight'); await p.waitForTimeout(i===4?4000:400); beats++; }
-ok('the demo runs all twelve beats', (await p.locator('.demo__n').innerText()) === '12/12', await p.locator('.demo__n').innerText());
+const n = await p.evaluate(() => window.__demoSteps);
+for (let i=0;i<n-1;i++){ await p.keyboard.press('ArrowRight'); await p.waitForTimeout((i===4||i===6)?6000:400); }
+ok(`the demo runs all ${n} beats`, (await p.locator('.demo__n').innerText()) === `${n}/${n}`, await p.locator('.demo__n').innerText());
 await shot('w18-demo-last');
 
 console.log('\n--- runtime errors:', errs.length ? errs.join('\n') : 'none');

@@ -1,6 +1,6 @@
 # Tests
 
-Four Playwright suites, run against Chromium. They exist because the prototype has real state now
+Five Playwright suites, run against Chromium. They exist because the prototype has real state now
 and a screenshot cannot tell you whether a gate is honest.
 
 ```
@@ -18,9 +18,10 @@ if yours is elsewhere.
 | Suite | What it protects |
 |---|---|
 | `smoke.mjs` | Every registered route renders and no `data-href` points at an unregistered route. `window.__checkRoutes()` also runs on boot and logs to the console. |
-| `state-integrity.mjs` | Contradiction resolution propagates (A); undecided is not a conclusion (B); walkthroughs are per variant and feed step 4 (C); testing is conditional and extending is not concluding (D); questionnaire answers reach the fact model (E); sign-off is a state machine (F). |
+| `state-integrity.mjs` | Contradiction resolution propagates (A); undecided is not a conclusion (B); walkthroughs are per variant and feed step 4 (C); testing is conditional and extending is not concluding (D); one control's test conclusion never closes another's (D2); questionnaire answers become real evidence (E); sign-off is a state machine with a working review-point loop (F). |
 | `ui-walk.mjs` | The same journey through the interface — clicks and keystrokes only — from Prepare to reviewer approval, plus the twelve-beat demo. |
 | `filecheck.mjs` | `audit-ai-prototype.html` boots and works from `file://`, which is how design partners will open it. |
+| `undo-reset.mjs` | Every decision the later passes added is undoable, session evidence is undone with the answer that created it, and reset returns a valid start state. |
 
 `tests/` is prototype tooling. It is not a production test strategy, and nothing here touches
 `audit-engine`.

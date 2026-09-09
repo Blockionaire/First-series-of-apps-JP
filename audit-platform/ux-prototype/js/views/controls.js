@@ -13,7 +13,7 @@
    · A finding can be modified, not only confirmed or dismissed. */
 
 import { esc, cx, act as btn, row, dot, chip, more, evidence, empty, callout, state } from "../ui.js";
-import { controls, risks, subProcesses } from "../data-model.js";
+import { controls, risks, gaps, subProcesses, analysisPipeline } from "../data-model.js";
 import { processSteps } from "../data-process.js";
 import { ref } from "../data-sources.js";
 import * as st from "../state.js";
@@ -48,6 +48,81 @@ const focusBar = (i, len, label) => `<div class="focus__bar">
   <span class="sp"></span><span>${esc(label)}</span><span class="idline__sep">·</span>
   <span><b style="color:var(--ink-2)">${i + 1}</b> of ${len}</span>
 </div>`;
+
+/* ── The analysis run ─────────────────────────────────────────────────────
+   Step 4 is its own piece of work. It reads the understanding the auditor has
+   just reviewed and proposes what controls the process and what is wrong with
+   it. Step 3 deliberately did none of this.
+   ------------------------------------------------------------------------- */
+
+function fill(t) {
+  return t.replace("CONTROL_COUNT", controls.length)
+    .replace("FINDING_COUNT", gaps.length + 1)
+    .replace("GAP_COUNT", gaps.length)
+    .replace("RISK_COUNT", risks.length)
+    .replace("KEY_COUNT", controls.filter((c) => c.keyProposal === true).length)
+    .replace("RCM_ROWS", 15);
+}
+
+function analysisView() {
+  const running = S.analysing;
+  const done = S.analysed && !S.anaSeen;
+  const n = st.narrativeSummary();
+
+  const body = `
+    <div class="head">
+      <h1 class="t-title">${done ? "Analysis ready" : running ? "Analysing controls and findings"
+        : "Analyse controls and findings"}</h1>
+      <p class="t-lede" style="margin-top:10px">
+        ${analysisPipeline.length} stages against the understanding you approved. This is where
+        controls, gaps and risk signals are identified — none of it happened in step 3, because none
+        of it should be proposed from a draft nobody has read.
+      </p>
+    </div>
+
+    ${!running && !done ? `
+      <div class="rows" style="margin-top:36px">
+        ${row({ title: "Process understanding", side: `${n.approved} sections approved` })}
+        ${row({ title: "Process steps to analyse", side: `${processSteps.length} across 3 variants` })}
+        ${row({ title: "Control library", side: "33 entries · revenue v0.1.0" })}
+        ${row({ title: "Risk library", side: "30 entries · revenue v0.1.0" })}
+      </div>
+      <div style="margin-top:30px">
+        ${btn("Start the analysis", "run-analysis", { variant: "go", size: "lg", key: "Enter" })}
+      </div>
+      <p class="t-meta" style="margin-top:14px;max-width:64ch">
+        Everything it produces is a proposal. Nothing is concluded until you conclude it, one item
+        at a time.</p>` : `
+      <div style="margin-top:36px" class="rows">
+        ${analysisPipeline.map((p, i) => {
+          const fin = i < S.anaStage, now = i === S.anaStage && running;
+          return `<div class="rw" style="opacity:${fin || now ? 1 : .35};transition:opacity .3s">
+            <span class="rw__lead" style="padding-top:4px;width:18px">
+              ${fin ? `<span style="color:var(--ok)">✓</span>`
+                : now ? `<span class="dot dot--open"></span>` : `<span class="t-meta">${i + 1}</span>`}</span>
+            <span class="rw__main">
+              <span class="rw__t">${esc(p.name)}</span>
+              <span class="rw__d">${esc(p.desc)}</span>
+              ${fin ? `<span class="rw__d" style="color:var(--ink-2);margin-top:5px">${esc(fill(p.out))}</span>` : ""}
+            </span>
+            <span class="rw__side mono" style="font-size:11.5px">${esc(p.model)}</span>
+          </div>`;
+        }).join("")}
+      </div>
+      ${done ? `
+        <div style="margin-top:32px">
+          ${callout(`<b>${controls.length} controls and ${gaps.length + 1} findings proposed.</b>
+            Every one cites the part of the understanding it came from, and every one is a proposal
+            until you conclude it. ${controls.filter((c) => c.keyProposal === null).length} controls
+            could not be assessed against the key-control criteria at all — those are questions, not
+            low-confidence answers.`)}
+          <div class="acts" style="margin-top:22px">
+            ${btn("Review the proposals", "read-analysis", { variant: "go", size: "lg", key: "Enter" })}
+          </div>
+        </div>` : ""}`}
+  `;
+  return screen("controls", body);
+}
 
 /* ── Triage ──────────────────────────────────────────────────────────────── */
 
@@ -156,14 +231,22 @@ function triage() {
       ${more("fdec", `Show ${fs.decided} concluded ${fs.decided === 1 ? "finding" : "findings"}`, `<div class="rows">
         ${fs.all.filter((f) => !st.findingOpen(f)).map((f) => {
           const o = st.findingOutcome(f);
-          return row({
-            lead: dot(o.decision === "dismissed" ? "" : o.severity === "observation" ? "warn" : "alert"),
-            title: esc(o.title),
-            detail: o.decision === "dismissed" ? "Dismissed by the auditor"
-              : o.decision === "modified" ? `Confirmed as modified · ${esc(SEV[o.severity] || o.severity)}`
-              : `Confirmed as proposed · ${esc(SEV[o.severity] || o.severity)}`,
-            side: btn("Reopen", "clear-finding", { size: "sm", variant: "plain", data: { id: f.id } }),
-          });
+          const changed = o.decision === "modified";
+          return `<div class="rw" style="display:block">
+            <div class="row row--top" style="gap:20px">
+              <span class="rw__lead" style="padding-top:5px">${dot(
+                o.decision === "dismissed" ? "" : o.severity === "observation" ? "warn" : "alert")}</span>
+              <span class="rw__main">
+                <span class="rw__t">${esc(o.title)}</span>
+                <span class="rw__d">${o.decision === "dismissed" ? "Dismissed by the auditor"
+                  : changed ? `Your conclusion · ${esc(SEV[o.severity] || o.severity)}`
+                  : `Confirmed as proposed · ${esc(SEV[o.severity] || o.severity)}`}</span>
+                ${changed ? `<span class="rw__d" style="margin-top:6px;color:var(--ink-4)">
+                  Platform proposed: &ldquo;${esc(f.title)}&rdquo; · ${esc(SEV[f.severity] || f.severity)}</span>` : ""}
+              </span>
+              <span class="rw__side">${btn("Reopen", "clear-finding", { size: "sm", variant: "plain", data: { id: f.id } })}</span>
+            </div>
+          </div>`;
         }).join("")}
       </div>`, S.disclosed.fdec)}
     </section>` : ""}
@@ -305,6 +388,9 @@ function findingFocus() {
       <label class="t-eyebrow" for="f-title">Finding</label>
       <input class="field" id="f-title" value="${esc(f.title)}" style="margin:6px 0 14px">
 
+      <label class="t-eyebrow" for="f-detail">What was found</label>
+      <textarea class="field" id="f-detail" rows="4" style="margin:6px 0 14px">${esc(f.detail)}</textarea>
+
       <label class="t-eyebrow" for="f-sev">Severity</label>
       <select class="field" id="f-sev" style="margin:6px 0 14px">
         ${Object.entries(SEV).map(([k, v]) =>
@@ -379,12 +465,22 @@ function findingFocus() {
 export function controlsStep() {
   if (!S.generated) {
     return screen("controls", `
-      ${empty("No controls identified yet",
-        "Controls are identified from the process understanding, so the process has to be documented first.")}
+      ${empty("The process is not documented yet",
+        "Controls are analysed from the process understanding, so step 3 has to run first.")}
       <div style="text-align:center;margin-top:-40px">
         ${btn("Go to the process understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
       </div>`);
   }
+  const n = st.narrativeSummary();
+  if (n.pending) {
+    return screen("controls", `
+      ${empty(`${n.pending} sections of the understanding are still unreviewed`,
+        "Step 4 analyses the understanding you have accepted. Proposing controls from a draft nobody has read would put the analysis ahead of the judgement it depends on.")}
+      <div style="text-align:center;margin-top:-40px">
+        ${btn("Finish reviewing the understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
+      </div>`);
+  }
+  if (!S.analysed || !S.anaSeen) return analysisView();
   if (S.reviewMode === "focus" && S.focusKind === "controls") return controlFocus();
   if (S.reviewMode === "focus" && S.focusKind === "findings") return findingFocus();
   return triage();

@@ -12,7 +12,7 @@
      leaves the test open. */
 
 import { esc, cx, act as btn, row, dot, more, callout, empty } from "../ui.js";
-import { controlTest } from "../data-process.js";
+import { controlTest as controlTestPack } from "../data-process.js";
 import { controls } from "../data-model.js";
 import * as st from "../state.js";
 import { screen } from "./shell.js";
@@ -32,14 +32,16 @@ function scopeSection(sc) {
       A control is tested because you intend to rely on it. Deciding not to rely, and taking a
       substantive response instead, is a legitimate answer — it just has to be an answer.</p>
 
-    ${sc.rows.map(({ control: c, scope }) => {
+    ${sc.rows.map(({ control: c, scope, test }) => {
       const editing = S.editing === `ts:${c.id}`;
       return `<section class="vcard">
         <div class="row" style="align-items:baseline;gap:12px">
           <h3 class="t-h" style="font-size:16px">${esc(c.title)}</h3>
           <span class="sp"></span>
           <span class="t-meta">${
-            scope.state === "required" ? "test required"
+            scope.state === "required"
+              ? (test.conclusion ? (test.conclusion === "rely" ? "tested · reliance placed" : "tested · no reliance")
+                 : test.extended ? "sample extended — open" : "test required, not concluded")
             : scope.state === "not_required" ? "no test — reason on file"
             : "no decision recorded"}</span>
         </div>
@@ -70,21 +72,55 @@ function scopeSection(sc) {
           </div>
         </div>` : ""}
 
-        ${scope.state === "required" && c.id !== controlTest.controlId ? `
-          <p class="t-sub" style="margin-top:14px;color:var(--ink-4)">
-            Scoped for testing. No test has been drafted for this control in the prototype — only
-            ${esc(controlTest.controlId)} carries a worked example.</p>` : ""}
+        ${scope.state === "required" ? placeholder(c, test) : ""}
       </section>`;
     }).join("")}
   </section>`;
 }
 
+/* --- Controls scoped for testing that have no workpaper in the prototype ----
+   A placeholder, not a shortcut: the control still needs its own conclusion,
+   and step 6 stays open until it has one.
+   -------------------------------------------------------------------------- */
+
+function placeholder(c, test) {
+  if (st.hasWorkpaper(c.id)) {
+    return `<p class="t-sub" style="margin-top:14px;color:var(--ink-4)">
+      Scoped for testing. The worked test is below.</p>`;
+  }
+  const editing = S.editing === `tc:${c.id}`;
+  return `<div class="callout" style="margin-top:14px">
+    <b>Scoped for testing.</b> No test workpaper has been drafted for this control in the
+    prototype — only <span class="mono">${esc(controlTestPack.controlId)}</span> carries a worked
+    example. The conclusion is still this control's own, and step 6 stays open without it.
+    ${test.conclusion ? `<div class="t-meta" style="margin-top:10px">
+      <b style="color:var(--ink-2)">${esc(test.conclusion === "rely"
+        ? "Concluded — reliance placed on this control." : "Concluded — no reliance placed.")}</b>
+      ${test.note ? " " + esc(test.note) : ""}</div>
+      <div class="acts" style="margin-top:10px">
+        ${btn("Reopen this conclusion", "reopen-test", { variant: "plain", size: "sm", data: { id: c.id } })}
+      </div>`
+    : editing ? `<div style="margin-top:12px">
+        <textarea class="field" id="ans" rows="2"
+          placeholder="What the test found, in one line."></textarea>
+        <div class="acts" style="margin-top:10px">
+          ${btn("Rely on the control", "conclude-test", { variant: "go", size: "sm", data: { id: c.id, d: "rely" } })}
+          ${btn("Do not rely", "conclude-test", { size: "sm", data: { id: c.id, d: "no_rely" } })}
+          ${btn("Cancel", "cancel-edit", { variant: "plain", size: "sm" })}
+        </div>
+      </div>`
+    : `<div class="acts" style="margin-top:10px">
+        ${btn("Record this control's conclusion", "test-conclude-open", { size: "sm", data: { id: c.id } })}
+      </div>`}
+  </div>`;
+}
+
 /* --- The worked test ------------------------------------------------------- */
 
 function testSection() {
-  const c = controls.find((x) => x.id === controlTest.controlId);
-  const t = controlTest;
-  const ts = st.testSummary();
+  const c = controls.find((x) => x.id === controlTestPack.controlId);
+  const t = controlTestPack;
+  const ts = st.testSummary(t.controlId);
 
   const stage = (n, name, body, done = true) => `
     <div class="tstage ${done ? "is-done" : ""}">
@@ -136,7 +172,7 @@ function testSection() {
           <b>${ts.corroborated} of ${ts.selected}</b> items met every attribute.
           ${ts.exceptions} exception${ts.exceptions === 1 ? "" : "s"}.</p>
         ${!ts.extended ? `<div class="acts" style="margin-top:16px">
-          ${btn("Extend the sample to 10", "extend-sample", { data: { d: "extend" } })}
+          ${btn("Extend the sample to 10", "extend-sample", { data: { id: t.controlId } })}
         </div>
         <p class="t-meta" style="margin-top:10px">Extending changes the selection. It does not
         conclude the test, and the step stays open until you do.</p>` : `
@@ -164,14 +200,14 @@ function testSection() {
         </div>
         <div class="q__acts">
           ${ts.conclusion
-            ? btn("Reopen the conclusion", "reopen-test", { variant: "plain" })
-            : `${btn("Rely on the control", "conclude-test", { variant: "go", data: { d: "rely" } })}
-               ${btn("Do not rely — respond substantively", "conclude-test", { data: { d: "no_rely" } })}`}
+            ? btn("Reopen the conclusion", "reopen-test", { variant: "plain", data: { id: t.controlId } })
+            : `${btn("Rely on the control", "conclude-test", { variant: "go", data: { id: t.controlId, d: "rely" } })}
+               ${btn("Do not rely — respond substantively", "conclude-test", { data: { id: t.controlId, d: "no_rely" } })}`}
         </div>
         ${!ts.conclusion ? `<p class="t-meta" style="margin-top:12px;max-width:64ch">
           Only these two answers close the test. Everything else — extending, requesting more
           evidence, going back to the client — leaves it open, which is what the completion gate
-          reads.</p>` : ""}`, !!ts.conclusion)}
+          reads. And this conclusion closes <i>this</i> control only.</p>` : ""}`, !!ts.conclusion)}
     </div>
   </section>`;
 }
@@ -180,7 +216,6 @@ function testSection() {
 
 export function testing() {
   const sc = st.testingScope();
-  const ts = st.testSummary();
 
   const intro = `
     <div class="callout callout--future" style="margin-bottom:28px">
@@ -200,7 +235,7 @@ export function testing() {
   }
 
   const showTest = sc.rows.some(
-    (r) => r.control.id === controlTest.controlId && r.scope.state === "required");
+    (r) => r.control.id === controlTestPack.controlId && r.scope.state === "required");
 
   const body = `${intro}
     <div class="head">
@@ -235,8 +270,10 @@ export function testing() {
       ${!st.testingSatisfied() ? `<p class="t-meta" style="margin-top:10px">
         ${!sc.scopeDecided
           ? `${sc.deferred.length} key control${sc.deferred.length === 1 ? " has" : "s have"} no testing decision.`
-          : ts.extended ? "The extended test has not been concluded."
-          : "The scoped test has not been concluded."}
+          : `${sc.outstanding.length} of ${sc.required.length} scoped test${sc.required.length === 1 ? "" : "s"}
+             ${sc.outstanding.length === 1 ? "is" : "are"} not concluded —
+             ${esc(sc.outstanding.map((r) => r.control.id).join(", "))}. Concluding one control
+             says nothing about another.`}
         Completion reads this.</p>` : ""}
     </section>
   `;

@@ -5,7 +5,8 @@
    ========================================================================== */
 
 import { esc, act as btn } from "./ui.js";
-import { pipeline, narrative } from "./data-model.js";
+import { pipeline, analysisPipeline, narrative } from "./data-model.js";
+import { ref as srcRef } from "./data-sources.js";
 import * as st from "./state.js";
 import { S, act, undo, canUndo } from "./state.js";
 import { palette, runPalette, matches } from "./palette.js";
@@ -23,12 +24,14 @@ import { complete, matrix, clientSurface } from "./views/complete.js";
 import { cockpit } from "./views/cockpit.js";
 
 window.__demoStart = demoStart;
+window.__demoSteps = STEPS.length;
 /* Test hooks. Read-only in practice; the smoke, route-integrity and
    state-integrity tests drive the app through them rather than through the DOM. */
 window.__S = S;
 window.__st = st;
 window.__act = act;
 window.__narrative = narrative;
+window.__refs = (ids) => ids.map((id) => srcRef(id)).filter(Boolean);
 
 const ROUTES = {
   "#/": work,                       // across engagements
@@ -184,6 +187,8 @@ document.addEventListener("click", (e) => {
     }
     case "run-pipeline": act.startGeneration(pipeline); break;
     case "read-gen": act.readGenResult(); break;
+    case "run-analysis": act.startAnalysis(analysisPipeline); break;
+    case "read-analysis": act.readAnalysis(); break;
 
     /* claims */
     case "toggle-claim": act.toggleClaim(d.claim); break;
@@ -216,7 +221,7 @@ document.addEventListener("click", (e) => {
     case "cancel-finding-edit": act.cancelFindingEdit(); break;
     case "clear-finding": act.clearFinding(d.id); break;
     case "save-finding": act.decideFinding(d.id, "modified", {
-      title: val("f-title"), severity: sel("f-sev"),
+      title: val("f-title"), detail: val("f-detail"), severity: sel("f-sev"),
       impact: val("f-impact"), remediation: val("f-rem") || null,
     }); break;
     case "map-node": S.mapStep = S.mapStep === d.step || !d.step ? null : d.step; st.commit(); break;
@@ -241,14 +246,19 @@ document.addEventListener("click", (e) => {
     case "test-not-open": act.openEditor("ts:" + d.id); break;
     case "test-not-required": act.setTestScope(d.id, "not_required", val("ans") || "No reason recorded."); break;
     case "test-reopen-scope": act.setTestScope(d.id, "deferred", null); break;
-    case "extend-sample": act.extendSample(); break;
-    case "conclude-test": act.concludeTest(d.d || null); break;
-    case "reopen-test": act.reopenTest(); break;
+    case "extend-sample": act.extendSample(d.id); break;
+    case "test-conclude-open": act.openEditor("tc:" + d.id); break;
+    case "conclude-test": act.concludeTest(d.id, d.d || null, val("ans")); break;
+    case "reopen-test": act.reopenTest(d.id); break;
 
     /* step 7 — sign-off */
     case "sign-preparer": act.signPreparer(); break;
     case "submit-review": act.submitForReview(); break;
     case "reviewer": act.reviewerAction(d.d); break;
+    case "open-point": act.openPoint(d.id); break;
+    case "answer-point-open": act.openEditor("rp:" + d.id); break;
+    case "answer-point": act.answerPoint(d.id, val("ans")); break;
+    case "reopen-point": act.reopenPoint(d.id); break;
     case "prepare-reopen": act.prepareReopen(); break;
     case "carry-item-open": act.openEditor("carry-item:" + d.id); break;
     case "carry-item": act.carryItem(d.id, sel("carry-dest") || "Final audit", val("ans")); break;
@@ -331,6 +341,9 @@ document.addEventListener("keydown", (e) => {
   if (S.route === "#/prepare" && e.key === "Enter" && !S.prepared) { e.preventDefault(); act.prepareDone(); return; }
   if (S.route === "#/understanding" && e.key === "Enter" && !S.generated && !S.generating) { e.preventDefault(); act.startGeneration(pipeline); return; }
   if (S.route === "#/understanding" && e.key === "Enter" && S.generated && !S.genSeen) { e.preventDefault(); act.readGenResult(); return; }
+  if (S.route === "#/controls" && e.key === "Enter" && S.generated && !st.narrativeSummary().pending
+      && !S.analysed && !S.analysing) { e.preventDefault(); act.startAnalysis(analysisPipeline); return; }
+  if (S.route === "#/controls" && e.key === "Enter" && S.analysed && !S.anaSeen) { e.preventDefault(); act.readAnalysis(); return; }
   if (S.route === "#/trace" && S.reviewMode !== "focus" && e.key === "Enter" && S.traceTxn) {
     const prog = st.traceProgress(S.traceTxn);
     if (prog && !prog.concluded) {
@@ -340,6 +353,7 @@ document.addEventListener("keydown", (e) => {
     }
   }
   if (!FOCUS_ROUTES.includes(S.route) || !S.generated) return;
+  if (S.route === "#/controls" && (!S.analysed || !S.anaSeen)) return;
 
   /* Focus mode: the queue is keyboard-first */
   if (S.reviewMode === "focus") {

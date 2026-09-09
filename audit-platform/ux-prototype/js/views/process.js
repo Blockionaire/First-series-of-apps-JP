@@ -94,7 +94,7 @@ export function processHome() {
   const steps = st.journeyStates();
   const next = st.nextAction();
   const tr = st.traceSummary();
-  const mode = tr.active ? "trace" : S.generated ? "annotated" : "plain";
+  const mode = tr.active ? "trace" : S.analysed ? "annotated" : "plain";
 
   const body = `
     <div class="head">
@@ -103,7 +103,7 @@ export function processHome() {
           <h1 class="t-title">Revenue</h1>
           <p class="t-lede" style="margin-top:10px">
             Order-to-cash, ${esc(client.short)} FY2026 interim.
-            ${S.generated ? "The process as we understand it, and how far the work has got."
+            ${S.analysed ? "The process as we understand it, and how far the work has got."
               : "The process as described so far. It fills in as the walkthrough progresses."}
           </p>
         </div>

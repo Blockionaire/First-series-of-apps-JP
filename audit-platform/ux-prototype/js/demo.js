@@ -6,7 +6,8 @@
 
 import { esc, act as btn } from "./ui.js";
 import { S, commit, act } from "./state.js";
-import { pipeline } from "./data-model.js";
+import * as st from "./state.js";
+import { pipeline, analysisPipeline, narrative } from "./data-model.js";
 import { txnById } from "./data-process.js";
 
 /** Corroborate the first n steps of a transaction, keyed the way state does. */
@@ -33,8 +34,8 @@ export const STEPS = [
     say: "Plain English, not methodology: three things need clarification. The 45 coverage areas, the fact keys and the ISA references are one disclosure away when a methodology partner asks for them.",
     setup: () => { S.prepared = true; S.disclosed.meth = false; } },
 
-  { route: "#/understanding", title: "Step three — the routine, separated from the judgement",
-    say: "Nine stages, two of them ordinary code. Validation checks that every statement cites a source and that the quote occurs in it — three did not. Then: four statements need a person, ten sections are clean and go in one action.",
+  { route: "#/understanding", title: "Step three — how the process works, and nothing more",
+    say: "Nine stages, four of them ordinary code — and every one of them about how the process works. It documents the process and stops there: no control identified, no finding proposed, no risk signal raised. Validation checks that every statement cites a source and that the quote occurs in it — three did not. Then four statements need a person and ten sections go in one action.",
     setup: () => { S.prepared = true; S.reviewMode = "triage"; } },
 
   { route: "#/understanding", title: "The contradiction comes first",
@@ -45,21 +46,26 @@ export const STEPS = [
     say: "Click any sentence and the evidence opens directly beneath it — speaker, timestamp, exact words. No side panel, no navigation, the eye never leaves the line.",
     setup: () => { S.generated = true; S.genSeen = true; S.reviewMode = "read"; S.section = "N8"; S.openClaim = "N8.1"; } },
 
-  { route: "#/controls", title: "Step four — controls, and undecided is not a conclusion",
-    say: "The same map, now annotated: which step each control sits on, and which steps have something wrong with them. Enter accepts the proposal, K and N conclude, C carries one forward with a reason. Parking a control leaves it in the queue — the gate still counts it as outstanding.",
+  { route: "#/controls", title: "Step four is its own analysis",
+    say: "Only now does anything get proposed about controls. Seven stages against the understanding you just approved — controls, gaps, risk signals, the key-control criteria, the matrix. Proposing any of this from a draft nobody had read would put the analysis ahead of the judgement it depends on.",
     setup: () => { S.generated = true; S.genSeen = true; S.reviewMode = "triage"; S.mapStep = null; } },
+
+  { route: "#/controls", title: "Controls, and undecided is not a conclusion",
+    say: "The same map, now annotated: which step each control sits on, and which steps have something wrong with them. Enter accepts the proposal, K and N conclude, C carries one forward with a reason. Parking a control leaves it in the queue — the gate still counts it as outstanding.",
+    setup: () => { S.generated = true; S.genSeen = true; S.analysed = true; S.anaSeen = true;
+                   S.reviewMode = "triage"; S.mapStep = null; } },
 
   { route: "#/trace", title: "Step five — which variants need a walkthrough",
     say: "A machine sale tells you nothing about how a spare-part order behaves. So the requirement is decided per variant, and 'not required' is a real answer that carries a reason. Service contracts do not need one; the two goods variants do.",
     setup: () => {
-      S.generated = true; S.genSeen = true; S.traceTxn = null;
-      S.lwRequirements = {}; S.reviewMode = "triage";
+      S.generated = true; S.genSeen = true; S.analysed = true; S.anaSeen = true;
+      S.traceTxn = null; S.lwRequirements = {}; S.reviewMode = "triage";
     } },
 
   { route: "#/trace", title: "The walkthrough finds the model wrong",
     say: "The invoice went out on 15 September. The customer signed acceptance on 22 September. Revenue was recognised seven days before the performance obligation was satisfied — found by comparing two dates, not by anything anyone said in an interview.",
     setup: () => {
-      S.generated = true; S.genSeen = true;
+      S.generated = true; S.genSeen = true; S.analysed = true; S.anaSeen = true;
       S.lwRequirements = { V1: { state: "required", reason: null } };
       S.traceTxn = "SO-24188"; S.traceStarted["SO-24188"] = true;
       preTrace("SO-24188", 4);
@@ -67,12 +73,17 @@ export const STEPS = [
     } },
 
   { route: "#/testing", title: "Step six — identifying a control is not testing it",
-    say: "Conditional, and marked as a future concept. First a scope decision per key control: tested, or not tested with a reason on file. Then population, selection, evidence, results. Extending the sample is not a conclusion — only rely or do not rely closes the test.",
-    setup: () => { S.generated = true; S.genSeen = true; } },
+    say: "Conditional, and marked as a future concept. First a scope decision per key control: tested, or not tested with a reason on file. Then population, selection, evidence, results. Extending the sample is not a conclusion — and concluding one control's test says nothing about any other one.",
+    setup: () => { S.generated = true; S.genSeen = true; S.analysed = true; S.anaSeen = true; } },
 
-  { route: "#/complete", title: "Step seven — complete closes the process, not the audit",
-    say: "Ready for review is not the same as complete: the preparer signs, the manager approves, and only then is the process closed. What it hands forward is the process understanding, the matrix, the findings, the walkthrough results and anything carried forward. Risk analysis is the next phase and deliberately not in this product.",
-    setup: () => { S.generated = true; S.genSeen = true; } },
+  { route: "#/complete", title: "Step seven — reviewed, not just finished",
+    say: "Ready for review is not the same as complete. The preparer signs, the manager reviews — and if it comes back, it comes back with a review point that has to be answered before the file can go anywhere. Only the reviewer's approval closes the process.",
+    setup: () => { S.generated = true; S.genSeen = true; S.analysed = true; S.anaSeen = true; } },
+
+  { route: "#/complete", title: "What interim hands forward",
+    say: "The process understanding, the matrix, the findings, the walkthrough results and anything carried forward with its destination and its reason. Risk analysis is the next phase, reads all of this, and is deliberately not in this product.",
+    setup: () => { S.generated = true; S.genSeen = true; S.analysed = true; S.anaSeen = true;
+                   S.disclosed.footer = true; } },
 ];
 
 export function demoBar() {
@@ -91,16 +102,35 @@ export function demoBar() {
   </div>`;
 }
 
-/** The beat that first reaches step three runs the pipeline for real. */
-const PIPELINE_BEAT = 4;
+/** Two beats run a pipeline for real: step 3 documents, step 4 analyses. */
+const UNDERSTANDING_BEAT = 4;
+const ANALYSIS_BEAT = 7;
 
 export function demoGo(step) {
   S.demoStep = Math.max(0, Math.min(STEPS.length - 1, step));
   const s = STEPS[S.demoStep];
-  if (S.demoStep === PIPELINE_BEAT && !S.generated && !S.generating) {
+  if (S.demoStep === UNDERSTANDING_BEAT && !S.generated && !S.generating) {
     S.prepared = true;
     location.hash = s.route;
     setTimeout(() => act.startGeneration(pipeline), 260);
+    return;
+  }
+  if (S.demoStep === ANALYSIS_BEAT && !S.analysed && !S.analysing) {
+    // Step 4 runs against a *reviewed* understanding, so if the presenter
+    // skipped the review beats, take the proposed resolution for each item.
+    S.generated = true; S.genSeen = true;
+    st.claimQueue().forEach(({ b }) => {
+      if (st.claimState(b) === "contradiction" && b.options?.[0]) {
+        act.resolveConflict(b.id, b.options[0].choice, b.options[0].text);
+      } else {
+        act.saveClaim(b.id, b.suggestion || b.text);
+      }
+    });
+    act.acceptClean();
+    narrative.forEach((sec) => { if (st.sectionApprovable(sec)) act.approveSection(sec.id); });
+    S.reviewMode = "triage"; S.focusKind = null;
+    location.hash = s.route;
+    setTimeout(() => act.startAnalysis(analysisPipeline), 260);
     return;
   }
   s.setup();

@@ -30,8 +30,9 @@ ok('the shortcut sheet opens and is grouped', (await p.locator('.sheet').innerTe
 await p.keyboard.press('Escape'); await p.waitForTimeout(150);
 // demo
 await p.evaluate(() => window.__demoStart()); await p.waitForTimeout(400);
-for (let i=0;i<11;i++){ await p.keyboard.press('ArrowRight'); await p.waitForTimeout(i===4?4200:350); }
-ok('the guided demo runs to beat 12', (await p.locator('.demo__n').innerText()) === '12/12', await p.locator('.demo__n').innerText());
+const beats = await p.evaluate(() => window.__demoSteps);
+for (let i=0;i<beats-1;i++){ await p.keyboard.press('ArrowRight'); await p.waitForTimeout((i===4||i===6)?6000:350); }
+ok(`the guided demo runs to beat ${beats}`, (await p.locator('.demo__n').innerText()) === `${beats}/${beats}`, await p.locator('.demo__n').innerText());
 await p.screenshot({ path: 'file-final.png' });
 console.log('--- runtime errors:', errs.length ? errs.join('\n') : 'none');
 console.log('--- FAILURES:', fails);

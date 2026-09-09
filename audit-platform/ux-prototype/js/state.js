@@ -10,23 +10,34 @@
    ========================================================================== */
 
 import { subProcesses, narrative, risks, controls, gaps, openItems } from "./data-model.js";
+import { questionnaire, recordAnswerEvidence, clearSessionEvidence,
+         sessionEvidence } from "./data-sources.js";
 import { journey, processSteps, processFindings, traceFindings, transactions, txnById,
-         variants, stepsForVariant, lineWalkRequirements, controlTest,
+         variants, stepsForVariant, lineWalkRequirements,
+         controlTest as controlTestPack, reviewPointLibrary,
          methodologyConfig } from "./data-process.js";
 
 /* The decision state that undo restores. Everything else is view state. */
 const DECISIONS = ["blocks", "sections", "coverage", "factOverrides", "controlDecisions",
                    "controlCarry", "findingDecisions", "itemStates", "itemCarry",
                    "traceDecisions", "traceTxn", "traceStarted", "traceConcluded", "lwRequirements",
-                   "testScope", "testExtended", "testConclusion", "answers", "signOff",
+                   "testScope", "controlTests", "answers", "signOff", "reviewPoints",
                    "prepared"];
 
 const initial = () => ({
   route: "#/",
+  /* Step 3 — the process understanding is drafted. */
   generated: false,
   generating: false,
   genStage: -1,
-  genSeen: false,          // the pipeline result has been read
+  genSeen: false,          // the step 3 result has been read
+
+  /* Step 4 — controls and findings are analysed. A separate run against the
+     reviewed understanding: step 3 documents the process, step 4 analyses it. */
+  analysed: false,
+  analysing: false,
+  anaStage: -1,
+  anaSeen: false,
 
   /* --- decisions (undoable) --- */
   blocks: {},              // claim id -> { text, edited, rejected, resolution }
@@ -44,16 +55,18 @@ const initial = () => ({
   traceConcluded: {},      // txnId -> true
   lwRequirements: {},      // variant id -> { state, reason }
   testScope: {},           // control id -> { state: required|not_required|deferred, reason }
-  testExtended: false,     // the sample has been extended
-  testConclusion: null,    // "rely" | "no_rely"  (extending is not a conclusion)
-  answers: {},             // questionnaire: question n -> { kind, text }
+  /* Per control, never global: concluding one test must not close another. */
+  controlTests: {},        // control id -> { started, extended, conclusion, note }
+  answers: {},             // questionnaire: question n -> { kind, text, evidenceId }
   signOff: { preparer: "unsigned", review: "not_submitted" },
+  reviewPoints: {},        // review point id -> { state, response, respondedAt }
   prepared: false,         // step 1 confirmed
 
   /* --- view state --- */
   reviewMode: "triage",    // triage | focus | read
   focusKind: null,         // claims | controls | findings | trace
   editingFinding: null,    // finding id open in the modify form
+  openPoint: null,         // review point whose detail is open
   focusIx: 0,
   openClaim: null,         // claim whose evidence is expanded inline
   mapStep: null,           // process-map step whose detail is open
@@ -99,6 +112,11 @@ export function undo() {
   const last = undoStack.pop();
   if (!last) return;
   DECISIONS.forEach((k) => { S[k] = last.before[k]; });
+  // Evidence created by an answer that has just been undone must go with it.
+  Object.keys(sessionEvidence).forEach((id) => {
+    const n = Number(id.split(":")[1]);
+    if (S.answers[n]?.kind !== "answer") delete sessionEvidence[id];
+  });
   S.toast = { label: `Undone — ${last.label}`, undoable: false };
   scheduleToastClear();
   commit();
@@ -276,6 +294,7 @@ export const controlDecision = (c) => S.controlDecisions[c.id] ?? null;
  *  which is the next phase and outside this product. They are carried
  *  forward, not decided here (V3-DESIGN-DIRECTION.md §1). */
 export function riskSummary() {
+  if (!S.analysed) return { total: 0, significant: 0, fraud: 0, newRisks: 0, blocked: [] };
   return {
     total: risks.length,
     significant: risks.filter((r) => r.significant).length,
@@ -291,6 +310,11 @@ export const CONCLUDED_CONTROL = ["key", "not_key", "carried_forward"];
 export const controlOpen = (c) => !CONCLUDED_CONTROL.includes(controlDecision(c));
 
 export function controlSummary() {
+  if (!S.analysed) {
+    return { total: 0, decided: 0, pending: 0, queue: [], undecided: [], carriedForward: 0,
+             suggestedKey: 0, unassessable: 0, agreedKey: 0, keyControls: [], gaps: 0,
+             identified: controls.length };
+  }
   const open = controls.filter(controlOpen);
   const undecided = controls.filter((c) => controlDecision(c) === "undecided");
   return {
@@ -305,6 +329,7 @@ export function controlSummary() {
     agreedKey: controls.filter((c) => controlDecision(c) === "key").length,
     keyControls: controls.filter((c) => controlDecision(c) === "key"),
     gaps: gaps.length,
+    identified: controls.length,
   };
 }
 
@@ -318,6 +343,7 @@ const stepOfSubProcess = (sub) => processSteps.find((p) => p.sub === sub)?.id ||
 /** Every finding, including any the line walkthrough raised. The system
  *  proposal and the auditor's conclusion are kept as separate values. */
 export function allFindings() {
+  if (!S.analysed) return [];      // step 4 has not been run
   const fromGaps = gaps.map((g) => ({
     id: g.id, step: stepOfSubProcess(g.sub), kind: "gap", severity: g.severity,
     title: g.desc, detail: g.impact, remediation: g.remediation, refs: g.refs,
@@ -426,14 +452,24 @@ export const traceStepFor = (txnId, mapStepId) =>
 
 export const testScopeFor = (cid) => S.testScope[cid] ?? { state: "deferred", reason: null };
 
+/** Test state for one control. Never global — concluding C-04 says nothing
+ *  about any other control that was scoped for testing. */
+export const controlTest = (cid) =>
+  S.controlTests[cid] ?? { started: false, extended: false, conclusion: null };
+
+/** Only this control carries a worked example in the prototype. */
+export const hasWorkpaper = (cid) => cid === controlTestPack.controlId;
+
 export function testingScope() {
   const keys = controlSummary().keyControls;
-  const rows = keys.map((c) => ({ control: c, scope: testScopeFor(c.id) }));
+  const rows = keys.map((c) => ({ control: c, scope: testScopeFor(c.id), test: controlTest(c.id) }));
   const required = rows.filter((r) => r.scope.state === "required");
   const deferred = rows.filter((r) => r.scope.state === "deferred");
+  const concluded = required.filter((r) => !!r.test.conclusion);
   return {
     rows, keys,
-    required, deferred,
+    required, deferred, concluded,
+    outstanding: required.filter((r) => !r.test.conclusion),
     notRequired: rows.filter((r) => r.scope.state === "not_required"),
     decided: rows.length - deferred.length,
     // Nothing to test is a legitimate outcome, provided it was decided.
@@ -442,37 +478,60 @@ export function testingScope() {
   };
 }
 
-export function testSummary() {
-  const base = controlTest.results;
-  const ext = S.testExtended ? controlTest.extendedResults : [];
+/** The worked test, for the one control that has a workpaper. */
+export function testSummary(cid = controlTestPack.controlId) {
+  const t = controlTest(cid);
+  if (!hasWorkpaper(cid)) {
+    return { control: cid, workpaper: false, results: [], selected: 0, corroborated: 0,
+             exceptions: 0, extended: false, concluded: !!t.conclusion, conclusion: t.conclusion };
+  }
+  const base = controlTestPack.results;
+  const ext = t.extended ? controlTestPack.extendedResults : [];
   const all = [...base, ...ext];
   return {
-    control: controlTest.controlId,
+    control: cid, workpaper: true,
     results: all,
     selected: all.length,
     corroborated: all.filter((x) => x.ok).length,
     exceptions: all.filter((x) => !x.ok).length,
-    extended: S.testExtended,
+    extended: t.extended,
     // Extending is not concluding.
-    concluded: !!S.testConclusion,
-    conclusion: S.testConclusion,
+    concluded: !!t.conclusion,
+    conclusion: t.conclusion,
   };
 }
 
-/** Step 6 is satisfied when the scope is decided and every required test concluded. */
+/** Step 6 is satisfied when every key control has been scoped, and every
+ *  control scoped as requiring a test has its *own* conclusion. */
 export function testingSatisfied() {
   const sc = testingScope();
   if (!sc.keys.length) return true;             // nothing concluded key yet
   if (!sc.scopeDecided) return false;
-  if (!sc.applicable) return true;              // decided that no test is required
-  return !!S.testConclusion;
+  return sc.outstanding.length === 0;
 }
 
-/* --- Sign-off ------------------------------------------------------------------ */
+/* --- Sign-off and review points ------------------------------------------------
+   Reopening is only real if it carries something to do. A review point has to be
+   answered before the file can go back to the reviewer.
+   -------------------------------------------------------------------------- */
 
 export const signOff = () => S.signOff;
 export const reviewRequired = () => methodologyConfig.requiresManagerReview;
 export const partnerRequired = () => methodologyConfig.requiresPartnerReview;
+
+/** Review points exist once the reviewer has raised them, not before. */
+export function reviewPoints() {
+  return reviewPointLibrary
+    .filter((p) => S.reviewPoints[p.id])
+    .map((p) => ({ ...p, ...S.reviewPoints[p.id] }));
+}
+export const openReviewPoints = () => reviewPoints().filter((p) => p.state !== "addressed");
+export const reviewPointById = (id) =>
+  reviewPoints().find((p) => p.id === id) || null;
+
+/** The file goes back to the reviewer only when every point has an answer. */
+export const canResubmit = () =>
+  S.signOff.preparer === "signed" && openReviewPoints().length === 0;
 
 /** Everything except the signatures themselves. */
 export function workComplete() {
@@ -513,6 +572,7 @@ export function openItemSummary() {
 /* --- RCM ---------------------------------------------------------------------- */
 
 export function rcmRows() {
+  if (!S.analysed) return [];
   const rows = [];
   risks.forEach((r) => {
     const linked = controls.filter((c) => c.risks.includes(r.id));
@@ -534,6 +594,18 @@ export const QUESTION_FACTS = {
         value: "Recognised on sale to the end customer, not on despatch to the distributor." },
 };
 
+/** Facts established during this session, with the evidence behind each — the
+ *  answer to "where did that come from?" for anything settled after the draft. */
+export function sessionFacts() {
+  return Object.entries(S.factOverrides)
+    .filter(([, v]) => v.refs && v.refs.length)
+    .map(([key, v]) => {
+      const [itemId, factKey] = key.split("::");
+      const item = allItems().find((i) => i.id === itemId);
+      return { itemId, factKey, item, ...v };
+    });
+}
+
 export const questionState = (q) => S.answers[q.n]?.kind
   ?? (q.a ? "answer" : q.state === "sent" ? "sent" : "open");
 export const questionAnswer = (q) => S.answers[q.n]?.text ?? q.a ?? null;
@@ -553,6 +625,14 @@ export function questionnaireItems() {
         : "The client would rather discuss this than answer in writing. Schedule the follow-up.",
       blocks: [], refs: [], owner: "Unassigned", fromQuestionnaire: true,
     }));
+}
+
+/** Evidence that settled an open item, when a questionnaire answer did it. */
+export function itemEvidence(i) {
+  const entry = Object.entries(QUESTION_FACTS).find(([, m]) => m.openItem === i.id);
+  if (!entry) return [];
+  const a = S.answers[Number(entry[0])];
+  return a && a.kind === "answer" && a.evidenceId ? [a.evidenceId] : [];
 }
 
 /* --- Open items: carry-forward carries a destination and a reason ------------ */
@@ -588,13 +668,15 @@ export function journeyStates() {
           : { s: "done", c: "approved" };
       case "controls": {
         const owed = cs.pending + fs.pending.length;
-        return !S.generated ? { s: "later", c: "—", why: "Controls are identified from the process understanding." }
+        return !S.generated ? { s: "later", c: "—", why: "Controls are analysed from the process understanding, so the process has to be documented first." }
+          : n.pending ? { s: "later", c: "—", why: "The analysis runs against the reviewed understanding. Finish reviewing the draft first." }
+          : !S.analysed ? { s: "open", c: "not analysed" }
           : fs.fromTraceOpen.length ? { s: "open", c: "new finding", tone: "alert" }
           : owed ? { s: "open", c: `${owed} to conclude` }
           : { s: "done", c: `${cs.agreedKey} key` };
       }
       case "trace":
-        return !S.generated ? { s: "later", c: "—", why: "A transaction is traced against the documented process, so the process has to be documented first." }
+        return !S.analysed ? { s: "later", c: "—", why: "A transaction is traced against the documented process and the controls identified on it, so step 4 has to run first." }
           : tr.undecided ? { s: "open", c: "scope undecided" }
           : tr.satisfied ? { s: "done", c: tr.exceptions ? `${tr.exceptions} exception` : "no exceptions", tone: tr.exceptions ? "warn" : "" }
           : { s: "open", c: `${tr.completed} of ${tr.required}` };
@@ -602,10 +684,11 @@ export function journeyStates() {
         if (!cs.keyControls.length) return { s: "later", c: "—", why: "Controls concluded as key appear here." };
         if (!sc.scopeDecided) return { s: "open", c: "decide scope" };
         if (!sc.applicable) return { s: "done", c: "not required" };
-        return S.testConclusion ? { s: "done", c: "concluded" }
-          : { s: "open", c: S.testExtended ? "sample extended" : "1 to test" };
+        return sc.outstanding.length === 0 ? { s: "done", c: `${sc.concluded.length} concluded` }
+          : { s: "open", c: `${sc.outstanding.length} to conclude` };
       case "complete":
         return ps.id === "complete" ? { s: "done", c: "complete", tone: "ok" }
+          : ps.id === "reopened" ? { s: "open", c: "review points", tone: "alert" }
           : ps.id === "wip" ? { s: "later", c: "blocked", why: "Every applicable gate has to be met first." }
           : { s: "open", c: ps.label.toLowerCase(), tone: "ok" };
     }
@@ -666,19 +749,31 @@ export function gateStates() {
       ok: S.generated && n.needsSource.length === 0,
       detail: n.needsSource.length ? `${n.needsSource.length} statements have no support` : "Every statement is traced to a source" },
 
-    { id: "contradiction", label: "Contradictions resolved or carried forward", step: "interview", applicable: true,
+    /* Carrying a contradiction forward preserves it — it does not resolve it,
+       and it does not clear this gate. The label has to say that. */
+    { id: "contradiction", label: "No unresolved contradictions", step: "interview", applicable: true,
       ok: n.contradiction.length === 0 && cov.facts.contradictory === 0,
-      detail: cov.facts.contradictory || n.contradiction.length ? "One contradiction is unresolved" : "No unresolved contradictions" },
+      detail: cov.facts.contradictory || n.contradiction.length
+        ? (openItems.some((i) => itemState(i) === "carried_forward" && i.kind === "contradiction")
+            ? "Carried forward, which preserves the conflict — it does not resolve it"
+            : "One contradiction is unresolved")
+        : "Every contradiction is resolved on the evidence" },
+
+    { id: "analysed", label: "Controls and findings analysed", step: "controls", applicable: true,
+      ok: S.analysed,
+      detail: S.analysed ? `${cs.total} controls and ${fs.total} findings identified from the reviewed understanding`
+        : n.pending ? "The analysis runs against the reviewed understanding, which is not finished"
+        : "Not analysed yet" },
 
     { id: "controls", label: "Controls concluded", step: "controls", applicable: true,
-      ok: S.generated && cs.pending === 0,
-      detail: !S.generated ? "Not identified yet"
+      ok: S.analysed && cs.pending === 0,
+      detail: !S.analysed ? "Not analysed yet"
         : cs.undecided.length ? `${cs.undecided.length} left undecided — carry forward or conclude`
         : `${cs.decided} of ${cs.total} concluded · ${cs.agreedKey} key` },
 
     { id: "findings", label: "Findings concluded", step: "controls", applicable: true,
-      ok: S.generated && fs.pending.length === 0,
-      detail: !S.generated ? "Not identified yet"
+      ok: S.analysed && fs.pending.length === 0,
+      detail: !S.analysed ? "Not analysed yet"
         : fs.fromTraceOpen.length ? "A finding raised by the line walkthrough needs review"
         : `${fs.decided} of ${fs.total} concluded` },
 
@@ -692,10 +787,10 @@ export function gateStates() {
       applicable: cs.keyControls.length > 0, ok: testingSatisfied(),
       detail: !cs.keyControls.length ? "No key controls concluded yet"
         : !sc.scopeDecided ? `${sc.deferred.length} key controls have no testing decision`
-        : !sc.applicable ? "No reliance planned — no testing required, reason on file"
-        : S.testConclusion ? "Tested and concluded"
-        : S.testExtended ? "Sample extended — a conclusion is still required"
-        : `${sc.required.length} control to test` },
+        : !sc.applicable ? "No reliance planned on any key control — no testing required, reasons on file"
+        : sc.outstanding.length ? `${sc.concluded.length} of ${sc.required.length} scoped tests concluded · ${
+            sc.outstanding.map((r) => r.control.id).join(", ")} outstanding`
+        : `${sc.concluded.length} of ${sc.required.length} scoped tests concluded` },
 
     { id: "openItems", label: "Open matters resolved or carried forward", step: "interview", applicable: true,
       ok: oi.open === 0, detail: `${oi.open} open · ${oi.resolved} settled · ${carried} carried forward` },
@@ -708,7 +803,8 @@ export function gateStates() {
       applicable: methodologyConfig.requiresManagerReview, signature: true,
       ok: so.review === "approved",
       detail: so.review === "approved" ? "Approved"
-        : so.review === "reopened" ? "Reopened with review points"
+        : so.review === "reopened" ? `Reopened · ${openReviewPoints().length} review point${
+            openReviewPoints().length === 1 ? "" : "s"} to answer before it can go back`
         : so.review === "in_review" ? "With the reviewer"
         : so.review === "submitted" ? "Submitted, awaiting review"
         : "Not yet submitted" },
@@ -731,18 +827,34 @@ export function nextAction() {
   if (!S.prepared) return { t: "Prepare the Revenue process", d: "Scope, systems, people and the context carried in from planning.", href: "#/prepare" };
   if (cov.facts.contradictory) return { t: "Two sources disagree about who can change a credit limit", d: "It blocks a statement, a control and a coverage area at once.", href: "#/interview" };
   if (cov.mandatoryOpen.length) return { t: `${cov.mandatoryOpen.length} required areas are still open`, d: "The process interview cannot be concluded while an ISA 240 area is unaddressed.", href: "#/interview" };
-  if (!S.generated) return { t: "Draft the current understanding", d: `Coverage is ${cov.pct}% and the required areas are addressed.`, href: "#/understanding" };
+  if (!S.generated) return { t: "Draft the process understanding", d: `Coverage is ${cov.pct}% and the required areas are addressed.`, href: "#/understanding" };
   if (n.attention.length) return { t: `${n.attention.length} statements need your judgement`, d: "Unsupported or contradictory statements are blocking their sections.", href: "#/understanding" };
-  if (n.pending) return { t: `${n.pending} sections to approve`, d: "Every statement in them is traced to a source.", href: "#/understanding" };
+  if (n.pending) return { t: `${n.pending} sections to approve`, d: "Every statement in them is traced to a source. Nothing is analysed until the understanding is reviewed.", href: "#/understanding" };
+  if (!S.analysed) return { t: "Analyse controls and findings", d: "The understanding is reviewed. Step 4 identifies what controls this process and what is wrong with it.", href: "#/controls" };
   if (fs.fromTraceOpen.length) return { t: "The line walkthrough raised a finding", d: "Testing a real transaction changed the documented understanding. Review it before moving on.", href: "#/controls" };
   if (cs.pending) return { t: `${cs.pending} controls to conclude`, d: cs.undecided.length ? `${cs.undecided.length} are undecided — conclude them or carry them forward with a reason.` : `${cs.suggestedKey} are suggested as key controls.`, href: "#/controls" };
   if (fs.pending.length) return { t: `${fs.pending.length} findings to conclude`, d: "Confirm, modify or dismiss each one. Severity is your judgement.", href: "#/controls" };
   if (tr.undecided) return { t: "Decide which variants need a line walkthrough", d: "Revenue has three process variants and they do not all need one.", href: "#/trace" };
   if (!tr.satisfied) return { t: `${tr.required - tr.completed} required line walkthroughs outstanding`, d: "Trace a real transaction through each variant that needs one.", href: "#/trace" };
   if (cs.keyControls.length && !sc.scopeDecided) return { t: "Decide which controls require testing", d: `${sc.deferred.length} key controls have no testing decision.`, href: "#/testing" };
-  if (cs.keyControls.length && sc.applicable && !S.testConclusion) return { t: S.testExtended ? "Conclude the extended control test" : "Perform the required control test", d: S.testExtended ? "The sample was extended; a conclusion is still required." : "One control is scoped for testing.", href: "#/testing" };
+  if (sc.outstanding.length) {
+    const r = sc.outstanding[0];
+    return { t: sc.outstanding.length === 1
+        ? `Conclude the control test on ${r.control.id}`
+        : `${sc.outstanding.length} control tests still to conclude`,
+      d: r.test.extended ? "The sample was extended; a conclusion is still required."
+        : `Each control scoped for testing needs its own conclusion — ${sc.outstanding.map((x) => x.control.id).join(", ")}.`,
+      href: "#/testing" };
+  }
   if (oi.open) return { t: `${oi.open} open matters`, d: "Resolve each one, or carry it forward with a destination and a reason.", href: "#/resolve" };
   if (so.preparer !== "signed") return { t: "Sign as preparer", d: "Every applicable gate is met. Signing makes Revenue ready for review.", href: "#/complete" };
+  /* Reopened work comes back to the preparer, and says so. */
+  if (openReviewPoints().length) {
+    const n2 = openReviewPoints().length;
+    return { t: `${n2} review point${n2 === 1 ? "" : "s"} need${n2 === 1 ? "s" : ""} your attention`,
+      d: `The reviewer sent Revenue back. ${openReviewPoints()[0].subject}.`, href: "#/complete" };
+  }
+  if (methodologyConfig.requiresManagerReview && so.review === "reopened") return { t: "Resubmit for manager review", d: "Every review point has been answered.", href: "#/complete" };
   if (methodologyConfig.requiresManagerReview && so.review === "not_submitted") return { t: "Submit for manager review", d: "The preparer has signed. The process is not complete until the reviewer approves.", href: "#/complete" };
   if (methodologyConfig.requiresManagerReview && so.review !== "approved") return { t: "Awaiting manager review", d: "The reviewer approves, or reopens with review points.", href: "#/complete" };
   return { t: "Revenue is complete", d: "Handed forward to risk analysis.", href: "#/complete" };
@@ -999,18 +1111,25 @@ export const act = {
     commit(state === "required" ? "Test required for this control"
       : state === "not_required" ? "No reliance planned — no test required" : "Decision deferred", true);
   },
-  extendSample() {
+  extendSample(cid) {
     checkpoint("sample extended");
-    S.testExtended = true;
+    S.controlTests[cid] = { ...controlTest(cid), started: true, extended: true };
     // Extending is not concluding: the test stays open and the gate stays blocked.
-    commit("Sample extended to 10 items — a conclusion is still required", true);
+    commit(`${cid} — sample extended to 10 items, a conclusion is still required`, true);
   },
-  concludeTest(d) {
+  concludeTest(cid, d, note) {
     checkpoint("control test concluded");
-    S.testConclusion = d;
-    commit(d === "rely" ? "Concluded — reliance placed on the control" : "Concluded — no reliance placed", true);
+    S.controlTests[cid] = { ...controlTest(cid), started: true, conclusion: d, note: note || null };
+    S.editing = null;
+    const left = testingScope().outstanding.length;
+    commit(`${cid} — ${d === "rely" ? "reliance placed" : "no reliance placed"}${
+      left ? `; ${left} other control${left === 1 ? "" : "s"} still to conclude` : ""}`, true);
   },
-  reopenTest() { checkpoint("control test reopened"); S.testConclusion = null; commit(); },
+  reopenTest(cid) {
+    checkpoint("control test reopened");
+    S.controlTests[cid] = { ...controlTest(cid), conclusion: null, note: null };
+    commit();
+  },
 
   /* step 7 — sign-off */
   signPreparer() {
@@ -1019,6 +1138,11 @@ export const act = {
     commit("Signed as preparer — Revenue is ready for review", true);
   },
   submitForReview() {
+    // Guarded, not just labelled: an unanswered review point blocks resubmission.
+    if (!canResubmit()) {
+      commit(`${openReviewPoints().length} review point${openReviewPoints().length === 1 ? "" : "s"} still to answer`);
+      return;
+    }
     checkpoint("submitted for review");
     S.signOff = { ...S.signOff, review: "submitted" };
     commit("Submitted for manager review", true);
@@ -1026,11 +1150,38 @@ export const act = {
   reviewerAction(d) {
     checkpoint("reviewer decision");
     S.signOff = { ...S.signOff, review: d };
-    commit(d === "approved" ? "Approved — Revenue is complete"
-      : d === "reopened" ? "Reopened with review points" : "In review", true);
+    if (d === "reopened") {
+      // Reopening carries work, not only a status. The point is raised here.
+      reviewPointLibrary.forEach((p) => {
+        if (!S.reviewPoints[p.id]) S.reviewPoints[p.id] = { state: "open", response: null };
+      });
+      const n = openReviewPoints().length;
+      commit(`Reopened — ${n} review point${n === 1 ? "" : "s"} for the preparer`, true);
+      return;
+    }
+    commit(d === "approved" ? "Approved — Revenue is complete" : "In review", true);
+  },
+  openPoint(id) { S.openPoint = S.openPoint === id ? null : id; S.editing = null; commit(); },
+  answerPoint(id, response) {
+    checkpoint("review point answered");
+    S.reviewPoints[id] = { state: "addressed", response: response || "No response recorded.",
+                           respondedAt: "3 October 2026" };
+    S.editing = null; S.openPoint = null;
+    const left = openReviewPoints().length;
+    commit(left ? `${id} addressed — ${left} still open`
+      : `${id} addressed — the file can go back to the reviewer`, true);
+  },
+  reopenPoint(id) {
+    checkpoint("review point reopened");
+    S.reviewPoints[id] = { ...(S.reviewPoints[id] || {}), state: "open" };
+    commit();
   },
 
-  /* generation */
+  /* --- The two generation runs -------------------------------------------
+     Step 3 documents the process. Step 4 analyses it, against the reviewed
+     understanding. Two runs because they are two pieces of audit work, and the
+     auditor reviews the first before anything is concluded from it.
+     -------------------------------------------------------------------- */
   startGeneration(stagesList) {
     S.generating = true; S.genStage = 0; commit();
     const step = (i) => {
@@ -1046,31 +1197,60 @@ export const act = {
     };
     step(0);
   },
+  startAnalysis(stagesList) {
+    S.analysing = true; S.anaStage = 0; commit();
+    const step = (i) => {
+      if (i >= stagesList.length) {
+        S.analysing = false; S.analysed = true; S.anaStage = stagesList.length;
+        S.anaSeen = false; S.reviewMode = "triage"; commit();
+        return;
+      }
+      S.anaStage = i; commit();
+      setTimeout(() => step(i + 1), stagesList[i].ms);
+    };
+    step(0);
+  },
+  readAnalysis() { S.anaSeen = true; commit(); },
 
   /* peripheral */
   setMode(m) { S.mode = m; commit(); },
   /** Send / I don't know / Rather have a call are three different outcomes. */
   answerQuestion(n, kind, text) {
     checkpoint("questionnaire answered");
-    S.answers[n] = { kind, text: text || null };
+    S.answers[n] = { kind, text: text || null, evidenceId: null };
     const map = QUESTION_FACTS[n];
     if (kind === "answer") {
+      // The answer becomes a source first. Everything downstream then cites it,
+      // rather than resting on an unexplained internal override.
+      const q = questionnaire.find((x) => x.n === n);
+      const evidenceId = q ? recordAnswerEvidence(q, text || map?.value || "", "3 October 2026") : null;
+      S.answers[n] = { kind, text: text || null, evidenceId };
       // One answer, three consequences: the fact, the coverage area it belongs
       // to, and the open item that was raised to chase it.
       if (map) {
-        S.factOverrides[`${map.item}::${map.fact}`] =
-          { status: "known", value: text || map.value, resolution: "Established by the client questionnaire." };
-        if (map.openItem) S.itemStates[map.openItem] = "resolved";
+        S.factOverrides[`${map.item}::${map.fact}`] = {
+          status: "known",
+          value: text || map.value,
+          resolution: `Established by the client's answer to questionnaire question ${n}.`,
+          refs: evidenceId ? [evidenceId] : [],
+          via: "client_questionnaire",
+          question: n,
+        };
+        if (map.openItem) {
+          S.itemStates[map.openItem] = "resolved";
+          S.itemCarry[map.openItem] = null;
+        }
       }
-      commit("Answer recorded — coverage and the open item it was chasing both update", true);
+      commit("Answer recorded as evidence — the fact, the coverage area and the open item all update", true);
     } else if (kind === "unknown") {
+      // Not evidence. Nothing is established, and the fact stays unknown.
       S.itemStates[`QQ-${n}`] = "open";
       if (map?.openItem) S.itemStates[map.openItem] = "open";   // back off "sent"
-      commit("Recorded as unable to answer — raised for the auditor", true);
+      commit("Recorded as unable to answer — nothing established, raised for the auditor", true);
     } else {
       S.itemStates[`QQ-${n}`] = "open";
       if (map?.openItem) S.itemStates[map.openItem] = "open";
-      commit("Follow-up call requested — raised for the auditor", true);
+      commit("Follow-up call requested — nothing established, raised for the auditor", true);
     }
   },
   cockpitAdvance() { S.cockpitTurn = Math.min(S.cockpitTurn + 1, 14); commit(); },
@@ -1086,6 +1266,7 @@ export const act = {
 
   reset() {
     undoStack.length = 0;
+    clearSessionEvidence();
     Object.assign(S, initial());
     location.hash = "#/";
     commit("Reset");

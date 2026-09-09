@@ -8,9 +8,9 @@
    default answer is plain English; the 45 items, fact keys, triggers and ISA
    references live one disclosure deeper. */
 
-import { esc, cx, act as btn, row, dot, chip, more, bar, callout, link, empty } from "../ui.js";
+import { esc, cx, act as btn, row, dot, chip, more, bar, callout, link, empty, evidence } from "../ui.js";
 import { subProcesses } from "../data-model.js";
-import { sources, ref, client } from "../data-sources.js";
+import { sources, ref, refs, client } from "../data-sources.js";
 import * as st from "../state.js";
 import { screen } from "./shell.js";
 
@@ -115,6 +115,7 @@ export function interview() {
   const gaps = st.coverageGaps();
   const settled = st.coverageSettled();
   const na = st.allItems().filter((i) => st.covState(i) === "na");
+  const sf = st.sessionFacts();
 
   const body = `
     <div class="head">
@@ -148,6 +149,32 @@ export function interview() {
         <h2 class="t-h">Nothing outstanding</h2>
         <p class="t-sub" style="margin-top:6px">Every applicable area has been established.</p>
       </section>`}
+
+    ${sf.length ? `
+      <section style="margin-top:44px">
+        <h2 class="t-h" style="margin-bottom:4px">Established since the draft</h2>
+        <p class="t-meta" style="margin-bottom:16px">
+          Facts settled after the process understanding was drafted, each with the source it came
+          from. Nothing here is an internal override — it is evidence, and anything that later
+          rests on it cites this.</p>
+        <div class="rows">
+          ${sf.map((x) => `<div class="rw" style="display:block">
+            <div class="row row--top" style="gap:20px">
+              <span class="rw__lead" style="padding-top:5px">${dot("ok")}</span>
+              <span class="rw__main">
+                <span class="rw__t">${esc(x.value)}</span>
+                <span class="rw__d">${esc(x.item ? x.item.plain || x.item.q : x.itemId)}</span>
+                <span class="rw__d" style="margin-top:6px">
+                  <span class="mono">${esc(x.itemId)}.${esc(x.factKey)}</span> · ${esc(x.resolution)}</span>
+              </span>
+              <span class="rw__side"><span class="t-meta">${esc(
+                x.via === "client_questionnaire" ? "client questionnaire" : "auditor")}</span></span>
+            </div>
+            ${x.refs && x.refs.length ? `<div style="margin:10px 0 2px 37px">
+              ${evidence(refs(x.refs))}</div>` : ""}
+          </div>`).join("")}
+        </div>
+      </section>` : ""}
 
     ${settled.length ? `
       <section style="margin-top:48px">
