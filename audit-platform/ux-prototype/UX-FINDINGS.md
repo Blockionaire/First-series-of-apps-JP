@@ -353,7 +353,7 @@ current object state on every read; positions in it are identified by object id,
 # Findings from the third iteration
 
 Reframing the product around the full process-level interim audit
-(`V3-DESIGN-DIRECTION.md`) surfaced two structural gaps, both about objects the engine has no
+(`V3-PRODUCT-SCOPE.md`) surfaced two structural gaps, both about objects the engine has no
 representation for at all.
 
 ## F-16 · There is no process-step model, so there is nothing to draw or to test against

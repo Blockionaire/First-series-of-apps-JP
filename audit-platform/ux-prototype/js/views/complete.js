@@ -10,7 +10,7 @@
    · Being finished with the work is not the same as the process being
      complete. */
 
-import { esc, cx, act as btn, row, dot, more, empty, callout, chip } from "../ui.js";
+import { esc, cx, act as btn, row, rows, dot, tag, icon, more, empty, callout, chip, card } from "../ui.js";
 import { risks, controls, gaps } from "../data-model.js";
 import { methodologyConfig, variants } from "../data-process.js";
 import { client, engagement, user, firm, questionnaire, sources } from "../data-sources.js";
@@ -48,55 +48,53 @@ export function complete() {
     <div class="head">
       <div class="head__row">
         <div>
-          <h1 class="t-title">${esc(head.t)}</h1>
-          <p class="t-lede" style="margin-top:10px">${esc(head.d(workOpen.length, workGates.length))}</p>
+          <h1 class="t-display">${esc(head.t)}</h1>
+          <p class="t-lede">${esc(head.d(workOpen.length, workGates.length))}</p>
         </div>
-        <div style="text-align:right;padding-top:4px">
-          <div class="t-num" style="color:${done ? "var(--ok)" : "var(--ink-4)"}">${workGates.length - workOpen.length}/${workGates.length}</div>
-          <div class="t-meta">conditions met</div>
+        <div class="tally">
+          <div><span class="tally__n" style="color:${done ? "var(--ok)" : "var(--ink-4)"}">${
+            workGates.length - workOpen.length}<span class="ink4">/${workGates.length}</span></span>
+            <span class="tally__l">conditions met</span></div>
         </div>
       </div>
     </div>
 
-    <section style="margin-top:40px">
-      <h2 class="t-eyebrow" style="margin-bottom:14px">The work</h2>
-      <div class="rows">
-        ${workGates.map((g) => row({
-          lead: dot(g.ok ? "ok" : "open"),
-          title: `<span class="${g.ok ? "" : "b"}">${esc(g.label)}</span>`,
-          detail: esc(g.detail),
-          side: g.ok ? `<span class="t-meta" style="color:var(--ok)">met</span>`
-            : `<span class="t-meta" style="color:var(--warn)">open</span>`,
-          ...(g.ok ? {} : { action: "nav", data: { href: gateHref(g) } }),
-        })).join("")}
-      </div>
-      <p class="t-meta" style="margin-top:12px">
+    <section class="sec">
+      <div class="sec__h"><h2 class="t-eyebrow">The work</h2></div>
+      ${rows(workGates.map((g) => row({
+        lead: g.ok ? `<span class="state state--ok">${icon("check", 17)}</span>`
+          : `<span class="state state--warn">${icon("gate", 17)}</span>`,
+        title: `<span class="${g.ok ? "" : "b"}">${esc(g.label)}</span>`,
+        detail: esc(g.detail),
+        side: g.ok ? tag("met", "ok") : tag("open", "warn"),
+        ...(g.ok ? {} : { action: "nav", data: { href: gateHref(g) } }),
+      })).join(""))}
+      <p class="t-meta sec__note measure">
         Conditions that do not apply to this engagement are not listed. ${
           methodologyConfig.requiresPartnerReview ? "" : "Partner review, for one: " +
           methodologyConfig.partnerReviewNote.charAt(0).toLowerCase() + methodologyConfig.partnerReviewNote.slice(1)}
       </p>
     </section>
 
-    <section style="margin-top:48px">
-      <h2 class="t-h" style="margin-bottom:4px">Sign-off</h2>
-      <p class="t-meta" style="margin-bottom:16px">
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-h">Sign-off</h2></div>
+      <p class="t-sub sec__h measure">
         Signing is what a person does, not what the platform does. Each signature records who and when.</p>
 
-      <div class="rows">
+      ${rows(`
         ${row({
-          lead: dot(so.preparer === "signed" ? "ok" : "open"),
+          lead: icon("signature", 17),
           title: `<span class="b">${esc(user.name)}</span>`,
           detail: so.preparer === "signed"
             ? "Prepared by · audit senior · signed"
             : done ? "Prepared by · audit senior · ready to sign"
             : "Prepared by · audit senior · waiting on the work",
-          side: so.preparer === "signed"
-            ? `<span class="state state--ok"><i class="dot dot--ok"></i>Signed</span>`
+          side: so.preparer === "signed" ? tag("Signed", "ok", "check")
             : done ? btn("Sign as preparer", "sign-preparer", { variant: "ok", size: "sm" })
-            : `<span class="t-meta">waiting</span>`,
+            : tag("waiting", "quiet"),
         })}
         ${st.reviewRequired() ? row({
-          lead: dot(so.review === "approved" ? "ok" : so.review === "reopened" ? "alert" : "open"),
+          lead: icon("reviewpoint", 17),
           title: `<span class="b">${esc(engagement.team[1].name)}</span>`,
           detail: so.review === "approved" ? "Reviewed by · manager · approved"
             : so.review === "reopened" ? "Reviewed by · manager · sent back with review points"
@@ -104,35 +102,34 @@ export function complete() {
             : so.review === "submitted" ? "Reviewed by · manager · submitted, not yet opened"
             : so.preparer === "signed" ? "Reviewed by · manager · ready to submit"
             : "Reviewed by · manager · waiting for the preparer",
-          side: so.review === "approved"
-            ? `<span class="state state--ok"><i class="dot dot--ok"></i>Approved</span>`
-            : `<span class="t-meta">${so.review === "not_submitted" ? "not submitted" : esc(so.review.replace("_", " "))}</span>`,
+          side: so.review === "approved" ? tag("Approved", "ok", "check")
+            : tag(so.review === "not_submitted" ? "not submitted" : so.review.replace("_", " "),
+                so.review === "reopened" ? "alert" : "quiet"),
         }) : ""}
         ${row({
-          lead: dot(""),
-          title: `<span style="color:var(--ink-4)">${esc(engagement.team[0].name)}</span>`,
+          lead: `<span class="ink5">${icon("signature", 17)}</span>`,
+          title: `<span class="ink4">${esc(engagement.team[0].name)}</span>`,
           detail: "Engagement partner",
           side: `<span class="t-meta">${methodologyConfig.requiresPartnerReview ? "review required" : "no review required at process level"}</span>`,
-        })}
-      </div>
+        })}`)}
 
-      ${!done ? `<p class="t-meta" style="margin-top:14px">
+      ${!done ? `<p class="t-meta sec__note measure">
         Blocked by ${esc(workOpen.map((g) => g.label.toLowerCase()).join(", "))}.</p>` : ""}
 
-      ${done && so.preparer !== "signed" ? `<div class="acts" style="margin-top:20px">
-        ${btn("Sign as preparer", "sign-preparer", { variant: "go", size: "lg", key: "Enter" })}
+      ${done && so.preparer !== "signed" ? `<div class="acts sec">
+        ${btn("Sign as preparer", "sign-preparer", { variant: "primary", size: "lg", key: "Enter", ic: "signature" })}
       </div>
-      <p class="t-meta" style="margin-top:10px;max-width:64ch">
+      <p class="t-meta sec__note measure">
         Signing does not complete the process. It records that the work is finished and makes it
         ready for review.</p>` : ""}
 
       ${so.preparer === "signed" && st.reviewRequired() && ["not_submitted", "reopened"].includes(so.review) ? `
-        <div class="acts" style="margin-top:20px">
+        <div class="acts sec">
           ${btn(so.review === "reopened" ? "Resubmit for review" : "Submit for manager review",
-            "submit-review", { variant: "go", size: "lg", key: "Enter",
+            "submit-review", { variant: "primary", size: "lg", key: "Enter", ic: "arrow",
               disabled: !st.canResubmit() })}
         </div>
-        ${!st.canResubmit() ? `<p class="t-meta" style="margin-top:10px">
+        ${!st.canResubmit() ? `<p class="t-meta sec__note measure">
           ${st.openReviewPoints().length} review point${st.openReviewPoints().length === 1 ? "" : "s"}
           still ${st.openReviewPoints().length === 1 ? "needs" : "need"} an answer. The file does not
           go back to the reviewer until ${st.openReviewPoints().length === 1 ? "it does" : "they do"}.</p>` : ""}` : ""}
@@ -140,15 +137,15 @@ export function complete() {
       ${so.review === "reopened" || st.reviewPoints().length ? reviewPointSection() : ""}
 
       ${["submitted", "in_review"].includes(so.review) ? `
-        <div style="margin-top:26px;padding-top:20px;border-top:1px dashed var(--line-2)">
-          <div class="t-eyebrow" style="margin-bottom:8px">Acting as the reviewer — prototype only</div>
-          <p class="t-meta" style="margin-bottom:12px;max-width:64ch">
+        <div class="s-recessed pad sec">
+          <div class="t-eyebrow rail__h">Acting as the reviewer — prototype only</div>
+          <p class="t-meta sec__note measure">
             One person plays both roles here. In the product these actions belong to the manager and
             the preparer never sees them.</p>
-          <div class="acts">
+          <div class="acts sec__note">
             ${so.review === "submitted" ? btn("Open the file for review", "reviewer", { data: { d: "in_review" } }) : ""}
-            ${btn("Approve — complete the process", "reviewer", { variant: "ok", data: { d: "approved" } })}
-            ${btn("Send back with review points", "reviewer", { data: { d: "reopened" } })}
+            ${btn("Approve — complete the process", "reviewer", { variant: "ok", ic: "check", data: { d: "approved" } })}
+            ${btn("Send back with review points", "reviewer", { data: { d: "reopened" }, ic: "reviewpoint" })}
           </div>
         </div>` : ""}
 
@@ -157,60 +154,59 @@ export function complete() {
         analysis — which is a different phase and deliberately not part of this product.`, "ok") : ""}
     </section>
 
-    <section style="margin-top:48px">
-      <h2 class="t-h" style="margin-bottom:4px">Export</h2>
-      <p class="t-meta" style="margin-bottom:16px">
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-h">Export</h2></div>
+      <p class="t-sub sec__h measure">
         Only approved content is included. Statements recorded as not obtained <em>are</em> included —
         an incomplete understanding has to look incomplete in the file.</p>
-      <div class="rows">
+      ${rows(`
         ${[
-          ["Process narrative", "DOCX · firm template, sign-off block, sources as footnotes"],
-          ["Risk and control matrix", "XLSX · one row per risk-control pair"],
-          ["Control deficiencies", "DOCX · the ISA 265 management letter draft"],
-          ["Canonical engagement export", "JSON · every statement with its evidence references"],
-        ].map(([t, d]) => row({
-          title: esc(t), detail: esc(d),
+          ["Process narrative", "DOCX · firm template, sign-off block, sources as footnotes", "document"],
+          ["Risk and control matrix", "XLSX · one row per risk-control pair", "control"],
+          ["Control deficiencies", "DOCX · the ISA 265 management letter draft", "finding"],
+          ["Canonical engagement export", "JSON · every statement with its evidence references", "evidence"],
+        ].map(([t, d, ic]) => row({
+          lead: icon(ic, 17), title: esc(t), detail: esc(d),
           side: btn(ps.id === "complete" ? "Generate" : "Draft", "mock", { size: "sm" }),
         })).join("")}
-        ${row({ title: `<span style="color:var(--ink-4)">Push to the audit file system</span>`,
+        ${row({ lead: `<span class="ink5">${icon("system", 17)}</span>`,
+          title: `<span class="ink4">Push to the audit file system</span>`,
           detail: "Caseware, CCH or the firm's own file system",
-          side: `<span class="t-meta">not built</span>` })}
-      </div>
+          side: tag("not built", "quiet") })}`)}
     </section>
 
-    <section style="margin-top:48px">
-      <h2 class="t-h" style="margin-bottom:4px">Carried forward to risk analysis</h2>
-      <p class="t-meta" style="margin-bottom:16px">
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-h">Carried forward to risk analysis</h2></div>
+      <p class="t-sub sec__h measure">
         Completing Revenue closes the process-level interim work. It does not assess risks of
         material misstatement — that is the next phase, and these are its inputs.</p>
-      <div class="rows">
-        ${row({ lead: dot(n.pending ? "open" : "ok"), title: "<span class=\"b\">Process understanding</span>",
+      ${rows(`
+        ${row({ lead: icon("document", 17), title: "<span class=\"b\">Process understanding</span>",
           detail: "The approved narrative, the process map, and the facts behind both",
           side: `<span class="t-meta">${n.approved} sections</span>` })}
-        ${row({ lead: dot("ok"), title: "<span class=\"b\">Risk and control matrix</span>",
+        ${row({ lead: icon("control", 17), title: "<span class=\"b\">Risk and control matrix</span>",
           detail: `${st.riskSummary().total} identified risk signals against ${st.controlSummary().total} controls, with provenance`,
           side: `<span class="t-meta">${st.rcmRows().length} rows</span>`,
           action: "nav", data: { href: "#/matrix" } })}
-        ${row({ lead: dot(st.findingSummary().pending.length ? "open" : "ok"), title: "<span class=\"b\">Findings</span>",
+        ${row({ lead: icon("finding", 17), title: "<span class=\"b\">Findings</span>",
           detail: "Deficiencies and observations for the ISA 265 communication to management",
           side: `<span class="t-meta">${st.findingSummary().confirmed} confirmed</span>` })}
-        ${row({ lead: dot(tr.exceptions ? "alert" : tr.satisfied ? "ok" : "open"),
+        ${row({ lead: icon("walkthrough", 17),
           title: "<span class=\"b\">Line walkthrough results</span>",
           detail: tr.satisfied
             ? `${tr.completed} of ${variants.length} variants walked through · ${tr.exceptions} exception${tr.exceptions === 1 ? "" : "s"} · the rest documented as not requiring one`
             : `${tr.completed} of ${tr.required} required walkthroughs complete`,
           side: `<span class="t-meta">${tr.satisfied ? "settled" : "open"}</span>` })}
-        ${row({ lead: dot(st.openItemSummary().carried.length ? "warn" : "ok"),
+        ${row({ lead: icon("clock", 17),
           title: "<span class=\"b\">Matters carried forward</span>",
           detail: st.openItemSummary().carried.length
             ? st.openItemSummary().carried.map((i) => `${esc(i.id)} → ${esc(st.itemCarry(i)?.destination || "unspecified")}`).join(" · ")
             : "Nothing carried forward — every open matter was settled during interim",
           side: `<span class="t-meta">${st.openItemSummary().carried.length}</span>`,
-          action: "nav", data: { href: "#/resolve" } })}
-      </div>
+          action: "nav", data: { href: "#/resolve" } })}`)}
     </section>
 
-    <section style="margin-top:44px">
+    <section class="sec--loose">
       ${more("footer", "What the export footer records", `<div class="meth"><dl>
         <dt>entity</dt><dd>${esc(client.name)}</dd>
         <dt>engagement</dt><dd>${esc(engagement.id)} · FY2026 interim</dd>
@@ -240,56 +236,50 @@ function reviewPointSection() {
   const pts = st.reviewPoints();
   const open = st.openReviewPoints();
 
-  return `<div style="margin-top:24px">
+  return `<div class="sec">
     ${callout(`<b>${open.length ? `${open.length} review point${open.length === 1 ? "" : "s"} to answer`
       : "Every review point has been answered"}.</b>
       ${open.length ? "The reviewer sent Revenue back. Answer each point on the file, then resubmit."
         : "The file can go back to the reviewer."}`, open.length ? "alert" : "ok")}
 
-    <div class="rows" style="margin-top:16px">
+    <div class="sec__note">
       ${pts.map((p) => {
         const isOpen = S.openPoint === p.id;
         const editing = S.editing === `rp:${p.id}`;
-        return `<div class="${cx("rw", p.state !== "addressed" && "rw--attn")}" style="display:block">
-          <div class="row row--top" style="gap:20px">
-            <span class="rw__lead" style="padding-top:5px">${dot(p.state === "addressed" ? "ok" : "alert")}</span>
-            <span class="rw__main">
-              <span class="rw__t">${esc(p.subject)}</span>
-              <span class="rw__d">${esc(p.reviewer)}, ${esc(p.role)} · ${esc(p.raisedOn)}</span>
+        return `<div class="${cx("rp", p.state === "addressed" && "is-done")}">
+          <div class="rp__hd">
+            <span class="rw__lead">${icon("reviewpoint", 18)}</span>
+            <span class="sp">
+              <span class="card__t">${esc(p.subject)}</span>
+              <span class="rp__meta">${esc(p.reviewer)}, ${esc(p.role)} · ${esc(p.raisedOn)}
+                · <span class="mono">${esc(p.id)}</span></span>
             </span>
-            <span class="rw__side">
-              <span class="t-meta mono">${esc(p.id)}</span>
-              <div class="t-meta" style="margin-top:3px;${p.state === "addressed" ? "color:var(--ok)" : "color:var(--alert)"}">${
-                p.state === "addressed" ? "addressed" : "open"}</div>
-            </span>
+            ${p.state === "addressed" ? tag("addressed", "ok", "check") : tag("open", "alert")}
           </div>
 
-          ${isOpen ? `<div style="margin:12px 0 4px 37px;max-width:74ch">
-            <div class="q__block" style="margin-top:0">
-              <h4>What the reviewer wrote</h4>
-              <p>${esc(p.comment)}</p>
-            </div>
-            <p class="t-meta" style="margin-top:10px">Expects: ${esc(p.expects)}</p>
-            ${p.response ? `<div class="q__block">
-              <h4>Your response · ${esc(p.respondedAt || "")}</h4>
-              <p>${esc(p.response)}</p>
+          ${isOpen ? `<div class="sec__note">
+            <div class="rp__q">&ldquo;${esc(p.comment)}&rdquo;</div>
+            <p class="t-meta sec__note">Expects: ${esc(p.expects)}</p>
+            ${p.response ? `<div class="s-recessed pad-s sec__note">
+              <div class="t-eyebrow">Your response · ${esc(p.respondedAt || "")}</div>
+              <p class="t-body" style="margin-top:6px">${esc(p.response)}</p>
             </div>` : ""}
-            ${editing ? `<div style="margin-top:14px">
+            ${editing ? `<div class="sec__note">
               <textarea class="field" id="ans" rows="4" style="font:15px/1.6 var(--sans)"
                 placeholder="What you did about it, or why the conclusion stands."></textarea>
-              <div class="acts" style="margin-top:10px">
-                ${btn("Record and mark addressed", "answer-point", { variant: "go", size: "sm", data: { id: p.id } })}
-                ${btn("Cancel", "cancel-edit", { variant: "plain", size: "sm" })}
+              <div class="acts sec__note">
+                ${btn("Record and mark addressed", "answer-point", { variant: "primary", size: "sm", data: { id: p.id } })}
+                ${btn("Cancel", "cancel-edit", { variant: "ghost", size: "sm" })}
               </div>
-            </div>` : `<div class="acts" style="margin-top:12px">
-              ${p.target ? btn(`Open ${p.target.id}`, "nav", { size: "sm", data: { href: p.target.href } }) : ""}
+            </div>` : `<div class="acts sec__note">
+              ${p.target ? btn(`Open ${p.target.id}`, "nav", { size: "sm", ic: "link", data: { href: p.target.href } }) : ""}
               ${p.state === "addressed"
-                ? btn("Reopen this point", "reopen-point", { variant: "plain", size: "sm", data: { id: p.id } })
-                : btn("Respond", "answer-point-open", { variant: "go", size: "sm", data: { id: p.id } })}
+                ? btn("Reopen this point", "reopen-point", { variant: "ghost", size: "sm", data: { id: p.id } })
+                : btn("Respond", "answer-point-open", { variant: "primary", size: "sm", data: { id: p.id } })}
             </div>`}
-          </div>` : `<div class="acts" style="margin:11px 0 2px 37px">
+          </div>` : `<div class="acts sec__note">
             ${btn(p.state === "addressed" ? "Show" : "Open the review point", "open-point",
-              { variant: p.state === "addressed" ? "plain" : "go", size: "sm", data: { id: p.id } })}
+              { variant: p.state === "addressed" ? "ghost" : "primary", size: "sm", data: { id: p.id } })}
           </div>`}
         </div>`;
       }).join("")}
@@ -307,62 +297,109 @@ const gateHref = (g) => (g.id === "openItems" ? "#/resolve" : STEP_HREF[g.step] 
 /* ── Matrix — a view reached from step 4, not a destination ──────────────── */
 
 export function matrix() {
-  const rows = st.rcmRows();
+  const rows_ = st.rcmRows();
   const NAT = { manual: "Manual", automated: "Automated", it_dependent_manual: "IT-dependent" };
+  const q = (S.gridQuery || "").toLowerCase();
+  const filter = S.gridFilter || "all";
+
+  const shown = rows_.filter(({ risk: r, control: c }) => {
+    if (filter === "gaps" && c) return false;
+    if (filter === "key" && st.controlDecision(c || {}) !== "key") return false;
+    if (filter === "significant" && !r.significant) return false;
+    if (!q) return true;
+    return (r.title + " " + (c ? c.title + " " + (c.owner || "") : "") + " " + r.id).toLowerCase().includes(q);
+  });
+
+  /* Group consecutive rows by risk signal, so a risk with three controls reads
+     as one risk rather than three. */
+  let lastRisk = null;
 
   const body = `
     <div class="head">
-      <button class="b-link" data-act="nav" data-href="#/controls">← Back to controls and findings</button>
-      <h1 class="t-title" style="margin-top:10px">Risk and control matrix</h1>
-      <p class="t-lede" style="margin-top:10px">
-        A view of work recorded elsewhere, not a place where work happens. The controls carry the
-        conclusions you recorded in step 4. The risk signals are identified but not assessed —
-        assessing them is risk analysis, which reads this matrix rather than being done inside it.
-      </p>
+      <div class="head__row">
+        <div>
+          ${btn("Back to controls and findings", "nav", { variant: "ghost", size: "sm", ic: "back",
+            data: { href: "#/controls" } })}
+          <h1 class="t-display" style="margin-top:10px">Risk and control matrix</h1>
+          <p class="t-lede">
+            A view of work recorded elsewhere, not a place where work happens. The controls carry the
+            conclusions you recorded in step 4. The risk signals are identified but not assessed.
+          </p>
+        </div>
+        <div class="tally">
+          <div><span class="tally__n">${rows_.length}</span><span class="tally__l">pairs</span></div>
+          <div><span class="tally__n" style="color:var(--danger)">${rows_.filter((x) => !x.control).length}</span>
+            <span class="tally__l">without a control</span></div>
+        </div>
+      </div>
     </div>
 
-    <div class="rows" style="margin-top:32px">
-      ${rows.map(({ risk: r, control: c, gap: g }) => {
-        const cd = c ? st.controlDecision(c) : null;
-        return `<div class="rw" style="display:block">
-          <div class="row row--top" style="gap:20px">
-            <span class="rw__lead" style="padding-top:5px">${dot(
-              c ? (cd === "key" ? "ok" : "") : "alert")}</span>
-            <span class="rw__main">
-              <span class="rw__t">${esc(r.title)}</span>
-              <span class="rw__d" style="margin-top:5px">
-                ${c ? esc(c.title) : `<span style="color:var(--alert)">No control identified — gap ${esc(g?.id || "")}</span>`}
-              </span>
-              <span class="rw__d" style="margin-top:6px">
-                ${r.assertions.map((a) => `<span class="chip">${esc(a.replace(/_/g, " "))}</span>`).join(" ")}
-                ${c ? `<span class="chip">${esc(NAT[c.nature])}</span>` : ""}
-                ${c && c.owner ? `<span class="chip">${esc(c.owner)}</span>` : ""}
-              </span>
-            </span>
-            <span class="rw__side">
-              <div class="t-meta">${esc(r.rating)} — proposed${r.significant ? ", flagged significant" : ""}</div>
-              ${c ? `<div class="t-meta" style="margin-top:4px">${cd === "key" ? "key control"
-                : cd === "not_key" ? "not key"
-                : cd === "carried_forward" ? "carried forward undecided"
-                : cd === "undecided" ? "parked, not concluded"
-                : `proposed: ${c.keyProposal === true ? "key" : c.keyProposal === false ? "not key" : "unclear"}`}</div>` : ""}
-            </span>
-          </div>
-        </div>`;
-      }).join("")}
-    </div>
+    <section class="sec">
+      <div class="row sec__h">
+        <label class="srch" style="width:280px;height:34px" for="grid-q">
+          ${icon("search", 15)}
+          <input id="grid-q" class="field" placeholder="Search risks, controls, owners"
+            value="${esc(S.gridQuery || "")}"
+            style="border:0;box-shadow:none;background:none;padding:0;font-size:13.5px">
+        </label>
+        <span class="filters">
+          ${[["all", "All", rows_.length],
+             ["significant", "Significant", rows_.filter((x) => x.risk.significant).length],
+             ["key", "Key controls", rows_.filter((x) => x.control && st.controlDecision(x.control) === "key").length],
+             ["gaps", "No control", rows_.filter((x) => !x.control).length]].map(([k, label, n]) =>
+            `<button class="${cx("fchip", filter === k && "is-on")}" data-act="grid-filter" data-f="${k}">
+              ${icon("filter", 13)}${esc(label)}<span class="fchip__n">${n}</span></button>`).join("")}
+        </span>
+        <span class="sp"></span>
+        <span class="t-meta">${shown.length} of ${rows_.length} shown</span>
+      </div>
 
-    <p class="t-meta" style="margin-top:18px;max-width:74ch">
-      Risk ratings shown here are the methodology pack's proposals. Nothing on this screen is an
-      assessed risk of material misstatement, and nothing on it can be concluded here.</p>
+      <div class="gridwrap">
+        <table class="agrid">
+          <thead><tr>
+            <th>Risk signal</th><th>Assertions</th><th>Control</th><th>Owner</th>
+            <th>Nature</th><th>Conclusion</th>
+          </tr></thead>
+          <tbody>
+            ${shown.map(({ risk: r, control: c, gap: g }) => {
+              const cd = c ? st.controlDecision(c) : null;
+              const newRisk = r.id !== lastRisk;
+              lastRisk = r.id;
+              return `<tr>
+                <td class="c-risk">${newRisk ? `${esc(r.title)}
+                  <span class="sub">${esc(r.id)} · ${esc(r.rating)} proposed${
+                    r.significant ? " · flagged significant" : ""}${r.fraud ? " · fraud" : ""}</span>`
+                  : `<span class="ink5">↳ same signal</span>`}</td>
+                <td>${newRisk ? `<span class="chipline">${r.assertions.map((a) =>
+                  chip(a.replace(/_/g, " "))).join("")}</span>` : ""}</td>
+                <td class="c-ctl">${c ? esc(c.title)
+                  : `<span class="agrid__none">No control identified${g ? ` — gap ${esc(g.id)}` : ""}</span>`}</td>
+                <td>${c ? esc(c.owner || "not established") : "—"}</td>
+                <td>${c ? esc(NAT[c.nature]) : "—"}</td>
+                <td class="c-num">${c ? (cd === "key" ? tag("key control", "ok", "check")
+                  : cd === "not_key" ? tag("not key", "quiet")
+                  : cd === "carried_forward" ? tag("carried forward", "warn")
+                  : cd === "undecided" ? tag("parked", "warn")
+                  : tag(`proposed: ${c.keyProposal === true ? "key" : c.keyProposal === false ? "not key" : "unclear"}`, "quiet"))
+                  : tag("gap", "alert")}</td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
 
-    <div class="acts" style="margin-top:28px">
-      ${btn("Export to Excel", "mock")}
-      ${btn("Back to controls and findings", "nav", { variant: "plain", data: { href: "#/controls" } })}
-    </div>
+      <p class="t-meta sec__note measure">
+        Risk ratings shown here are the methodology pack's proposals. Nothing on this screen is an
+        assessed risk of material misstatement, and nothing on it can be concluded here.</p>
+
+      <div class="acts sec">
+        ${btn("Export to Excel", "mock", { ic: "document" })}
+        ${btn("Back to controls and findings", "nav", { variant: "ghost", ic: "back", data: { href: "#/controls" } })}
+      </div>
+    </section>
   `;
 
-  return screen("complete", body, { width: "wide" });
+  return screen("controls", body, { width: "full" });
 }
 
 /* ── Client questionnaire — a separate, plainer surface ──────────────────── */
@@ -372,75 +409,86 @@ export function clientSurface() {
   const outstanding = questionnaire.filter((q) => !["answer"].includes(st.questionState(q)));
   const current = outstanding.find((q) => !S.answers[q.n]) || outstanding[0];
   const handled = questionnaire.filter((q) => S.answers[q.n]);
+  const pct = Math.round((answeredNow.length / questionnaire.length) * 100);
 
   const outcome = (q) => {
     const a = S.answers[q.n];
     if (!a) return "";
-    return a.kind === "answer"
-      ? `<div class="t-meta" style="margin-top:8px">Sent. Your auditor has it.</div>`
+    return `<div class="t-meta sec__note">${a.kind === "answer"
+      ? "Sent. Your auditor has it."
       : a.kind === "unknown"
-      ? `<div class="t-meta" style="margin-top:8px">Recorded as unable to answer. Your auditor will find another route — you do not need to do anything.</div>`
-      : `<div class="t-meta" style="margin-top:8px">A call has been requested. Your auditor will get in touch.</div>`;
+      ? "Recorded as unable to answer. Your auditor will find another route — you do not need to do anything."
+      : "A call has been requested. Your auditor will get in touch."}</div>`;
   };
 
   return `<div class="cq">
     <header class="cq__bar">
+      <span class="mark__g">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <rect x="1.6" y="1.6" width="16.8" height="16.8" rx="5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M5.6 10.4l2.8 2.8 6-6.4" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </svg></span>
       <div>
         <div class="b">Revenue — a few questions</div>
-        <div class="t-meta" style="margin-top:2px">${esc(firm.name)} · ${esc(client.name)}</div>
+        <div class="t-meta">for ${esc(firm.name)} · ${esc(client.name)}</div>
       </div>
       <span class="sp"></span>
-      <span class="t-meta">${answeredNow.length} of ${questionnaire.length} answered</span>
-      ${btn("Back to the auditor view", "nav", { size: "sm", data: { href: "#/interview" } })}
+      <span class="t-meta nowrap">${answeredNow.length} of ${questionnaire.length}</span>
+      ${btn("Auditor view", "nav", { size: "sm", variant: "ghost", data: { href: "#/interview" } })}
     </header>
 
     <div class="cq__body">
-      <p class="t-lede" style="margin-bottom:40px">
+      <div class="cq__prog" style="margin-bottom:36px"><i style="width:${pct}%"></i></div>
+
+      <p class="t-lede" style="margin-bottom:44px">
         Bas — these are about how sales get recorded. Answer in your own words; there are no wrong
         answers, and you can stop and come back.
       </p>
 
       ${current && !S.answers[current.n] ? `
-        <div class="t-meta" style="margin-bottom:12px">Question ${current.n}</div>
+        <div class="t-eyebrow rail__h">Question ${current.n}</div>
         <h2 class="cq__q">${esc(current.q)}</h2>
-        <p class="t-sub" style="margin-top:10px">${current.origin === "deterministic_trigger"
+        <p class="t-sub" style="margin-top:12px">${current.origin === "deterministic_trigger"
           ? "Following up on what you told us about price changes."
           : "Following up on the German distributor you mentioned."}</p>
-        <textarea class="field" id="q-${current.n}" rows="4" style="margin-top:22px" placeholder="Type your answer…"></textarea>
-        <div class="acts" style="margin-top:14px">
-          ${btn("Send", "answer-send", { variant: "go", data: { n: current.n } })}
+        <textarea class="field" id="q-${current.n}" rows="5" style="margin-top:26px"
+          placeholder="Type your answer…"></textarea>
+        <div class="acts" style="margin-top:18px">
+          ${btn("Send", "answer-send", { variant: "primary", size: "lg", data: { n: current.n } })}
           ${btn("I don't know", "answer-unknown", { data: { n: current.n } })}
-          ${btn("Rather have a call", "answer-call", { variant: "plain", data: { n: current.n } })}
+          ${btn("Rather have a call", "answer-call", { variant: "ghost", data: { n: current.n } })}
         </div>
-        <p class="t-meta" style="margin-top:14px;max-width:60ch">
+        <p class="t-meta sec--tight measure">
           The three do different things. An answer settles the point. "I don't know" and a call
           request both go back to your auditor as something for them to pick up — nothing is lost
           and nothing is guessed.</p>`
         : `<h2 class="cq__q">That's everything — thank you.</h2>
-           <p class="t-sub" style="margin-top:8px">Your auditor has been notified.</p>`}
+           <p class="t-sub" style="margin-top:10px">Your auditor has been notified.</p>`}
 
-      ${handled.length ? `<div style="margin-top:52px">
-        <div class="t-eyebrow" style="margin-bottom:8px">Just now</div>
+      ${handled.length ? `<div class="sec--loose">
+        <div class="t-eyebrow rail__h">Just now</div>
         ${handled.map((q) => `<div class="cq__done">
           <div class="qq">${esc(q.q)}</div>
-          <div class="aa">${esc(S.answers[q.n].text || (S.answers[q.n].kind === "unknown" ? "I don't know" : "I'd rather have a call"))}</div>
+          <div class="aa">${esc(S.answers[q.n].text
+            || (S.answers[q.n].kind === "unknown" ? "I don't know" : "I'd rather have a call"))}</div>
           ${outcome(q)}
         </div>`).join("")}
       </div>` : ""}
 
-      <div style="margin-top:52px">
-        <div class="t-eyebrow" style="margin-bottom:8px">Already answered</div>
+      <div class="sec--loose">
+        <div class="t-eyebrow rail__h">Already answered</div>
         ${[...questionnaire.filter((q) => q.a)].reverse().slice(0, 5).map((q) => `<div class="cq__done">
           <div class="qq">${esc(q.q)}</div>
           <div class="aa">${esc(q.a)}</div>
-          ${q.flag === "contradiction" ? `<div class="t-meta" style="margin-top:8px">
+          ${q.flag === "contradiction" ? `<div class="t-meta sec__note">
             Thank you — we'll check this against what the finance team told us.</div>` : ""}
-          ${q.flag === "new_topic" ? `<div class="t-meta" style="margin-top:8px">
+          ${q.flag === "new_topic" ? `<div class="t-meta sec__note">
             One follow-up added about how that stock is treated at the year end.</div>` : ""}
         </div>`).join("")}
       </div>
 
-      <p class="t-meta" style="margin-top:40px">
+      <p class="t-meta sec--loose">
         These questions are about process, not about any customer or personal data.
         Only ${esc(firm.name)} can see your answers.
       </p>

@@ -4,7 +4,8 @@
    process. The process home is the map plus the journey — one screen that
    answers "where is this process?". */
 
-import { esc, cx, act as btn, row, dot, callout, empty } from "../ui.js";
+import { esc, cx, act as btn, row, rows, dot, icon, tag, callout, empty,
+         nextAction, card } from "../ui.js";
 import { client, engagement, sources } from "../data-sources.js";
 import { journey, carriedContext, variants } from "../data-process.js";
 import * as st from "../state.js";
@@ -29,16 +30,16 @@ export function engagementView() {
     <div class="head">
       <div class="head__row">
         <div>
-          <h1 class="t-title">${esc(client.name)}</h1>
-          <p class="t-lede" style="margin-top:10px">
+          <h1 class="t-display">${esc(client.name)}</h1>
+          <p class="t-lede">
             ${esc(engagement.period)} · ${esc(client.framework)} · materiality ${esc(engagement.materiality)}
           </p>
         </div>
       </div>
     </div>
 
-    <section style="margin-top:36px">
-      <h2 class="t-eyebrow" style="margin-bottom:14px">Engagement</h2>
+    <section class="sec">
+      <div class="sec__h"><h2 class="t-eyebrow">Audit phases</h2></div>
       <div class="phases">
         ${[["Planning", "done", "Signed 4 July 2026"],
            ["Interim", "on", `Revenue · step ${prog.current.n} of 7`],
@@ -51,31 +52,30 @@ export function engagementView() {
       </div>
     </section>
 
-    <section style="margin-top:44px">
-      <h2 class="t-h" style="margin-bottom:4px">Interim — processes</h2>
-      <p class="t-meta" style="margin-bottom:16px">
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-h">Interim — processes</h2></div>
+      <p class="t-sub sec__h">
         Each process is carried through the full interim workflow independently.
         Only Revenue is in scope for the current methodology pack.</p>
-      <div class="rows">
+      ${rows(`
         ${row({
-          lead: dot("ok"),
+          lead: icon("process", 17),
           title: `<span class="b">Revenue / order-to-cash</span>`,
-          detail: `${prog.current.name} — ${esc(prog.current.blurb)}`,
-          side: `<span class="b" style="color:var(--ink-2)">step ${prog.current.n} of 7</span>
+          detail: `${esc(prog.current.name)} — ${esc(prog.current.blurb)}`,
+          side: `<span class="b ink2">Step ${prog.current.n} of 7</span>
                  <div class="t-meta">${cov.pct}% understood</div>`,
           action: "nav", data: { href: "#/revenue" },
         })}
         ${later.map(([n, d]) => row({
-          lead: dot("open"),
-          title: `<span style="color:var(--ink-3)">${esc(n)}</span>`,
+          lead: icon("process", 17),
+          title: `<span class="ink3">${esc(n)}</span>`,
           detail: esc(d),
           side: `<span class="t-meta">not started</span>`,
-        })).join("")}
-      </div>
+        })).join("")}`)}
     </section>
 
-    <section style="margin-top:44px">
-      <h2 class="t-eyebrow" style="margin-bottom:14px">Team</h2>
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-eyebrow">Team</h2></div>
       <p class="inline-list">${engagement.team.map((t) =>
         `<b>${esc(t.name)}</b> <span class="t-meta">${esc(t.role)}</span>`).join(" · ")}</p>
     </section>
@@ -94,83 +94,87 @@ export function processHome() {
   const steps = st.journeyStates();
   const next = st.nextAction();
   const tr = st.traceSummary();
+  const prog = st.processProgress();
+  const cov = st.coverageSummary();
   const mode = tr.active ? "trace" : S.analysed ? "annotated" : "plain";
+
+  const vstate = (v) => v.state === "completed"
+      ? { t: `Walkthrough complete${v.progress?.exceptions ? ` · ${v.progress.exceptions} exception` : ""}`,
+          tone: v.progress?.exceptions ? "warn" : "ok" }
+    : v.state === "not_required" ? { t: "No walkthrough required", tone: "" }
+    : v.state === "in_progress" ? { t: `${v.progress.done} of ${v.progress.expected} steps traced`, tone: "warn" }
+    : v.state === "not_decided" ? { t: "Walkthrough not decided", tone: "" }
+    : { t: "Walkthrough not started", tone: "" };
 
   const body = `
     <div class="head">
       <div class="head__row">
         <div>
-          <h1 class="t-title">Revenue</h1>
-          <p class="t-lede" style="margin-top:10px">
+          <h1 class="t-display">Revenue</h1>
+          <p class="t-lede">
             Order-to-cash, ${esc(client.short)} FY2026 interim.
             ${S.analysed ? "The process as we understand it, and how far the work has got."
-              : "The process as described so far. It fills in as the walkthrough progresses."}
+              : "The process as described so far. It fills in as the work progresses."}
           </p>
         </div>
-        <div style="text-align:right;padding-top:4px">
-          <div class="t-num">${st.processProgress().done}<span style="color:var(--ink-4)">/7</span></div>
-          <div class="t-meta">steps done</div>
+        <div class="tally">
+          <div><span class="tally__n">${prog.done}<span class="ink4">/7</span></span>
+            <span class="tally__l">steps done</span></div>
+          <div><span class="tally__n">${cov.pct}<span class="ink4">%</span></span>
+            <span class="tally__l">understood</span></div>
         </div>
       </div>
     </div>
 
-    <section style="margin-top:32px">
-      <div class="row" style="margin-bottom:12px">
+    <section class="sec">
+      <div class="sec__h">
         <h2 class="t-eyebrow">Process understanding map</h2>
         <span class="sp"></span>
         ${mapLegend(mode)}
       </div>
       ${processMap(mode, { selected: S.mapStep })}
-      ${S.mapStep ? mapDetail(S.mapStep) : `<p class="t-meta" style="margin-top:12px">
+      ${S.mapStep ? mapDetail(S.mapStep) : `<p class="t-meta sec__note">
+        Three variants, sharing most of their steps and converging at revenue posting.
         Click a step to see its controls, findings and sources.</p>`}
     </section>
 
-    <section style="margin-top:44px">
-      <h2 class="t-h" style="margin-bottom:4px">Process variants</h2>
-      <p class="t-meta" style="margin-bottom:16px">
-        Revenue is three materially different flows sharing most of their steps. Line walkthroughs
-        are tracked per variant.</p>
-      <div class="rows">
-        ${st.traceSummary().variants.map((v) => row({
-          lead: dot(v.state === "completed" ? "ok" : v.state === "not_required" ? "open"
-            : v.state === "in_progress" ? "warn" : "open"),
-          title: `<span class="b">${esc(v.variant.name)}</span>`,
-          detail: `${esc(v.variant.recognition)} · ${st.stepsForVariantCount(v.variant.id)} process steps`,
-          side: `<span class="t-meta" style="${v.state === "completed" ? "color:var(--ok)" : ""}">${
-            v.state === "completed" ? `walkthrough complete${v.progress?.exceptions ? ` · ${v.progress.exceptions} exception` : ""}`
-            : v.state === "not_required" ? "walkthrough not required"
-            : v.state === "in_progress" ? `${v.progress.done} of ${v.progress.expected} traced`
-            : v.state === "not_decided" ? "walkthrough not decided"
-            : "walkthrough not started"}</span>`,
-          action: "nav", data: { href: "#/trace" },
-        })).join("")}
+    <section class="sec--loose">
+      ${nextAction(next, "Next")}
+    </section>
+
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-h">Process variants</h2></div>
+      <p class="t-sub sec__h">Line walkthroughs are decided and tracked per variant.</p>
+      <div class="cards cards--3">
+        ${tr.variants.map((v) => {
+          const vs = vstate(v);
+          return card({
+            title: esc(v.variant.name),
+            detail: `${esc(v.variant.value)} · ${esc(v.variant.recognition.toLowerCase())}`,
+            body: `<div class="card__ft">
+              ${tag(vs.t, vs.tone, v.state === "completed" ? "check" : "walkthrough")}
+              <span class="sp"></span>
+              <span class="t-meta">${st.stepsForVariantCount(v.variant.id)} steps</span>
+            </div>`,
+            action: "nav", data: { href: "#/trace" },
+          });
+        }).join("")}
       </div>
     </section>
 
-    <section style="margin-top:44px">
-      <h2 class="t-h" style="margin-bottom:4px">The interim workflow</h2>
-      <p class="t-meta" style="margin-bottom:16px">Seven steps. You can look ahead at any time.</p>
-      <div class="rows">
-        ${steps.map((j) => row({
-          lead: j.s === "done" ? dot("ok") : j.s === "open" ? dot(j.tone === "warn" ? "warn" : "") : dot("open"),
-          title: `<span class="${j.s === "later" ? "" : "b"}" style="${j.s === "later" ? "color:var(--ink-4)" : ""}">${j.n}. ${esc(j.name)}</span>`,
-          detail: j.s === "later" && j.why ? esc(j.why) : esc(j.blurb),
-          side: `<span class="t-meta ${j.tone === "warn" ? "" : ""}" style="${j.tone === "warn" ? "color:var(--warn)" : j.s === "done" ? "color:var(--ok)" : ""}">${esc(j.c)}</span>`,
-          action: "nav", data: { href: j.href },
-        })).join("")}
-      </div>
-    </section>
-
-    <section style="margin-top:40px">
-      <button class="rw" data-act="nav" data-href="${esc(next.href)}"
-        style="border-top:1px solid var(--line);padding:24px 4px">
-        <span class="rw__main">
-          <span class="t-eyebrow">Next</span>
-          <span class="t-h" style="display:block;margin:8px 0 5px">${esc(next.t)}</span>
-          <span class="t-sub" style="display:block">${esc(next.d)}</span>
-        </span>
-        <span class="rw__side" style="padding-top:24px;font-size:19px;color:var(--ink-5)">›</span>
-      </button>
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-h">The interim workflow</h2></div>
+      <p class="t-sub sec__h">Seven steps. You can look ahead at any time.</p>
+      ${rows(steps.map((j) => row({
+        lead: j.s === "done" ? `<span class="state state--ok">${icon("check", 17)}</span>`
+          : j.s === "later" ? `<span class="ink5">${icon("clock", 17)}</span>`
+          : icon("step", 17),
+        title: `<span class="${j.s === "later" ? "ink4" : "b"}">${j.n}. ${esc(j.name)}</span>`,
+        detail: j.s === "later" && j.why ? esc(j.why) : esc(j.blurb),
+        side: j.c ? tag(j.c, j.s === "done" ? "ok" : j.tone === "alert" ? "alert"
+          : j.tone === "warn" ? "warn" : "quiet") : "",
+        action: "nav", data: { href: j.href },
+      })).join(""))}
     </section>
   `;
 
@@ -181,135 +185,129 @@ export function processHome() {
 
 export function prepare() {
   const cov = st.coverageSummary();
+  const KIND_IC = { "Inherent risk factor": "finding", "Entity-level": "process",
+                    "Systems in scope": "system", "Prior year": "clock" };
 
   const body = `
     <div class="head">
       <div class="head__row">
         <div>
-          <h1 class="t-title">Prepare</h1>
-          <p class="t-lede" style="margin-top:10px">
+          <h1 class="t-display">Prepare</h1>
+          <p class="t-lede">
             What we already know about Revenue at ${esc(client.short)}, and who we need to speak to.
-            Everything here came from the prior year, the engagement file or documents already supplied.
+            Everything here came from the prior year, the engagement file or documents already
+            supplied — interim receives this work, it does not redo it.
           </p>
         </div>
-        ${S.prepared ? `<span class="state state--ok" style="padding-top:12px"><i class="dot dot--ok"></i>Confirmed</span>` : ""}
+        ${S.prepared ? `<span class="tag tag--ok">${icon("check", 12)}Confirmed</span>` : ""}
       </div>
     </div>
 
-    <section style="margin-top:36px">
-      <h2 class="t-eyebrow" style="margin-bottom:14px">Scope</h2>
-      <div class="rows">
-        ${row({ title: "Process", detail: "Revenue — three process variants across two revenue streams", side: `<span class="t-meta">in scope</span>` })}
+    <section class="sec">
+      <div class="sec__h"><h2 class="t-eyebrow">Scope</h2></div>
+      ${rows(`
+        ${row({ lead: icon("process", 17), title: "Process",
+          detail: "Revenue — three process variants across two revenue streams",
+          side: tag("in scope", "accent") })}
         ${variants.map((v) => row({
-          title: esc(v.name), detail: `${esc(v.value)} · ${esc(v.recognition.toLowerCase())}`,
+          lead: icon("variant", 17), title: esc(v.name),
+          detail: `${esc(v.value)} · ${esc(v.recognition.toLowerCase())}`,
           side: `<span class="t-meta">${v.recognition.startsWith("Over") ? "over time" : "point in time"}</span>` })).join("")}
-        ${row({ title: "Methodology pack", detail: "12 sub-processes, 45 coverage areas, 10 required by ISA 240", side: `<span class="mono t-meta">revenue v0.1.0</span>` })}
-      </div>
+        ${row({ lead: icon("document", 17), title: "Methodology pack",
+          detail: "12 sub-processes, 45 coverage areas, 10 required by ISA 240",
+          side: `<span class="mono t-meta">revenue v0.1.0</span>` })}`)}
     </section>
 
-    <section style="margin-top:40px">
-      <h2 class="t-eyebrow" style="margin-bottom:14px">Systems</h2>
-      <div class="rows">
-        ${client.systems.map((s) => row({
-          title: `<span class="b">${esc(s.name)}</span>`, detail: esc(s.role) })).join("")}
-      </div>
-    </section>
-
-    <section style="margin-top:40px">
-      <h2 class="t-eyebrow" style="margin-bottom:14px">Process owners and participants</h2>
-      <div class="rows">
-        ${client.contacts.map((c) => row({
-          lead: dot(c.tag ? "ok" : "open"),
-          title: `<span class="b">${esc(c.name)}</span>`,
-          detail: esc(c.role),
-          side: `<span class="t-meta">${esc(c.tag || "not yet contacted")}</span>`,
-        })).join("")}
-      </div>
-    </section>
-
-    <section style="margin-top:40px">
-      <h2 class="t-eyebrow" style="margin-bottom:14px">What we already have</h2>
-      <div class="rows">
-        ${Object.values(sources).map((s) => row({
-          lead: dot("ok"), title: esc(s.name), detail: esc(s.detail),
-        })).join("")}
-      </div>
-      <div class="acts" style="margin-top:16px">
-        ${btn("Add a document", "mock")}
-        ${btn("Import a transcript", "mock")}
-      </div>
-    </section>
-
-    <section style="margin-top:40px">
-      <h2 class="t-eyebrow" style="margin-bottom:4px">Context carried into interim</h2>
-      <p class="t-meta" style="margin-bottom:14px">
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-h">Context carried into interim</h2></div>
+      <p class="t-sub sec__h measure">
         From client acceptance, entity understanding and the inherent risk factors identified in
-        planning. Read-only here — interim receives this work, it does not redo it.</p>
-      <div class="rows">
-        ${carriedContext.map((c) => row({
-          lead: dot("open"),
+        planning. Read-only here.</p>
+      <div class="cards cards--2">
+        ${carriedContext.map((c) => card({
+          mod: "quiet",
           title: esc(c.t), detail: esc(c.d),
-          side: `<span class="t-meta">${esc(c.kind)}</span>`,
+          side: tag(c.kind, "quiet", KIND_IC[c.kind] || "document"),
         })).join("")}
       </div>
     </section>
 
-    <section style="margin-top:40px">
-      <h2 class="t-eyebrow" style="margin-bottom:4px">Process variants in scope</h2>
-      <p class="t-meta" style="margin-bottom:14px">
-        Revenue is not one flow. These three are materially different processes and are walked
-        through separately where the methodology requires it.</p>
-      <div class="rows">
-        ${variants.map((v) => row({
-          lead: dot("open"),
-          title: `<span class="b">${esc(v.name)}</span>`,
-          detail: `${esc(v.what)} — ${esc(v.recognition.toLowerCase())}`,
-          side: `<span class="t-meta">${esc(v.value)}</span>`,
-        })).join("")}
-      </div>
-    </section>
-
-    <section style="margin-top:40px">
-      <h2 class="t-eyebrow" style="margin-bottom:14px">Known changes since last year</h2>
-      <div class="rows">
-        ${row({ lead: dot("warn"),
-          title: "Warehousing and despatch outsourced to Van Dijk Logistics in March 2026",
-          detail: "Performed in-house at Eindhoven in FY2025. A new service organisation in the middle of the revenue process.",
-          side: `<span class="t-meta">process change</span>` })}
-        ${row({ lead: dot("warn"),
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-h">Known changes since last year</h2></div>
+      <div class="cards cards--2">
+        ${card({ mod: "warn",
+          title: "Warehousing outsourced to Van Dijk Logistics in March 2026",
+          detail: "Performed in-house at Eindhoven in FY2025. A new service organisation sits in the middle of the revenue process.",
+          side: tag("process change", "warn") })}
+        ${card({ mod: "warn",
           title: "Service revenue has grown since the 2024 maintenance acquisition",
           detail: "A second recognition basis, and a second system feeding the ledger.",
-          side: `<span class="t-meta">scale</span>` })}
+          side: tag("scale", "warn") })}
       </div>
     </section>
 
-    <section style="margin-top:40px">
-      <h2 class="t-eyebrow" style="margin-bottom:14px">Already outstanding</h2>
-      <p class="t-sub" style="max-width:66ch">
+    <section class="sec--loose">
+      <div class="grid2">
+        <div>
+          <div class="sec__h"><h2 class="t-eyebrow">Systems</h2></div>
+          ${rows(client.systems.map((sy) => row({
+            lead: icon("system", 17),
+            title: `<span class="b">${esc(sy.name)}</span>`, detail: esc(sy.role) })).join(""))}
+        </div>
+        <div>
+          <div class="sec__h"><h2 class="t-eyebrow">People</h2></div>
+          ${rows(client.contacts.map((c) => row({
+            lead: icon("people", 17),
+            title: `<span class="b">${esc(c.name)}</span>`, detail: esc(c.role),
+            side: c.tag ? tag(c.tag, "ok", "check") : `<span class="t-meta">not yet contacted</span>` })).join(""))}
+        </div>
+      </div>
+    </section>
+
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-eyebrow">What we already have</h2></div>
+      ${rows(Object.values(sources).map((sy) => row({
+        lead: icon(SRC_IC[sy.kind] || "document", 17),
+        title: esc(sy.name), detail: esc(sy.detail) })).join(""))}
+      <div class="acts sec__note">
+        ${btn("Add a document", "mock", { size: "sm", ic: "document" })}
+        ${btn("Import a transcript", "mock", { size: "sm", ic: "transcript" })}
+      </div>
+    </section>
+
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-eyebrow">Still outstanding</h2></div>
+      <p class="t-body measure">
         ${cov.mandatoryOpen.length
-          ? `${cov.mandatoryOpen.length} required areas were not established by the documents alone and need to be covered in the walkthrough.`
+          ? `${cov.mandatoryOpen.length} required areas were not established by the documents alone
+             and need to be covered in the interview.`
           : "Nothing outstanding from the preparation."}
       </p>
     </section>
 
-    <section style="margin-top:44px;border-top:1px solid var(--line);padding-top:28px">
+    <hr class="rule">
+    <section class="sec">
       ${S.prepared
-        ? `<div class="row" style="gap:16px">
-            <span class="state state--ok"><i class="dot dot--ok"></i>Preparation confirmed</span>
+        ? `<div class="row">
+            <span class="state state--ok">${icon("check", 16)}Preparation confirmed</span>
             <span class="sp"></span>
-            ${btn("Edit preparation", "prepare-reopen", { variant: "plain" })}
-            ${btn("Go to the process interview", "nav", { variant: "go", data: { href: "#/interview" } })}
+            ${btn("Edit preparation", "prepare-reopen", { variant: "ghost" })}
+            ${btn("Go to the process interview", "nav", { variant: "primary", data: { href: "#/interview" }, ic: "arrow" })}
           </div>`
         : `<h2 class="t-h">Ready to speak to the client?</h2>
-           <p class="t-sub" style="margin:6px 0 18px;max-width:62ch">
+           <p class="t-sub sec__h measure">
              Confirming records that the scope, the participants, the carried context and the prior
              information were considered before the interview — which is what the file has to show.
-             You are taken straight to the process interview.</p>
+             You are taken straight to step 2.</p>
            <div class="acts">
-             ${btn("Confirm and start the process interview", "prepare-done", { variant: "go", size: "lg", key: "Enter" })}
+             ${btn("Confirm and start the process interview", "prepare-done",
+               { variant: "primary", size: "lg", key: "Enter" })}
            </div>`}
     </section>
   `;
 
   return screen("prepare", body);
 }
+
+const SRC_IC = { transcript: "transcript", client_answer: "questionnaire", prior_year: "document",
+                 access_log: "system", assurance_report: "document", auditor_note: "note" };

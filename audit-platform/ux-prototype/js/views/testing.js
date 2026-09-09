@@ -11,7 +11,7 @@
    · Extending the sample is not a conclusion. It enlarges the selection and
      leaves the test open. */
 
-import { esc, cx, act as btn, row, dot, more, callout, empty } from "../ui.js";
+import { esc, cx, act as btn, row, rows, dot, tag, icon, more, callout, empty, card } from "../ui.js";
 import { controlTest as controlTestPack } from "../data-process.js";
 import { controls } from "../data-model.js";
 import * as st from "../state.js";
@@ -22,53 +22,57 @@ const S = st.S;
 /* --- Scope: which key controls are to be tested --------------------------- */
 
 function scopeSection(sc) {
-  return `<section style="margin-top:32px">
-    <div class="row" style="margin-bottom:6px">
+  return `<section class="sec">
+    <div class="sec__h">
       <h2 class="t-h">Which key controls will be tested</h2>
       <span class="sp"></span>
       <span class="t-meta">${sc.decided} of ${sc.rows.length} decided</span>
     </div>
-    <p class="t-sub" style="margin-bottom:16px;max-width:74ch">
+    <p class="t-sub sec__h measure">
       A control is tested because you intend to rely on it. Deciding not to rely, and taking a
       substantive response instead, is a legitimate answer — it just has to be an answer.</p>
 
     ${sc.rows.map(({ control: c, scope, test }) => {
       const editing = S.editing === `ts:${c.id}`;
+      const badge = scope.state === "required"
+          ? (test.conclusion ? tag(test.conclusion === "rely" ? "tested · reliance placed" : "tested · no reliance",
+              test.conclusion === "rely" ? "ok" : "warn", "check")
+             : test.extended ? tag("sample extended — open", "warn", "test")
+             : tag("test required, not concluded", "accent", "test"))
+        : scope.state === "not_required" ? tag("no test — reason on file", "quiet")
+        : tag("no decision recorded", "warn");
+
       return `<section class="vcard">
-        <div class="row" style="align-items:baseline;gap:12px">
-          <h3 class="t-h" style="font-size:16px">${esc(c.title)}</h3>
+        <div class="row row--base">
+          <span class="rw__lead">${icon("control", 18)}</span>
+          <h3 class="t-h-sm">${esc(c.title)}</h3>
           <span class="sp"></span>
-          <span class="t-meta">${
-            scope.state === "required"
-              ? (test.conclusion ? (test.conclusion === "rely" ? "tested · reliance placed" : "tested · no reliance")
-                 : test.extended ? "sample extended — open" : "test required, not concluded")
-            : scope.state === "not_required" ? "no test — reason on file"
-            : "no decision recorded"}</span>
+          ${badge}
         </div>
-        <p class="t-meta" style="margin-top:4px">
+        <p class="t-meta" style="margin-top:6px">
           <span class="mono">${esc(c.id)}</span> · ${esc(c.owner || "owner not established")} ·
           ${c.nature === "automated" ? "automated" : c.nature === "manual" ? "manual" : "IT-dependent manual"}</p>
 
-        ${scope.state === "deferred" && !editing ? `<div class="acts" style="margin-top:14px">
-          ${btn("Test this control", "test-require", { variant: "go", size: "sm", data: { id: c.id } })}
+        ${scope.state === "deferred" && !editing ? `<div class="acts sec__note">
+          ${btn("Test this control", "test-require", { variant: "primary", size: "sm", data: { id: c.id } })}
           ${btn("No test — record why", "test-not-open", { size: "sm", data: { id: c.id } })}
         </div>` : ""}
 
-        ${editing ? `<div class="callout" style="margin-top:14px">
+        ${editing ? `<div class="callout sec__note">
           <b>Why will this control not be tested?</b>
-          <p class="t-meta" style="margin:6px 0 10px">Usually because no reliance is planned and the
-          assertion is covered substantively. That reason goes on the file.</p>
+          <p class="t-meta sec__note">Usually because no reliance is planned and the assertion is
+          covered substantively. That reason goes on the file.</p>
           <textarea class="field" id="ans" rows="3" placeholder="e.g. No reliance planned. Cut-off is covered substantively by the year-end sales cut-off testing, so testing operating effectiveness would not change the audit response."></textarea>
-          <div class="acts" style="margin-top:12px">
-            ${btn("Record — no test required", "test-not-required", { variant: "go", data: { id: c.id } })}
-            ${btn("Cancel", "cancel-edit", { variant: "plain" })}
+          <div class="acts sec__note">
+            ${btn("Record — no test required", "test-not-required", { variant: "primary", data: { id: c.id } })}
+            ${btn("Cancel", "cancel-edit", { variant: "ghost" })}
           </div>
         </div>` : ""}
 
-        ${scope.state === "not_required" ? `<div class="callout" style="margin-top:14px">
+        ${scope.state === "not_required" ? `<div class="callout sec__note">
           <b>No test required.</b> ${esc(scope.reason || "No reason recorded.")}
-          <div class="acts" style="margin-top:10px">
-            ${btn("Change this decision", "test-reopen-scope", { variant: "plain", size: "sm", data: { id: c.id } })}
+          <div class="acts sec__note">
+            ${btn("Change this decision", "test-reopen-scope", { variant: "ghost", size: "sm", data: { id: c.id } })}
           </div>
         </div>` : ""}
 
@@ -89,28 +93,28 @@ function placeholder(c, test) {
       Scoped for testing. The worked test is below.</p>`;
   }
   const editing = S.editing === `tc:${c.id}`;
-  return `<div class="callout" style="margin-top:14px">
+  return `<div class="callout sec__note">
     <b>Scoped for testing.</b> No test workpaper has been drafted for this control in the
     prototype — only <span class="mono">${esc(controlTestPack.controlId)}</span> carries a worked
     example. The conclusion is still this control's own, and step 6 stays open without it.
-    ${test.conclusion ? `<div class="t-meta" style="margin-top:10px">
-      <b style="color:var(--ink-2)">${esc(test.conclusion === "rely"
+    ${test.conclusion ? `<div class="t-meta sec__note">
+      <b class="ink2">${esc(test.conclusion === "rely"
         ? "Concluded — reliance placed on this control." : "Concluded — no reliance placed.")}</b>
       ${test.note ? " " + esc(test.note) : ""}</div>
-      <div class="acts" style="margin-top:10px">
-        ${btn("Reopen this conclusion", "reopen-test", { variant: "plain", size: "sm", data: { id: c.id } })}
+      <div class="acts sec__note">
+        ${btn("Reopen this conclusion", "reopen-test", { variant: "ghost", size: "sm", data: { id: c.id } })}
       </div>`
-    : editing ? `<div style="margin-top:12px">
+    : editing ? `<div class="sec__note">
         <textarea class="field" id="ans" rows="2"
           placeholder="What the test found, in one line."></textarea>
-        <div class="acts" style="margin-top:10px">
-          ${btn("Rely on the control", "conclude-test", { variant: "go", size: "sm", data: { id: c.id, d: "rely" } })}
+        <div class="acts sec__note">
+          ${btn("Rely on the control", "conclude-test", { variant: "primary", size: "sm", data: { id: c.id, d: "rely" } })}
           ${btn("Do not rely", "conclude-test", { size: "sm", data: { id: c.id, d: "no_rely" } })}
-          ${btn("Cancel", "cancel-edit", { variant: "plain", size: "sm" })}
+          ${btn("Cancel", "cancel-edit", { variant: "ghost", size: "sm" })}
         </div>
       </div>`
-    : `<div class="acts" style="margin-top:10px">
-        ${btn("Record this control's conclusion", "test-conclude-open", { size: "sm", data: { id: c.id } })}
+    : `<div class="acts sec__note">
+        ${btn("Record this control's conclusion", "test-conclude-open", { size: "sm", data: { id: c.id }, ic: "test" })}
       </div>`}
   </div>`;
 }
@@ -128,9 +132,9 @@ function testSection() {
       <div class="tstage__b">${body}</div>
     </div>`;
 
-  return `<section style="margin-top:44px">
-    <h2 class="t-h" style="margin-bottom:4px">${esc(c ? c.title : t.controlId)}</h2>
-    <p class="t-meta" style="margin-bottom:22px">
+  return `<section class="sec--loose">
+    <div class="sec__h"><h2 class="t-h">${esc(c ? c.title : t.controlId)}</h2></div>
+    <p class="t-meta sec__h">
       <span class="mono">${esc(t.controlId)}</span> · scoped for testing, worked through end to end</p>
 
     <div class="tflow">
@@ -148,8 +152,8 @@ function testSection() {
           <div class="expect__r"><dt>Completeness</dt><dd>${esc(t.completeness)}</dd></div>
           <div class="expect__r"><dt>Sample</dt><dd><b>${ts.selected} items</b> — ${esc(ts.extended ? t.extendedBasis : t.sampleBasis)}</dd></div>
         </div>
-        <p class="t-meta" style="margin-top:10px">The number always shows the firm parameter that
-        produced it, never a number the model chose.</p>`)}
+        <p class="t-meta sec__note">The number always shows the firm parameter that produced it,
+        never a number the model chose.</p>`)}
 
       ${stage(3, "Evidence", `
         <p class="t-sub" style="margin-bottom:10px">What to inspect on each selected item:</p>
@@ -158,26 +162,29 @@ function testSection() {
           ${t.evidenceToRequest.map(esc).join("; ")}.</p>`)}
 
       ${stage(4, "Results", `
-        <div class="rows">
-          ${ts.results.map((r, i) => row({
-            lead: dot(r.ok ? "ok" : "alert"),
-            title: `<span class="mono">${esc(r.id)}</span>${
-              ts.extended && i >= t.results.length ? ` <span class="t-meta">added by the extension</span>` : ""}`,
-            detail: esc(r.note),
-            side: `<span class="t-meta" style="${r.ok ? "color:var(--ok)" : "color:var(--alert)"}">${r.ok ? "attributes met" : "exception"}</span>`,
-            mod: r.ok ? "" : "conflict",
-          })).join("")}
+        <div class="gridwrap" style="max-height:none">
+          <table class="agrid">
+            <thead><tr><th>Item</th><th>What was inspected</th><th>Selection</th><th>Result</th></tr></thead>
+            <tbody>
+              ${ts.results.map((r, i) => `<tr>
+                <td class="mono">${esc(r.id)}</td>
+                <td>${esc(r.note)}</td>
+                <td class="t-meta">${ts.extended && i >= t.results.length ? "extension" : "initial"}</td>
+                <td class="c-num">${r.ok ? tag("attributes met", "ok", "check") : tag("exception", "alert", "contradiction")}</td>
+              </tr>`).join("")}
+            </tbody>
+          </table>
         </div>
-        <p class="t-sub" style="margin-top:14px">
+        <p class="t-sub sec__note">
           <b>${ts.corroborated} of ${ts.selected}</b> items met every attribute.
           ${ts.exceptions} exception${ts.exceptions === 1 ? "" : "s"}.</p>
-        ${!ts.extended ? `<div class="acts" style="margin-top:16px">
-          ${btn("Extend the sample to 10", "extend-sample", { data: { id: t.controlId } })}
+        ${!ts.extended ? `<div class="acts sec__note">
+          ${btn("Extend the sample to 10", "extend-sample", { data: { id: t.controlId }, ic: "plus" })}
         </div>
-        <p class="t-meta" style="margin-top:10px">Extending changes the selection. It does not
-        conclude the test, and the step stays open until you do.</p>` : `
-        <p class="t-meta" style="margin-top:10px">Extended to ${ts.selected} items on the firm
-        parameter, after the exception in the initial sample. A second exception was found.</p>`}`)}
+        <p class="t-meta sec__note">Extending changes the selection. It does not conclude the test,
+        and the step stays open until you do.</p>` : `
+        <p class="t-meta sec__note">Extended to ${ts.selected} items on the firm parameter, after the
+        exception in the initial sample. A second exception was found.</p>`}`)}
 
       ${stage(5, "Conclusion", `
         ${callout(ts.extended
@@ -191,20 +198,20 @@ function testSection() {
              extend the sample on your behalf either.`)}
         ${more("pynote", "Prior-year consideration", `<div class="meth">
           <p style="color:var(--ink-2);line-height:1.65">${esc(t.priorYearNote)}</p></div>`, S.disclosed.pynote)}
-        <div class="q__sug" style="margin-top:22px">
-          <span class="l">Auditor conclusion</span>
-          <span class="v">${ts.conclusion
+        <div class="proposal">
+          <span class="proposal__l">${icon("test", 14)}Auditor conclusion</span>
+          <span class="proposal__v">${ts.conclusion
             ? esc(ts.conclusion === "rely" ? "Control operates — reliance placed"
                 : "Not relied upon — substantive response instead")
             : ts.extended ? "still required, after the extension" : "required"}</span>
         </div>
-        <div class="q__acts">
+        <div class="acts sec__note">
           ${ts.conclusion
-            ? btn("Reopen the conclusion", "reopen-test", { variant: "plain", data: { id: t.controlId } })
-            : `${btn("Rely on the control", "conclude-test", { variant: "go", data: { id: t.controlId, d: "rely" } })}
+            ? btn("Reopen the conclusion", "reopen-test", { variant: "ghost", data: { id: t.controlId } })
+            : `${btn("Rely on the control", "conclude-test", { variant: "primary", data: { id: t.controlId, d: "rely" } })}
                ${btn("Do not rely — respond substantively", "conclude-test", { data: { id: t.controlId, d: "no_rely" } })}`}
         </div>
-        ${!ts.conclusion ? `<p class="t-meta" style="margin-top:12px;max-width:64ch">
+        ${!ts.conclusion ? `<p class="t-meta sec__note measure">
           Only these two answers close the test. Everything else — extending, requesting more
           evidence, going back to the client — leaves it open, which is what the completion gate
           reads. And this conclusion closes <i>this</i> control only.</p>` : ""}`, !!ts.conclusion)}
@@ -218,7 +225,7 @@ export function testing() {
   const sc = st.testingScope();
 
   const intro = `
-    <div class="callout callout--future" style="margin-bottom:28px">
+    <div class="callout callout--future" style="margin-bottom:32px">
       <b>Future concept.</b> Control testing is not built. This is one worked example of how the
       workflow would run, shown so the shape is visible — real populations, sampling, evidence
       upload and test workpapers are all out of scope for this prototype.
@@ -228,10 +235,10 @@ export function testing() {
   if (!sc.keys.length) {
     return screen("testing", `${intro}
       ${empty("No control has been concluded as key yet",
-        "Testing operates on controls you intend to rely on. Conclude the controls in step 4 and any key control appears here — including, legitimately, none.")}
-      <div style="text-align:center;margin-top:-40px">
-        ${btn("Go to controls and findings", "nav", { variant: "go", data: { href: "#/controls" } })}
-      </div>`);
+        "Testing operates on controls you intend to rely on. Conclude the controls in step 4 and any key control appears here — including, legitimately, none.", "test")}
+      <div class="acts" style="justify-content:center">
+        ${btn("Go to controls and findings", "nav", { variant: "primary", ic: "arrow", data: { href: "#/controls" } })}
+      </div>`, { width: "narrow" });
   }
 
   const showTest = sc.rows.some(
@@ -241,8 +248,8 @@ export function testing() {
     <div class="head">
       <div class="head__row">
         <div>
-          <h1 class="t-title">Control testing</h1>
-          <p class="t-lede" style="margin-top:10px">
+          <h1 class="t-display">Control testing</h1>
+          <p class="t-lede">
             ${sc.keys.length} control${sc.keys.length === 1 ? " has" : "s have"} been concluded as key.
             Identifying a control is not testing it: a test needs a population, a selection, evidence
             and a conclusion, and it is performed only where you plan to rely.
@@ -254,7 +261,7 @@ export function testing() {
     ${scopeSection(sc)}
 
     ${sc.scopeDecided && !sc.applicable ? `
-      <section style="margin-top:36px;border-top:1px solid var(--line);padding-top:26px">
+      <section class="sec--loose"><hr class="rule">
         ${callout(`<b>No control testing required for this process.</b> Every key control has a
           recorded reason for not being tested, and the assertions are covered substantively. Step 6
           is complete without a test — which is a real outcome, not a skipped step.`, "ok")}
@@ -262,12 +269,13 @@ export function testing() {
 
     ${showTest ? testSection() : ""}
 
-    <section style="margin-top:40px;border-top:1px solid var(--line);padding-top:28px">
+    <hr class="rule">
+    <section class="sec">
       <div class="acts">
         ${btn("Go to completion", "nav",
-          { variant: st.testingSatisfied() ? "go" : "", data: { href: "#/complete" } })}
+          { variant: st.testingSatisfied() ? "primary" : "", ic: "arrow", data: { href: "#/complete" } })}
       </div>
-      ${!st.testingSatisfied() ? `<p class="t-meta" style="margin-top:10px">
+      ${!st.testingSatisfied() ? `<p class="t-meta sec__note measure">
         ${!sc.scopeDecided
           ? `${sc.deferred.length} key control${sc.deferred.length === 1 ? " has" : "s have"} no testing decision.`
           : `${sc.outstanding.length} of ${sc.required.length} scoped test${sc.required.length === 1 ? "" : "s"}
@@ -278,5 +286,5 @@ export function testing() {
     </section>
   `;
 
-  return screen("testing", body);
+  return screen("testing", body, { width: "reading" });
 }

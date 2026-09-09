@@ -77,6 +77,8 @@ const initial = () => ({
   palQuery: "",
   palIx: 0,
   sheet: null,             // "keys"
+  gridQuery: "",           // RCM search
+  gridFilter: "all",       // RCM filter chip
   toast: null,             // { label, undoable }
   editing: null,           // claim id being edited inline
   mode: "transcript",
@@ -292,7 +294,7 @@ export const controlDecision = (c) => S.controlDecisions[c.id] ?? null;
 
 /** Risks are identified during interim but concluded during risk analysis,
  *  which is the next phase and outside this product. They are carried
- *  forward, not decided here (V3-DESIGN-DIRECTION.md §1). */
+ *  forward, not decided here (PRE-DESIGN-FUNCTIONAL-FREEZE.md §10). */
 export function riskSummary() {
   if (!S.analysed) return { total: 0, significant: 0, fraud: 0, newRisks: 0, blocked: [] };
   return {
@@ -877,6 +879,8 @@ export const act = {
   sheet(k) { S.sheet = k; commit(); },
 
   disclose(id) { S.disclosed[id] = !S.disclosed[id]; commit(); },
+  gridQuery(q) { S.gridQuery = q; commit(); },
+  gridFilter(f) { S.gridFilter = f; commit(); },
 
   readGenResult() { S.genSeen = true; commit(); },
 

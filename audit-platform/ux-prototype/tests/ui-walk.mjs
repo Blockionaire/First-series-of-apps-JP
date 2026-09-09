@@ -14,7 +14,7 @@ const has = async (x) => (await txt()).toLowerCase().includes(x.toLowerCase());
 // 1 — Prepare: confirm navigates onward
 await p.evaluate(() => location.hash = '#/prepare'); await p.waitForTimeout(250);
 ok('prepare shows carried context', await has('carried into interim'));
-ok('prepare shows the variants', await has('Process variants in scope'));
+ok('prepare shows the variants', await has('Service and maintenance contracts'));
 await shot('w1-prepare');
 await p.click('button:has-text("Confirm and start the process interview")'); await p.waitForTimeout(450);
 ok('confirming navigates to the interview', await p.evaluate(() => location.hash) === '#/interview', await p.evaluate(()=>location.hash));
@@ -24,8 +24,9 @@ await shot('w2-interview');
 // 2 — Understanding: run the pipeline, see the result, work the queue
 await p.click('[data-act="nav"][data-href="#/understanding"]'); await p.waitForTimeout(350);
 await p.click('[data-act="run-pipeline"]');
-await p.waitForSelector('text=could not be validated', { timeout: 40000 });
-ok('the pipeline result waits to be read', await has('could not be validated'));
+await p.waitForSelector('[data-act="read-gen"]', { timeout: 60000 });
+ok('the pipeline result waits to be read', await has('could not be supported'));
+ok('and step 3 says nothing was concluded', await has('no risk signal'));
 await shot('w3-pipeline');
 await p.click('[data-act="read-gen"]'); await p.waitForTimeout(300);
 await p.click('[data-act="start-focus"][data-kind="claims"]'); await p.waitForTimeout(300);
@@ -186,7 +187,7 @@ await shot('w16b-reopened');
 ok('resubmission is blocked', await p.evaluate(() =>
   document.querySelector('[data-act="submit-review"]')?.disabled === true));
 await p.click('[data-act="open-point"]'); await p.waitForTimeout(250);
-ok('the review point shows what the reviewer wrote', await has('What the reviewer wrote'));
+ok('the review point shows what the reviewer wrote', await has('Explain why that does not change the conclusion'));
 ok('and links to the object it concerns', await p.locator('[data-act="nav"][data-href="#/controls"]').count() > 0);
 await shot('w16c-review-point');
 await p.click('[data-act="answer-point-open"]'); await p.waitForTimeout(250);

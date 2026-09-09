@@ -4,7 +4,7 @@
    Views are pure `state -> HTML`. One click handler, one key handler.
    ========================================================================== */
 
-import { esc, act as btn } from "./ui.js";
+import { esc, act as btn, icon as uiIcon } from "./ui.js";
 import { pipeline, analysisPipeline, narrative } from "./data-model.js";
 import { ref as srcRef } from "./data-sources.js";
 import * as st from "./state.js";
@@ -57,11 +57,11 @@ const FOCUS_ROUTES = ["#/understanding", "#/controls", "#/trace"];
 
 function undoBar() {
   if (!S.toast) return "";
-  return `<div class="undo">
+  return `<div class="undo" role="status">
     <b>${esc(S.toast.label)}</b>
     ${S.toast.undoable && canUndo()
-      ? `<button data-act="undo">Undo<span class="k">⌘Z</span></button>` : ""}
-    <button data-act="dismiss-toast" style="color:#6e7c8a">✕</button>
+      ? `<button data-act="undo">${uiIcon("undo", 14)}Undo<span class="k">⌘Z</span></button>` : ""}
+    <button data-act="dismiss-toast" title="Dismiss" style="opacity:.6">✕</button>
   </div>`;
 }
 
@@ -95,16 +95,19 @@ function keysSheet() {
       ["X", "Raise an exception"], ["J", "Skip"],
     ]],
   ];
-  return `<div class="sheet-scrim" data-act="close-sheet"></div>
+  return `<div class="scrim" data-act="close-sheet"></div>
   <div class="sheet">
-    <div class="t-h">Keyboard</div>
-    <p class="t-sub" style="margin-top:6px">Every queue can be worked without the mouse. A key only
-    does something where the action exists.</p>
-    ${GROUPS.map(([g, ks]) => `<div style="margin-top:20px">
-      <div class="t-eyebrow" style="margin-bottom:8px">${esc(g)}</div>
+    <div class="row row--base">
+      <h2 class="t-title">Keyboard</h2>
+      <span class="sp"></span>
+      ${btn("Close", "close-sheet", { variant: "ghost", size: "sm" })}
+    </div>
+    <p class="t-sub measure" style="margin-top:8px">Every queue can be worked without the mouse.
+    A key only does something where the action exists.</p>
+    ${GROUPS.map(([g, ks]) => `<div class="sec--tight">
+      <div class="t-eyebrow rail__h">${esc(g)}</div>
       <div class="keys">${ks.map(([k, d]) => `<div><span class="k">${esc(k)}</span>${esc(d)}</div>`).join("")}</div>
     </div>`).join("")}
-    <div style="margin-top:24px">${btn("Close", "close-sheet", { variant: "plain" })}</div>
   </div>`;
 }
 
@@ -127,6 +130,10 @@ function render() {
   if (S.palette) {
     const inp = document.getElementById("pal-in");
     if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  }
+  const gq = document.getElementById("grid-q");
+  if (gq && S.gridQuery && document.activeElement !== gq) {
+    gq.focus(); gq.setSelectionRange(gq.value.length, gq.value.length);
   }
   const ed = document.getElementById("claim-edit") || document.getElementById("ans");
   if (ed && document.activeElement !== ed) { ed.focus(); ed.setSelectionRange(ed.value.length, ed.value.length); }
@@ -169,6 +176,7 @@ document.addEventListener("click", (e) => {
     case "keys": act.sheet("keys"); break;
     case "close-sheet": act.sheet(null); break;
     case "disclose": act.disclose(d.id); break;
+    case "grid-filter": act.gridFilter(d.f); break;
     case "undo": undo(); break;
     case "dismiss-toast": S.toast = null; st.commit(); break;
 
@@ -290,6 +298,7 @@ document.addEventListener("click", (e) => {
 
 document.addEventListener("input", (e) => {
   if (e.target.id === "pal-in") { S.palQuery = e.target.value; S.palIx = 0; render(); }
+  if (e.target.id === "grid-q") { S.gridQuery = e.target.value; render(); }
 });
 
 /* --- Keyboard --------------------------------------------------------------- */
@@ -318,6 +327,12 @@ document.addEventListener("keydown", (e) => {
       if (claim && S.editing) { e.preventDefault(); act.saveClaim(S.editing, claim.value.trim()); }
     }
     return;
+  }
+
+  // A claim is a focusable div (it nests its own action buttons), so Enter and
+  // Space have to be wired by hand.
+  if (["Enter", " "].includes(e.key) && e.target.matches?.('[data-act="toggle-claim"]')) {
+    e.preventDefault(); act.toggleClaim(e.target.dataset.claim); return;
   }
 
   if (e.key === "Escape") {

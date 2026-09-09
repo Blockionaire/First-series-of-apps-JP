@@ -93,11 +93,11 @@ export function demoBar() {
     <span class="demo__n">${i + 1}/${STEPS.length}</span>
     <div class="demo__t"><b>${esc(s.title)}</b> — ${esc(s.say)}</div>
     <div class="acts">
-      ${btn("Back", "demo-prev", { variant: "plain", size: "sm", disabled: i === 0 })}
+      ${btn("Back", "demo-prev", { variant: "ghost", size: "sm", disabled: i === 0 })}
       ${i === STEPS.length - 1
-        ? btn("Finish", "demo-exit", { variant: "go", size: "sm" })
-        : btn("Next", "demo-next", { variant: "go", size: "sm", key: "→" })}
-      ${btn("Exit", "demo-exit", { variant: "plain", size: "sm" })}
+        ? btn("Finish", "demo-exit", { variant: "primary", size: "sm" })
+        : btn("Next", "demo-next", { variant: "primary", size: "sm", key: "→" })}
+      ${btn("Exit", "demo-exit", { variant: "ghost", size: "sm" })}
     </div>
   </div>`;
 }

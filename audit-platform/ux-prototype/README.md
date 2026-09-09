@@ -6,7 +6,7 @@ auditors and design partners can experience the product before any production fr
 **Third iteration.** V1 proved the product logic and looked like enterprise audit software. V2
 fixed how it feels — calm, exception-driven, keyboard-first. V3 fixes *what it is*: not an AI
 documentation generator, but the workspace in which an auditor performs the **interim audit of a
-business process**, end to end. `V3-DESIGN-DIRECTION.md` is that reframing;
+business process**, end to end. `V3-PRODUCT-SCOPE.md` is that reframing;
 `NEXT-GEN-UX-DIRECTION.md` is the V2 critique whose interaction philosophy still holds. V1 is at
 git tag `ux-v1`.
 
@@ -59,7 +59,9 @@ browser against mock data: no model is called, no request leaves the page, nothi
 | File | What it is |
 |---|---|
 | **`PRE-DESIGN-FUNCTIONAL-FREEZE.md`** | **The canonical functional model the V3 design must preserve. Read this first.** |
-| `V3-DESIGN-DIRECTION.md` | The product scope: the full process-level interim audit |
+| `V3-PRODUCT-SCOPE.md` | How the product scope was settled (superseded as canon by the freeze document) |
+| `V3-DESIGN-DIRECTION.md` | The V3 visual and interaction design system |
+| `V3-DESIGN-REVIEW.md` | Screen-by-screen: the V2 problem, the V3 answer, and what still needs work |
 | `NEXT-GEN-UX-DIRECTION.md` | The V2 critique — the interaction philosophy, still in force |
 | `UX-PLAN.md` | V1's plan. Still the reference for provenance rules and what is excluded |
 | `PRE-V3-FUNCTIONAL-CORRECTIONS.md` | The first functional/IA correction pass, and what it fixed |

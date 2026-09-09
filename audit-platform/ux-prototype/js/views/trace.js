@@ -11,11 +11,13 @@
      not happened yet. Neither is a corroboration, and neither is silently
      dropped. */
 
-import { esc, cx, act as btn, row, dot, more, empty, callout, evidence } from "../ui.js";
+import { esc, cx, act as btn, row, rows, dot, tag, icon, more, empty, callout,
+         evidence, card, dependencies } from "../ui.js";
 import { transactions, txnById, variants, traceFindings, processSteps } from "../data-process.js";
 import { ref } from "../data-sources.js";
 import * as st from "../state.js";
 import { screen } from "./shell.js";
+import { dwBar } from "./understanding.js";
 import { processMap, mapLegend, mapDetail } from "./map.js";
 
 const S = st.S;
@@ -33,127 +35,168 @@ function overview() {
     const candidates = transactions.filter((t) => t.variant === v.id);
     const suggested = st.lwProposal(v.id);
 
+    const badge = vw.state === "not_required" ? tag("no walkthrough required", "quiet")
+      : vw.state === "completed" ? tag(`complete${vw.progress?.exceptions ? ` · ${vw.progress.exceptions} exception` : ""}`,
+          vw.progress?.exceptions ? "warn" : "ok", "check")
+      : vw.state === "in_progress" ? tag(`${vw.progress.done} of ${vw.progress.expected} traced`, "accent", "walkthrough")
+      : vw.state === "not_started" ? tag("not started", "quiet")
+      : tag("no decision recorded", "warn");
+
     return `<section class="vcard">
-      <div class="row" style="align-items:baseline;gap:12px">
+      <div class="row row--base">
+        <span class="rw__lead">${icon("variant", 18)}</span>
         <h3 class="t-h">${esc(v.name)}</h3>
         <span class="t-meta">${esc(v.value)} · ${esc(v.recognition)}</span>
         <span class="sp"></span>
-        <span class="t-meta">${
-          vw.state === "not_required" ? "no walkthrough required"
-          : vw.state === "completed" ? "walkthrough complete"
-          : vw.state === "in_progress" ? `${vw.progress.done} of ${vw.progress.expected} steps traced`
-          : vw.state === "not_started" ? "not started"
-          : "no decision recorded"}</span>
+        ${badge}
       </div>
-      <p class="t-sub" style="margin-top:6px;max-width:74ch">${esc(v.what)}</p>
+      <p class="t-sub measure" style="margin-top:8px">${esc(v.what)}</p>
 
       ${req.state === "not_decided" && !editing ? `
-        <div class="callout" style="margin-top:16px">
+        <div class="callout callout--warn sec__note">
           <b>Does this variant need a line walkthrough?</b>
           ${suggested ? ` The methodology pack proposes <b>${
             suggested.state === "required" ? "yes" : "no"}</b>${
             suggested.state === "not_required" ? ` — ${esc(suggested.reason)}` : ""}. ` : " "}
           It is your decision and it is recorded either way.
-          <div class="acts" style="margin-top:12px">
-            ${btn("A walkthrough is required", "lw-require", { variant: "go", data: { v: v.id } })}
+          <div class="acts sec__note">
+            ${btn("A walkthrough is required", "lw-require", { variant: "primary", data: { v: v.id } })}
             ${btn("Not required — record why", "lw-not-open", { data: { v: v.id } })}
           </div>
         </div>` : ""}
 
-      ${editing ? `<div class="callout" style="margin-top:16px">
+      ${editing ? `<div class="callout sec__note">
         <b>Why does this variant not need a line walkthrough?</b>
-        <p class="t-meta" style="margin:6px 0 10px">The reason is what the reviewer reads. "Immaterial"
-        on its own is not one.</p>
+        <p class="t-meta sec__note">The reason is what the reviewer reads. "Immaterial" on its own
+        is not one.</p>
         <textarea class="field" id="ans" rows="3">${esc(suggested?.state === "not_required" ? suggested.reason : "")}</textarea>
-        <div class="acts" style="margin-top:12px">
-          ${btn("Record as not required", "lw-not-required", { variant: "go", data: { v: v.id } })}
-          ${btn("Cancel", "cancel-edit", { variant: "plain" })}
+        <div class="acts sec__note">
+          ${btn("Record as not required", "lw-not-required", { variant: "primary", data: { v: v.id } })}
+          ${btn("Cancel", "cancel-edit", { variant: "ghost" })}
         </div>
       </div>` : ""}
 
-      ${req.state === "not_required" ? `<div class="callout" style="margin-top:16px">
+      ${req.state === "not_required" ? `<div class="callout sec__note">
         <b>No line walkthrough required.</b> ${esc(req.reason || "No reason recorded.")}
-        <div class="acts" style="margin-top:12px">
-          ${btn("Change this decision", "lw-reopen", { variant: "plain", size: "sm", data: { v: v.id } })}
+        <div class="acts sec__note">
+          ${btn("Change this decision", "lw-reopen", { variant: "ghost", size: "sm", data: { v: v.id } })}
         </div>
       </div>` : ""}
 
       ${req.state === "required" ? (
-        vw.txn ? `<div class="rows" style="margin-top:16px">
-          ${row({
-            lead: dot(vw.progress.exceptions ? "alert" : vw.progress.concluded ? "ok" : "open"),
+        vw.txn ? `<div class="sec__note">${rows(row({
             title: `<span class="b">${esc(vw.txn.id)}</span> — ${esc(vw.txn.customer)}`,
             detail: vw.progress.concluded
               ? `Concluded · ${vw.progress.corroborated} corroborated, ${vw.progress.exceptions} exception${vw.progress.exceptions === 1 ? "" : "s"}`
               : `${vw.progress.done} of ${vw.progress.expected} steps traced`,
+            lead: icon("walkthrough", 17),
             side: btn(vw.progress.concluded ? "Open" : "Continue", "open-trace",
-              { size: "sm", variant: vw.progress.concluded ? "" : "go", data: { id: vw.txn.id } }),
-          })}
-        </div>`
-        : candidates.length ? `<div style="margin-top:16px">
-          <div class="t-eyebrow" style="margin-bottom:10px">Choose a transaction</div>
-          <div class="rows">
-            ${candidates.map((t) => `
-              <button class="rw ${t.recommended ? "rw--attn" : ""}" data-act="pick-txn" data-id="${esc(t.id)}">
-                <span class="rw__lead">${dot(t.recommended ? "warn" : "open")}</span>
-                <span class="rw__main">
-                  <span class="rw__t"><span class="b">${esc(t.id)}</span> — ${esc(t.customer)}</span>
-                  <span class="rw__d">${esc(t.what)} · ${esc(t.value)}</span>
-                  <span class="rw__d" style="margin-top:6px">${t.recommended ? "<b>Suggested.</b> " : ""}${esc(t.why)}</span>
-                </span>
-                <span class="rw__side">${t.recommended ? `<span class="t-meta" style="color:var(--warn)">suggested</span>` : ""}</span>
-              </button>`).join("")}
+              { size: "sm", variant: vw.progress.concluded ? "" : "primary", data: { id: vw.txn.id } }),
+          }))}</div>`
+        : candidates.length ? `<div class="sec--tight">
+          <div class="t-eyebrow rail__h">Choose a transaction</div>
+          <div class="cards">
+            ${candidates.map((t) => card({
+              mod: t.recommended ? "accent" : "flat",
+              lead: icon("walkthrough", 18),
+              title: `<span class="b">${esc(t.id)}</span> — ${esc(t.customer)}`,
+              detail: `${esc(t.what)} · ${esc(t.value)}`,
+              side: t.recommended ? tag("suggested", "accent") : "",
+              body: `<p class="t-sub measure">${t.recommended ? "<b>Suggested.</b> " : ""}${esc(t.why)}</p>`,
+              action: "pick-txn", data: { id: t.id },
+            })).join("")}
           </div>
-          <p class="t-meta" style="margin-top:10px">
+          <p class="t-meta sec__note">
             Suggested from the period's transactions for this variant. The selection is yours and the
             reason is recorded.</p>
         </div>`
-        : `<p class="t-sub" style="margin-top:16px;color:var(--warn)">
-            No candidate transactions have been loaded for this variant in the prototype.</p>`
+        : `<p class="t-sub sec__note"><span class="state state--warn">${icon("question", 14)}
+            No candidate transactions have been loaded for this variant in the prototype.</span></p>`
       ) : ""}
     </section>`;
   };
 
   const body = `
     <div class="head">
-      <h1 class="t-title">Line walkthrough</h1>
-      <p class="t-lede" style="margin-top:10px">
-        Trace one real transaction end to end through the process we documented. Everything up to
-        here is what people said; this is the first point at which the file tests it.
-      </p>
+      <div class="head__row">
+        <div>
+          <h1 class="t-display">Line walkthrough</h1>
+          <p class="t-lede">
+            Trace one real transaction end to end through the process we documented. Everything up to
+            here is what people said; this is the first point at which the file tests it.
+          </p>
+        </div>
+        <div class="tally">
+          <div><span class="tally__n">${tr.completed}<span class="ink4">/${tr.required}</span></span>
+            <span class="tally__l">required complete</span></div>
+          ${tr.exceptions ? `<div><span class="tally__n" style="color:var(--danger)">${tr.exceptions}</span>
+            <span class="tally__l">exception${tr.exceptions === 1 ? "" : "s"}</span></div>` : ""}
+        </div>
+      </div>
     </div>
 
-    <section style="margin-top:28px">
-      <div class="row" style="margin-bottom:12px">
+    <section class="sec">
+      <div class="sec__h">
         <h2 class="t-eyebrow">The process it will be traced against</h2>
         <span class="sp"></span>${mapLegend("annotated")}
       </div>
       ${processMap("annotated", { compact: true, onSelect: "noop" })}
-      <p class="t-meta" style="margin-top:10px">
+      <p class="t-meta sec__note measure">
         Revenue runs three different paths. A walkthrough of a machine sale says nothing about how a
         spare-part order or a service contract behaves, so the requirement is decided per variant.</p>
     </section>
 
-    <section style="margin-top:40px">
-      <div class="row" style="margin-bottom:6px">
+    <section class="sec--loose">
+      <div class="sec__h">
         <h2 class="t-h">Which variants need a walkthrough</h2>
         <span class="sp"></span>
-        <span class="t-meta">${tr.completed} of ${tr.required} required complete${
-          tr.undecided ? ` · ${tr.undecided} undecided` : ""}</span>
+        <span class="t-meta">${tr.undecided ? `${tr.undecided} undecided` : "all decided"}</span>
       </div>
       ${tr.variants.map(variantCard).join("")}
     </section>
 
-    ${tr.satisfied ? `<section style="margin-top:36px;border-top:1px solid var(--line);padding-top:26px">
+    ${tr.satisfied ? `<section class="sec--loose"><hr class="rule">
       ${callout(`<b>Every variant is dealt with.</b> ${tr.completed} walkthrough${tr.completed === 1 ? "" : "s"}
         completed and ${tr.variants.length - tr.required} variant${tr.variants.length - tr.required === 1 ? "" : "s"}
         documented as not requiring one.`, "ok")}
-      <div class="acts" style="margin-top:16px">
-        ${btn("Go to control testing", "nav", { variant: "go", data: { href: "#/testing" } })}
+      <div class="acts sec">
+        ${btn("Go to control testing", "nav", { variant: "primary", ic: "arrow", data: { href: "#/testing" } })}
       </div>
     </section>` : ""}
   `;
   return screen("trace", body, { width: "wide" });
+}
+
+/* --- The progress ribbon: where the auditor is in this transaction --------
+   Traced, exception, now, not yet occurred and not-in-this-variant are five
+   different states and the ribbon shows all five.
+   -------------------------------------------------------------------------- */
+function ribbon(txn, currentId) {
+  const all = [...txn.steps.map((t) => ({ kind: "step", t })),
+               ...(txn.untraced || []).map((u) => ({ kind: "skip", u }))];
+  const order = processSteps.map((p) => p.id);
+  all.sort((a, b) => order.indexOf(a.t ? a.t.step : a.u.step) - order.indexOf(b.t ? b.t.step : b.u.step));
+
+  return `<div class="ribbon">${all.map((x, i) => {
+    const stepId = x.t ? x.t.step : x.u.step;
+    const name = processSteps.find((p) => p.id === stepId)?.name || stepId;
+    if (x.kind === "skip") {
+      return `<div class="rbn is-na">
+        <span class="rbn__top">${i ? `<span class="rbn__ln"></span>` : ""}
+          <span class="rbn__m"></span><span class="rbn__n">${esc(name)}</span></span>
+        <span class="rbn__c">${esc(x.u.kind === "not_applicable" ? "not in this variant" : "not yet occurred")}</span>
+      </div>`;
+    }
+    const v = st.traceVerdict(txn.id, x.t);
+    const now = x.t.id === currentId;
+    return `<div class="${cx("rbn", v === "corroborated" && "is-ok", v === "exception" && "is-ex", now && "is-now")}">
+      <span class="rbn__top">${i ? `<span class="rbn__ln"></span>` : ""}
+        <span class="rbn__m">${v ? icon(v === "exception" ? "contradiction" : "check", 11) : ""}</span>
+        <span class="rbn__n">${esc(name)}</span></span>
+      <span class="rbn__c">${v === "exception" ? "exception" : v === "corroborated" ? "corroborated"
+        : now ? "tracing now" : "not traced"}</span>
+    </div>`;
+  }).join("")}</div>`;
 }
 
 /* --- One step of the trace ------------------------------------------------- */
@@ -170,22 +213,23 @@ function stepFocus() {
   const n = txn.steps.indexOf(t) + 1;
   const isEx = t.suggested === "exception";
 
-  const body = `
+  const body = `<div class="dw">
     <div class="tracehead">
-      <div class="row" style="margin-bottom:10px">
-        <span class="t-meta"><b style="color:var(--ink-2)">${esc(txn.id)}</b>
-          · ${esc(txn.customer)} · ${esc(txn.value)} · ${esc(vName(txn.variant))}</span>
+      <div class="row sec__h" style="margin-bottom:12px">
+        <span class="t-meta">${icon("walkthrough", 15)}</span>
+        <span class="t-meta"><b class="ink2">${esc(txn.id)}</b> · ${esc(txn.customer)} ·
+          ${esc(txn.value)} · ${esc(vName(txn.variant))}</span>
         <span class="sp"></span>
         <span class="t-meta">${prog.done} of ${prog.expected} traced</span>
-        ${btn("Leave", "exit-focus", { variant: "plain", size: "sm" })}
+        ${btn("Leave", "exit-focus", { variant: "ghost", size: "sm", ic: "back" })}
       </div>
-      ${processMap("trace", { selected: t.step, onSelect: "noop", variant: txn.variant, txn: txn.id })}
+      ${ribbon(txn, t.id)}
     </div>
 
-    <div class="focus__body"><div class="q">
-      <div class="t-meta" style="margin-bottom:6px">Step ${n} of ${txn.steps.length} on this transaction</div>
-      <h1 class="q__t">${esc(p ? p.name : t.step)}</h1>
-      <p class="t-meta" style="margin-top:6px">${esc(p ? p.actor + " · " + p.system : "")}</p>
+    <div class="dw__body"><div class="dw__in">
+      <div class="dw__ctx">${icon("step", 15)}<span class="t-eyebrow">Step ${n} of ${txn.steps.length}</span>
+        <span>·</span><b>${esc(p ? p.actor : "")}</b></div>
+      <h1 class="dw__t">${esc(p ? p.name : t.step)}</h1>
 
       <div class="expect">
         <div class="expect__r"><dt>Expected step</dt><dd>${esc(t.expectedStep)}</dd></div>
@@ -194,38 +238,41 @@ function stepFocus() {
       </div>
 
       <div class="actual">
-        <div class="t-eyebrow" style="margin-bottom:8px">Evidence obtained</div>
+        <div class="t-eyebrow rail__h">Evidence obtained</div>
         <p class="actual__e">${esc(t.actualEvidence)}</p>
-        <div class="t-eyebrow" style="margin:20px 0 8px">Observation</div>
+        <div class="t-eyebrow rail__h" style="margin-top:22px">Observation</div>
         <p class="actual__o">${esc(t.observation)}</p>
       </div>
 
-      ${isEx ? `<div class="q__flag q__flag--alert" style="margin-top:22px">
+      ${isEx ? `<div class="flag flag--alert">
         <b>Possible exception.</b> ${esc(t.exception)}
-        <div class="t-meta" style="margin-top:8px;color:inherit;opacity:.8">Found by ${esc(t.why)}</div>
+        <div class="t-meta" style="margin-top:8px;color:inherit;opacity:.85">Found by ${esc(t.why)}</div>
       </div>` : ""}
 
-      ${t.note === "not_triggered" ? `<div class="q__flag" style="margin-top:22px">
+      ${t.note === "not_triggered" ? `<div class="flag">
         <b>The control did not operate on this transaction.</b> Nothing was blocked, so this trace
-        gives no evidence about whether the control works. That is a corroborated step, not a tested control.
-      </div>` : ""}
+        gives no evidence about whether the control works. That is a corroborated step, not a tested
+        control.</div>` : ""}
 
-      <div class="q__sug">
-        <span class="l">Proposed by the platform</span>
-        <span class="v">${isEx ? "Exception" : "Corroborated"}</span>
+      <div class="proposal">
+        <span class="proposal__l">${icon("walkthrough", 14)}Proposed by the platform</span>
+        <span class="proposal__v">${isEx ? "Exception" : "Corroborated"}</span>
       </div>
-      <div class="q__acts">
+
+      <div class="dock"><div class="dock__in">
         ${btn(isEx ? "Record the exception" : "Corroborated", "decide-trace",
-          { variant: isEx ? "go" : "ok", key: "Enter", data: { txn: txn.id, id: t.id, v: isEx ? "exception" : "corroborated" } })}
+          { variant: isEx ? "primary" : "ok", key: "⏎",
+            data: { txn: txn.id, id: t.id, v: isEx ? "exception" : "corroborated" },
+            ic: isEx ? "contradiction" : "check" })}
         ${btn(isEx ? "No exception" : "Raise an exception", "decide-trace",
           { key: isEx ? "C" : "X", data: { txn: txn.id, id: t.id, v: isEx ? "corroborated" : "exception" } })}
         <span class="sp"></span>
-        ${btn("Skip", "focus-next", { variant: "plain", key: "J" })}
-      </div>
+        ${btn("Skip", "focus-next", { variant: "ghost", key: "J" })}
+      </div></div>
     </div></div>
-  `;
+  </div>`;
 
-  return screen("trace", `<div class="focus">${body}</div>`, { raw: true });
+  return screen("trace", body, { raw: true });
 }
 
 /* --- The result for one transaction ---------------------------------------- */
@@ -244,88 +291,91 @@ function txnSummary() {
     <div class="head">
       <div class="head__row">
         <div>
-          <button class="b-link" data-act="back-to-variants">← All variants</button>
-          <h1 class="t-title" style="margin-top:8px">${prog.concluded ? "Line walkthrough complete"
+          ${btn("All variants", "back-to-variants", { variant: "ghost", size: "sm", ic: "back" })}
+          <h1 class="t-display" style="margin-top:10px">${prog.concluded ? "Line walkthrough complete"
             : prog.pending.length ? "Line walkthrough in progress" : "Every step traced"}</h1>
-          <p class="t-lede" style="margin-top:10px">
+          <p class="t-lede">
             ${esc(txn.id)} — ${esc(txn.customer)}, ${esc(txn.what)}, ${esc(txn.value)}.
             <span class="t-meta">${esc(vName(txn.variant))}</span>
           </p>
         </div>
+        <div class="tally">
+          <div><span class="tally__n">${prog.expected}</span><span class="tally__l">steps on this path</span></div>
+          <div><span class="tally__n" style="color:var(--ok)">${prog.corroborated}</span><span class="tally__l">corroborated</span></div>
+          <div><span class="tally__n" style="color:${prog.exceptions ? "var(--danger)" : "var(--ink-4)"}">${prog.exceptions}</span>
+            <span class="tally__l">exception${prog.exceptions === 1 ? "" : "s"}</span></div>
+        </div>
       </div>
     </div>
 
-    <div class="tally">
-      <div><span class="tally__n">${prog.expected}</span><span class="tally__l">steps on this path</span></div>
-      <div><span class="tally__n" style="color:var(--ok)">${prog.corroborated}</span><span class="tally__l">corroborated</span></div>
-      <div><span class="tally__n" style="color:${prog.exceptions ? "var(--alert)" : "var(--ink-4)"}">${prog.exceptions}</span>
-        <span class="tally__l">exception${prog.exceptions === 1 ? "" : "s"}</span></div>
-    </div>
+    <section class="sec">
+      <div class="sec__h"><h2 class="t-eyebrow">Every step on this transaction</h2></div>
+      ${ribbon(txn, null)}
+    </section>
 
-    <section style="margin-top:36px">
-      <div class="row" style="margin-bottom:12px">
+    <section class="sec--loose">
+      <div class="sec__h">
         <h2 class="t-eyebrow">Against the process map</h2>
         <span class="sp"></span>${mapLegend("trace")}
       </div>
       ${processMap("trace", { selected: S.mapStep, txn: txn.id })}
       ${S.mapStep ? mapDetail(S.mapStep, { txn: txn.id }) : ""}
-      <p class="t-meta" style="margin-top:10px">
+      <p class="t-meta sec__note measure">
         The faded steps are not on this transaction's path. Steps outside the variant and steps that
-        have not happened yet are two different things, and both are stated below.</p>
+        have not happened yet are two different things, and the ribbon above says which.</p>
     </section>
 
     ${exSteps.length ? `
-      <section style="margin-top:40px">
-        <h2 class="t-h" style="margin-bottom:14px">Exception</h2>
-        ${exSteps.map((t) => `<div class="rw rw--conflict" style="display:block">
-          <div class="rw__t"><span class="b">${esc(processSteps.find((p) => p.id === t.step)?.name || t.step)}</span></div>
-          <div class="rw__d" style="margin-top:6px;max-width:74ch">${esc(t.exception)}</div>
-          <div class="rw__d" style="margin-top:8px">${esc(t.actualEvidence)}</div>
-        </div>`).join("")}
+      <section class="sec--loose">
+        <div class="sec__h"><h2 class="t-h">The exception</h2></div>
+        ${exSteps.map((t) => card({
+          mod: "alert",
+          lead: icon("contradiction", 18),
+          title: esc(processSteps.find((p) => p.id === t.step)?.name || t.step),
+          detail: esc(t.exception),
+          body: `<p class="t-sub measure sec__note">${esc(t.actualEvidence)}</p>`,
+        })).join("")}
         ${prog.concluded && finding ? callout(`<b>Raised as finding ${esc(finding.id)}.</b>
           ${esc(finding.title)} — now in Controls and findings, on the invoicing step of the process
           map. ${openFinding ? "It has not been concluded yet." : "It has been concluded."}
-          <div class="acts" style="margin-top:12px">
+          <div class="acts sec__note">
             ${btn(openFinding ? "Review the finding" : "See it in Controls and findings", "nav",
-              { variant: openFinding ? "go" : "plain", size: "sm", data: { href: "#/controls" } })}
+              { variant: openFinding ? "primary" : "ghost", size: "sm", data: { href: "#/controls" } })}
           </div>`, openFinding ? "alert" : "") : ""}
       </section>` : ""}
 
-    <section style="margin-top:40px">
-      <h2 class="t-h" style="margin-bottom:14px">Every step on this transaction</h2>
-      <div class="rows">
-        ${txn.steps.map((t, i) => {
-          const v = st.traceVerdict(txnId, t);
-          return row({
-            lead: dot(v === "exception" ? "alert" : v ? "ok" : "open"),
-            title: `<span class="b">${i + 1}. ${esc(processSteps.find((p) => p.id === t.step)?.name || t.step)}</span>`,
-            detail: esc(t.actualEvidence),
-            side: `<span class="t-meta" style="${v === "exception" ? "color:var(--alert)" : v ? "color:var(--ok)" : ""}">${
-              v === "exception" ? "exception" : v ? "corroborated" : "not traced"}</span>`,
-            mod: v === "exception" ? "conflict" : "",
-          });
-        }).join("")}
-      </div>
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-h">What each step evidenced</h2></div>
+      ${rows(txn.steps.map((t, i) => {
+        const v = st.traceVerdict(txnId, t);
+        return row({
+          lead: icon(v === "exception" ? "contradiction" : v ? "check" : "clock", 17),
+          title: `<span class="b">${i + 1}. ${esc(processSteps.find((p) => p.id === t.step)?.name || t.step)}</span>`,
+          detail: esc(t.actualEvidence),
+          side: tag(v === "exception" ? "exception" : v ? "corroborated" : "not traced",
+            v === "exception" ? "alert" : v ? "ok" : "quiet"),
+          mod: v === "exception" ? "conflict" : "",
+        });
+      }).join(""))}
     </section>
 
-    ${(txn.untraced || []).length ? `<section style="margin-top:34px">
-      <h2 class="t-h" style="margin-bottom:6px">Steps not covered by this walkthrough</h2>
-      <p class="t-sub" style="margin-bottom:14px;max-width:74ch">
+    ${(txn.untraced || []).length ? `<section class="sec--loose">
+      <div class="sec__h"><h2 class="t-h">Steps not covered by this walkthrough</h2></div>
+      <p class="t-sub sec__h measure">
         Not the same as corroborated, and not the same as a gap in the work. Each one says which.</p>
-      <div class="rows">
-        ${txn.untraced.map((u) => row({
-          lead: dot("open"),
-          title: `<span style="color:var(--ink-3)">${esc(processSteps.find((p) => p.id === u.step)?.name || u.step)}</span>`,
-          detail: esc(u.why),
-          side: `<span class="t-meta">${u.kind === "not_applicable" ? "not in this variant" : "not yet occurred"}</span>`,
-        })).join("")}
-      </div>
+      ${rows(txn.untraced.map((u) => row({
+        lead: icon(u.kind === "not_applicable" ? "variant" : "clock", 17),
+        title: `<span class="ink3">${esc(processSteps.find((p) => p.id === u.step)?.name || u.step)}</span>`,
+        detail: esc(u.why),
+        side: tag(u.kind === "not_applicable" ? "not in this variant" : "not yet occurred", "quiet"),
+      })).join(""))}
     </section>` : ""}
 
-    <section style="margin-top:40px;border-top:1px solid var(--line);padding-top:28px">
+    <hr class="rule">
+    <section class="sec">
       ${prog.concluded
         ? `<h2 class="t-h">Concluded</h2>
-           <p class="t-sub" style="margin:6px 0 18px;max-width:70ch">
+           <p class="t-sub sec__h measure">
              ${prog.exceptions
                ? `The transaction did not behave as documented at ${prog.exceptions} step${prog.exceptions === 1 ? "" : "s"}.
                   The exception is recorded as a finding against the process, not against this order.`
@@ -336,22 +386,22 @@ function txnSummary() {
            </p>
            <div class="acts">
              ${openFinding
-               ? btn("Review the finding it raised", "nav", { variant: "go", data: { href: "#/controls" } })
-               : btn("Back to the variants", "back-to-variants", { variant: "go" })}
-             ${btn("Reopen the walkthrough", "reopen-trace", { variant: "plain", data: { txn: txn.id } })}
+               ? btn("Review the finding it raised", "nav", { variant: "primary", ic: "arrow", data: { href: "#/controls" } })
+               : btn("Back to the variants", "back-to-variants", { variant: "primary", ic: "back" })}
+             ${btn("Reopen the walkthrough", "reopen-trace", { variant: "ghost", data: { txn: txn.id } })}
            </div>`
         : prog.pending.length
         ? `<h2 class="t-h">${prog.pending.length} step${prog.pending.length === 1 ? "" : "s"} still to trace</h2>
-           <div class="acts" style="margin-top:16px">
-             ${btn("Continue tracing", "pick-txn", { variant: "go", size: "lg", data: { id: txn.id }, key: "Enter" })}
+           <div class="acts sec">
+             ${btn("Continue tracing", "pick-txn", { variant: "primary", size: "lg", data: { id: txn.id }, key: "Enter", ic: "arrow" })}
            </div>`
         : `<h2 class="t-h">Conclude</h2>
-           <p class="t-sub" style="margin:6px 0 18px;max-width:70ch">
+           <p class="t-sub sec__h measure">
              Concluding records the result in the file${prog.exceptions ? ` and raises the exception as a
              finding against the process, which goes back to step four for your conclusion` : ""}.
              ${notYet.length ? "It will also record which steps this transaction could not evidence, and why." : ""}</p>
            <div class="acts">
-             ${btn("Conclude the line walkthrough", "conclude-trace", { variant: "go", size: "lg", key: "Enter", data: { txn: txn.id } })}
+             ${btn("Conclude the line walkthrough", "conclude-trace", { variant: "primary", size: "lg", key: "Enter", data: { txn: txn.id }, ic: "check" })}
            </div>`}
     </section>
   `;
@@ -365,18 +415,18 @@ export function trace() {
   if (!S.generated) {
     return screen("trace", `
       ${empty("Nothing to trace against yet",
-        "A line walkthrough tests a real transaction against the documented process, so the process has to be documented first.")}
-      <div style="text-align:center;margin-top:-40px">
-        ${btn("Go to the process understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
-      </div>`);
+        "A line walkthrough tests a real transaction against the documented process, so the process has to be documented first.", "walkthrough")}
+      <div class="acts" style="justify-content:center">
+        ${btn("Go to the process understanding", "nav", { variant: "primary", ic: "arrow", data: { href: "#/understanding" } })}
+      </div>`, { width: "narrow" });
   }
   if (!S.analysed) {
     return screen("trace", `
       ${empty("The controls to trace against have not been identified yet",
-        "A line walkthrough compares a real transaction with the documented process and the controls identified on it, so step 4 has to run first.")}
-      <div style="text-align:center;margin-top:-40px">
-        ${btn("Go to controls and findings", "nav", { variant: "go", data: { href: "#/controls" } })}
-      </div>`);
+        "A line walkthrough compares a real transaction with the documented process and the controls identified on it, so step 4 has to run first.", "control")}
+      <div class="acts" style="justify-content:center">
+        ${btn("Go to controls and findings", "nav", { variant: "primary", ic: "arrow", data: { href: "#/controls" } })}
+      </div>`, { width: "narrow" });
   }
   if (!S.traceTxn) return overview();
   if (S.reviewMode === "focus" && S.focusKind === "trace") return stepFocus();

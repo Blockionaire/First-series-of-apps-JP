@@ -12,12 +12,14 @@
      with a documented reason.
    · A finding can be modified, not only confirmed or dismissed. */
 
-import { esc, cx, act as btn, row, dot, chip, more, evidence, empty, callout, state } from "../ui.js";
+import { esc, cx, act as btn, row, rows, dot, chip, tag, icon, more, evidence, empty,
+         callout, state, dependencies, card } from "../ui.js";
 import { controls, risks, gaps, subProcesses, analysisPipeline } from "../data-model.js";
 import { processSteps } from "../data-process.js";
 import { ref } from "../data-sources.js";
 import * as st from "../state.js";
 import { screen } from "./shell.js";
+import { dwBar } from "./understanding.js";
 import { processMap, mapLegend, mapDetail } from "./map.js";
 
 const S = st.S;
@@ -43,17 +45,13 @@ export const SEV = {
   material_weakness_candidate: "Material weakness — candidate",
 };
 
-const focusBar = (i, len, label) => `<div class="focus__bar">
-  <button class="b-act b-act--plain b-act--sm" data-act="exit-focus">← Back</button>
-  <span class="sp"></span><span>${esc(label)}</span><span class="idline__sep">·</span>
-  <span><b style="color:var(--ink-2)">${i + 1}</b> of ${len}</span>
-</div>`;
+/* ── Triage ──────────────────────────────────────────────────────────────── */
 
-/* ── The analysis run ─────────────────────────────────────────────────────
+/* --- The analysis run ------------------------------------------------------
    Step 4 is its own piece of work. It reads the understanding the auditor has
    just reviewed and proposes what controls the process and what is wrong with
    it. Step 3 deliberately did none of this.
-   ------------------------------------------------------------------------- */
+   -------------------------------------------------------------------------- */
 
 function fill(t) {
   return t.replace("CONTROL_COUNT", controls.length)
@@ -71,9 +69,9 @@ function analysisView() {
 
   const body = `
     <div class="head">
-      <h1 class="t-title">${done ? "Analysis ready" : running ? "Analysing controls and findings"
+      <h1 class="t-display">${done ? "Analysis ready" : running ? "Analysing controls and findings"
         : "Analyse controls and findings"}</h1>
-      <p class="t-lede" style="margin-top:10px">
+      <p class="t-lede">
         ${analysisPipeline.length} stages against the understanding you approved. This is where
         controls, gaps and risk signals are identified — none of it happened in step 3, because none
         of it should be proposed from a draft nobody has read.
@@ -81,50 +79,48 @@ function analysisView() {
     </div>
 
     ${!running && !done ? `
-      <div class="rows" style="margin-top:36px">
-        ${row({ title: "Process understanding", side: `${n.approved} sections approved` })}
-        ${row({ title: "Process steps to analyse", side: `${processSteps.length} across 3 variants` })}
-        ${row({ title: "Control library", side: "33 entries · revenue v0.1.0" })}
-        ${row({ title: "Risk library", side: "30 entries · revenue v0.1.0" })}
+      ${rows(`
+        ${row({ lead: icon("document", 17), title: "Process understanding",
+          side: `<span class="b ink2">${n.approved} sections approved</span>` })}
+        ${row({ lead: icon("map", 17), title: "Process steps to analyse",
+          side: `<span class="b ink2">${processSteps.length} across 3 variants</span>` })}
+        ${row({ lead: icon("control", 17), title: "Control library",
+          side: `<span class="mono t-meta">33 entries · revenue v0.1.0</span>` })}
+        ${row({ lead: icon("finding", 17), title: "Risk library",
+          side: `<span class="mono t-meta">30 entries · revenue v0.1.0</span>` })}`)}
+      <div class="acts sec">
+        ${btn("Start the analysis", "run-analysis", { variant: "primary", size: "lg", key: "Enter", ic: "arrow" })}
       </div>
-      <div style="margin-top:30px">
-        ${btn("Start the analysis", "run-analysis", { variant: "go", size: "lg", key: "Enter" })}
-      </div>
-      <p class="t-meta" style="margin-top:14px;max-width:64ch">
+      <p class="t-meta sec__note measure">
         Everything it produces is a proposal. Nothing is concluded until you conclude it, one item
         at a time.</p>` : `
-      <div style="margin-top:36px" class="rows">
-        ${analysisPipeline.map((p, i) => {
-          const fin = i < S.anaStage, now = i === S.anaStage && running;
-          return `<div class="rw" style="opacity:${fin || now ? 1 : .35};transition:opacity .3s">
-            <span class="rw__lead" style="padding-top:4px;width:18px">
-              ${fin ? `<span style="color:var(--ok)">✓</span>`
-                : now ? `<span class="dot dot--open"></span>` : `<span class="t-meta">${i + 1}</span>`}</span>
-            <span class="rw__main">
-              <span class="rw__t">${esc(p.name)}</span>
-              <span class="rw__d">${esc(p.desc)}</span>
-              ${fin ? `<span class="rw__d" style="color:var(--ink-2);margin-top:5px">${esc(fill(p.out))}</span>` : ""}
-            </span>
-            <span class="rw__side mono" style="font-size:11.5px">${esc(p.model)}</span>
-          </div>`;
-        }).join("")}
-      </div>
+      <div class="sec">${rows(analysisPipeline.map((p, i) => {
+        const fin = i < S.anaStage, now = i === S.anaStage && running;
+        return `<div class="rw" style="opacity:${fin || now ? 1 : .38}">
+          <span class="rw__lead">${fin ? `<span class="state state--ok">${icon("check", 17)}</span>`
+            : now ? `<span class="dot dot--accent"></span>` : `<span class="t-meta">${i + 1}</span>`}</span>
+          <span class="rw__main">
+            <span class="rw__t">${esc(p.name)}</span>
+            <span class="rw__d">${esc(p.desc)}</span>
+            ${fin ? `<span class="rw__d ink2">${esc(fill(p.out))}</span>` : ""}
+          </span>
+          <span class="rw__side"><span class="mono t-meta">${esc(p.model)}</span></span>
+        </div>`;
+      }).join(""))}</div>
       ${done ? `
-        <div style="margin-top:32px">
+        <div class="sec">
           ${callout(`<b>${controls.length} controls and ${gaps.length + 1} findings proposed.</b>
             Every one cites the part of the understanding it came from, and every one is a proposal
             until you conclude it. ${controls.filter((c) => c.keyProposal === null).length} controls
             could not be assessed against the key-control criteria at all — those are questions, not
             low-confidence answers.`)}
-          <div class="acts" style="margin-top:22px">
-            ${btn("Review the proposals", "read-analysis", { variant: "go", size: "lg", key: "Enter" })}
+          <div class="acts sec">
+            ${btn("Review the proposals", "read-analysis", { variant: "primary", size: "lg", key: "Enter", ic: "arrow" })}
           </div>
         </div>` : ""}`}
   `;
-  return screen("controls", body);
+  return screen("controls", body, { width: "narrow" });
 }
-
-/* ── Triage ──────────────────────────────────────────────────────────────── */
 
 function triage() {
   const cs = st.controlSummary();
@@ -132,136 +128,147 @@ function triage() {
   const rs = st.riskSummary();
   const undecided = cs.undecided;
 
+  const findingItem = (f, i) => {
+    const alert = f.severity !== "observation";
+    return `<button class="${cx("aqi", alert ? "aqi--alert" : "aqi--warn")}"
+        data-act="start-focus" data-kind="findings">
+      <span class="aqi__top">
+        <span class="aqi__n">${String(i + 1).padStart(2, "0")}</span>
+        <span class="aqi__k">${icon(f.fromTrace ? "walkthrough" : "finding", 13)}${
+          f.fromTrace ? "Raised by the walkthrough" : "Finding"}</span>
+        <span class="aqi__ctx">${esc(SEV[f.severity] || f.severity)}</span>
+      </span>
+      <span class="aqi__t">${esc(f.title)}</span>
+      <span class="aqi__why">${esc(f.impact)}</span>
+      <span class="aqi__ft">
+        <span class="blocks">${icon("link", 13)}<b>Blocks</b>
+          <span class="blocks__i">Findings concluded</span></span>
+        <span class="aqi__go">Review${icon("chevron", 14)}</span>
+      </span>
+    </button>`;
+  };
+
   const body = `
     <div class="head">
-      <h1 class="t-title">Controls and findings</h1>
-      <p class="t-lede" style="margin-top:10px">
-        ${cs.total} controls and ${fs.total} findings, identified from the process understanding
-        and attached to the steps they belong to.
-      </p>
+      <div class="head__row">
+        <div>
+          <h1 class="t-display">Controls and findings</h1>
+          <p class="t-lede">
+            ${cs.total} controls and ${fs.total} findings, identified from the process understanding
+            and attached to the steps they belong to.
+          </p>
+        </div>
+        <div class="tally">
+          <div><span class="tally__n" style="color:var(--ok)">${cs.agreedKey}</span>
+            <span class="tally__l">key controls</span></div>
+          <div><span class="tally__n" style="color:${cs.pending + fs.pending.length ? "var(--warn)" : "var(--ok)"}">${
+            cs.pending + fs.pending.length}</span>
+            <span class="tally__l">to conclude</span></div>
+        </div>
+      </div>
     </div>
 
-    <section style="margin-top:28px">
-      <div class="row" style="margin-bottom:12px">
+    ${fs.fromTraceOpen.length ? `
+      <section class="sec">
+        ${callout(`<b>The line walkthrough changed the process understanding.</b>
+          Tracing a real transaction raised ${fs.fromTraceOpen.length === 1 ? "a finding" : `${fs.fromTraceOpen.length} findings`}
+          that nobody described in the interview. ${fs.fromTraceOpen.length === 1 ? "It has" : "They have"}
+          not been concluded yet.
+          <div class="acts sec__note">
+            ${btn("Review it now", "start-focus", { variant: "primary", data: { kind: "findings" }, ic: "arrow" })}
+          </div>`, "alert")}
+      </section>` : ""}
+
+    <section class="sec">
+      <div class="sec__h">
         <h2 class="t-eyebrow">The process, annotated</h2>
         <span class="sp"></span>${mapLegend("annotated")}
       </div>
       ${processMap("annotated", { selected: S.mapStep })}
-      ${S.mapStep ? mapDetail(S.mapStep) : `<p class="t-meta" style="margin-top:12px">
+      ${S.mapStep ? mapDetail(S.mapStep) : `<p class="t-meta sec__note">
         Click a step to see what controls it and what is wrong with it.</p>`}
     </section>
 
-    ${fs.fromTraceOpen.length ? `
-      <section class="triage__group" style="margin-top:36px">
-        <div class="callout callout--alert">
-          <b>The line walkthrough changed the process understanding.</b>
-          Tracing a real transaction raised ${fs.fromTraceOpen.length === 1 ? "a finding" : `${fs.fromTraceOpen.length} findings`}
-          that nobody described in the interview. ${fs.fromTraceOpen.length === 1 ? "It has" : "They have"}
-          not been concluded yet.
-          <div class="acts" style="margin-top:12px">
-            ${btn("Review it now", "start-focus", { variant: "go", data: { kind: "findings" } })}
-          </div>
-        </div>
-      </section>` : ""}
-
     ${cs.pending ? `
-      <section class="triage__group" style="margin-top:36px">
-        <div class="triage__n"><span class="c">${cs.pending}</span> controls to conclude</div>
-        <p class="t-sub" style="margin-bottom:18px">
-          ${cs.suggestedKey} suggested as key · ${cs.unassessable} where the criteria could not be
-          established${undecided.length ? ` · <b>${undecided.length} left undecided</b>` : ""}
-        </p>
-        ${undecided.length ? `<div class="callout" style="margin-bottom:18px">
-          <b>Undecided is not a conclusion.</b> ${undecided.length === 1 ? "One control is" : `${undecided.length} controls are`}
-          parked. Either conclude ${undecided.length === 1 ? "it" : "them"}, or carry
-          ${undecided.length === 1 ? "it" : "them"} forward with a documented reason — which is a
-          decision the reviewer can see.
-          <div class="rows" style="margin-top:14px">
-            ${undecided.map((c) => row({
-              lead: dot("open"),
-              title: esc(c.title),
-              detail: "Undecided — no conclusion recorded",
-              side: btn("Carry forward", "carry-control-open", { size: "sm", data: { id: c.id } }),
-            })).join("")}
-          </div>
-        </div>` : ""}
-        <div class="acts">
-          ${btn("Review recommendations", "start-focus", { variant: "go", data: { kind: "controls" }, key: "Enter" })}
+      <section class="sec--loose">
+        <div class="sec__h">
+          <h2 class="t-h">${cs.pending} controls to conclude</h2>
+          <span class="sp"></span>
+          ${btn("Review recommendations", "start-focus", { variant: "primary", data: { kind: "controls" }, key: "⏎" })}
         </div>
+        <p class="t-sub sec__h measure">
+          ${cs.suggestedKey} suggested as key · ${cs.unassessable} where the criteria could not be
+          established${undecided.length ? ` · ${undecided.length} left undecided` : ""}
+        </p>
+        ${undecided.length ? `${callout(`<b>Undecided is not a conclusion.</b>
+          ${undecided.length === 1 ? "One control is" : `${undecided.length} controls are`} parked.
+          Either conclude ${undecided.length === 1 ? "it" : "them"}, or carry
+          ${undecided.length === 1 ? "it" : "them"} forward with a documented reason — which is a
+          decision the reviewer can see.`, "warn")}
+          <div class="sec__note">${rows(undecided.map((c) => row({
+            lead: icon("control", 17),
+            title: esc(c.title), detail: "Undecided — no conclusion recorded",
+            side: btn("Carry forward", "carry-control-open", { size: "sm", data: { id: c.id } }),
+          })).join(""))}</div>` : ""}
       </section>` : `
-      <section class="triage__group" style="margin-top:36px">
-        <div class="triage__n">Controls concluded</div>
-        <p class="t-sub">${cs.agreedKey} of ${cs.total} recorded as key controls${
+      <section class="sec--loose">
+        <div class="sec__h"><h2 class="t-h">Controls concluded</h2></div>
+        <p class="t-sub measure">${cs.agreedKey} of ${cs.total} recorded as key controls${
           cs.carriedForward ? ` · ${cs.carriedForward} carried forward undecided, with a reason` : ""}.</p>
-        ${cs.carriedForward ? `<div class="rows" style="margin-top:14px">
-          ${controls.filter((c) => st.controlDecision(c) === "carried_forward").map((c) => row({
-            lead: dot("open"), title: esc(c.title),
+        ${cs.carriedForward ? `<div class="sec__note">${rows(
+          controls.filter((c) => st.controlDecision(c) === "carried_forward").map((c) => row({
+            lead: icon("control", 17), title: esc(c.title),
             detail: esc(S.controlCarry[c.id] || "Carried forward undecided."),
-            side: btn("Reopen", "clear-control", { size: "sm", variant: "plain", data: { id: c.id } }),
-          })).join("")}
-        </div>` : ""}
+            side: btn("Reopen", "clear-control", { size: "sm", variant: "ghost", data: { id: c.id } }),
+          })).join(""))}</div>` : ""}
       </section>`}
 
     ${fs.pending.length ? `
-      <section class="triage__group">
-        <div class="triage__n"><span class="c">${fs.pending.length}</span> findings to conclude</div>
-        <p class="t-sub" style="margin-bottom:16px">
+      <section class="sec--loose">
+        <div class="sec__h">
+          <h2 class="t-h">${fs.pending.length} findings to conclude</h2>
+          <span class="sp"></span>
+          ${btn("Review findings", "start-focus", { variant: "primary", data: { kind: "findings" } })}
+        </div>
+        <p class="t-sub sec__h measure">
           Confirm, modify or dismiss each one. Severity is a professional judgement and stays yours.
-          These feed the ISA 265 communication to management.
-        </p>
-        <div class="rows" style="margin-bottom:18px">
-          ${fs.pending.slice(0, 4).map((f) => row({
-            lead: dot(f.severity === "observation" ? "warn" : "alert"),
-            title: esc(f.title),
-            detail: `${esc(SEV[f.severity] || f.severity)}${f.fromTrace ? " · raised by the line walkthrough" : ""}`,
-            side: `<span class="t-meta mono">${esc(f.id)}</span>`,
-          })).join("")}
-        </div>
-        <div class="acts">
-          ${btn("Review findings", "start-focus", { variant: "go", data: { kind: "findings" } })}
-        </div>
+          These feed the ISA 265 communication to management.</p>
+        <div class="aq">${fs.pending.slice(0, 4).map(findingItem).join("")}</div>
       </section>` : `
-      <section class="triage__group">
-        <div class="triage__n">Findings concluded</div>
-        <p class="t-sub">${fs.confirmed} confirmed for the management letter${
+      <section class="sec--loose">
+        <div class="sec__h"><h2 class="t-h">Findings concluded</h2></div>
+        <p class="t-sub measure">${fs.confirmed} confirmed for the management letter${
           fs.modified ? `, ${fs.modified} of them after you changed what the platform proposed` : ""}.</p>
       </section>`}
 
-    ${fs.decided ? `<section class="triage__group">
-      ${more("fdec", `Show ${fs.decided} concluded ${fs.decided === 1 ? "finding" : "findings"}`, `<div class="rows">
-        ${fs.all.filter((f) => !st.findingOpen(f)).map((f) => {
+    ${fs.decided ? `<section class="sec--loose">
+      ${more("fdec", `Show ${fs.decided} concluded ${fs.decided === 1 ? "finding" : "findings"}`,
+        rows(fs.all.filter((f) => !st.findingOpen(f)).map((f) => {
           const o = st.findingOutcome(f);
           const changed = o.decision === "modified";
-          return `<div class="rw" style="display:block">
-            <div class="row row--top" style="gap:20px">
-              <span class="rw__lead" style="padding-top:5px">${dot(
-                o.decision === "dismissed" ? "" : o.severity === "observation" ? "warn" : "alert")}</span>
-              <span class="rw__main">
-                <span class="rw__t">${esc(o.title)}</span>
-                <span class="rw__d">${o.decision === "dismissed" ? "Dismissed by the auditor"
-                  : changed ? `Your conclusion · ${esc(SEV[o.severity] || o.severity)}`
-                  : `Confirmed as proposed · ${esc(SEV[o.severity] || o.severity)}`}</span>
-                ${changed ? `<span class="rw__d" style="margin-top:6px;color:var(--ink-4)">
-                  Platform proposed: &ldquo;${esc(f.title)}&rdquo; · ${esc(SEV[f.severity] || f.severity)}</span>` : ""}
-              </span>
-              <span class="rw__side">${btn("Reopen", "clear-finding", { size: "sm", variant: "plain", data: { id: f.id } })}</span>
-            </div>
-          </div>`;
-        }).join("")}
-      </div>`, S.disclosed.fdec)}
+          return row({
+            lead: icon(o.decision === "dismissed" ? "check" : "finding", 17),
+            title: esc(o.title),
+            detail: `${o.decision === "dismissed" ? "Dismissed by the auditor"
+              : changed ? `Your conclusion · ${esc(SEV[o.severity] || o.severity)}`
+              : `Confirmed as proposed · ${esc(SEV[o.severity] || o.severity)}`}${
+              changed ? `<br><span class="ink4">Platform proposed: &ldquo;${esc(f.title)}&rdquo; · ${
+                esc(SEV[f.severity] || f.severity)}</span>` : ""}`,
+            side: btn("Reopen", "clear-finding", { size: "sm", variant: "ghost", data: { id: f.id } }),
+          });
+        }).join("")), S.disclosed.fdec)}
     </section>` : ""}
 
-    <section class="triage__group">
-      <div class="triage__n">${rs.total} risk signals identified</div>
-      <p class="t-sub" style="margin-bottom:14px">
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-h">${rs.total} risk signals identified</h2></div>
+      <p class="t-sub sec__h measure">
         ${rs.significant} carry a system-proposed significance flag · ${rs.fraud} touch fraud
-        considerations · ${rs.newRisks} are outside the firm's library. <b>Nothing here is
-        assessed or concluded.</b> These are inputs the process work produces; assessing risks of
-        material misstatement is risk analysis, a separate phase that reads this output — it is not
-        part of this product.
+        considerations · ${rs.newRisks} are outside the firm's library. <b>Nothing here is assessed
+        or concluded.</b> These are inputs the process work produces; assessing risks of material
+        misstatement is risk analysis, a separate phase that reads this output.
       </p>
       <div class="acts">
-        ${btn("See what is carried forward", "nav", { variant: "plain", data: { href: "#/matrix" } })}
+        ${btn("See what is carried forward", "nav", { data: { href: "#/matrix" }, ic: "arrow" })}
       </div>
     </section>
   `;
@@ -269,7 +276,7 @@ function triage() {
   return screen("controls", body, { width: "wide" });
 }
 
-/* ── Control focus ───────────────────────────────────────────────────────── */
+/* ── Control decision ────────────────────────────────────────────────────── */
 
 function controlFocus() {
   const q = st.controlSummary().queue;
@@ -279,94 +286,99 @@ function controlFocus() {
   const refs = refsOf(c.refs);
   const linked = risks.filter((r) => c.risks.includes(r.id));
   const unmet = Object.entries(c.criteria).filter(([, v]) => v !== "met");
+  const met = Object.entries(c.criteria).filter(([, v]) => v === "met");
   const step = processSteps.find((p) => p.controls.includes(c.id));
   const parked = st.controlDecision(c) === "undecided";
   const carrying = S.editing === `carry:${c.id}`;
 
-  const body = `<div class="focus">
-    ${focusBar(ix, q.length, "Controls")}
-    <div class="focus__body"><div class="q">
-      ${step ? `<div class="t-meta" style="margin-bottom:8px">On the process at
-        <b style="color:var(--ink-2)">${esc(step.name)}</b></div>` : ""}
-      <h1 class="q__t">${esc(c.title)}</h1>
-      <p class="q__d">${esc(c.desc)}</p>
+  const body = `<div class="dw">
+    ${dwBar(ix, q.length, "Controls")}
+    <div class="dw__body"><div class="dw__in">
+      <div class="dw__ctx">${icon("control", 15)}<span class="t-eyebrow">Control</span>
+        ${step ? `<span>·</span>on the process at <b>${esc(step.name)}</b>` : ""}</div>
+      <h1 class="dw__t">${esc(c.title)}</h1>
+      <p class="dw__d">${esc(c.desc)}</p>
 
-      <div class="q__block">
+      <div class="dw__blk">
         <h4>${c.keyProposal === true ? "Why this may be a key control"
           : c.keyProposal === false ? "Why this is probably not a key control"
           : "Why this cannot be assessed"}</h4>
         <p>${esc(c.rationale)}</p>
       </div>
 
-      <dl class="q__facts">
-        <div class="q__fact"><dt>Owner</dt><dd>${esc(c.owner || "Not established")}</dd></div>
-        <div class="q__fact"><dt>Type</dt><dd>${c.type === "preventive" ? "Preventive" : "Detective"} · ${esc(NAT[c.nature])} · ${esc(FRQ[c.frequency])}</dd></div>
-        <div class="q__fact"><dt>Addresses</dt><dd>${linked.length ? linked.map((r) => esc(r.title)).join("; ") : "No identified risk linked"}</dd></div>
-        <div class="q__fact"><dt>Evidence it operated</dt><dd>${c.evidenceOfOperation ? esc(c.evidenceOfOperation)
-          : `<span style="color:var(--warn)">Not established</span>`}</dd></div>
-        ${c.ipe ? `<div class="q__fact"><dt>Information used</dt><dd>${esc(c.ipe)}${
-          c.ipeNote ? `<div class="t-meta" style="margin-top:3px">${esc(c.ipeNote)}</div>` : ""}</dd></div>` : ""}
+      <dl class="facts">
+        <div class="fact"><dt>Owner</dt><dd>${esc(c.owner || "Not established")}</dd></div>
+        <div class="fact"><dt>Type</dt><dd>${c.type === "preventive" ? "Preventive" : "Detective"} · ${esc(NAT[c.nature])} · ${esc(FRQ[c.frequency])}</dd></div>
+        <div class="fact"><dt>Addresses</dt><dd>${linked.length ? linked.map((r) => esc(r.title)).join("; ") : "No identified risk signal linked"}</dd></div>
+        <div class="fact"><dt>Evidence it operated</dt><dd>${c.evidenceOfOperation ? esc(c.evidenceOfOperation)
+          : `<span class="state state--warn">${icon("evidence", 14)}Not established</span>`}</dd></div>
+        ${c.ipe ? `<div class="fact"><dt>Information used</dt><dd>${esc(c.ipe)}${
+          c.ipeNote ? `<div class="t-meta">${esc(c.ipeNote)}</div>` : ""}</dd></div>` : ""}
       </dl>
 
       ${more("csrc", `Supported by ${refs.length} sources`, evidence(refs), S.disclosed.csrc)}
 
-      ${c.blocked ? `<div class="q__flag q__flag--alert"><b>Blocked.</b> ${esc(c.blocked)}</div>` : ""}
-      ${!c.blocked && unmet.length ? `<div class="q__flag">
-        <b>${unmet.length === 1 ? "One criterion is not met" : `${unmet.length} criteria are not met`}.</b>
+      ${c.blocked ? `<div class="flag flag--alert"><b>Blocked.</b> ${esc(c.blocked)}</div>` : ""}
+      ${!c.blocked && unmet.length ? `<div class="flag">
+        <b>${met.length} of 6 criteria met.</b>
         ${unmet.map(([k]) => esc(CRIT[k].toLowerCase())).join("; ")}.
         ${c.followUp ? " " + esc(c.followUp) : ""}</div>` : ""}
-      ${parked && !carrying ? `<div class="q__flag">
+      ${!c.blocked && !unmet.length ? `<div class="flag flag--ok">
+        <b>All six criteria met.</b> Nothing about this control needs establishing before you
+        conclude on it.</div>` : ""}
+      ${parked && !carrying ? `<div class="flag">
         <b>Left undecided.</b> That is a bookmark, not a conclusion — this control is still counted
         as outstanding and still blocks the completion gate.</div>` : ""}
 
       ${more("crit", "Show the six criteria", `<div class="meth">
-        ${Object.entries(c.criteria).map(([k, v]) => `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--line)">
-          <span style="flex:1;color:var(--ink-2)">${esc(CRIT[k])}</span>
-          ${v === "met" ? state("approved", "Met") : v === "not_met" ? state("rejected", "Not met") : state("needs_source", "Unknown")}
+        ${Object.entries(c.criteria).map(([k, v]) => `<div class="row meth__row" style="padding:9px 0">
+          <span style="flex:1" class="ink2">${esc(CRIT[k])}</span>
+          ${v === "met" ? tag("met", "ok", "check") : v === "not_met" ? tag("not met", "alert")
+            : tag("cannot establish", "warn")}
         </div>`).join("")}
         <p class="t-meta" style="margin-top:12px">A criterion that cannot be established produces a
         follow-up question, never a lower-confidence conclusion.</p>
       </div>`, S.disclosed.crit)}
 
-      <div class="q__sug">
-        <span class="l">Proposed by the platform</span>
-        <span class="v">${c.keyProposal === true ? "Key control"
+      <div class="proposal">
+        <span class="proposal__l">${icon("control", 14)}Proposed by the platform</span>
+        <span class="proposal__v">${c.keyProposal === true ? "Key control"
           : c.keyProposal === false ? "Not a key control" : "Cannot be assessed"}</span>
       </div>
 
       ${carrying ? `
-        <div class="q__block" style="margin-top:18px">
+        <div class="dw__blk">
           <h4>Carry forward undecided — why</h4>
-          <p class="t-meta" style="margin-bottom:10px">This reason goes on the file and is shown to
-          the reviewer. It is what makes moving on without a conclusion defensible.</p>
-          <textarea class="field" id="ans" rows="3" placeholder="e.g. The control owner is on leave until the final audit; whether this is a key control depends on the override report we have not received.">${
+          <p class="t-meta measure">This reason goes on the file and is shown to the reviewer. It is
+          what makes moving on without a conclusion defensible.</p>
+          <textarea class="field" id="ans" rows="3" style="margin-top:12px"
+            placeholder="e.g. The control owner is on leave until the final audit; whether this is a key control depends on the override report we have not received.">${
             esc(S.controlCarry[c.id] || "")}</textarea>
-          <div class="acts" style="margin-top:12px">
-            ${btn("Carry forward with this reason", "carry-control", { variant: "go", data: { id: c.id } })}
-            ${btn("Cancel", "cancel-edit", { variant: "plain" })}
+          <div class="acts sec__note">
+            ${btn("Carry forward with this reason", "carry-control", { variant: "primary", data: { id: c.id } })}
+            ${btn("Cancel", "cancel-edit", { variant: "ghost" })}
           </div>
         </div>`
-      : `<div class="q__acts">
+      : `<div class="dock"><div class="dock__in">
         ${btn(c.keyProposal === true ? "Accept — key control" : c.keyProposal === false ? "Accept — not key" : "Record as key control",
-          "decide-control", { variant: "go", key: "Enter",
-          data: { id: c.id, d: c.keyProposal === true ? "key" : c.keyProposal === false ? "not_key" : "key" } })}
+          "decide-control", { variant: "primary", key: "⏎",
+          data: { id: c.id, d: c.keyProposal === false ? "not_key" : "key" } })}
         ${c.keyProposal !== true ? btn("Key control", "decide-control", { data: { id: c.id, d: "key" }, key: "K" }) : ""}
         ${c.keyProposal !== false ? btn("Not key", "decide-control", { data: { id: c.id, d: "not_key" }, key: "N" }) : ""}
         ${btn("Carry forward undecided", "carry-control-open", { data: { id: c.id }, key: "C" })}
         <span class="sp"></span>
         ${btn(parked ? "Next" : "Park for now", parked ? "focus-next" : "park-control",
-          { variant: "plain", data: { id: c.id }, key: "U" })}
+          { variant: "ghost", data: { id: c.id }, key: "U" })}
       </div>
-      <p class="t-meta" style="margin-top:14px;max-width:60ch">
-        Parking keeps the control in this queue. Only <i>key</i>, <i>not key</i> and
-        <i>carried forward with a reason</i> conclude it.</p>`}
+      <p class="dock__note">Parking keeps the control in this queue. Only <i>key</i>, <i>not key</i>
+        and <i>carried forward with a reason</i> conclude it.</p></div>`}
     </div></div>
   </div>`;
 
   return screen("controls", body, { raw: true });
 }
 
-/* ── Finding focus ───────────────────────────────────────────────────────── */
+/* ── Finding decision ────────────────────────────────────────────────────── */
 
 function findingFocus() {
   const q = st.findingSummary().queue;
@@ -379,81 +391,87 @@ function findingFocus() {
   const editing = S.editingFinding === f.id;
 
   const form = `
-    <div class="q__block" style="margin-top:18px">
+    <div class="dw__blk">
       <h4>Your conclusion — edit anything the platform got wrong</h4>
-      <p class="t-meta" style="margin-bottom:12px">The proposal above is kept as it was. What you
-      write here is recorded as the auditor's conclusion, and it is this version that goes to
-      management.</p>
+      <p class="t-meta measure">The proposal above is kept as it was. What you write here is
+      recorded as the auditor's conclusion, and it is this version that goes to management.</p>
 
-      <label class="t-eyebrow" for="f-title">Finding</label>
-      <input class="field" id="f-title" value="${esc(f.title)}" style="margin:6px 0 14px">
+      <div class="fgroup" style="margin-top:18px">
+        <label class="t-eyebrow flabel" for="f-title">Finding</label>
+        <input class="field" id="f-title" value="${esc(f.title)}">
+      </div>
+      <div class="fgroup">
+        <label class="t-eyebrow flabel" for="f-detail">What was found</label>
+        <textarea class="field" id="f-detail" rows="4">${esc(f.detail)}</textarea>
+      </div>
+      <div class="fgroup">
+        <label class="t-eyebrow flabel" for="f-sev">Severity</label>
+        <select class="field" id="f-sev">
+          ${Object.entries(SEV).map(([k, v]) =>
+            `<option value="${esc(k)}"${k === f.severity ? " selected" : ""}>${esc(v)}</option>`).join("")}
+        </select>
+      </div>
+      <div class="fgroup">
+        <label class="t-eyebrow flabel" for="f-impact">Why it matters</label>
+        <textarea class="field" id="f-impact" rows="3">${esc(f.impact)}</textarea>
+      </div>
+      <div class="fgroup">
+        <label class="t-eyebrow flabel" for="f-rem">Suggested remediation</label>
+        <textarea class="field" id="f-rem" rows="3">${esc(f.remediation || "")}</textarea>
+      </div>
 
-      <label class="t-eyebrow" for="f-detail">What was found</label>
-      <textarea class="field" id="f-detail" rows="4" style="margin:6px 0 14px">${esc(f.detail)}</textarea>
-
-      <label class="t-eyebrow" for="f-sev">Severity</label>
-      <select class="field" id="f-sev" style="margin:6px 0 14px">
-        ${Object.entries(SEV).map(([k, v]) =>
-          `<option value="${esc(k)}"${k === f.severity ? " selected" : ""}>${esc(v)}</option>`).join("")}
-      </select>
-
-      <label class="t-eyebrow" for="f-impact">Why it matters</label>
-      <textarea class="field" id="f-impact" rows="3" style="margin:6px 0 14px">${esc(f.impact)}</textarea>
-
-      <label class="t-eyebrow" for="f-rem">Suggested remediation</label>
-      <textarea class="field" id="f-rem" rows="3" style="margin:6px 0 0">${esc(f.remediation || "")}</textarea>
-
-      <div class="acts" style="margin-top:14px">
-        ${btn("Record as modified", "save-finding", { variant: "go", data: { id: f.id } })}
-        ${btn("Cancel", "cancel-finding-edit", { variant: "plain" })}
+      <div class="acts sec">
+        ${btn("Record as modified", "save-finding", { variant: "primary", data: { id: f.id } })}
+        ${btn("Cancel", "cancel-finding-edit", { variant: "ghost" })}
       </div>
     </div>`;
 
-  const body = `<div class="focus">
-    ${focusBar(ix, q.length, "Findings")}
-    <div class="focus__body"><div class="q">
-      ${step ? `<div class="t-meta" style="margin-bottom:8px">On the process at
-        <b style="color:var(--ink-2)">${esc(step.name)}</b>${f.fromTrace ? " · raised by the line walkthrough" : ""}</div>` : ""}
-      <h1 class="q__t">${esc(f.title)}</h1>
-      <p class="q__d">${esc(f.detail)}</p>
+  const body = `<div class="dw">
+    ${dwBar(ix, q.length, "Findings")}
+    <div class="dw__body"><div class="dw__in">
+      <div class="dw__ctx">${icon(f.fromTrace ? "walkthrough" : "finding", 15)}
+        <span class="t-eyebrow">${f.fromTrace ? "Raised by the line walkthrough" : "Finding"}</span>
+        ${step ? `<span>·</span>at <b>${esc(step.name)}</b>` : ""}</div>
+      <h1 class="dw__t">${esc(f.title)}</h1>
+      <p class="dw__d">${esc(f.detail)}</p>
 
-      <div class="q__block">
+      <div class="dw__blk">
         <h4>Why it matters</h4>
         <p>${esc(f.impact)}</p>
       </div>
 
-      ${f.remediation ? `<div class="q__block">
+      ${f.remediation ? `<div class="dw__blk">
         <h4>Suggested remediation — for the management letter</h4>
         <p>${esc(f.remediation)}</p>
       </div>` : ""}
 
-      ${risk ? `<dl class="q__facts">
-        <div class="q__fact"><dt>Related risk signal</dt><dd>${esc(risk.title)}<div class="t-meta"
-          style="margin-top:3px">Carried into risk analysis. Not assessed here.</div></dd></div>
+      ${risk ? `<dl class="facts">
+        <div class="fact"><dt>Related risk signal</dt><dd>${esc(risk.title)}
+          <div class="t-meta">Carried into risk analysis. Not assessed here.</div></dd></div>
       </dl>` : ""}
 
       ${refs.length ? more("fsrc", `Supported by ${refs.length} sources`, evidence(refs), S.disclosed.fsrc) : ""}
 
-      ${f.fromTrace ? `<div class="q__flag q__flag--alert">
+      ${f.fromTrace ? `<div class="flag flag--alert">
         <b>Found by tracing a real transaction.</b> This did not come from what anyone said in the
         interview — it came from comparing two dates on one order. Concluding on it here is what
         closes the loop between step five and step four.</div>` : ""}
 
-      <div class="q__sug">
-        <span class="l">Severity proposed by the platform</span>
-        <span class="v">${esc(SEV[f.severity] || f.severity)}</span>
+      <div class="proposal">
+        <span class="proposal__l">${icon("finding", 14)}Severity proposed by the platform</span>
+        <span class="proposal__v">${esc(SEV[f.severity] || f.severity)}</span>
       </div>
 
-      ${editing ? form : `<div class="q__acts">
-        ${btn("Confirm as proposed", "decide-finding", { variant: "go", key: "Enter", data: { id: f.id, d: "confirmed" } })}
+      ${editing ? form : `<div class="dock"><div class="dock__in">
+        ${btn("Confirm as proposed", "decide-finding", { variant: "primary", key: "⏎", data: { id: f.id, d: "confirmed" } })}
         ${btn("Modify", "edit-finding", { key: "M", data: { id: f.id } })}
         ${btn("Dismiss", "decide-finding", { key: "D", data: { id: f.id, d: "dismissed" } })}
         <span class="sp"></span>
-        ${btn("Skip", "focus-next", { variant: "plain", key: "J" })}
+        ${btn("Skip", "focus-next", { variant: "ghost", key: "J" })}
       </div>
-      <p class="t-meta" style="margin-top:14px;max-width:60ch">
-        ISA 265 requires deficiencies to be communicated. Whether this one is significant is a
-        conclusion you record — the platform proposes a severity and stops there.</p>`}
+      <p class="dock__note">ISA 265 requires deficiencies to be communicated. Whether this one is
+        significant is a conclusion you record — the platform proposes a severity and stops there.</p>
+      </div>`}
     </div></div>
   </div>`;
 
@@ -466,19 +484,19 @@ export function controlsStep() {
   if (!S.generated) {
     return screen("controls", `
       ${empty("The process is not documented yet",
-        "Controls are analysed from the process understanding, so step 3 has to run first.")}
-      <div style="text-align:center;margin-top:-40px">
-        ${btn("Go to the process understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
-      </div>`);
+        "Controls are analysed from the process understanding, so step 3 has to run first.", "document")}
+      <div class="acts" style="justify-content:center">
+        ${btn("Go to the process understanding", "nav", { variant: "primary", ic: "arrow", data: { href: "#/understanding" } })}
+      </div>`, { width: "narrow" });
   }
   const n = st.narrativeSummary();
   if (n.pending) {
     return screen("controls", `
       ${empty(`${n.pending} sections of the understanding are still unreviewed`,
-        "Step 4 analyses the understanding you have accepted. Proposing controls from a draft nobody has read would put the analysis ahead of the judgement it depends on.")}
-      <div style="text-align:center;margin-top:-40px">
-        ${btn("Finish reviewing the understanding", "nav", { variant: "go", data: { href: "#/understanding" } })}
-      </div>`);
+        "Step 4 analyses the understanding you have accepted. Proposing controls from a draft nobody has read would put the analysis ahead of the judgement it depends on.", "document")}
+      <div class="acts" style="justify-content:center">
+        ${btn("Finish reviewing the understanding", "nav", { variant: "primary", ic: "arrow", data: { href: "#/understanding" } })}
+      </div>`, { width: "narrow" });
   }
   if (!S.analysed || !S.anaSeen) return analysisView();
   if (S.reviewMode === "focus" && S.focusKind === "controls") return controlFocus();

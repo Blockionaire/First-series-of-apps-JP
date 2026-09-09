@@ -1,320 +1,501 @@
-# V3 Design Direction — the process-level interim audit
+# V3 — Visual and Interaction Direction
 
-**Supersedes the scope of `NEXT-GEN-UX-DIRECTION.md`, not its interaction philosophy.**
-That document fixed *how* the product should feel: calm, contextual, evidence-first,
-exception-driven, invisible AI. All of it survives. What changes in V3 is *what the product is
-a workspace for*.
+The functional model is frozen (`PRE-DESIGN-FUNCTIONAL-FREEZE.md`). This document is the visual
+and interaction standard built on top of it. One direction, decided — not options to choose from.
 
----
-
-## 1. The scope correction
-
-V2 read as an **AI documentation generator with a review workflow bolted on**. Its four-stage
-spine — Understand → Review → Resolve → Complete — described the shape of a *review session*,
-not the shape of an *audit*. An auditor looking at it would conclude the product writes process
-narratives. That undersells it and, worse, it designs the product into a corner.
-
-The product is the **workspace in which an auditor performs the interim audit of a business
-process**. Documentation is one output of that work. Controls are another. Findings are another.
-The line walkthrough is another. Control testing is another. Sign-off closes the process.
-
-### Where interim sits
-
-```
-Client acceptance
-  → Understanding the entity
-    → Understanding processes and systems
-      → Inherent risk factors
-        → ▓▓▓ INTERIM AUDIT ▓▓▓   ← the product
-          → Risk analysis
-            → Further audit work / final
-```
-
-The product must know it lives inside a larger engagement, and must not pretend to be the whole
-of it. Interim is bounded on both sides, and the boundaries are shown, not hidden.
-
-### Risk analysis is out of scope — and that has a design consequence
-
-V2 asked the auditor to conclude on eleven risks: accept, modify or reject each one. **That was
-risk analysis, and it does not belong in interim.** Assessing risks of material misstatement at
-assertion level happens *after* the process work is done, with the process understanding as an
-input.
-
-So in V3, identified risks stop being a decision queue and become **an output carried forward**.
-They are still identified, still library-mapped, still linked to controls, still exported in the
-matrix — but the auditor is not asked to conclude on them here. What the auditor concludes on in
-interim is: the process understanding, the controls, the findings, the line walkthrough, and any
-control testing.
-
-> **Assumption on the record.** This removes an interaction the earlier prototype had. It follows
-> directly from "risk analysis comes after this and is not part of the current product scope",
-> but it is a scope judgement, so it is called out rather than made quietly. If risks should
-> still be concluded during interim, this is the one decision to reverse.
+**On the references.** `zeno.law` and `anthropic.com` are both blocked by this environment's egress
+proxy, so neither could be inspected directly. What follows is drawn from working knowledge of both
+and from the qualities named in the brief. Where a specific claim about either product is made, it
+should be checked against the live sites before being treated as fact.
 
 ---
 
-## 2. Product architecture: two layers
+## 1. What is wrong with V2, specifically
 
-### Engagement layer
+V2 was designed against a rule — *typography and whitespace, never boxes* — and held to it too
+literally. The result is coherent and underweight.
 
-Client · financial year · engagement · interim status · the processes in scope.
+**It is a white page with hairlines on it.** Almost every surface is `#fcfcfa` or `#ffffff`. There
+is no depth, so nothing can be visually prioritised except by size, and size is doing all the work
+alone.
 
-Thin on purpose. It exists to answer *which piece of work am I in?* and to make it obvious that
-Revenue is one process among several inside one interim phase inside one engagement.
+**The type is too small and too grey.** Body is 15px, metadata 12.5px at `#8b95a1`, and there is a
+lot of metadata. Four hours in this is tiring. The scale also compresses at the top: `t-title` 30px
+and `t-h` 20px is not enough separation to carry a whole screen.
 
-```
-Vandersteen Industrial Systems B.V.   FY2026
-  Planning ✓   Interim ●   Final —   Completion —
+**Buttons are apologetic.** 7px × 14px, 14px text, a 1px inset ring. The primary action does not
+read as more important than the four things next to it, and on several screens there are four or
+five buttons of near-equal weight. The single most important question — *what should I do next?* —
+is answered by reading, not by looking.
 
-  Interim — processes
-    Revenue / order-to-cash    ● in progress    step 4 of 7
-    Purchasing                 — later
-    Payroll                    — later
-    Inventory                  — later
-    Treasury                   — later
-    Financial close            — later
-```
+**The 3px inset left rule is doing every job.** Attention, contradiction, evidence, callout,
+selected claim and focus item all use the same device in a different colour. It is a signature that
+became a crutch.
 
-### Process workspace
+**Everything has the same density.** One `.wrap` at 940px, one `.head`, one `.rows`. The working
+paper, the RCM and the sign-off screen have identical rhythm, and they are not the same kind of
+work. The brief is right that this is V2's biggest weakness.
 
-Where the work happens. The auditor enters `Client → FY2026 → Interim → Revenue` and carries
-Revenue through the whole interim workflow without leaving.
+**There are no icons at all**, so every object type has to be read as a word, every time.
 
-Everything V2 built — triage, focus queues, inline evidence, ⌘K, undo — lives *inside* this
-layer.
+**It is generic on the accountability test.** Replace the audit words with legal or medical words
+and nothing about the interaction would look wrong. The audit-native ideas — evidence beneath a
+claim, a branching process, review by exception — are present functionally but not *visually
+asserted*.
+
+**Quantified:** 1 accent colour, 2 surfaces, 0 icons, 1 elevation, ~40% of styling still inline.
 
 ---
 
-## 3. The Revenue interim workflow
+## 2. What is preserved, without negotiation
 
-Seven steps. This is the product's actual spine.
+Everything in the freeze document. In interface terms specifically: the seven-step journey and its
+order; the engagement hierarchy; the three process variants and the branching map; review by
+exception with triage → focus; evidence inline beneath the claim, never in a side panel by default;
+undo instead of confirmation; ⌘K as the only navigation for everything off the spine; keyboard
+decisions in every queue; the two-run generation split; per-control test state; the review-point
+loop; and every piece of copy that distinguishes *unknown* from *not applicable*, *proposal* from
+*conclusion*, and *carried forward* from *resolved*.
 
-| # | Step | The auditor's question | Principal output |
+No visual idea in this document is worth breaking one of those.
+
+---
+
+## 3. What is taken from Zeno
+
+The qualities, not the appearance:
+
+- **Warmth as the ground state.** A warm off-white application background instead of white makes
+  paper-white content surfaces read as *content* rather than as the page itself.
+- **Tactility in the primary action.** A filled, confident primary button with real padding, so the
+  next step is visible from across the room.
+- **Softness over hairlines.** Grouping by surface and space, with borders as the exception.
+- **Source and claim as one object.** Evidence belongs to the sentence, not to a panel.
+- **Generosity on the things that matter.** The most important content on a screen gets more room
+  than everything else, not the same amount.
+
+**Not taken:** palette, typeface, logo, card shapes, layouts, illustration, any branded asset.
+
+---
+
+## 4. What is taken from Anthropic
+
+- **Editorial confidence.** Large type used as the primary structural device, with real size jumps
+  rather than a smooth ramp.
+- **A point of view about composition.** Asymmetry and deliberate emptiness where it serves the
+  reading, instead of a centred column on every screen.
+- **Warm neutrals with one unmistakable accent**, used sparingly enough that it always means
+  something.
+- **Restraint as personality.** The confidence to leave a screen quiet.
+
+**Not taken:** the ivory-and-clay palette itself, the display typeface, the marketing-site
+composition.
+
+---
+
+## 5. The Audit AI direction: *Quiet Richness*, and one original idea
+
+If V3 can be described as "Zeno for audit", it has failed. So the visual system is built around one
+idea that belongs to audit and to nothing else:
+
+> **Elevation carries evidentiary meaning.**
+>
+> The **work product rises**. The **evidence sits beneath it**.
+
+Concretely, and consistently, everywhere:
+
+| Layer | Treatment | What it means |
+|---|---|---|
+| **Ground** | warm ivory, no border | the application |
+| **Raised** | paper white, soft shadow, lifts on hover | work product — the narrative, a decision, a finding |
+| **Recessed** | tinted, inset shadow, no lift | evidence, sources, quotes, the client's own words |
+| **Attention** | raised + a semantic edge | something that needs a person |
+
+This is why the **Source Lens** works: clicking a sentence in a raised document opens a *recessed*
+surface directly beneath it. The user is looking *through* the work product *into* what it rests
+on. That gesture is legible before anyone explains it, and it is the interaction the product should
+become known for.
+
+Everything else in this document serves that idea.
+
+---
+
+## 6. Colour — *Ledger*
+
+A warm neutral foundation with a single deep mineral-green brand ink.
+
+```
+GROUND        #F3F1EB   warm ivory — the application background
+SURFACE       #FAF8F4   workspace, one step lighter
+PAPER         #FFFFFF   document and work-product surfaces
+RECESSED      #EDEBE3   evidence, sources, quotes
+SUNK          #E5E2D8   inputs, wells, the deepest surface
+
+INK           #1A1C18   warm near-black
+INK-2         #40443C   secondary body
+INK-3         #6A6F64   supporting
+INK-4         #8C9184   metadata — never smaller than 13px
+INK-5         #B0B4A8   disabled, ticks
+
+LINE          #E4E1D6   hairline
+LINE-2        #D3CFC0   stronger edge
+```
+
+**Brand accent — mineral green.** Deliberately dark: it reads as an ink, so it can fill the primary
+button without competing with the success green.
+
+```
+ACCENT        #22392F   primary fill, wordmark
+ACCENT-HOVER  #2E4B3E
+ACCENT-MID    #3F6B57   links, focus ring, active navigation
+ACCENT-SOFT   #E6EDE7   selection tint
+ACCENT-LINE   #C5D5C9
+```
+
+**Semantic, muted.** Meaning, not decoration. Never a filled badge, never a traffic light.
+
+```
+OK       #3F7350   soft #E9F0EA   line #C6DBCB     supported · approved · corroborated
+WARN     #9C6A1B   soft #F8EFDC   line #E5D2A8     needs attention · incomplete
+DANGER   #A5412F   soft #F7E9E5   line #E6C5BB     contradiction · exception · blocked
+CONCEPT  #5B5478   soft #EFEDF4   line #D2CDE0     future-state, used once
+```
+
+Contrast: ink on ground is 15.2:1; ink-4 on ground is 4.6:1 at 13px; every semantic colour on its
+soft tint clears 4.5:1. **No state is ever communicated by colour alone** — each has a dot shape, a
+word, or an icon beside it.
+
+---
+
+## 7. Typography
+
+Two worlds, deliberately different, no web fonts (the bundle must work offline from `file://`).
+
+**Interface — sans.** `Inter` where installed, then `Segoe UI Variable Display` (Windows 11),
+`-apple-system`, `Segoe UI`, `Roboto`. Tight tracking on headings, tabular numerals everywhere.
+
+**Work product — serif.** `Iowan Old Style`, `Palatino Linotype`, `Palatino`, `Charter`, `Georgia`.
+Used for the narrative, evidence quotes and the thing being decided — the content that is, or
+becomes, the audit file.
+
+The distinction is the point: **software is sans, the audit file is serif.**
+
+```
+display   34 / 1.15 / 600 / -0.022em    screen owner
+title     26 / 1.22 / 600 / -0.019em    section owner
+h         19 / 1.35 / 600 / -0.011em    group
+body      15.5 / 1.62                   interface prose
+doc       18.5 / 1.78 serif             the working paper
+quote     16 / 1.68 serif               evidence
+sub       14.5 / 1.55                   supporting
+meta      13 / 1.5                      metadata — the floor
+eyebrow   11.5 / 600 / .09em / caps     label
+num       32 / 600 / -0.02em tabular    counts
+```
+
+Everything is larger than V2. The metadata floor moves from 12.5px to **13px** and the colour from
+`#8b95a1` to `#8C9184` — still recessive, comfortably readable for four hours.
+
+---
+
+## 8. Header
+
+A **horizontal application frame**. No permanent sidebar, at any width.
+
+**Row 1 — 56px, sticky, ground-coloured with a hairline.**
+
+```
+[◆ Audit AI]   Vandersteen › FY2026 › Interim › Revenue        Saved · [⌘K Search] [?] [SB]
+```
+
+The wordmark is a small mineral-green mark plus the name. The breadcrumb is the *context*, always
+present and always clickable: client → engagement → phase → process. The right cluster is
+deliberately four items and no more: save state, a search *pill* that shows its own shortcut, help,
+avatar. No notification bell — nothing in this product needs one yet.
+
+**Row 2 — the Process Journey, 60px.** Described below.
+
+Together 116px of chrome, against V2's 64px — but V2's 64px carried a bare identity line and a tab
+strip. The extra 52px buys permanent orientation and the single most useful navigation in the
+product.
+
+---
+
+## 9. Process Journey
+
+Seven steps, connected, stateful. Not tabs.
+
+Each step is a small stack: a **state marker**, the **step name**, and a **compact state caption**.
+A hairline connector runs between markers and *fills* behind completed steps, so progress is
+readable as a line, at a glance, without reading a word.
+
+| State | Marker | Name | Caption |
 |---|---|---|---|
-| 1 | **Prepare** | What do we already know, and who do we need? | A scoped, informed starting point |
-| 2 | **Walkthrough** | How does this process actually work? | Established facts, with sources |
-| 3 | **Understanding** | Can we describe it, and is the description right? | Narrative, process steps, **the map** |
-| 4 | **Controls & findings** | What controls exist, and what is wrong? | Controls, gaps, deficiencies |
-| 5 | **Line walkthrough** | Does a real transaction behave the way we described? | A traced transaction, exceptions |
-| 6 | **Control testing** | Do the controls we rely on actually operate? | Test results (future state) |
-| 7 | **Complete** | Is the process work finished and defensible? | Sign-off, export, hand-forward |
+| done | filled green ring with a check | ink-3 | green |
+| current | filled accent dot with a ring halo | ink, 600 | ink-3 |
+| needs attention | amber or red dot | ink | semantic |
+| open | hollow ring | ink-2 | ink-4 |
+| later | small hollow tick | ink-5 | ink-5 |
 
-Steps 5 and 6 are the two the previous prototype was missing, and step 5 is the one that changes
-what the product *is*.
+The current step also carries a 2px accent underline. Later steps are dimmed but never disabled —
+they explain *why* they cannot start, which V2 got right and V3 keeps.
 
 ---
 
-## 4. Workflow is not interaction mode
+## 10. Surfaces
 
-The V2 spine was a category error: it exposed an interaction rhythm as if it were the workflow.
+Five, each with one job. This is §5 made mechanical.
 
-**The seven steps are the workflow. Understand → Review → Resolve → Complete is the rhythm
-*inside* each step.**
+```
+.s-ground     the page                       no border, no shadow
+.s-surface    a grouped region               1px line, radius 12
+.s-paper      work product                   white, shadow-1, radius 12, lifts on hover
+.s-recessed   evidence and sources           tinted, inset 1px line, radius 10, never lifts
+.s-sunk       inputs and wells               deeper tint, inset line, radius 9
+```
 
-Every step follows the same four beats, which is why the product only has to teach them once:
+Shadows are almost invisible and only ever used to lift:
 
-| Beat | In step 2 (Walkthrough) | In step 4 (Controls) | In step 5 (Line walkthrough) |
+```
+--sh-1  0 1px 2px rgba(26,28,24,.04), 0 1px 1px rgba(26,28,24,.03)
+--sh-2  0 2px 6px rgba(26,28,24,.05), 0 10px 24px -10px rgba(26,28,24,.08)
+--sh-3  0 24px 64px -14px rgba(26,28,24,.22), 0 4px 12px rgba(26,28,24,.07)   overlays only
+```
+
+Radius: **6** control · **9** button, input · **12** surface, card · **16** overlay · **999** pill.
+
+Attention is a **2px top-edge or left-edge accent on a raised surface** plus a soft tint — a
+combination V2 could not make, because V2 had no raised surface to put an edge on.
+
+---
+
+## 11. Buttons
+
+Four weights, and only one primary per screen region.
+
+```
+PRIMARY     accent fill, white text, 10px 18px, 15px/600, radius 9, shadow-1
+            hover: lighter fill + 1px lift    active: no lift
+SECONDARY   paper fill, 1px line-2, ink-2, same metrics
+            hover: line darkens, surface lifts to paper-white
+GHOST       no fill, no border, ink-3, 8px 12px
+            hover: recessed tint
+SEMANTIC    approve (ok) / exception (danger), fill only where the meaning is the action
+```
+
+Sizes: `sm` 8×13 / 13.5px · default 10×18 / 15px · `lg` 13×24 / 16px.
+
+Requirements met by the component, not by each caller: consistent 38px default height, icon slot,
+optional shortcut chip rendered subtly on the right, `:focus-visible` ring in accent-mid at 2px
+with 2px offset, and a disabled state at 40% that keeps its shape.
+
+**The rule that matters:** if a screen region needs two primaries, one of them is not a primary.
+
+---
+
+## 12. Iconography
+
+One family, drawn in-house: **1.5px stroke, 20px grid, round caps and joins, no fill.** Inline SVG,
+`currentColor`, so it inherits state colour for free and costs nothing offline.
+
+Twenty-two icons covering the object types the product actually has — transcript, document,
+questionnaire, note, evidence, contradiction, question, finding, control, walkthrough, test, review
+point, signature, variant, map, step, plus the interface set: search, check, chevron, arrow, undo,
+keyboard, user, clock.
+
+Rules: an icon never appears without a label except where the label is the tooltip; icons mark
+**object type**, never decorate; and there is **no sparkle, no robot, no brain** — the product does
+not announce that it contains AI.
+
+---
+
+## 13. Process Understanding Map — signature #1
+
+The map has to say *this is not one process* before anything is read.
+
+**Lanes, not a flowchart.** Two lanes — goods and service — each a horizontal run of nodes, meeting
+at a convergence bar where all three variants join. The lane label sits above the run. A step that
+is not on every variant of its lane says so in words (*machine sales only*), which is more precise
+than a colour key and needs no legend.
+
+**Nodes are tactile.** Paper surface, radius 12, 1px line, real padding, and they lift on hover.
+Each carries: an ordinal or id, the step name at 14px/600, the actor at 12.5px, and a marker row
+that changes by mode — controls and findings in step 4, trace verdicts in step 5.
+
+**States are edges, not fills.** A 2px bottom edge for *no control identified*; a soft green wash
+and green edge for *corroborated*; a danger edge and tint for *exception*; 45% opacity plus an
+explicit caption for *not on this path*. Never a filled block of colour.
+
+**Clicking a node opens detail beneath the map, not on another screen** — what we understand, the
+evidence, the controls, the findings, the trace observation. The map stays where it is.
+
+Explicitly not: BPMN, swimlane diagramming, a node-graph canvas, drag-and-drop, zoom controls.
+
+---
+
+## 14. Attention Queue — signature #2
+
+The triage screen's whole job is one sentence: **41 statements checked · 37 ready · 4 need you.**
+
+The clean work is stated in one quiet line and then dismissed. The four items get the screen. Each
+is a raised card carrying:
+
+```
+01  ── CONTRADICTION ──────────────────────────────── ordinal + type, with icon
+Credit management                                     context
+Two sources disagree on who can change a limit.       the thing itself, serif, 19px
+Blocks · Process narrative · Control C-02             what it holds up
+                                            Review →  one action
+```
+
+Ordinals matter: they say *four, and they are ordered*. The type strip is coloured by kind and
+carries its icon. `Blocks` is the line that makes an auditor click, and it is why the Dependency
+View (§17) is the same data rendered larger.
+
+Hover lifts the card and reveals the action. `Enter` opens the first. This screen should be the one
+people remember from the demo.
+
+---
+
+## 15. Decision Workspace — signature #3
+
+Every professional judgement in the product uses one grammar: contradictions, unsupported claims,
+controls, findings, walkthrough verdicts, test conclusions.
+
+```
+← Back        Controls · 3 of 14                     small, quiet
+──────────────────────────────────────────────────
+On the process at  Credit check                      where it lives
+Discounts above 12% block the order                  THE THING — 26px, 600
+until the Commercial Director releases it
+
+Why this may be a key control                        supporting blocks
+Owner · Frequency · Nature · Evidence                facts
+▸ Supported by 3 sources                             recessed, on demand
+▸ Show the six criteria
+
+Proposed  Key control                                the system's view, labelled
+──────────────────────────────────────────────────
+[Accept — key control ⏎] [Not key N] [Carry forward C]   DECISION DOCK
+```
+
+The **decision dock** is a sticky bar at the bottom of the workspace with a ground-tinted backdrop
+and a top hairline. It never scrolls away, it always shows the shortcuts, and it is the only place
+on the screen with a primary button. Deciding advances the queue in **160ms** — the card leaves
+upward, the next arrives from below — and the undo bar confirms what happened.
+
+Measure is capped at 62ch. The thing being decided is set in the serif, because it is going into
+the file.
+
+---
+
+## 16. Source Lens — signature #4
+
+The interaction the product is named by, per §5.
+
+Click any sentence in the working paper. The sentence stays exactly where it is and gains an accent
+left edge. A **recessed** surface opens directly beneath it in 140ms, inside the same measure,
+carrying: source-type icon, source name, speaker, locator, and the exact passage in serif with the
+supporting words marked in a soft accent underline.
+
+Two sources → both, stacked, labelled *corroborated by*. A contradiction → both, one with an ok
+edge and one with a danger edge, and the conflicting phrases marked in each. Nothing supports it →
+the recessed surface says so plainly and offers what the sources *do* say.
+
+The eye never leaves the line. No panel, no modal, no navigation. This is the single most important
+interaction to get right, and it is why the recessed surface exists as a token.
+
+---
+
+## 17. Dependency View — signature #5
+
+Blocking is made visual without a graph. When an item blocks other work, it renders as a small
+fan-out beneath the item: a short vertical connector into two or three targets, each with its
+object icon, its name, and its state.
+
+```
+This contradiction is blocking
+  ├── Process understanding · Credit management      needs judgement
+  ├── Control C-02 · Credit limit release            cannot conclude
+  └── Completion · No unresolved contradictions       gate unmet
+```
+
+When it resolves, the connectors fade and each target animates to its cleared state over 200ms,
+staggered by 40ms. That stagger is the only piece of ornamental motion in the product, and it is
+earned: it is the product showing its work.
+
+---
+
+## 18. Screen density — one template does not fit seven steps
+
+| Screen | Density | Measure | Character |
 |---|---|---|---|
-| **Understand** | Coverage: what is still unknown | Which controls were identified | Which transaction, and what we expect |
-| **Review** | Confirm facts, answer follow-ups | Confirm each control | Confirm each step against evidence |
-| **Resolve** | Contradictions, missing facts | Unowned controls, unclear evidence | Missing documents, inconsistencies |
-| **Complete** | Coverage sufficient | Controls concluded | Trace concluded |
+| Work | calm | 780px | one question, enormous next action |
+| Engagement | calm | 1080px | hierarchy, phases as a rail |
+| Process home | spatial | 1240px | map first, next action second |
+| Prepare | grouped | 940px | carried context as recessed cards |
+| Process interview | medium | 940px | attention items as raised cards |
+| Generation | focused | 720px | five plain-language stages, technical detail on demand |
+| Triage | focused | 900px | the Attention Queue |
+| Decision | focused | 760px | Decision Workspace |
+| Working paper | editorial | 68ch | document, rail, Source Lens |
+| Controls | spatial → focused | 1240px → 760px | map, then queue |
+| Line walkthrough | rich | 1240px | variants, then trace with a progress ribbon |
+| Control testing | structured | 1040px | staged, with a real results table |
+| Resolve | grouped | 940px | by impact, with dependencies |
+| RCM | dense | full | a proper data grid |
+| Complete | calm | 860px | readiness, then signature |
+| Questionnaire | generous | 640px | one question, large type, mobile-first |
 
-This is the answer to "do not expose seven permanent enterprise tabs". The auditor learns one
-interaction model and applies it seven times. The steps differ in *content*, never in *rhythm*.
-
----
-
-## 5. Navigating seven steps without a tab bar
-
-A seven-item tab bar is exactly what V2 removed. The replacement is a **process journey**: an
-ordered, stateful line rather than a row of peers.
-
-```
-Vandersteen / FY2026 / Interim / Revenue                        Saved   ⌘K   ?
-─────────────────────────────────────────────────────────────────────────────
-Prepare ✓  Walkthrough ✓  Understanding ✓  Controls 4 left  Line walkthrough
-                                            ▔▔▔▔▔▔▔▔▔▔▔▔▔   · Testing · Complete
-```
-
-Three things make this a journey and not a tab bar, and each is load-bearing:
-
-1. **It is ordered and directional.** Steps read left to right in the order the work happens.
-2. **Each item carries its own state**, not just a label: `✓` done, a count when it owes you
-   something, `—` when it has not started.
-3. **Later steps are visibly not-yet-live** and say why on hover — *"available once the process
-   understanding is approved"*. A tab bar implies you may go anywhere; a journey tells you where
-   you are in a piece of work. Nothing is *blocked* — an auditor can always look ahead — but the
-   product is honest about sequence.
-
-The **process home** (clicking "Revenue") is the map plus the journey: one screen answering
-*where is this process?* Two levels of navigation total — engagement, and process. No third.
+**The RCM gets a real table.** V2's anti-table rule was right for narrative and wrong for a matrix:
+sticky header, grouped risk rows, 13.5px tabular figures, subtle row separation, expandable detail,
+search and filter chips, full keyboard navigation. Tabular information gets a table.
 
 ---
 
-## 6. The Process Understanding Map
+## 19. Motion
 
-**This is V3's centre of gravity**, and the reason the product stops reading as a document
-generator.
-
-One diagram of the process as understood, built in step 3, annotated in step 4, and **tested
-against reality in step 5**. The same object, gaining meaning at each step:
+Functional only. Nothing decorative, nothing slow.
 
 ```
-        step 3                    step 4                      step 5
-   ┌─────────────┐         ┌─────────────┐           ┌─────────────┐
-   │  Quotation  │         │  Quotation  │           │  Quotation  │
-   │  Sales eng. │   ──▶   │  Sales eng. │    ──▶    │  Sales eng. │
-   │             │         │  ◆ CTL-004  │           │  ◆ ✓ QUO-0412│
-   └─────────────┘         └─────────────┘           └─────────────┘
-   what happens            what controls it          did it happen
-                           and what is missing       on this transaction
+--t-fast    120ms   hover, focus, press
+--t-base    160ms   queue advance, disclosure, node state
+--t-slow    220ms   overlays, lens, dependency clearing
+--ease      cubic-bezier(.2, .8, .3, 1)
 ```
 
-The Revenue map, eight steps: **Quotation → Sales order → Credit check → Despatch → Installation
-& acceptance → Invoicing → Revenue posting → Cash receipt.**
-
-Each node carries its actor and system, the controls attached to it, and any finding on it. It is
-drawn in the same restrained language as everything else — hairlines, one accent, no gradients —
-and it must stay legible when a partner glances at it from two metres away.
-
-**Why this earns its place:** it is the only object that makes the product's whole claim visible
-at once. The narrative says the process in words; the map says it in a form you can *test*. And
-step 5 is literally running a real transaction through it.
+Nine moments have motion and nothing else does: page enter (6px rise, 120ms), Source Lens open,
+queue advance, node state change, palette open, undo bar, dependency clearing, sign-off
+progression, and the generation stages. All of it is wrapped in `prefers-reduced-motion`.
 
 ---
 
-## 7. Line walkthrough — the new product concept
+## 20. Component system
 
-> Testing the process model against a real transaction.
+Twenty-six patterns in CSS, with matching helpers in `ui.js` — enough to be coherent, not so much
+that it becomes a framework:
 
-The auditor picks one transaction and traces it end to end through the documented process. For
-each step the product shows six things:
+`AppHeader` · `Breadcrumb` · `ProcessJourney` · `NextAction` · `Card` · `CardGrid` ·
+`AttentionQueue` · `AttentionItem` · `DecisionWorkspace` · `DecisionDock` · `SourceLens` ·
+`EvidenceQuote` · `AuditStatus` · `StatBar` · `ProcessMap` · `ProcessNode` · `MapDetail` ·
+`DependencyView` · `WorkingPaper` · `ReadingRail` · `TraceRibbon` · `TestStage` · `AuditGrid` ·
+`ReviewPoint` · `CompletionGate` · `QuestionnaireCard`.
 
-```
-  Step 5 of 7 — Installation and acceptance
-
-  EXPECTED STEP       The customer signs an acceptance protocol on installation
-  EXPECTED CONTROL    Signed acceptance protocol retained (CTL-REV-013)
-  EXPECTED EVIDENCE   Acceptance protocol, signed and dated
-
-  ACTUAL EVIDENCE     Acceptance protocol ACC-24188, signed 22 September 2026
-  OBSERVATION         The invoice is dated 15 September — seven days before
-                      the customer accepted the installation
-
-  ▍ EXCEPTION         Revenue was recognised before the performance
-                      obligation was satisfied
-```
-
-**The interaction is the focus queue again** — one step at a time, keyboard first, `Enter` to
-corroborate, `X` to raise an exception. The auditor has already learned this pattern in steps 2
-and 4. The map sits above the card and fills in as the trace advances, so the auditor always sees
-how far through the process they are.
-
-**It closes with a result, not a document:**
-
-```
-  7 steps expected · 6 corroborated · 1 exception
-```
-
-**What the product can do here** (and what it must not): suggest which evidence should exist for
-each step, flag a document that was never supplied, compare dates and amounts across steps to
-find inconsistencies, and draft the resulting documentation. It must not conclude that something
-is an exception — it proposes, the auditor concludes, exactly as everywhere else.
-
-**Why this matters more than it looks.** The exception in the mock engagement is not decorative:
-invoicing before acceptance contradicts the recognition policy the narrative describes. The line
-walkthrough finds the process model *wrong*, which is precisely what a walkthrough is for and
-precisely what an AI-drafted narrative would otherwise have left unchallenged.
+Inline styles are removed wherever a pattern repeats. The remaining ones are one-offs that genuinely
+occur once.
 
 ---
 
-## 8. Control testing — future state, clearly separated
+## The tests this direction has to pass
 
-**Control identification and control testing are different objects and must never merge.** A
-control is a thing that exists in the process. A test is a procedure performed on it, with a
-population, a selection, evidence and a conclusion. One control may have no test, one test, or a
-test in a later period.
-
-The concept flow, shown for one control only:
-
-```
-CONTROL → TEST SETUP → POPULATION & SELECTION → EVIDENCE → RESULTS → EXCEPTIONS → CONCLUSION
-```
-
-V3 shows this as a **labelled future-state concept**, the way the live cockpit is labelled — one
-worked example, honest about not being built. The product may eventually propose the procedure,
-the expected evidence and the selection approach; the auditor approves the procedure and
-concludes the result. Sample sizes always show the firm parameter that produced them.
-
-Not built in V3: real populations, real sampling, evidence upload, test workpapers.
-
----
-
-## 9. Process completion gates
-
-Revenue is complete when the process-level interim work is complete — **not** when risk analysis
-is done.
-
-| Gate | Cleared by |
-|---|---|
-| Process understanding reviewed | Step 3 |
-| Process documentation approved | Step 3 |
-| Controls concluded | Step 4 |
-| Findings concluded | Step 4 |
-| Line walkthrough completed | Step 5 |
-| Required control testing completed | Step 6 |
-| No unsupported statements | Any step |
-| No unresolved contradictions | Any step |
-| Open matters resolved or carried forward | Any step |
-| Prepared and reviewed | Step 7 |
-
-Each gate links to the work that clears it. Completion hands three things forward to risk
-analysis, stated explicitly on the screen: the process understanding, the risk-and-control
-matrix, and the findings. That hand-forward is what makes the product's place in the lifecycle
-visible instead of implied.
-
----
-
-## 10. What changes, concretely
-
-**Kept without change:** the interaction philosophy, the design system, triage → focus → read,
-inline evidence, plain language with methodology behind a disclosure, ⌘K, undo-not-confirmation,
-the keyboard model, block-level provenance, the needs-support gate, contradictions blocking
-downstream objects.
-
-**Changed:**
-
-| V2 | V3 |
-|---|---|
-| Four-stage spine as the workflow | Seven-step process journey; the four beats become the rhythm inside each step |
-| Coverage as a top-level stage | Inside step 2, where the walkthrough happens |
-| Documentation as the product's centre | One output among five; the map is the centre |
-| Risks as a decision queue | An output carried forward to risk analysis |
-| Gaps listed under controls | **Findings** as a first-class object with its own conclusions |
-| Engagement barely present | An engagement layer, with Revenue as one process of six |
-
-**New:** the process home, the Process Understanding Map, Prepare as a real step, the line
-walkthrough, and the control-testing concept.
-
----
-
-## 11. What V3 must not become
-
-- A seven-tab enterprise application. The journey is ordered and stateful, or it has failed.
-- A project-management module. Prepare is one screen, not a planning suite.
-- A risk-analysis tool. That is the next product, and pretending otherwise misleads a buyer.
-- A diagram editor. The map is generated from the understanding and annotated by the workflow;
-  it is not a canvas for drawing boxes.
-- Heavier. V3 adds three screens and must not add a single permanent pixel of chrome.
-
-## Success test
-
-An audit manager clicks through Revenue and says:
-
-> *"This isn't a tool that writes my documentation. This is where I'd do the interim work."*
-
-And a senior, on the line walkthrough:
-
-> *"It caught that the invoice went out before the customer signed. I would have found that in
-> February, if at all."*
+1. **Could this screenshot come from generic enterprise SaaS?** The lane map, the Attention Queue,
+   the Source Lens and the decision dock all have to answer no.
+2. **Replace the audit words with legal words — does it still make sense?** Process variants, line
+   walkthrough, corroborated-vs-exception and the completion gates should not survive the
+   substitution.
+3. **Can an auditor find the next action in two seconds?** One primary button per region, and a
+   Next Action block on every overview.
+4. **Four hours without fatigue?** Warm ground, 13px metadata floor, no pure-white full screens, no
+   animation that repeats.
+5. **Partner sees control. Auditor feels speed.** Provenance and gates are always one click away;
+   every queue is fully keyboard-operable.

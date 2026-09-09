@@ -4,7 +4,7 @@
    risks, controls, coverage areas, sources, open items, other engagements,
    and actions. This is how the target user already navigates. */
 
-import { esc, cx } from "./ui.js";
+import { esc, cx, icon } from "./ui.js";
 import { narrative, risks, controls, subProcesses } from "./data-model.js";
 import { processSteps, variants } from "./data-process.js";
 import { sources, client } from "./data-sources.js";
@@ -14,19 +14,21 @@ const S = st.S;
 
 function index() {
   const items = [];
-  const add = (group, name, hint, run, keep) => items.push({ group, name, hint, run, keep });
+  const add = (group, name, hint, run, ic) => items.push({ group, name, hint, run, ic });
 
+  const STEP_IC = { prepare: "document", interview: "questionnaire", understanding: "document",
+                    controls: "control", trace: "walkthrough", testing: "test", complete: "signature" };
   st.journeyStates().forEach((s) =>
-    add("Steps", `${s.n}. ${s.name}`, s.c, () => { location.hash = s.href; }));
+    add("Steps", `${s.n}. ${s.name}`, s.c, () => { location.hash = s.href; }, STEP_IC[s.id] || "step"));
 
-  add("Go to", "Revenue process home", "the map and the journey", () => { location.hash = "#/revenue"; });
-  add("Go to", "Engagement", "client, year, processes", () => { location.hash = "#/engagement"; });
-  add("Go to", "Open items", `${st.openItemSummary().open} open`, () => { location.hash = "#/resolve"; });
+  add("Go to", "Revenue process home", "the map and the journey", () => { location.hash = "#/revenue"; }, "map");
+  add("Go to", "Engagement", "client, year, processes", () => { location.hash = "#/engagement"; }, "process");
+  add("Go to", "Open matters", `${st.openItemSummary().open} open`, () => { location.hash = "#/resolve"; }, "question");
   add("Go to", "Read the working paper", "the full narrative",
-    () => { S.reviewMode = "read"; location.hash = "#/understanding"; });
-  add("Go to", "Risk and control matrix", "assembled view", () => { location.hash = "#/matrix"; });
-  add("Go to", "Client questionnaire", "client-facing surface", () => { location.hash = "#/questionnaire"; });
-  add("Go to", "Live walkthrough cockpit", "future concept", () => { location.hash = "#/cockpit"; });
+    () => { S.reviewMode = "read"; location.hash = "#/understanding"; }, "document");
+  add("Go to", "Risk and control matrix", "assembled view", () => { location.hash = "#/matrix"; }, "control");
+  add("Go to", "Client questionnaire", "client-facing surface", () => { location.hash = "#/questionnaire"; }, "questionnaire");
+  add("Go to", "Live interview cockpit", "future concept", () => { location.hash = "#/cockpit"; }, "people");
 
   if (st.S.generated) {
     const n = st.narrativeSummary();
@@ -130,6 +132,13 @@ export function matches() {
   return scored.slice(0, q ? 24 : 12).map((x) => x.it);
 }
 
+const GROUP_IC = {
+  Steps: "step", "Go to": "arrow", Do: "check", "Process steps": "map", Sections: "document",
+  Controls: "control", Findings: "finding", "Risk signals (carried forward)": "finding",
+  Coverage: "question", "Open items": "question", "Process variants": "variant",
+  Sources: "transcript", Engagements: "process",
+};
+
 export function palette() {
   if (!S.palette) return "";
   const list = matches();
@@ -139,19 +148,22 @@ export function palette() {
     group = it.group;
     return `${head}<button class="${cx("pal__i", i === S.palIx && "is-on")}"
       data-act="pal-run" data-ix="${i}">
+      ${icon(it.ic || GROUP_IC[it.group] || "chevron", 16)}
       <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.name)}</span>
       ${it.hint ? `<span class="s">${esc(it.hint)}</span>` : ""}
     </button>`;
   }).join("");
 
-  return `<div class="pal-scrim" data-act="close-palette"></div>
+  return `<div class="scrim" data-act="close-palette"></div>
   <div class="pal">
-    <input class="pal__in" id="pal-in" autocomplete="off" spellcheck="false"
-      placeholder="Search sections, risks, controls, areas, sources — or type a command"
-      value="${esc(S.palQuery)}">
+    <div class="pal__hd">${icon("search", 18)}
+      <input class="pal__in" id="pal-in" autocomplete="off" spellcheck="false"
+        placeholder="Search anything, or type a command"
+        value="${esc(S.palQuery)}"></div>
     <div class="pal__list">${list.length ? rows : `<div class="pal__none">Nothing matches that.</div>`}</div>
-    <div class="pal__foot">
-      <span>↑↓ move</span><span>Enter opens</span><span>esc close</span>
+    <div class="pal__ft">
+      <span><span class="k">↑↓</span> move</span><span><span class="k">⏎</span> open</span>
+      <span><span class="k">esc</span> close</span>
       <span class="sp" style="flex:1"></span><span>${list.length} results</span>
     </div>
   </div>`;

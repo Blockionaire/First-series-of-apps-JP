@@ -8,9 +8,13 @@
    default answer is plain English; the 45 items, fact keys, triggers and ISA
    references live one disclosure deeper. */
 
-import { esc, cx, act as btn, row, dot, chip, more, bar, callout, link, empty, evidence } from "../ui.js";
+import { esc, cx, act as btn, row, rows, dot, chip, tag, icon, more, bar, callout,
+         link, empty, evidence, dependencies } from "../ui.js";
 import { subProcesses } from "../data-model.js";
 import { sources, ref, refs, client } from "../data-sources.js";
+
+const SRC_IC = { transcript: "transcript", client_answer: "questionnaire", prior_year: "document",
+                 access_log: "system", assurance_report: "document", auditor_note: "note" };
 import * as st from "../state.js";
 import { screen } from "./shell.js";
 
@@ -18,39 +22,44 @@ const S = st.S;
 
 /* --- one gap, in the auditor's language, with its actions inline ---------- */
 
-function gapRow(g) {
+function gapRow(g, i) {
   const editing = S.editing === g.item.id;
   const asked = S.coverage[g.item.id]?.asked;
   const isC = g.kind === "contradiction";
 
-  return `<div class="${cx("rw", isC ? "rw--conflict" : "rw--attn")}" style="display:block">
-    <div class="row row--top" style="gap:20px">
-      <span class="rw__lead" style="padding-top:5px">${dot(isC ? "alert" : "warn")}</span>
-      <span class="rw__main">
-        <span class="rw__t">${esc(g.plain)}</span>
-        <span class="rw__d">${esc(g.sub.name)}${g.mandatory ? " · required area" : ""}${
-          asked ? " · asked, awaiting a reply" : ""}</span>
-      </span>
-      <span class="rw__side">${isC ? `<span class="state state--alert">two answers</span>`
-        : `<span class="t-meta">${g.unknown.length} to establish</span>`}</span>
+  return `<div class="${cx("aqi", isC ? "aqi--alert" : "aqi--warn")}">
+    <div class="aqi__top">
+      <span class="aqi__n">${String(i + 1).padStart(2, "0")}</span>
+      <span class="aqi__k">${icon(isC ? "contradiction" : "question", 13)}${
+        isC ? "Contradiction" : g.mandatory ? "Required area" : "Not established"}</span>
+      <span class="aqi__ctx">${esc(g.sub.name)}</span>
     </div>
+    <div class="aqi__t">${esc(g.plain)}</div>
+    <div class="aqi__why">${isC
+      ? "Two sources gave different answers. The documentation cannot say both."
+      : `${g.unknown.length === 1 ? "One fact is" : `${g.unknown.length} facts are`} not established${
+          asked ? ", and the question is with the client" : ""}.${
+          g.mandatory ? " The methodology marks this area required." : ""}`}</div>
 
     ${editing ? `
-      <div style="margin:14px 0 4px 37px;max-width:600px">
-        <textarea class="field" id="ans" rows="3" style="font:15px/1.6 var(--sans)"
+      <div class="sec--tight">
+        <textarea class="field" id="ans" rows="3"
           placeholder="What did you establish, and how? e.g. Confirmed by telephone with I. Molenaar on 19 September."></textarea>
-        <div class="acts" style="margin-top:10px">
-          ${btn("Record", "save-answer", { variant: "go", size: "sm", data: { item: g.item.id, fact: g.unknown[0]?.key || "note" } })}
+        <div class="acts sec__note">
+          ${btn("Record", "save-answer", { variant: "primary", size: "sm",
+            data: { item: g.item.id, fact: g.unknown[0]?.key || "note" } })}
           ${btn("Not applicable instead", "save-na", { size: "sm", data: { item: g.item.id } })}
-          ${btn("Cancel", "cancel-edit", { variant: "plain", size: "sm" })}
+          ${btn("Cancel", "cancel-edit", { variant: "ghost", size: "sm" })}
         </div>
       </div>`
-    : `<div class="acts" style="margin:11px 0 2px 37px">
+    : `<div class="aqi__ft">
         ${isC
-          ? btn("Compare the two answers", "resolve-conflict", { variant: "go", size: "sm", data: { claim: "N6.2" } })
-          : asked ? "" : btn("Ask the client", "ask-client", { size: "sm", data: { item: g.item.id } })}
+          ? btn("Compare the two answers", "resolve-conflict",
+              { variant: "primary", size: "sm", data: { claim: "N6.2" }, ic: "contradiction" })
+          : asked ? "" : btn("Ask the client", "ask-client", { size: "sm", data: { item: g.item.id }, ic: "questionnaire" })}
         ${btn("Record what I know", "edit-item", { size: "sm", data: { item: g.item.id } })}
-        ${isC ? "" : btn("Not applicable", "edit-item", { variant: "plain", size: "sm", data: { item: g.item.id } })}
+        ${isC ? "" : btn("Not applicable", "edit-item", { variant: "ghost", size: "sm", data: { item: g.item.id } })}
+        ${asked ? `<span class="tag tag--quiet">${icon("clock", 12)}with the client</span>` : ""}
       </div>`}
   </div>`;
 }
@@ -59,39 +68,39 @@ function gapRow(g) {
 
 function methodology() {
   return `<div class="meth">
-    <div class="t-meta" style="margin-bottom:14px">
+    <div class="t-meta" style="margin-bottom:16px">
       Methodology pack <span class="mono">revenue v0.1.0</span> — 12 sub-processes,
       45 coverage items, 10 marked required by ISA 240. Coverage measures completeness of the
       process understanding, not of the audit.
     </div>
     ${subProcesses.map((sp) => {
       const c = st.coverageCounts(sp.items);
-      return `<div style="padding:14px 0;border-top:1px solid var(--line)">
+      return `<div class="meth__row">
         <div class="row" style="margin-bottom:8px">
-          <span class="mono" style="color:var(--ink-4);width:34px">${esc(sp.id)}</span>
+          <span class="mono ink4" style="width:36px">${esc(sp.id)}</span>
           <span class="b">${esc(sp.name)}</span>
           <span class="sp"></span>
-          <span style="width:110px">${bar([
+          <span style="width:120px">${bar([
             { k: "ok", n: c.covered }, { k: "part", n: c.partial }, { k: "open", n: c.open + c.na }])}</span>
         </div>
         ${sp.items.map((item) => {
           const stt = st.covState(item);
           const facts = st.covFacts(item);
-          return `<div style="padding:7px 0 7px 34px">
-            <div class="row" style="align-items:baseline;gap:10px">
-              <span class="mono" style="color:var(--ink-4);width:42px">${esc(item.id)}</span>
-              <span style="flex:1;color:var(--ink-2)">${esc(item.q)}</span>
-              ${item.mandatory ? `<span class="chip">required</span>` : ""}
-              <span class="t-meta" style="width:104px;text-align:right">${
+          return `<div style="padding:8px 0 8px 36px">
+            <div class="row row--base" style="gap:10px">
+              <span class="mono ink4" style="width:44px">${esc(item.id)}</span>
+              <span style="flex:1" class="ink2">${esc(item.q)}</span>
+              ${item.mandatory ? tag("required", "quiet") : ""}
+              <span class="t-meta" style="width:108px;text-align:right">${
                 stt === "covered" ? "established" : stt === "partial" ? "partial"
                 : stt === "na" ? "not applicable" : "open"}</span>
             </div>
-            ${facts.length ? `<div class="chipline" style="margin:6px 0 0 52px">
+            ${facts.length ? `<div class="chipline" style="margin:8px 0 0 54px">
               ${facts.map((f) => chip(f.key, f.status === "known" ? "ok"
                 : f.status === "contradictory" ? "alert"
                 : f.status === "assumed" ? "warn" : "open")).join("")}
             </div>` : ""}
-            ${st.covReason(item) ? `<div class="t-meta" style="margin:6px 0 0 52px;max-width:64ch">
+            ${st.covReason(item) ? `<div class="t-meta" style="margin:7px 0 0 54px;max-width:64ch">
               Reason on file: ${esc(st.covReason(item))}</div>` : ""}
           </div>`;
         }).join("")}
@@ -121,109 +130,106 @@ export function interview() {
     <div class="head">
       <div class="head__row">
         <div>
-          <h1 class="t-title">Process interview</h1>
-          <p class="t-lede" style="margin-top:10px">
+          <h1 class="t-display">Process interview</h1>
+          <p class="t-lede">
             Everything that tells us how Revenue works arrives here — the interview itself, the
             client questionnaire, the documents and the auditor's own notes.
-            ${cov.covered} of ${cov.applicable} areas are established from
-            ${Object.keys(sources).length} sources.
-            ${gaps.length ? `${gaps.length} still need clarification.` : "Nothing outstanding."}
           </p>
         </div>
-        <div style="text-align:right;padding-top:4px">
-          <div class="t-num">${cov.pct}%</div>
-          <div class="t-meta">understood</div>
+        <div class="tally">
+          <div><span class="tally__n">${cov.pct}<span class="ink4">%</span></span>
+            <span class="tally__l">understood</span></div>
+          <div><span class="tally__n" style="color:${gaps.length ? "var(--warn)" : "var(--ok)"}">${gaps.length}</span>
+            <span class="tally__l">need${gaps.length === 1 ? "s" : ""} clarification</span></div>
         </div>
       </div>
-      <div style="margin-top:22px;max-width:340px">${bar([
-        { k: "ok", n: cov.covered }, { k: "part", n: cov.partial }, { k: "open", n: cov.open }])}</div>
+      <div class="sec--tight" style="max-width:420px">${bar([
+        { k: "ok", n: cov.covered }, { k: "part", n: cov.partial }, { k: "open", n: cov.open }])}
+        <p class="t-meta sec__note">${cov.covered} of ${cov.applicable} areas established from
+          ${Object.keys(sources).length} sources · ${cov.partial} partial · ${cov.open} open</p>
+      </div>
     </div>
 
     ${gaps.length ? `
-      <section style="margin-top:44px">
-        <h2 class="t-h" style="margin-bottom:4px">Needs clarification</h2>
-        <p class="t-meta" style="margin-bottom:16px">Resolving any of these updates coverage immediately.</p>
-        <div class="rows">${gaps.map(gapRow).join("")}</div>
+      <section class="sec--loose">
+        <div class="sec__h"><h2 class="t-h">What we still need to understand</h2></div>
+        <p class="t-sub sec__h measure">Resolving any of these updates coverage immediately.</p>
+        <div class="aq">${gaps.map(gapRow).join("")}</div>
       </section>` : `
-      <section style="margin-top:44px">
-        <h2 class="t-h">Nothing outstanding</h2>
-        <p class="t-sub" style="margin-top:6px">Every applicable area has been established.</p>
+      <section class="sec--loose">
+        ${callout(`<b>Nothing outstanding.</b> Every applicable area has been established.`, "ok")}
       </section>`}
 
     ${sf.length ? `
-      <section style="margin-top:44px">
-        <h2 class="t-h" style="margin-bottom:4px">Established since the draft</h2>
-        <p class="t-meta" style="margin-bottom:16px">
+      <section class="sec--loose">
+        <div class="sec__h"><h2 class="t-h">Established since the draft</h2></div>
+        <p class="t-sub sec__h measure">
           Facts settled after the process understanding was drafted, each with the source it came
           from. Nothing here is an internal override — it is evidence, and anything that later
           rests on it cites this.</p>
-        <div class="rows">
-          ${sf.map((x) => `<div class="rw" style="display:block">
-            <div class="row row--top" style="gap:20px">
-              <span class="rw__lead" style="padding-top:5px">${dot("ok")}</span>
-              <span class="rw__main">
-                <span class="rw__t">${esc(x.value)}</span>
-                <span class="rw__d">${esc(x.item ? x.item.plain || x.item.q : x.itemId)}</span>
-                <span class="rw__d" style="margin-top:6px">
-                  <span class="mono">${esc(x.itemId)}.${esc(x.factKey)}</span> · ${esc(x.resolution)}</span>
+        <div class="gap-s">
+          ${sf.map((x) => `<div class="card card--ok">
+            <div class="card__hd">
+              <span class="rw__lead">${icon("check", 17)}</span>
+              <span class="sp">
+                <span class="card__t">${esc(x.value)}</span>
+                <span class="card__d">${esc(x.item ? x.item.plain || x.item.q : x.itemId)}</span>
               </span>
-              <span class="rw__side"><span class="t-meta">${esc(
-                x.via === "client_questionnaire" ? "client questionnaire" : "auditor")}</span></span>
+              ${tag(x.via === "client_questionnaire" ? "client questionnaire" : "auditor", "quiet",
+                x.via === "client_questionnaire" ? "questionnaire" : "note")}
             </div>
-            ${x.refs && x.refs.length ? `<div style="margin:10px 0 2px 37px">
-              ${evidence(refs(x.refs))}</div>` : ""}
+            ${x.refs && x.refs.length ? evidence(refs(x.refs)) : ""}
           </div>`).join("")}
         </div>
       </section>` : ""}
 
     ${settled.length ? `
-      <section style="margin-top:48px">
-        <h2 class="t-h" style="margin-bottom:10px">Understood</h2>
+      <section class="sec--loose">
+        <div class="sec__h"><h2 class="t-eyebrow">Understood</h2></div>
         <p class="inline-list">${settled.map((s) => `<b>${esc(s.name)}</b>`).join(" · ")}</p>
       </section>` : ""}
 
     ${na.length ? `
-      <section style="margin-top:44px">
-        <h2 class="t-h" style="margin-bottom:10px">Not applicable</h2>
-        ${na.map((i) => `<p class="t-sub" style="max-width:66ch">
-          <span class="b" style="color:var(--ink)">Returns</span> — ${esc(st.covReason(i))}</p>`).join("")}
+      <section class="sec--loose">
+        <div class="sec__h"><h2 class="t-eyebrow">Not applicable</h2></div>
+        ${na.map((i) => `<p class="t-sub measure"><span class="b ink">Returns</span> — ${esc(st.covReason(i))}</p>`).join("")}
       </section>` : ""}
 
-    <section style="margin-top:44px">
+    <section class="sec--loose">
       ${more("meth", "Show methodology", methodology(), S.disclosed.meth)}
     </section>
 
-    <section style="margin-top:56px;border-top:1px solid var(--line);padding-top:32px">
-      <h2 class="t-h" style="margin-bottom:4px">Input to this step</h2>
-      <p class="t-meta" style="margin-bottom:14px">
+    <hr class="rule">
+    <section class="sec">
+      <div class="sec__h"><h2 class="t-h">Input to this step</h2></div>
+      <p class="t-sub sec__h measure">
         Step two is the whole input flow, not one meeting. Each route below feeds the same coverage
         model, and each statement keeps the source it came from.</p>
-      <div class="rows">
-        ${Object.values(sources).map((s) => row({
-          lead: dot("ok"),
-          title: esc(s.name),
-          detail: esc(s.detail),
-          side: `<span class="t-meta">${esc(s.ingest.split(" · ").slice(1).join(" · ") || "indexed")}</span>`,
-        })).join("")}
-      </div>
-      <div class="acts" style="margin-top:18px">
-        ${btn("Import an interview transcript", "mock")}
-        ${btn("Upload a document", "mock")}
-        ${btn("Open the client questionnaire", "nav", { data: { href: "#/questionnaire" } })}
-        ${btn("Live interview cockpit — concept", "nav", { variant: "plain", data: { href: "#/cockpit" } })}
+      ${rows(Object.values(sources).map((s) => row({
+        lead: icon(SRC_IC[s.kind] || "document", 17),
+        title: esc(s.name),
+        detail: esc(s.detail),
+        side: `<span class="t-meta">${esc(s.ingest.split(" · ").slice(1).join(" · ") || "indexed")}</span>`,
+      })).join(""))}
+      <div class="acts sec__h" style="margin-top:18px">
+        ${btn("Import a transcript", "mock", { ic: "transcript" })}
+        ${btn("Upload a document", "mock", { ic: "document" })}
+        ${btn("Open the client questionnaire", "nav", { ic: "questionnaire", data: { href: "#/questionnaire" } })}
+        ${btn("Live interview — concept", "nav", { variant: "ghost", ic: "people", data: { href: "#/cockpit" } })}
       </div>
     </section>
 
     ${!st.S.generated ? `
-      <section style="margin-top:56px;border-top:1px solid var(--line);padding-top:32px">
+      <hr class="rule">
+      <section class="sec">
         <h2 class="t-h">Ready to draft</h2>
-        <p class="t-sub" style="margin:6px 0 18px;max-width:62ch">
+        <p class="t-sub sec__h measure">
           ${cov.mandatoryOpen.length
             ? `${cov.mandatoryOpen.length} required areas are still open. The draft will say so explicitly rather than infer an answer.`
             : "Coverage is sufficient and the required areas are addressed."}
         </p>
-        ${btn("Draft the current understanding", "nav", { variant: "go", size: "lg", data: { href: "#/understanding" } })}
-        <p class="t-meta" style="margin-top:12px;max-width:62ch">
+        ${btn("Draft the process understanding", "nav", { variant: "primary", size: "lg", ic: "arrow", data: { href: "#/understanding" } })}
+        <p class="t-meta sec__note measure">
           Drafting does not complete this step. The interview stays open — a questionnaire answer or a
           second conversation still lands here, and the draft is redone from what is then known.</p>
       </section>` : ""}

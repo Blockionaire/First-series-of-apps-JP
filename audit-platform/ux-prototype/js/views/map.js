@@ -10,7 +10,7 @@
    `variants` and `next` fields on the steps, so the picture and the model
    cannot drift apart. */
 
-import { esc, cx, act as btn, chip, evidence } from "../ui.js";
+import { esc, cx, act as btn, chip, tag, icon, evidence } from "../ui.js";
 import { processSteps, variants, stepsForVariant, txnById } from "../data-process.js";
 import { controls } from "../data-model.js";
 import { ref } from "../data-sources.js";
@@ -75,14 +75,16 @@ export function processMap(mode = "annotated", opts = {}) {
         ? `<span class="mapnode__na">${esc(offVariant ? "not in this variant"
             : skip ? (skip.kind === "not_applicable" ? "not in this variant" : "not yet occurred")
             : "not traced")}</span>`
-        : verdict === "corroborated" ? `<span class="mapnode__v mapnode__v--ok">✓ corroborated</span>`
-        : verdict === "exception" ? `<span class="mapnode__v mapnode__v--ex">! exception</span>`
-        : `<span class="mapnode__v">awaiting</span>`;
+        : verdict === "corroborated" ? `<span class="mapnode__v mapnode__v--ok">${icon("check", 13)}corroborated</span>`
+        : verdict === "exception" ? `<span class="mapnode__v mapnode__v--ex">${icon("contradiction", 13)}exception</span>`
+        : `<span class="mapnode__v">${icon("clock", 13)}awaiting</span>`;
     } else if (mode === "annotated") {
       markers = `<span class="mapnode__m">
-        ${ctl ? `<span class="mapnode__ctl" title="${ctl} control${ctl === 1 ? "" : "s"}">${"◆".repeat(Math.min(ctl, 3))}</span>` : `<span class="mapnode__none">no control</span>`}
-        ${fnd.length ? `<span class="mapnode__f">● ${fnd.length}</span>` : ""}
-        ${p.contested ? `<span class="mapnode__f mapnode__f--alert">● contested</span>` : ""}
+        ${ctl ? `<span class="mapnode__ctl" title="${ctl} control${ctl === 1 ? "" : "s"}">${
+            icon("control", 13)}${ctl}</span>`
+          : `<span class="mapnode__none">${icon("control", 13)}none</span>`}
+        ${fnd.length ? `<span class="mapnode__f">${icon("finding", 13)}${fnd.length}</span>` : ""}
+        ${p.contested ? `<span class="mapnode__f mapnode__f--alert">${icon("contradiction", 13)}contested</span>` : ""}
       </span>`;
     }
 
@@ -118,12 +120,22 @@ export function processMap(mode = "annotated", opts = {}) {
   return `<div class="mapg">
     <div class="mapg__lanes">
       ${groups.map((g) => `<div class="maplane">
-        <div class="maplane__l">${esc(g.label)}</div>
+        <div class="maplane__l">${icon("variant", 13)}${esc(g.label)}</div>
         ${strip(g.steps, g.variants, true)}
       </div>`).join("")}
     </div>
-    ${merge.length ? `<div class="maplane maplane--merge">
-      <div class="maplane__l">All variants converge here</div>
+    ${merge.length ? `
+    <div class="converge">
+      <span class="converge__r"></span>
+      <svg class="converge__j" width="96" height="30" viewBox="0 0 96 30" fill="none" aria-hidden="true">
+        <path d="M6 0 V8 Q6 16 14 16 H82 Q90 16 90 8 V0" stroke="currentColor" stroke-width="1.25"/>
+        <path d="M48 16 V26 M44 22l4 4 4-4" stroke="currentColor" stroke-width="1.25"
+          stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="converge__l">All three variants converge</span>
+      <span class="converge__r"></span>
+    </div>
+    <div class="maplane maplane--merge">
       ${strip(merge, ALL, true)}
     </div>` : ""}
   </div>`;
@@ -134,12 +146,12 @@ export const mapLegend = (mode = "annotated") => mode === "plain" ? "" : mode ==
       <span><i class="dot dot--ok"></i>corroborated</span>
       <span><i class="dot dot--alert"></i>exception</span>
       <span><i class="dot dot--open"></i>awaiting</span>
-      <span style="opacity:.6">faded — not on this transaction's path</span>
+      <span class="ink5">faded — not on this transaction's path</span>
     </div>`
   : `<div class="maplegend">
-      <span><b>◆</b> control identified</span>
-      <span><i class="dot dot--warn"></i>finding on this step</span>
-      <span><i class="dot dot--open"></i>no control identified</span>
+      <span>${icon("control", 13)}control identified</span>
+      <span>${icon("finding", 13)}finding on this step</span>
+      <span><i class="dot dot--warn"></i>no control identified</span>
     </div>`;
 
 /** The panel that opens under the map when a step is clicked. */
@@ -155,56 +167,52 @@ export function mapDetail(stepId, opts = {}) {
   const onVariants = p.variants.map((v) => variants.find((x) => x.id === v)?.name || v);
 
   return `<div class="mapdetail">
-    <div class="row" style="align-items:baseline;gap:12px;margin-bottom:8px">
+    <div class="row row--base sec__h">
       <span class="t-h">${esc(p.name)}</span>
       <span class="t-meta">${esc(p.actor)} · ${esc(p.system)}</span>
       <span class="sp"></span>
-      <button class="b-act b-act--plain b-act--sm" data-act="map-node" data-step="">Close</button>
+      ${btn("Close", "map-node", { variant: "ghost", size: "sm", data: { step: "" } })}
     </div>
-    <p class="t-sub" style="max-width:70ch;line-height:1.6">${esc(p.what)}</p>
-    <p class="t-meta" style="margin-top:8px">On ${esc(onVariants.join(", "))}${
+    <p class="t-body measure">${esc(p.what)}</p>
+    <p class="t-meta sec__note">On ${esc(onVariants.join(", "))}${
       p.skipNote ? ` · ${esc(p.skipNote)}` : ""}</p>
 
-    <div class="grid2" style="margin-top:20px">
+    <div class="grid2 sec--tight">
       <div>
-        <div class="t-eyebrow" style="margin-bottom:8px">Controls</div>
+        <div class="t-eyebrow rail__h">Controls</div>
         ${ctl.length ? ctl.map((c) => {
           const d = st.controlDecision(c);
-          return `<div class="rw" style="padding:10px 0">
-            <span class="rw__main">
-              <span class="rw__t" style="font-size:14px">${esc(c.title)}</span>
-              <span class="rw__d">${esc(c.owner || "owner not established")} · ${
+          return `<div class="dep__i">${icon("control", 15)}
+            <span>${esc(c.title)}<span class="t-meta">${esc(c.owner || "owner not established")}</span></span>
+            <span class="t-meta">${
                 d === "key" ? "key control" : d === "not_key" ? "not key"
-                : d === "carried_forward" ? "carried forward undecided"
-                : d === "undecided" ? "parked, not concluded" : "not concluded"}</span>
-            </span></div>`;
-        }).join("") : `<p class="t-sub" style="color:var(--warn)">No control identified on this step.</p>`}
+                : d === "carried_forward" ? "carried forward" : d === "undecided" ? "parked" : "not concluded"}</span>
+          </div>`;
+        }).join("") : `<p class="t-sub"><span class="state state--warn"><i class="dot dot--warn"></i>No control identified on this step.</span></p>`}
       </div>
       <div>
-        <div class="t-eyebrow" style="margin-bottom:8px">Findings</div>
+        <div class="t-eyebrow rail__h">Findings</div>
         ${fnd.length ? fnd.map((f) => {
           const o = st.findingOutcome(f);
-          return `<div class="rw" style="padding:10px 0">
-            <span class="rw__lead"><i class="dot dot--${o.severity === "observation" ? "warn" : "alert"}"></i></span>
-            <span class="rw__main"><span class="rw__t" style="font-size:14px">${esc(o.title)}</span>
-            <span class="rw__d">${f.fromTrace ? "Raised by the line walkthrough · " : ""}${
-              o.decision === "dismissed" ? "dismissed" : o.decision ? "concluded" : "not concluded"}</span></span>
+          return `<div class="dep__i">${icon("finding", 15)}
+            <span>${esc(o.title)}<span class="t-meta">${f.fromTrace ? "Raised by the line walkthrough" : "From the analysis"}</span></span>
+            <span class="t-meta">${o.decision === "dismissed" ? "dismissed" : o.decision ? "concluded" : "open"}</span>
           </div>`;
         }).join("") : `<p class="t-sub">None recorded on this step.</p>`}
       </div>
     </div>
 
-    ${ts && st.traceVerdict(txn, ts) ? `<div style="margin-top:18px">
-      <div class="t-eyebrow" style="margin-bottom:8px">On the traced transaction</div>
-      <p class="t-sub" style="max-width:70ch;line-height:1.6">${esc(ts.observation)}</p>
+    ${ts && st.traceVerdict(txn, ts) ? `<div class="sec--tight">
+      <div class="t-eyebrow rail__h">On the traced transaction</div>
+      <p class="t-body measure">${esc(ts.observation)}</p>
     </div>` : ""}
-    ${!ts && skip ? `<div style="margin-top:18px">
-      <div class="t-eyebrow" style="margin-bottom:8px">Not traced on this transaction</div>
-      <p class="t-sub" style="max-width:70ch;line-height:1.6">${esc(skip.why)}</p>
+    ${!ts && skip ? `<div class="sec--tight">
+      <div class="t-eyebrow rail__h">Not traced on this transaction</div>
+      <p class="t-body measure">${esc(skip.why)}</p>
     </div>` : ""}
 
-    <div style="margin-top:18px">
-      <div class="t-eyebrow" style="margin-bottom:8px">Established from</div>
+    <div class="sec--tight">
+      <div class="t-eyebrow rail__h">Established from</div>
       ${evidence(refs)}
     </div>
   </div>`;
