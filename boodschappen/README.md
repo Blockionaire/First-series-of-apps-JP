@@ -92,6 +92,32 @@ op basis van wat je zojuist hebt afgevinkt — één tik zet hem op een andere.
   8 uur bewaard, dus je mag de app tussendoor gerust afsluiten. Zodra je op
   *Klaar met winkelen* tikt, begint de volgende keer weer met de hele lijst.
 
+### Eten
+Een eigen tabblad voor de weekplanning en jullie gerechten. **De app komt zonder recepten
+aan** — alles wat erin staat, hebben jullie zelf gemaakt.
+
+**Gerechten maken.** Naam, een emoji, voor hoeveel personen het recept is, een foto en de
+bereiding. Daaronder zet je de ingrediënten met hun hoeveelheid. Bij dingen die je
+**meestal in huis hebt** (olie, zout) tik je het groene vinkje aan; die worden later niet
+vanzelf op de boodschappenlijst gezet. Met *Van mijn lijst* pluk je ingrediënten zo van je
+boodschappenlijst — handig als je al aan het typen was.
+
+**De week plannen.** Bovenin staan de zeven dagen met vandaag gemarkeerd; met de pijltjes
+bladert je naar een andere week. Tik een dag aan en kies een gerecht, of noteer iets vrijs
+("uit eten", "restjes"). Bij een geplande dag zie je meteen *3 personen · 2 nog te halen*.
+
+**Boodschappen erbij.** Vanuit een gerecht kom je in een keuzelijst met alle ingrediënten.
+Wat je in huis hebt of al op je lijst staat, staat uit; de rest staat aan. Zet je het
+aantal personen hoger, dan **schalen de hoeveelheden mee** — 300 g wordt 400 g, en 2
+courgettes worden er 3 (stuks worden naar boven afgerond). Met *Boodschappen voor deze
+week* haal je alles van de geplande dagen in één keer op, dubbele ingrediënten bij elkaar
+en met de gerechten erbij vermeld. Boodschappen die uit een gerecht komen, laten dat op de
+lijst zien.
+
+**Wanneer aten we wat.** De planning is meteen de geschiedenis: bij elk gerecht staat hoe
+vaak jullie het gegeten hebben en hoe lang geleden. Zoeken kan op gerecht én op ingrediënt
+("waar zat ook alweer pesto in?").
+
 ### Budget
 Het budgettabblad houdt jullie **maandbudget** bij — geen verrekening onderling,
 gewoon: hoeveel is er deze maand nog over?
@@ -164,6 +190,8 @@ ovs_bonnen   de uitgaven
 ovs_meta     instellingen, waaronder het maandbudget
 ovs_geleerd  categorieën die jullie zelf hebben rechtgezet (id = de naam)
 ovs_cats     de categorieën zelf (naam, icoon, volgorde)
+ovs_gerechten jullie eigen gerechten, met de ingrediënten erin
+ovs_menu     wat jullie op welke dag eten (id = de datum)
 ovs_producten wat jullie hebben gescand, met de streepjescode als id
 ```
 
