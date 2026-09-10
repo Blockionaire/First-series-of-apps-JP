@@ -226,6 +226,35 @@ button{border:none; background:none; padding:0; cursor:pointer;}
 .item.af .vink, .wm-item.af .vink{background:var(--groen); border-color:var(--groen);}
 .item.af .vink svg, .wm-item.af .vink svg{opacity:1; transform:scale(1);}
 
+/* meerdere tegelijk kiezen */
+.item.kiesbaar{cursor:pointer; user-select:none; -webkit-user-select:none;}
+.item.gekozen{background:var(--accent-zacht);}
+.kiesbol{pointer-events:none;}
+.item.gekozen .kiesbol{background:var(--accent); border-color:var(--accent);}
+.item.gekozen .kiesbol svg{opacity:1; transform:scale(1);}
+.item.gekozen .item-mid{opacity:1;}
+
+.kiesbalk{
+  position:fixed; left:0; right:0; z-index:44;
+  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
+  background:color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter:saturate(1.6) blur(16px);
+  -webkit-backdrop-filter:saturate(1.6) blur(16px);
+  border-top:1px solid var(--line);
+}
+.kiesbalk-in{
+  max-width:620px; margin:0 auto;
+  display:flex; gap:8px; align-items:center;
+  padding:11px 16px; overflow-x:auto; scrollbar-width:none;
+}
+.kiesbalk-in::-webkit-scrollbar{display:none;}
+.kiesbalk .chip svg{width:14px; height:14px; stroke-width:2.2;}
+.kiesbalk .chip[disabled]{opacity:.42;}
+.kop-acties .tekstknop{
+  font-size:14px; font-weight:650; color:var(--accent); padding:9px 10px; border-radius:10px;
+}
+.kop-acties .tekstknop:active{background:var(--accent-zacht);}
+
 .item-mid{flex:1; min-width:0;}
 .item-titelrij{display:flex; align-items:baseline; gap:7px; flex-wrap:wrap;}
 .item-tekst{font-size:16px; font-weight:600; letter-spacing:-.005em; word-break:break-word;}
@@ -479,6 +508,28 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
 .wm-item.af .tk b{text-decoration:line-through; color:var(--muted);}
 .wm-item .tk span{font-size:13px; color:var(--muted);}
 
+/* ---------- groepen op de lijst in- en uitklappen ---------- */
+.vouwknop{
+  display:flex; align-items:center; gap:9px; background:none; border:none;
+  padding:0; text-align:left; flex:none; max-width:72%;
+}
+.vouwknop:active{opacity:.6;}
+.vouwknop h2{
+  margin:0; font-size:12px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--muted); display:flex; align-items:center; gap:7px; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.vouwknop .telw{
+  font-size:11px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums;
+  background:var(--bg-2); padding:2px 7px; border-radius:999px; flex:none;
+}
+.vouwknop .chev{
+  display:grid; place-items:center; color:var(--line-2); flex:none;
+  transition:transform var(--vt);
+}
+.vouwknop .chev svg{width:16px; height:16px; stroke-width:2.4;}
+.vouwknop.open .chev{transform:rotate(90deg);}
+
 /* ---------- winkelmodus: groepen en "niet nu" ---------- */
 .groepkop{
   width:100%; text-align:left; background:none; border:none;
@@ -681,6 +732,13 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
   background:var(--bg-2); border:1px solid var(--line);
 }
 .gfoto.geenfoto{display:grid; place-items:center; font-size:21px; border:none; background:var(--bg-2);}
+
+.statuswissel{
+  flex:none; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+  color:var(--muted); background:var(--bg-2); padding:4px 9px; border-radius:999px;
+}
+.rij[data-inhuis] .statuswissel{transition:background var(--vt), color var(--vt);}
+.rij[data-inhuis]:active .statuswissel{background:var(--accent-zacht); color:var(--accent);}
 
 .stepper{display:flex; align-items:center; gap:12px;}
 .stepper button{
@@ -1200,7 +1258,8 @@ const IK = {
   route:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 20.5v-4a3 3 0 0 1 3-3h5a3 3 0 0 0 3-3v-4"/><circle cx="6.5" cy="4.2" r="2.2"/><circle cx="17.5" cy="19.8" r="2.2"/></svg>',
   later:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v10.2"/><path d="m8.2 10.2 3.8 3.8 3.8-3.8"/><path d="M4.5 19.5h15"/></svg>',
   omhoog:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5V10.3"/><path d="m8.2 14.1 3.8-3.8 3.8 3.8"/><path d="M4.5 4.5h15"/></svg>',
-  vlam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c3.6 0 6.2-2.4 6.2-5.7 0-4.4-4.3-5.6-3.4-10.8C11.3 6 9 8.6 9.4 11.6c-1-.5-1.7-1.6-1.9-2.9-1.1 1.3-1.7 3.2-1.7 5.1C5.8 18 8.4 21 12 21Z"/></svg>'
+  vlam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c3.6 0 6.2-2.4 6.2-5.7 0-4.4-4.3-5.6-3.4-10.8C11.3 6 9 8.6 9.4 11.6c-1-.5-1.7-1.6-1.9-2.9-1.1 1.3-1.7 3.2-1.7 5.1C5.8 18 8.4 21 12 21Z"/></svg>',
+  kiezen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6.5h9.5M11 12h9.5M11 17.5h9.5"/><path d="m3 6.3 1.5 1.5L7.3 5"/><path d="m3 11.8 1.5 1.5L7.3 10.5"/><path d="m3 17.3 1.5 1.5L7.3 16"/></svg>'
 };
 
 /* =====================================================================
@@ -1309,6 +1368,7 @@ const S = {
   fotoCache:{},
   filter:{winkel:null, cat:null, door:null, urgent:false, zoek:"", groep:"winkel", toonAf:true},
   winkelSessie:null,       // {winkelId, gestart}
+  kies:null,               // Set met item-id's zolang je meerdere tegelijk kiest
   maand:null,                    // welke maand het budgetscherm laat zien
   budget:{standaard:0, perMaand:{}},
   laatsteItemIds:null,     // om nieuwe items van de ander te herkennen
@@ -1928,6 +1988,20 @@ function startHartslag(){
 /* =====================================================================
    7 · ITEMS — filteren, groeperen, acties
    ===================================================================== */
+/* welke groepen heb je op de lijst dichtgeklapt? Dat is een kijkvoorkeur,
+   dus die blijft op je eigen telefoon staan. */
+const VOUW = () => "boodschappen_vouw_" + P;
+function isDicht(sleutel){
+  const alles = LS.get(VOUW(), {});
+  return !!alles[S.filter.groep + ":" + sleutel];
+}
+function vouwWissel(sleutel){
+  const alles = LS.get(VOUW(), {});
+  const k = S.filter.groep + ":" + sleutel;
+  if(alles[k]) delete alles[k]; else alles[k] = true;
+  LS.zet(VOUW(), alles);
+}
+
 function openItems(){ return S.items.filter(i => !i.af); }
 function afItems(){ return S.items.filter(i => i.af); }
 
@@ -1949,6 +2023,28 @@ function pasFilterToe(lijst){
 function filterActief(){
   const f = S.filter;
   return !!(f.cat || f.door || f.urgent || f.zoek.trim());
+}
+
+/* ---------- meerdere boodschappen tegelijk aanpassen ----------
+   Zet je iets snel op de lijst zonder erbij te bedenken waar het te koop
+   is, dan wil je dat later niet één voor één goed gaan zetten. In de
+   kiesmodus tik je een stapel boodschappen aan en pas je in één keer de
+   winkel aan (of de categorie, spoed, afvinken, weggooien). */
+let kiesSinds = 0;
+function kiesAan(startId){
+  S.kies = new Set(startId ? [startId] : []);
+  kiesSinds = nu();
+  tekenNu();
+}
+function kiesUit(){ S.kies = null; tekenNu(); }
+function kiesWissel(id){
+  if(!S.kies) return;
+  if(S.kies.has(id)) S.kies.delete(id); else S.kies.add(id);
+}
+/* alleen wat er nu écht op de lijst staat — je huisgenoot kan tussendoor
+   iets weggehaald hebben terwijl jij stond te kiezen */
+function gekozenItems(){
+  return S.kies ? S.items.filter(i => S.kies.has(i.id)) : [];
 }
 function sorteerItems(lijst, orde){
   const m = orde || STANDAARD_ORDE();
@@ -2032,21 +2128,40 @@ function schermLijst(){
   alleOpen.forEach(i => { const w = i.winkel || "nvt"; winkelTellers[w] = (winkelTellers[w]||0)+1; });
   const winkelsMetItems = S.winkels.filter(w => winkelTellers[w.id]).sort((a,b) => (a.volgorde||50)-(b.volgorde||50));
 
+  const kiesModus = !!S.kies;
+  const gekozen = gekozenItems();
+  /* in de kiesmodus tik je alleen wat je nú ziet aan of uit */
+  const kiesbaar = zichtbaar.concat(af);
+  const allesGekozen = kiesModus && kiesbaar.length > 0 && kiesbaar.every(i => S.kies.has(i.id));
+
   return `
   <div class="scherm">
     <div class="kop" id="kop">
       <div class="kop-rij">
         <div class="kop-titel">
-          <h1>${esc(CFG.huisNaam)}</h1>
-          <div class="sub">${alleOpen.length === 0 ? "Alles is gehaald" :
-            alleOpen.length + " te halen" + (alleOpen.filter(i=>i.urgent).length ? " · " + alleOpen.filter(i=>i.urgent).length + " met spoed" : "")}</div>
+          <h1>${kiesModus
+            ? (gekozen.length === 0 ? "Niets gekozen" : gekozen.length + " gekozen")
+            : esc(CFG.huisNaam)}</h1>
+          <div class="sub">${kiesModus
+            ? (gekozen.length === 0
+                ? "Tik de boodschappen aan die je wilt aanpassen"
+                : "Kies onderin wat ermee moet gebeuren")
+            : (alleOpen.length === 0 ? "Alles is gehaald" :
+                alleOpen.length + " te halen" + (alleOpen.filter(i=>i.urgent).length ? " · " + alleOpen.filter(i=>i.urgent).length + " met spoed" : ""))}</div>
         </div>
         <div class="kop-acties">
-          <button class="ikoonknop ${f.zoek?"aan":""}" id="k-zoek" aria-label="Zoeken">${IK.zoek}</button>
-          <button class="ikoonknop ${filterActief()?"aan":""}" id="k-filter" aria-label="Filters">${IK.filter}</button>
-          <button id="k-leden" style="display:flex; align-items:center; padding-left:4px">
-            <span class="av-stapel">${S.leden.slice(0,3).map(l => AV.html(l, "", isOnline(l))).join("")}</span>
-          </button>
+          ${kiesModus ? `
+            <button class="tekstknop" id="k-alles">${allesGekozen ? "Geen" : "Alles"}</button>
+            <button class="ikoonknop" id="k-kiesuit" aria-label="Klaar met kiezen">${IK.kruis}</button>
+          ` : `
+            <button class="ikoonknop ${f.zoek?"aan":""}" id="k-zoek" aria-label="Zoeken">${IK.zoek}</button>
+            <button class="ikoonknop ${filterActief()?"aan":""}" id="k-filter" aria-label="Filters">${IK.filter}</button>
+            ${alleOpen.length >= 2
+              ? `<button class="ikoonknop" id="k-kies" aria-label="Meerdere kiezen">${IK.kiezen}</button>` : ""}
+            <button id="k-leden" style="display:flex; align-items:center; padding-left:4px">
+              <span class="av-stapel">${S.leden.slice(0,3).map(l => AV.html(l, "", isOnline(l))).join("")}</span>
+            </button>
+          `}
         </div>
       </div>
       ${f.zoekOpen || f.zoek ? `
@@ -2078,33 +2193,67 @@ function schermLijst(){
         ${S.syncFout ? `<div class="banner">${IK.waarsch}<span>${esc(S.syncFout)}</span></div>` : ""}
         ${DB && DB.demo ? `<div class="banner info">${IK.info}<span>Demo-modus — deze lijst staat alleen op dit apparaat.</span></div>` : ""}
 
-        ${zichtbaar.length === 0 ? legeLijst(alleOpen.length) : groepen.map(g => `
+        ${zichtbaar.length === 0 ? legeLijst(alleOpen.length) : groepen.map(g => {
+          const dicht = isDicht(g.sleutel);
+          return `
           <div class="sectie">
             <div class="sectie-kop">
-              <h2>${g.em ? `<span style="font-size:14px">${g.em}</span>` : ""}${esc(g.naam)}</h2>
-              <span class="telw">${g.items.length}</span>
+              <button class="vouwknop ${dicht?"":"open"}" data-vouw="${esc(g.sleutel)}">
+                <span class="chev">${IK.pijl}</span>
+                <h2>${g.em ? `<span style="font-size:14px">${g.em}</span>` : ""}${esc(g.naam)}</h2>
+                <span class="telw">${g.items.length}</span>
+              </button>
               <span class="lijn"></span>
-              ${S.filter.groep === "winkel" && g.sleutel !== "nvt"
-                ? `<button class="mini" data-winkelen="${esc(g.sleutel)}">Winkelen ›</button>` : ""}
+              ${kiesModus
+                ? `<button class="mini" data-kiesgroep="${esc(g.sleutel)}">${
+                    g.items.every(i => S.kies.has(i.id)) ? "Geen" : "Alles"}</button>`
+                : (S.filter.groep === "winkel" && g.sleutel !== "nvt"
+                    ? `<button class="mini" data-winkelen="${esc(g.sleutel)}">Winkelen ›</button>` : "")}
             </div>
-            <div class="lijst">${g.items.map(itemHtml).join("")}</div>
-          </div>`).join("")}
+            ${dicht ? "" : `<div class="lijst fade">${g.items.map(itemHtml).join("")}</div>`}
+          </div>`;
+        }).join("")}
 
-        ${af.length ? `
+        ${af.length ? (() => {
+          const dicht = isDicht("__kar");
+          return `
           <div class="sectie">
             <div class="sectie-kop">
-              <h2>In de kar</h2>
-              <span class="telw">${af.length}</span>
+              <button class="vouwknop ${dicht?"":"open"}" data-vouw="__kar">
+                <span class="chev">${IK.pijl}</span>
+                <h2>In de kar</h2>
+                <span class="telw">${af.length}</span>
+              </button>
               <span class="lijn"></span>
               <button class="mini" id="wis-af">Opruimen</button>
             </div>
-            <div class="lijst">${af.slice(0,40).map(itemHtml).join("")}</div>
-            ${af.length > 40 ? `<div class="hint" style="text-align:center">en nog ${af.length-40} eerder afgevinkt</div>` : ""}
-          </div>` : ""}
+            ${dicht ? "" : `<div class="lijst fade">${af.slice(0,40).map(itemHtml).join("")}</div>
+              ${af.length > 40 ? `<div class="hint" style="text-align:center">en nog ${af.length-40} eerder afgevinkt</div>` : ""}`}
+          </div>`;
+        })() : ""}
       </div>
     </div>
 
-    <button class="fab" id="fab">${IK.plus}<span>Toevoegen</span></button>
+    ${kiesModus ? kiesbalkHtml(gekozen) : `<button class="fab" id="fab">${IK.plus}<span>Toevoegen</span></button>`}
+  </div>`;
+}
+
+/* de balk onderin met wat je met je selectie kunt doen */
+function kiesbalkHtml(gekozen){
+  const n = gekozen.length;
+  const uit = n === 0 ? "disabled" : "";
+  const allesAf = n > 0 && gekozen.every(i => i.af);
+  const allesSpoed = n > 0 && gekozen.every(i => i.urgent);
+  return `
+  <div class="kiesbalk">
+    <div class="kiesbalk-in">
+      <button class="chip aan winkel" id="kies-winkel" ${uit}>${IK.winkel} Winkel</button>
+      <button class="chip" id="kies-cat" ${uit}>${IK.lijst} Categorie</button>
+      <button class="chip" id="kies-spoed" ${uit}>${IK.bliksem} ${allesSpoed ? "Spoed eraf" : "Spoed"}</button>
+      <button class="chip" id="kies-af" ${uit}>${IK.vink} ${allesAf ? "Terug op de lijst" : "Afvinken"}</button>
+      <button class="chip" id="kies-weg" ${uit} style="color:var(--rood)">${IK.prul} Verwijderen</button>
+      <span class="rek">&nbsp;</span>
+    </div>
   </div>`;
 }
 
@@ -2127,10 +2276,15 @@ function itemHtml(i){
   const w = winkelVan(i.winkel);
   const c = catVan(i.cat);
   const afLid = i.af ? lidVan(i.afDoor) : null;
+  const kiesModus = !!S.kies;
+  const gek = kiesModus && S.kies.has(i.id);
   return `
-  <div class="item ${i.af?"af":""}" data-item="${esc(i.id)}">
-    <button class="vink" data-vink="${esc(i.id)}" aria-label="Afvinken">${IK.vink}</button>
-    <div class="item-mid" data-open="${esc(i.id)}">
+  <div class="item ${i.af?"af":""} ${kiesModus?"kiesbaar":""} ${gek?"gekozen":""}" data-item="${esc(i.id)}"
+       ${kiesModus ? `data-kies="${esc(i.id)}"` : ""}>
+    ${kiesModus
+      ? `<span class="vink kiesbol">${IK.vink}</span>`
+      : `<button class="vink" data-vink="${esc(i.id)}" aria-label="Afvinken">${IK.vink}</button>`}
+    <div class="item-mid" ${kiesModus ? "" : `data-open="${esc(i.id)}"`}>
       <div class="item-titelrij">
         ${i.hoeveelheid ? `<span class="item-hoev">${esc(i.hoeveelheid)}</span>` : ""}
         <span class="item-tekst">${esc(i.tekst)}</span>
@@ -2169,6 +2323,46 @@ function bindLijst(){
   if(zw) zw.onclick = () => { S.filter.zoek = ""; tekenNu(); };
   const kf = $("#k-filter"); if(kf) kf.onclick = () => { tril(); sheetFilters(); };
   const kl = $("#k-leden");  if(kl) kl.onclick = () => { tril(); S.tab = "meer"; tekenNu(); };
+  const kk = $("#k-kies");   if(kk) kk.onclick = () => { tril(); kiesAan(); };
+  const ku = $("#k-kiesuit");if(ku) ku.onclick = () => { tril(); kiesUit(); };
+  const ka = $("#k-alles");
+  if(ka) ka.onclick = () => {
+    /* alles aan- of uitzetten geldt voor wat er nu in beeld staat,
+       dus een filter erboven bepaalt hoe groot je greep is */
+    const zichtbaar = pasFilterToe(openItems()).concat(S.filter.toonAf ? pasFilterToe(afItems()) : []);
+    const alles = zichtbaar.length > 0 && zichtbaar.every(i => S.kies.has(i.id));
+    zichtbaar.forEach(i => alles ? S.kies.delete(i.id) : S.kies.add(i.id));
+    tril(); tekenNu();
+  };
+  $$("[data-kiesgroep]").forEach(b => b.onclick = () => {
+    const g = groepeer(pasFilterToe(openItems())).find(x => x.sleutel === b.dataset.kiesgroep);
+    if(!g) return;
+    const alles = g.items.every(i => S.kies.has(i.id));
+    g.items.forEach(i => alles ? S.kies.delete(i.id) : S.kies.add(i.id));
+    tril(); tekenNu();
+  });
+  $$("[data-kies]").forEach(el => el.onclick = () => {
+    /* de lange druk die de kiesmodus opende komt vlak daarna nóg een keer
+       als "click" binnen — die zou meteen weer uitvinken */
+    if(nu() - kiesSinds < 400) return;
+    kiesWissel(el.dataset.kies); tril(6); tekenNu();
+  });
+  if(!S.kies){
+    /* lang op een boodschap drukken opent de kiesmodus met die er alvast in */
+    $$("[data-item]").forEach(rij => {
+      let t = null;
+      const stop = () => { if(t){ clearTimeout(t); t = null; } };
+      const start = () => {
+        stop();
+        t = setTimeout(() => { t = null; tril(14); kiesAan(rij.dataset.item); }, 480);
+      };
+      rij.addEventListener("touchstart", start, {passive:true});
+      ["touchend","touchmove","touchcancel"].forEach(e => rij.addEventListener(e, stop, {passive:true}));
+      rij.addEventListener("mousedown", start);
+      ["mouseup","mouseleave"].forEach(e => rij.addEventListener(e, stop));
+    });
+  }
+  bindKiesbalk();
 
   $$("[data-wfilter]").forEach(b => b.onclick = () => {
     S.filter.winkel = b.dataset.wfilter || null; tril(); tekenNu();
@@ -2185,6 +2379,9 @@ function bindLijst(){
     S.filter = Object.assign(S.filter, {winkel:null, cat:null, door:null, urgent:false, zoek:"", zoekOpen:false});
     tekenNu();
   };
+  $$("[data-vouw]").forEach(b => b.onclick = () => {
+    vouwWissel(b.dataset.vouw); tril(6); tekenAlleenInhoud();
+  });
   $$("[data-winkelen]").forEach(b => b.onclick = () => {
     S.winkelSessie = {winkelId:b.dataset.winkelen, gestart:nu()};
     S.tab = "winkelen"; tril(); tekenNu();
@@ -2204,8 +2401,11 @@ function bindLijst(){
     if(it) sheetItem(it);
   });
   $$(".item-thumb").forEach(im => im.onclick = e => {
+    const rij = im.closest(".item");
+    /* in de kiesmodus telt de foto gewoon als onderdeel van de regel */
+    if(S.kies){ if(nu() - kiesSinds >= 400){ kiesWissel(rij.dataset.item); tril(6); tekenNu(); } return; }
     e.stopPropagation();
-    const it = S.items.find(x => x.id === im.closest(".item").dataset.item);
+    const it = S.items.find(x => x.id === rij.dataset.item);
     if(it) openKijker(it.fotoId, it.tekst);
   });
   const wa = $("#wis-af");
@@ -2214,6 +2414,121 @@ function bindLijst(){
   if(fab) fab.onclick = () => { tril(); sheetToevoegen(); };
 
   volgScroll();
+}
+
+/* =====================================================================
+   8b · MEERDERE TEGELIJK: de balk onderin en wat hij kan
+   ===================================================================== */
+function bindKiesbalk(){
+  const kw = $("#kies-winkel"); if(kw) kw.onclick = () => { tril(); sheetKiesWinkel(); };
+  const kc = $("#kies-cat");    if(kc) kc.onclick = () => { tril(); sheetKiesCat(); };
+  const ks = $("#kies-spoed");
+  if(ks) ks.onclick = () => {
+    const lijst = gekozenItems();
+    const eraf = lijst.every(i => i.urgent);
+    kiesDoe(lijst, i => DB.zet(PAD.items + "/" + i.id, {urgent: !eraf}),
+      n => eraf ? "Spoed weggehaald bij " + n : (n === 1 ? "1 boodschap met spoed" : n + " boodschappen met spoed"),
+      eraf ? "🫱" : "⚡");
+  };
+  const kv = $("#kies-af");
+  if(kv) kv.onclick = () => {
+    const lijst = gekozenItems();
+    const terug = lijst.every(i => i.af);
+    kiesDoe(lijst, i => vinkItem(i, !terug),
+      n => terug ? (n === 1 ? "1 boodschap staat weer op de lijst" : n + " boodschappen staan weer op de lijst")
+                 : (n === 1 ? "1 boodschap in de kar" : n + " boodschappen in de kar"),
+      terug ? "↩️" : "✅");
+  };
+  const kg = $("#kies-weg");
+  if(kg) kg.onclick = () => {
+    const lijst = gekozenItems();
+    if(!lijst.length) return;
+    const wat = lijst.length === 1 ? "deze boodschap" : "deze " + lijst.length + " boodschappen";
+    if(!confirm("Weet je zeker dat je " + wat + " van de lijst haalt?")) return;
+    kiesDoe(lijst, i => verwijderItem(i),
+      n => n === 1 ? "1 boodschap verwijderd" : n + " boodschappen verwijderd", "🗑️");
+  };
+}
+
+/* voert iets uit op alles wat je gekozen hebt en sluit de kiesmodus af */
+async function kiesDoe(lijst, doeItem, melding, em){
+  if(!lijst.length) return;
+  sluitSheet();
+  S.kies = null;
+  tekenNu();
+  for(const i of lijst){
+    try{ await doeItem(i); }
+    catch(e){ console.error("meerdere tegelijk", e); }
+  }
+  toast(melding(lijst.length), em);
+}
+
+/* de namen van wat je gekozen hebt, kort samengevat */
+function kiesSamenvatting(lijst){
+  const namen = lijst.map(i => i.tekst).filter(Boolean);
+  const kort = namen.slice(0, 4).join(", ");
+  return namen.length > 4 ? kort + " en nog " + (namen.length - 4) : kort;
+}
+
+function sheetKiesWinkel(){
+  const lijst = gekozenItems();
+  if(!lijst.length) return;
+  const body = `
+    <p style="margin:0 0 14px; color:var(--ink-2); font-size:15px; line-height:1.5">
+      Waar ${lijst.length === 1 ? "is dit" : "zijn deze " + lijst.length} te koop?
+      Eén tik zet ${lijst.length === 1 ? "hem" : "ze allemaal"} bij dezelfde winkel.
+    </p>
+    <div class="hint" style="margin:-6px 0 14px">${IK.kar} ${esc(kiesSamenvatting(lijst))}</div>
+    <div class="lijst">
+      ${S.winkels.map(w => {
+        const zelfde = lijst.filter(i => (i.winkel || "nvt") === w.id).length;
+        return `<button class="rij" data-zetwinkel="${esc(w.id)}">
+          <span class="ik">${w.em}</span>
+          <div class="tk">
+            <b style="color:var(--ink)">${esc(w.naam)}</b>
+            <span>${zelfde === lijst.length ? "staat er nu al op"
+                 : zelfde ? zelfde + " van de " + lijst.length + (zelfde === 1 ? " staat" : " staan") + " hier al op"
+                 : "zet alles hierheen"}</span>
+          </div>
+          <span class="na">${IK.pijl}</span>
+        </button>`;
+      }).join("")}
+    </div>`;
+  sheet({titel:"Naar welke winkel?", body, naTeken:() => {
+    $$("[data-zetwinkel]").forEach(b => b.onclick = () => {
+      const w = winkelVan(b.dataset.zetwinkel);
+      kiesDoe(lijst, i => DB.zet(PAD.items + "/" + i.id, {winkel: w.id}),
+        n => (n === 1 ? "1 boodschap" : n + " boodschappen") + " naar " + w.naam, w.em);
+    });
+  }});
+}
+
+function sheetKiesCat(){
+  const lijst = gekozenItems();
+  if(!lijst.length) return;
+  const body = `
+    <p style="margin:0 0 14px; color:var(--ink-2); font-size:15px; line-height:1.5">
+      In welke categorie ${lijst.length === 1 ? "hoort dit" : "horen deze " + lijst.length}?
+      De app onthoudt je keuze, dus de volgende keer staat het meteen goed.
+    </p>
+    <div class="hint" style="margin:-6px 0 14px">${IK.kar} ${esc(kiesSamenvatting(lijst))}</div>
+    <div class="lijst">
+      ${cats().map(c => `
+        <button class="rij" data-zetcat="${esc(c.id)}">
+          <span class="ik">${c.em}</span>
+          <div class="tk"><b style="color:var(--ink)">${esc(c.naam)}</b></div>
+          <span class="na">${IK.pijl}</span>
+        </button>`).join("")}
+    </div>`;
+  sheet({titel:"In welke categorie?", body, naTeken:() => {
+    $$("[data-zetcat]").forEach(b => b.onclick = () => {
+      const c = catVan(b.dataset.zetcat);
+      kiesDoe(lijst, async i => {
+        await DB.zet(PAD.items + "/" + i.id, {cat: c.id});
+        await leerCategorie(i.tekst, c.id);
+      }, n => (n === 1 ? "1 boodschap" : n + " boodschappen") + " naar " + c.naam, c.em);
+    });
+  }});
 }
 
 /* =====================================================================
@@ -4727,17 +5042,18 @@ function bindEten(){
 /* de ingrediënten met hun status, voor een gekozen aantal personen */
 function ingRijenHtml(g, personen){
   const factor = (personen || g.personen || 2) / (g.personen || 2);
-  return (g.ingredienten || []).map(i => {
+  return (g.ingredienten || []).map((i, idx) => {
     const opLijst = staatOpLijst(i.naam);
-    return `<div class="rij">
+    return `<button class="rij" data-inhuis="${idx}">
       <span class="ik" style="background:${i.vast ? "var(--groen-zacht)" : opLijst ? "var(--accent-zacht)" : "var(--bg-2)"};
                   color:${i.vast ? "var(--groen)" : opLijst ? "var(--accent)" : "var(--ink-2)"}">
         ${i.vast ? IK.vink : opLijst ? IK.lijst : catVan(i.cat).em}</span>
       <div class="tk">
         <b>${i.hoeveelheid ? `<span class="item-hoev" style="font-size:12px">${esc(schaalHoeveelheid(i.hoeveelheid, factor))}</span> ` : ""}${esc(i.naam)}</b>
-        <span>${i.vast ? "heb je meestal in huis" : opLijst ? "staat al op je lijst" : "nog te halen"}</span>
+        <span>${i.vast ? "heb je in huis" : opLijst ? "staat al op je lijst" : "nog te halen"}</span>
       </div>
-    </div>`;
+      <span class="statuswissel">${i.vast ? "in huis" : "halen"}</span>
+    </button>`;
   }).join("");
 }
 
@@ -4780,7 +5096,9 @@ function sheetGerecht(g, dagSleutel){
     <div class="sectie" style="margin-top:6px">
       <div class="sectie-kop"><h2>Ingrediënten</h2><span class="lijn"></span></div>
       ${ing.length === 0 ? `<div class="hint">Er staan nog geen ingrediënten bij dit gerecht.</div>`
-        : `<div class="lijst" id="g-ing">${ingRijenHtml(g, personen)}</div>`}
+        : `<div class="lijst" id="g-ing">${ingRijenHtml(g, personen)}</div>
+           <div class="hint">Tik een ingrediënt aan om te wisselen tussen <b>nog halen</b> en
+             <b>in huis</b>. Wat je in huis hebt, wordt niet op de boodschappenlijst gezet.</div>`}
     </div>
 
     ${g.notitie ? `
@@ -4824,10 +5142,20 @@ function sheetGerecht(g, dagSleutel){
     vulFotos($(".sheet"));
     let pers = personen;
     const gf = $("#g-foto"); if(gf) gf.onclick = () => openKijker(g.fotoId, g.naam);
+    const bindIngKnoppen = () => {
+      $$("[data-inhuis]").forEach(b => b.onclick = async () => {
+        const i = g.ingredienten[+b.dataset.inhuis];
+        if(!i) return;
+        i.vast = !i.vast; tril(10);
+        bijwerken();
+        try{ await DB.zet(PAD.gerechten + "/" + g.id, {ingredienten: g.ingredienten}); }
+        catch(e){ console.error(e); toast("Opslaan lukte niet"); }
+      });
+    };
     const bijwerken = async () => {
       $("#g-pers").textContent = pers;
       const vak = $("#g-ing");
-      if(vak) vak.innerHTML = ingRijenHtml(g, pers);
+      if(vak){ vak.innerHTML = ingRijenHtml(g, pers); bindIngKnoppen(); }
       const tel = $("#g-naarlijst .tk span");
       if(tel){
         const n = nogTeHalen(g, pers).length;
@@ -4835,6 +5163,7 @@ function sheetGerecht(g, dagSleutel){
       }
       if(dagSleutel) await DB.zet(PAD.menu + "/" + dagSleutel, {personen: pers});
     };
+    bindIngKnoppen();
     $("#g-min").onclick = () => { if(pers > 1){ pers--; tril(6); bijwerken(); } };
     $("#g-plus").onclick = () => { if(pers < 20){ pers++; tril(6); bijwerken(); } };
     $("#g-naarlijst").onclick = () => sheetNaarLijst(g, pers, dagSleutel);
@@ -5396,6 +5725,7 @@ function tekenNu(){
       return;
     }
     S.tab = b.dataset.tab; tril();
+    S.kies = null;
     if(S.tab !== "winkelen") houdSchermAan(false);
     tekenNu(); naarBoven();
   });

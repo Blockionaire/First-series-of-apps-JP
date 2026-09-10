@@ -58,6 +58,20 @@ wie welke bon betaalde.
 - **Opruimen** wist de kar in één keer, of alleen wat ouder is dan een week.
 - **Groeperen** op winkel (standaard) of op categorie. De volgorde van de categorieën
   stel je in bij *Meer → Categorieën*.
+- **Meerdere tegelijk aanpassen** ☑️ — zet je iets snel op de lijst zonder erbij te
+  bedenken waar het te koop is, dan hoef je dat later niet één voor één goed te zetten.
+  Tik het vinkjes-knopje rechtsboven aan (of houd een boodschap even ingedrukt) en tik
+  dan alles aan wat bij elkaar hoort. Onderin kies je wat ermee moet gebeuren:
+  **winkel**, **categorie**, **spoed aan of uit**, in één keer **afvinken** of
+  **verwijderen**. *Alles* bovenin pakt de hele lijst, en per kop staat er ook een
+  *Alles* — filter eerst op *Nog niet gekozen*, tik *Alles*, kies Jumbo en je bent klaar.
+  Zet je zo een categorie recht, dan onthoudt de app dat net zo goed als bij één losse
+  boodschap.
+- **Koppen in- en uitklappen**: tik op een kop en die groep vouwt dicht, met het aantal
+  ernaast zodat je nog steeds ziet hoeveel er onder zit. *In de kar* klapt net zo dicht.
+  Wat je dichtgevouwen hebt, blijft zo staan als je de app afsluit — het is jouw
+  kijkvoorkeur, dus je huisgenoot merkt er niets van. Groeperen op winkel en op categorie
+  hebben elk hun eigen geheugen.
 
 ### Filters & zoeken
 - Chips bovenin filteren op winkel, met het aantal erbij.
@@ -105,6 +119,12 @@ boodschappenlijst — handig als je al aan het typen was.
 **De week plannen.** Bovenin staan de zeven dagen met vandaag gemarkeerd; met de pijltjes
 bladert je naar een andere week. Tik een dag aan en kies een gerecht, of noteer iets vrijs
 ("uit eten", "restjes"). Bij een geplande dag zie je meteen *3 personen · 2 nog te halen*.
+
+**Halen of in huis?** Bij een geopend gerecht staat achter elk ingrediënt *halen* of
+*in huis*. Tik het ingrediënt aan om te wisselen — je hebt die courgette misschien toch
+nog liggen. Wat op *in huis* staat, gaat niet mee naar de boodschappenlijst, en de teller
+onder *Boodschappen toevoegen* loopt meteen mee. De wissel wordt bij het gerecht bewaard,
+dus je huisgenoot ziet hem ook.
 
 **Boodschappen erbij.** Vanuit een gerecht kom je in een keuzelijst met alle ingrediënten.
 Wat je in huis hebt of al op je lijst staat, staat uit; de rest staat aan. Zet je het
