@@ -624,6 +624,98 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
 .persoonkaart .tk b{display:block; font-size:17px; font-weight:650; letter-spacing:-.01em;}
 .persoonkaart .tk span{font-size:12.5px; color:var(--muted);}
 
+/* ---------- eten: weekplanning en gerechten ---------- */
+.weekkop{
+  display:flex; align-items:center; gap:10px; padding:12px 14px; margin-top:14px;
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r-l);
+  box-shadow:var(--schaduw);
+}
+.weekkop .tk{flex:1; min-width:0; text-align:center;}
+.weekkop .tk b{display:block; font-size:16px; font-weight:700; letter-spacing:var(--kop);}
+.weekkop .tk span{font-size:12.5px; color:var(--muted);}
+
+.dagrij{
+  display:flex; align-items:center; gap:13px; padding:12px 14px; width:100%;
+  text-align:left; background:var(--card); border-bottom:1px solid var(--line);
+  transition:background var(--vt);
+}
+.dagrij:last-child{border-bottom:none;}
+.dagrij:active{background:var(--card-2);}
+.dagrij .dagkop{
+  width:42px; flex:none; display:grid; place-items:center; gap:1px;
+  padding:5px 0; border-radius:11px; background:var(--bg-2);
+}
+.dagrij .dagkop b{
+  font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--muted);
+}
+.dagrij .dagkop span{font-size:16px; font-weight:700; letter-spacing:-.02em; line-height:1;}
+.dagrij.vandaag .dagkop{background:var(--accent);}
+.dagrij.vandaag .dagkop b{color:var(--accent-ink); opacity:.75;}
+.dagrij.vandaag .dagkop span{color:var(--accent-ink);}
+.dagrij .tk{flex:1; min-width:0;}
+.dagrij .tk b{display:block; font-size:15.5px; font-weight:650; letter-spacing:-.005em;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.dagrij .tk b.stil{color:var(--muted); font-weight:500;}
+.dagrij .tk span{font-size:12.5px; color:var(--muted);}
+.dagrij .na{color:var(--line-2); flex:none; display:grid; place-items:center;}
+.dagrij .na svg{width:18px; height:18px; stroke-width:2.2;}
+.dagrij.vrijedag .na{color:var(--accent);}
+
+.gerechtrij{
+  display:flex; align-items:center; gap:13px; padding:11px 14px; width:100%;
+  text-align:left; background:var(--card); border-bottom:1px solid var(--line);
+  transition:background var(--vt);
+}
+.gerechtrij:last-child{border-bottom:none;}
+.gerechtrij:active{background:var(--card-2);}
+.gerechtrij .tk{flex:1; min-width:0;}
+.gerechtrij .tk b{display:block; font-size:15.5px; font-weight:650;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.gerechtrij .tk span{font-size:12.5px; color:var(--muted);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;}
+.gerechtrij .na{color:var(--line-2); flex:none; display:grid; place-items:center;}
+.gerechtrij .na svg{width:18px; height:18px; stroke-width:2.2;}
+.gfoto{
+  width:44px; height:44px; border-radius:13px; flex:none; object-fit:cover;
+  background:var(--bg-2); border:1px solid var(--line);
+}
+.gfoto.geenfoto{display:grid; place-items:center; font-size:21px; border:none; background:var(--bg-2);}
+
+.stepper{display:flex; align-items:center; gap:12px;}
+.stepper button{
+  width:38px; height:38px; border-radius:12px; display:grid; place-items:center;
+  background:var(--card); border:1px solid var(--line); font-size:21px; font-weight:600;
+  color:var(--ink); transition:transform var(--vt), background var(--vt);
+}
+.stepper button:active{transform:scale(.9); background:var(--accent-zacht);}
+.stepper b{
+  min-width:30px; text-align:center; font-size:20px; font-weight:700;
+  font-variant-numeric:tabular-nums;
+}
+
+.ingrij{
+  display:flex; align-items:center; gap:7px; padding:8px 10px;
+  border-bottom:1px solid var(--line); background:var(--card);
+}
+.ingrij:last-child{border-bottom:none;}
+.ingrij .invoer{padding:9px 11px; font-size:15px; border-radius:var(--r-s);}
+.ingrij .invoer.hoev{flex:0 0 62px; text-align:center; padding-left:4px; padding-right:4px;}
+.vastknop{
+  width:32px; height:32px; border-radius:50%; flex:none; display:grid; place-items:center;
+  border:1.5px solid var(--line-2); color:transparent; transition:all var(--vt);
+}
+.vastknop svg{width:15px; height:15px; stroke-width:3;}
+.vastknop.aan{background:var(--groen); border-color:var(--groen); color:#fff;}
+.vastknop:active{transform:scale(.88);}
+
+.ingkies .vink{border-color:var(--line-2);}
+.ingkies.aan .vink{background:var(--groen); border-color:var(--groen); color:#fff;}
+.ingkies.aan .vink svg{opacity:1; transform:scale(1); color:#fff;}
+.ingkies.stil{opacity:.6;}
+.rij .vink.gevuld{background:var(--groen); border-color:var(--groen);}
+.rij .vink.gevuld svg{opacity:1; transform:scale(1); color:#fff;}
+
 /* ---------- nutri-score & voedingswaarden ---------- */
 .nutri{
   display:inline-grid; place-items:center; flex:none;
@@ -860,6 +952,8 @@ const PAD = {
   geleerd:P+"_geleerd",   // categorieën die jullie zelf hebben rechtgezet
   cats:   P+"_cats",
   producten:P+"_producten",  // wat jullie zelf hebben gescand, op streepjescode
+  gerechten:P+"_gerechten",  // jullie eigen gerechten met hun ingrediënten
+  menu:   P+"_menu",       // wat jullie op welke dag eten
   bonnen: P+"_bonnen",
   meta:   P+"_meta"
 };
@@ -1099,6 +1193,8 @@ const IK = {
   waarsch:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.2 2.6 17.5A1.9 1.9 0 0 0 4.3 20.4h15.4a1.9 1.9 0 0 0 1.7-2.9L13.7 4.2a1.9 1.9 0 0 0-3.4 0Z"/><path d="M12 9.5v4"/><circle cx="12" cy="16.8" r=".9" fill="currentColor"/></svg>',
   sorteer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15M7 19.5 4 16.5M7 19.5l3-3M17 19.5v-15M17 4.5l-3 3M17 4.5l3 3"/></svg>',
   bon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 3.5v17l2.2-1.4 2.1 1.4 2.2-1.4 2.1 1.4 2.2-1.4 2.2 1.4v-17z"/><path d="M8.8 8h6.4M8.8 12h6.4"/></svg>',
+  pan:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5h13v4.2a5 5 0 0 1-5 5h-3a5 5 0 0 1-5-5z"/><path d="M16.5 12h2.3a1.7 1.7 0 0 0 0-3.4h-.6"/><path d="M6.5 7.2V5M10 7.2V4.2M13.5 7.2V5"/></svg>',
+  kalender:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="15" rx="2.2"/><path d="M3.5 10h17M8 3.5v4M16 3.5v4"/></svg>',
   hart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3S3.8 15.4 3.8 9.6a4.4 4.4 0 0 1 8.2-2.2 4.4 4.4 0 0 1 8.2 2.2c0 5.8-8.2 10.7-8.2 10.7Z"/></svg>',
   streepjes:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.9M17 4h1.9a1.6 1.6 0 0 1 1.6 1.6V7M20.5 17v1.4a1.6 1.6 0 0 1-1.6 1.6H17M7 20H5.1a1.6 1.6 0 0 1-1.6-1.6V17"/><path d="M7.5 8.5v7M10.5 8.5v7M13.5 8.5v7M16.5 8.5v7"/></svg>',
   route:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 20.5v-4a3 3 0 0 1 3-3h5a3 3 0 0 0 3-3v-4"/><circle cx="6.5" cy="4.2" r="2.2"/><circle cx="17.5" cy="19.8" r="2.2"/></svg>',
@@ -1204,6 +1300,9 @@ function toonSyncFout(e){
 const S = {
   ik:null,                 // {id, naam}
   leden:[], items:[], winkels:[], vast:[], bonnen:[], geleerd:[], cats:[],
+  gerechten:[], menu:[],
+  weekOffset:0,             // 0 = deze week, 1 = volgende week
+  gerechtZoek:"",
   geladen:false,
   tab:"lijst",
   syncFout:null,
@@ -2043,6 +2142,7 @@ function itemHtml(i){
           : `<span class="stuk">${c.em} ${esc(c.naam)}</span>`}
         ${i.nutri ? `<span class="stuk">${nutriHtml(i.nutri)}</span>` : ""}
         ${lid ? `<span class="stuk">${AV.html(lid,"mini")} ${esc(lid.naam.split(" ")[0])}</span>` : ""}
+        ${i.gerecht ? `<span class="stuk">${IK.pan} ${esc(i.gerecht)}</span>` : ""}
         ${i.af && afLid
           ? `<span class="stuk">${IK.vink} ${esc(afLid.naam.split(" ")[0])} · ${datumKort(i.afOp)}</span>`
           : `<span class="stuk">${IK.klok} ${datumKort(i.gemaakt)}</span>`}
@@ -4397,6 +4497,858 @@ function deelLijst(){
   }
 }
 
+
+/* =====================================================================
+   19 · ETEN — weekplanning en jullie eigen gerechten
+   ===================================================================== */
+const DAGNAMEN = ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"];
+
+const datumSleutel = d =>
+  d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+
+/* de zeven dagen van de week waar je nu naar kijkt (maandag eerst) */
+function weekDagen(offset){
+  const n = new Date(); n.setHours(12,0,0,0);
+  const verschuif = (n.getDay() + 6) % 7;          // zondag is 0, wij beginnen op maandag
+  const maandag = new Date(n);
+  maandag.setDate(n.getDate() - verschuif + (offset||0) * 7);
+  return [...Array(7)].map((_, i) => {
+    const d = new Date(maandag); d.setDate(maandag.getDate() + i); return d;
+  });
+}
+const isVandaag = d => datumSleutel(d) === datumSleutel(new Date());
+const menuVan = sleutel => S.menu.find(m => m.id === sleutel) || null;
+const gerechtVan = id => S.gerechten.find(g => g.id === id) || null;
+
+/* wanneer aten we dit voor het laatst, en hoe vaak? */
+function gerechtHistorie(gerechtId){
+  const vandaag = datumSleutel(new Date());
+  const dagen = S.menu
+    .filter(m => m.gerechtId === gerechtId && m.id <= vandaag)
+    .map(m => m.id).sort();
+  const alles = S.menu.filter(m => m.gerechtId === gerechtId).length;
+  return {laatst: dagen.length ? dagen[dagen.length-1] : null, keer: alles};
+}
+function geledenTekst(datumTekst){
+  if(!datumTekst) return "nog niet gegeten";
+  const [j,m,d] = datumTekst.split("-").map(Number);
+  const toen = new Date(j, m-1, d, 12);
+  const dagen = Math.round((new Date().setHours(12,0,0,0) - toen) / 864e5);
+  if(dagen <= 0) return "vandaag";
+  if(dagen === 1) return "gisteren";
+  if(dagen < 7) return dagen + " dagen geleden";
+  if(dagen < 14) return "vorige week";
+  if(dagen < 60) return Math.round(dagen/7) + " weken geleden";
+  return Math.round(dagen/30) + " maanden geleden";
+}
+
+/* "500 g" voor 2 personen wordt "750 g" voor 3 */
+function schaalHoeveelheid(tekst, factor){
+  if(!tekst || !factor || factor === 1) return tekst || "";
+  const t = String(tekst);
+  /* "300 g" mag een kommagetal worden, maar 2 courgettes voor anderhalf keer
+     zoveel mensen zijn er 3 — geen 2,67 */
+  const heeftMaat = /(^|[\d\s])(g|gr|gram|kg|ml|cl|dl|l|liter)\b/i.test(t);
+  const heelGetal = /^\s*\d+\s*[a-zà-ÿ]*\s*$/i.test(t) && !/[.,]/.test(t);
+  return t.replace(/(\d+(?:[.,]\d+)?)/, m => {
+    const n = parseFloat(m.replace(",", ".")) * factor;
+    const uit = (heelGetal && !heeftMaat) ? Math.ceil(n) : Math.round(n * 10) / 10;
+    return String(uit).replace(".", ",");
+  });
+}
+
+/* staat dit ingrediënt al op de boodschappenlijst? */
+function staatOpLijst(naam){
+  const s = leerSleutel(naam);
+  if(!s) return null;
+  return openItems().find(i => leerSleutel(i.tekst) === s) || null;
+}
+
+function schermEten(){
+  const dagen = weekDagen(S.weekOffset);
+  const gepland = dagen.filter(d => menuVan(datumSleutel(d))).length;
+  const zoek = (S.gerechtZoek || "").trim().toLowerCase();
+  const lijst = S.gerechten.filter(g =>
+    !zoek || (g.naam || "").toLowerCase().includes(zoek) ||
+    (g.ingredienten || []).some(i => (i.naam || "").toLowerCase().includes(zoek)));
+
+  const weekLabel = S.weekOffset === 0 ? "Deze week"
+    : S.weekOffset === 1 ? "Volgende week"
+    : S.weekOffset === -1 ? "Vorige week"
+    : dagen[0].toLocaleDateString("nl-NL", {day:"numeric", month:"short"}) + " – " +
+      dagen[6].toLocaleDateString("nl-NL", {day:"numeric", month:"short"});
+
+  return `
+  <div class="scherm">
+    <div class="kop" id="kop">
+      <div class="kop-rij">
+        <div class="kop-titel">
+          <h1>Eten</h1>
+          <div class="sub">${gepland ? gepland + " van de 7 dagen gepland" : "nog niets gepland deze week"}</div>
+        </div>
+        <button class="ikoonknop ${S.gerechtZoek?"aan":""}" id="e-zoek" aria-label="Zoeken">${IK.zoek}</button>
+        <button class="ikoonknop" id="e-nieuw" aria-label="Gerecht toevoegen">${IK.plus}</button>
+      </div>
+      ${S.gerechtZoekOpen || S.gerechtZoek ? `
+        <div class="zoekbalk">
+          ${IK.zoek}
+          <input id="e-zoekveld" placeholder="Zoek een gerecht of ingrediënt…" value="${esc(S.gerechtZoek||"")}" autocomplete="off">
+          ${S.gerechtZoek ? `<button class="zoek-wis" id="e-zoekwis">${IK.kruis}</button>` : ""}
+        </div>` : ""}
+    </div>
+
+    <div class="inhoud" id="inhoud">
+      <div class="wrap">
+        <div class="weekkop">
+          <button class="ikoonknop" id="e-vorige" aria-label="Vorige week">${IK.terug}</button>
+          <div class="tk">
+            <b>${esc(weekLabel)}</b>
+            <span>${dagen[0].toLocaleDateString("nl-NL",{day:"numeric",month:"long"})} – ${dagen[6].toLocaleDateString("nl-NL",{day:"numeric",month:"long"})}</span>
+          </div>
+          <button class="ikoonknop" id="e-volgende" aria-label="Volgende week">${IK.pijl}</button>
+        </div>
+
+        <div class="lijst" style="margin-top:12px">
+          ${dagen.map(d => {
+            const sleutel = datumSleutel(d);
+            const m = menuVan(sleutel);
+            const g = m && m.gerechtId ? gerechtVan(m.gerechtId) : null;
+            const naam = g ? g.naam : (m && m.tekst ? m.tekst : null);
+            const nodig = g ? nogTeHalen(g, m.personen || g.personen || 2).length : 0;
+            return `
+            <button class="dagrij ${isVandaag(d)?"vandaag":""} ${naam?"":"vrijedag"}" data-dag="${sleutel}">
+              <span class="dagkop">
+                <b>${DAGNAMEN[(d.getDay()+6)%7].slice(0,2)}</b>
+                <span>${d.getDate()}</span>
+              </span>
+              <span class="tk">
+                ${naam
+                  ? `<b>${esc(naam)}</b><span>${m.personen ? m.personen + " personen" : ""}${
+                       g && nodig ? (m.personen ? " · " : "") + nodig + " nog te halen" : (g ? (m.personen ? " · " : "") + "alles in huis" : "")}</span>`
+                  : `<b class="stil">Niets gepland</b><span>tik om een gerecht te kiezen</span>`}
+              </span>
+              <span class="na">${naam ? IK.pijl : IK.plus}</span>
+            </button>`;
+          }).join("")}
+        </div>
+
+        ${gepland ? `
+          <button class="knop vol" id="e-weeklijst" style="margin-top:14px">
+            ${IK.kar} Boodschappen voor deze week</button>
+          <div class="hint" style="text-align:center">Alles van de geplande dagen bij elkaar, zonder dubbele.</div>` : ""}
+
+        <div class="sectie">
+          <div class="sectie-kop">
+            <h2>Onze gerechten</h2>
+            <span class="telw">${S.gerechten.length}</span>
+            <span class="lijn"></span>
+            <button class="mini" id="e-nieuw2">${IK.plus} Nieuw</button>
+          </div>
+          ${S.gerechten.length === 0 ? `
+            <div class="leeg fade"><span class="em">🍲</span><h3>Nog geen gerechten</h3>
+            <p>Maak er een aan en zet de ingrediënten erbij. Daarna plan je hem op een dag
+               en staan de boodschappen met één tik op je lijst.</p>
+            <button class="knop zacht klein" id="e-nieuw3" style="margin-top:14px">${IK.plus} Eerste gerecht</button></div>`
+          : lijst.length === 0 ? `
+            <div class="leeg fade"><span class="em">🔍</span><h3>Niets gevonden</h3>
+            <p>Geen gerecht met die naam of dat ingrediënt.</p></div>`
+          : `<div class="lijst">
+              ${lijst.map(g => {
+                const h = gerechtHistorie(g.id);
+                const n = (g.ingredienten || []).length;
+                return `<button class="gerechtrij" data-gerecht="${esc(g.id)}">
+                  ${g.fotoId
+                    ? `<img class="gfoto laden" data-foto="${esc(g.fotoId)}_k" alt="">`
+                    : `<span class="gfoto geenfoto">${esc(g.em || "🍽️")}</span>`}
+                  <span class="tk">
+                    <b>${esc(g.naam)}</b>
+                    <span>${n} ${n===1?"ingrediënt":"ingrediënten"} · ${g.personen||2} pers.${
+                      h.keer ? " · " + geledenTekst(h.laatst) : ""}</span>
+                  </span>
+                  <span class="na">${IK.pijl}</span>
+                </button>`;
+              }).join("")}
+            </div>`}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* welke ingrediënten moeten er nog gehaald worden? */
+function nogTeHalen(gerecht, personen){
+  const factor = (personen || gerecht.personen || 2) / (gerecht.personen || 2);
+  return (gerecht.ingredienten || [])
+    .filter(i => !i.vast && !staatOpLijst(i.naam))
+    .map(i => ({...i, hoeveelheid: schaalHoeveelheid(i.hoeveelheid, factor)}));
+}
+
+function bindEten(){
+  const zk = $("#e-zoek");
+  if(zk) zk.onclick = () => {
+    S.gerechtZoekOpen = !S.gerechtZoekOpen;
+    if(!S.gerechtZoekOpen) S.gerechtZoek = "";
+    tril(); tekenNu();
+    const v = $("#e-zoekveld"); if(v) v.focus();
+  };
+  const zv = $("#e-zoekveld");
+  if(zv) zv.oninput = () => {
+    S.gerechtZoek = zv.value;
+    const pos = zv.selectionStart;
+    tekenNu();
+    const nieuw = $("#e-zoekveld");
+    if(nieuw){ nieuw.focus(); try{ nieuw.setSelectionRange(pos,pos); }catch(e){} }
+  };
+  const zw = $("#e-zoekwis"); if(zw) zw.onclick = () => { S.gerechtZoek = ""; tekenNu(); };
+
+  $("#e-vorige").onclick = () => { S.weekOffset--; tril(); tekenNu(); };
+  $("#e-volgende").onclick = () => { S.weekOffset++; tril(); tekenNu(); };
+  [$("#e-nieuw"), $("#e-nieuw2"), $("#e-nieuw3")].forEach(b => {
+    if(b) b.onclick = () => { tril(); sheetGerechtBewerk(null); };
+  });
+  $$("[data-dag]").forEach(b => b.onclick = () => {
+    const sleutel = b.dataset.dag;
+    const m = menuVan(sleutel);
+    const g = m && m.gerechtId ? gerechtVan(m.gerechtId) : null;
+    tril();
+    if(g) sheetGerecht(g, sleutel);
+    else sheetPlan(sleutel);
+  });
+  $$("[data-gerecht]").forEach(b => b.onclick = () => {
+    const g = gerechtVan(b.dataset.gerecht);
+    if(g){ tril(); sheetGerecht(g, null); }
+  });
+  const wl = $("#e-weeklijst");
+  if(wl) wl.onclick = () => sheetWeekBoodschappen();
+  volgScroll();
+}
+
+
+/* de ingrediënten met hun status, voor een gekozen aantal personen */
+function ingRijenHtml(g, personen){
+  const factor = (personen || g.personen || 2) / (g.personen || 2);
+  return (g.ingredienten || []).map(i => {
+    const opLijst = staatOpLijst(i.naam);
+    return `<div class="rij">
+      <span class="ik" style="background:${i.vast ? "var(--groen-zacht)" : opLijst ? "var(--accent-zacht)" : "var(--bg-2)"};
+                  color:${i.vast ? "var(--groen)" : opLijst ? "var(--accent)" : "var(--ink-2)"}">
+        ${i.vast ? IK.vink : opLijst ? IK.lijst : catVan(i.cat).em}</span>
+      <div class="tk">
+        <b>${i.hoeveelheid ? `<span class="item-hoev" style="font-size:12px">${esc(schaalHoeveelheid(i.hoeveelheid, factor))}</span> ` : ""}${esc(i.naam)}</b>
+        <span>${i.vast ? "heb je meestal in huis" : opLijst ? "staat al op je lijst" : "nog te halen"}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/* ---------- een gerecht bekijken ---------- */
+function sheetGerecht(g, dagSleutel){
+  const m = dagSleutel ? menuVan(dagSleutel) : null;
+  const personen = (m && m.personen) || g.personen || 2;
+  const factor = personen / (g.personen || 2);
+  const h = gerechtHistorie(g.id);
+  const ing = g.ingredienten || [];
+  const teHalen = nogTeHalen(g, personen);
+
+  const body = `
+    ${g.fotoId ? `<img class="laden" data-foto="${esc(g.fotoId)}" id="g-foto"
+        style="width:100%; border-radius:var(--r-m); margin-bottom:16px; cursor:zoom-in; border:1px solid var(--line)" alt="">` : ""}
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px">
+      ${g.fotoId ? "" : `<span class="gfoto geenfoto" style="width:48px;height:48px;font-size:24px">${esc(g.em || "🍽️")}</span>`}
+      <div style="flex:1; min-width:0">
+        <div style="font-size:20px; font-weight:700; letter-spacing:-.02em">${esc(g.naam)}</div>
+        <div style="color:var(--muted); font-size:13.5px; margin-top:2px">
+          ${ing.length} ${ing.length===1?"ingrediënt":"ingrediënten"} · ${h.keer ? h.keer + "× gegeten · " + geledenTekst(h.laatst) : "nog niet gegeten"}
+        </div>
+      </div>
+    </div>
+
+    ${dagSleutel ? `<div class="banner info">${IK.kalender}<span>Gepland voor
+      ${esc(DAGNAMEN[(new Date(dagSleutel + "T12:00").getDay()+6)%7].toLowerCase())}
+      ${new Date(dagSleutel + "T12:00").getDate()} ${new Date(dagSleutel + "T12:00").toLocaleDateString("nl-NL",{month:"long"})}</span></div>` : ""}
+
+    <div class="veld" style="margin-top:16px">
+      <label>Voor hoeveel personen</label>
+      <div class="stepper">
+        <button type="button" id="g-min">−</button>
+        <b id="g-pers">${personen}</b>
+        <button type="button" id="g-plus">+</button>
+        <span class="hint" style="margin:0 0 0 10px; padding:0">recept is voor ${g.personen || 2}</span>
+      </div>
+    </div>
+
+    <div class="sectie" style="margin-top:6px">
+      <div class="sectie-kop"><h2>Ingrediënten</h2><span class="lijn"></span></div>
+      ${ing.length === 0 ? `<div class="hint">Er staan nog geen ingrediënten bij dit gerecht.</div>`
+        : `<div class="lijst" id="g-ing">${ingRijenHtml(g, personen)}</div>`}
+    </div>
+
+    ${g.notitie ? `
+    <div class="sectie">
+      <div class="sectie-kop"><h2>Bereiding</h2><span class="lijn"></span></div>
+      <div class="lijst"><div style="padding:14px 15px; font-size:14.5px; line-height:1.6; color:var(--ink-2); white-space:pre-wrap">${esc(g.notitie)}</div></div>
+    </div>` : ""}
+
+    <div class="lijst" style="margin-top:16px">
+      <button class="rij" id="g-naarlijst">
+        <span class="ik" style="background:var(--accent-zacht); color:var(--accent)">${IK.kar}</span>
+        <div class="tk"><b>Boodschappen toevoegen</b>
+          <span>${teHalen.length ? teHalen.length + " nog te halen" : "alles staat er al op of is in huis"}</span></div>
+        <span class="na">${IK.pijl}</span>
+      </button>
+      ${dagSleutel ? `
+      <button class="rij" id="g-ander">
+        <span class="ik">${IK.herhaal}</span>
+        <div class="tk"><b>Ander gerecht op deze dag</b></div>
+      </button>
+      <button class="rij" id="g-afhalen">
+        <span class="ik" style="background:var(--rood-zacht); color:var(--rood)">${IK.kruis}</span>
+        <div class="tk"><b>Van deze dag afhalen</b></div>
+      </button>` : `
+      <button class="rij" id="g-plan">
+        <span class="ik">${IK.kalender}</span>
+        <div class="tk"><b>Inplannen</b><span>kies een dag in de week</span></div>
+        <span class="na">${IK.pijl}</span>
+      </button>`}
+      <button class="rij" id="g-bewerk">
+        <span class="ik">${IK.potlood}</span>
+        <div class="tk"><b>Aanpassen</b><span>naam, personen, ingrediënten en bereiding</span></div>
+      </button>
+      <button class="rij" id="g-wis">
+        <span class="ik" style="background:var(--rood-zacht); color:var(--rood)">${IK.prul}</span>
+        <div class="tk"><b style="color:var(--rood)">Gerecht verwijderen</b></div>
+      </button>
+    </div>`;
+
+  sheet({titel:"Gerecht", body, naTeken:() => {
+    vulFotos($(".sheet"));
+    let pers = personen;
+    const gf = $("#g-foto"); if(gf) gf.onclick = () => openKijker(g.fotoId, g.naam);
+    const bijwerken = async () => {
+      $("#g-pers").textContent = pers;
+      const vak = $("#g-ing");
+      if(vak) vak.innerHTML = ingRijenHtml(g, pers);
+      const tel = $("#g-naarlijst .tk span");
+      if(tel){
+        const n = nogTeHalen(g, pers).length;
+        tel.textContent = n ? n + " nog te halen" : "alles staat er al op of is in huis";
+      }
+      if(dagSleutel) await DB.zet(PAD.menu + "/" + dagSleutel, {personen: pers});
+    };
+    $("#g-min").onclick = () => { if(pers > 1){ pers--; tril(6); bijwerken(); } };
+    $("#g-plus").onclick = () => { if(pers < 20){ pers++; tril(6); bijwerken(); } };
+    $("#g-naarlijst").onclick = () => sheetNaarLijst(g, pers, dagSleutel);
+    const ga = $("#g-ander"); if(ga) ga.onclick = () => sheetPlan(dagSleutel);
+    const gaf = $("#g-afhalen");
+    if(gaf) gaf.onclick = async () => {
+      await DB.wis(PAD.menu + "/" + dagSleutel);
+      sluitSheet(); toast("Van de planning gehaald");
+    };
+    const gp = $("#g-plan"); if(gp) gp.onclick = () => sheetDagKiezen(g);
+    $("#g-bewerk").onclick = () => sheetGerechtBewerk(g);
+    $("#g-wis").onclick = async () => {
+      if(!confirm(`"${g.naam}" verwijderen?\n\nDe planning van dit gerecht verdwijnt ook.`)) return;
+      for(const m2 of S.menu.filter(x => x.gerechtId === g.id)) await DB.wis(PAD.menu + "/" + m2.id);
+      await wisFoto(g.fotoId);
+      await DB.wis(PAD.gerechten + "/" + g.id);
+      sluitSheet(); toast("Gerecht verwijderd");
+    };
+  }});
+}
+
+/* ---------- een dag inplannen ---------- */
+function sheetPlan(dagSleutel){
+  const d = new Date(dagSleutel + "T12:00");
+  const dagNaam = DAGNAMEN[(d.getDay()+6)%7];
+  const m = menuVan(dagSleutel);
+  const body = `
+    <p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+      Wat eten jullie op <b>${esc(dagNaam.toLowerCase())} ${d.getDate()} ${d.toLocaleDateString("nl-NL",{month:"long"})}</b>?
+    </p>
+    ${S.gerechten.length === 0 ? `
+      <div class="leeg" style="padding:26px 10px"><span class="em">🍲</span><h3>Nog geen gerechten</h3>
+      <p>Maak eerst een gerecht aan, dan kun je het hier inplannen.</p>
+      <button class="knop zacht klein" id="pl-nieuw" style="margin-top:14px">${IK.plus} Gerecht maken</button></div>`
+    : `<div class="lijst" style="margin-bottom:14px">
+      ${S.gerechten.map(g => {
+        const h = gerechtHistorie(g.id);
+        return `<button class="rij" data-kies="${esc(g.id)}">
+          <span class="gfoto geenfoto" style="width:34px;height:34px;font-size:17px;border-radius:10px">${esc(g.em || "🍽️")}</span>
+          <div class="tk"><b>${esc(g.naam)}</b>
+            <span>${(g.ingredienten||[]).length} ingrediënten${h.keer ? " · " + geledenTekst(h.laatst) : ""}</span></div>
+        </button>`;
+      }).join("")}
+    </div>`}
+    <div class="veld" style="margin-bottom:0">
+      <label>Of iets anders</label>
+      <div class="veld-rij">
+        <input class="invoer" id="pl-tekst" maxlength="40" placeholder="Bijv. uit eten, restjes"
+               value="${esc(m && m.tekst ? m.tekst : "")}">
+        <button class="knop" id="pl-tekstok" style="flex:0 0 auto">${IK.vink}</button>
+      </div>
+    </div>
+    ${m ? `<button class="knop stil vol" id="pl-leeg" style="margin-top:14px">${IK.kruis} Dag leegmaken</button>` : ""}`;
+
+  sheet({titel: dagNaam + " " + d.getDate(), body, naTeken:() => {
+    const nw = $("#pl-nieuw");
+    if(nw) nw.onclick = () => sheetGerechtBewerk(null);
+    $$("[data-kies]").forEach(b => b.onclick = async () => {
+      const g = gerechtVan(b.dataset.kies); if(!g) return;
+      await DB.zet(PAD.menu + "/" + dagSleutel, {
+        gerechtId: g.id, tekst:"", personen: g.personen || 2, door: S.ik.id, gemaakt: nu()
+      });
+      tril(12); sluitSheet(); toast(g.naam + " op " + dagNaam.toLowerCase(), "🍽️");
+    });
+    const bewaarTekst = async () => {
+      const t = $("#pl-tekst").value.trim();
+      if(!t) return;
+      await DB.zet(PAD.menu + "/" + dagSleutel, {gerechtId:null, tekst:t, personen:null, door:S.ik.id, gemaakt:nu()});
+      sluitSheet(); toast("Genoteerd", "✓");
+    };
+    $("#pl-tekstok").onclick = bewaarTekst;
+    $("#pl-tekst").onkeydown = e => { if(e.key === "Enter") bewaarTekst(); };
+    const leeg = $("#pl-leeg");
+    if(leeg) leeg.onclick = async () => {
+      await DB.wis(PAD.menu + "/" + dagSleutel); sluitSheet(); toast("Dag leeggemaakt");
+    };
+  }});
+}
+
+/* ---------- een gerecht op een dag zetten ---------- */
+function sheetDagKiezen(g){
+  const dagen = [...weekDagen(0), ...weekDagen(1)];
+  const body = `
+    <p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+      Op welke dag eten jullie <b>${esc(g.naam)}</b>?
+    </p>
+    <div class="lijst">
+      ${dagen.map(d => {
+        const sleutel = datumSleutel(d);
+        const m = menuVan(sleutel);
+        const bezet = m ? (m.gerechtId ? (gerechtVan(m.gerechtId)||{}).naam : m.tekst) : null;
+        return `<button class="rij" data-dagkies="${sleutel}">
+          <span class="ik" style="${isVandaag(d)?"background:var(--accent);color:var(--accent-ink)":""}">
+            <b style="font-size:13px">${d.getDate()}</b></span>
+          <div class="tk"><b>${DAGNAMEN[(d.getDay()+6)%7]}${isVandaag(d)?" · vandaag":""}</b>
+            <span>${bezet ? "nu: " + esc(bezet) : "nog niets gepland"}</span></div>
+        </button>`;
+      }).join("")}
+    </div>`;
+  sheet({titel:"Inplannen", body, naTeken:() => {
+    $$("[data-dagkies]").forEach(b => b.onclick = async () => {
+      const sleutel = b.dataset.dagkies;
+      await DB.zet(PAD.menu + "/" + sleutel, {
+        gerechtId: g.id, tekst:"", personen: g.personen || 2, door: S.ik.id, gemaakt: nu()
+      });
+      const d = new Date(sleutel + "T12:00");
+      tril(12); sluitSheet();
+      toast(g.naam + " op " + DAGNAMEN[(d.getDay()+6)%7].toLowerCase(), "🍽️");
+    });
+  }});
+}
+
+
+/* ---------- gerecht aanmaken of aanpassen ---------- */
+/* `concept` is wat je al had ingevuld: het paneel gaat dicht als je even naar je
+   boodschappenlijst kijkt, en komt daarna terug met je werk er nog in */
+function sheetGerechtBewerk(bestaand, concept){
+  const nieuw = !bestaand;
+  const f = concept || {
+    naam: bestaand ? bestaand.naam : "",
+    em: bestaand ? (bestaand.em || "🍽️") : "🍽️",
+    personen: bestaand ? (bestaand.personen || 2) : 2,
+    notitie: bestaand ? (bestaand.notitie || "") : "",
+    ingredienten: bestaand ? (bestaand.ingredienten || []).map(i => ({...i})) : [],
+    fotoFile: null, fotoWeg: false
+  };
+
+  const ingHtml = () => f.ingredienten.length === 0
+    ? `<div class="hint" style="padding:10px 2px">Nog geen ingrediënten. Voeg ze hieronder toe of haal ze van je lijst.</div>`
+    : `<div class="lijst">${f.ingredienten.map((i, idx) => `
+        <div class="ingrij">
+          <input class="invoer hoev" data-ihoev="${idx}" placeholder="1" maxlength="12" value="${esc(i.hoeveelheid||"")}">
+          <input class="invoer" data-inaam="${idx}" placeholder="Ingrediënt" maxlength="40" value="${esc(i.naam||"")}">
+          <button type="button" class="vastknop ${i.vast?"aan":""}" data-ivast="${idx}"
+                  title="Heb ik meestal in huis">${IK.vink}</button>
+          <button type="button" class="ikoonknop" data-iwis="${idx}"
+                  style="width:30px;height:30px;color:var(--muted);flex:none">${IK.kruis}</button>
+        </div>`).join("")}</div>`;
+
+  const body = `
+    <div class="veld">
+      <label>Naam van het gerecht</label>
+      <div class="veld-rij">
+        <input class="invoer" id="gb-em" maxlength="2" value="${esc(f.em)}"
+               style="flex:0 0 62px; text-align:center; font-size:20px">
+        <input class="invoer" id="gb-naam" maxlength="46" placeholder="Bijv. pasta pesto" value="${esc(f.naam)}">
+      </div>
+    </div>
+    <div class="veld">
+      <label>Voor hoeveel personen is dit recept</label>
+      <div class="stepper">
+        <button type="button" id="gb-min">−</button>
+        <b id="gb-pers">${f.personen}</b>
+        <button type="button" id="gb-plus">+</button>
+        <span class="hint" style="margin:0 0 0 10px; padding:0">de hoeveelheden gelden hiervoor</span>
+      </div>
+    </div>
+
+    <div class="veld">
+      <label>Ingrediënten</label>
+      <div id="gb-ing">${ingHtml()}</div>
+      <div class="veld-rij" style="margin-top:10px">
+        <button type="button" class="knop stil" id="gb-plusing" style="flex:1">${IK.plus} Regel erbij</button>
+        <button type="button" class="knop stil" id="gb-vanlijst" style="flex:1">${IK.lijst} Van mijn lijst</button>
+      </div>
+      <div class="hint">
+        Tik het vinkje aan bij dingen die je <b>meestal in huis hebt</b>, zoals olie of zout.
+        Die worden niet vanzelf op de boodschappenlijst gezet.
+      </div>
+    </div>
+
+    <div class="veld">
+      <label>Foto</label>
+      <div class="fotovak">
+        <button type="button" class="fotoknop" id="gb-foto">${bestaand && bestaand.fotoId ? IK.herhaal : IK.camera}<span>${bestaand && bestaand.fotoId ? "Andere foto" : "Foto toevoegen"}</span></button>
+        <div class="fotovb ${bestaand && bestaand.fotoId ? "" : "verborgen"}" id="gb-fotovb">
+          <img alt="" ${bestaand && bestaand.fotoId ? `class="laden" data-foto="${esc(bestaand.fotoId)}_k"` : ""}>
+          <button type="button" class="weg" id="gb-fotoweg">${IK.kruis}</button></div>
+      </div>
+      <input type="file" accept="image/*" id="gb-bestand" class="verborgen"></div>
+
+    <div class="veld">
+      <label>Bereiding <span style="text-transform:none;letter-spacing:0;font-weight:500">(mag leeg)</span></label>
+      <textarea class="invoer" id="gb-notitie" maxlength="1500" style="min-height:110px"
+                placeholder="Korte stappen, oventemperatuur, wat je erbij eet…">${esc(f.notitie)}</textarea>
+    </div>`;
+
+  const voet = `
+    <button class="knop stil" id="gb-annuleer" style="flex:0 0 auto">${nieuw ? "Annuleer" : "Terug"}</button>
+    <button class="knop" id="gb-opslaan" style="flex:1">${nieuw ? "Gerecht opslaan" : "Opslaan"}</button>`;
+
+  sheet({titel: nieuw ? "Nieuw gerecht" : "Gerecht aanpassen", body, voet, naTeken:() => {
+    vulFotos($(".sheet"));
+    if(nieuw) setTimeout(() => $("#gb-naam").focus(), 250);
+
+    const hertekenIng = () => {
+      const vak = $("#gb-ing");
+      const pos = vak ? vak.scrollTop : 0;
+      vak.innerHTML = ingHtml();
+      vak.scrollTop = pos;
+      bindIng();
+    };
+    const bindIng = () => {
+      $$("[data-inaam]").forEach(el => el.oninput = () => {
+        f.ingredienten[+el.dataset.inaam].naam = el.value;
+        const geraden = raadCategorie(el.value);
+        if(geraden) f.ingredienten[+el.dataset.inaam].cat = geraden;
+      });
+      $$("[data-ihoev]").forEach(el => el.oninput = () => {
+        f.ingredienten[+el.dataset.ihoev].hoeveelheid = el.value;
+      });
+      $$("[data-ivast]").forEach(b => b.onclick = () => {
+        const i = f.ingredienten[+b.dataset.ivast];
+        i.vast = !i.vast; tril(6); b.classList.toggle("aan", i.vast);
+      });
+      $$("[data-iwis]").forEach(b => b.onclick = () => {
+        f.ingredienten.splice(+b.dataset.iwis, 1); tril(6); hertekenIng();
+      });
+    };
+    bindIng();
+
+    $("#gb-plusing").onclick = () => {
+      f.ingredienten.push({naam:"", hoeveelheid:"", cat:"overig", vast:false});
+      hertekenIng();
+      const velden = $$("[data-inaam]");
+      if(velden.length) velden[velden.length-1].focus();
+    };
+    $("#gb-vanlijst").onclick = () => {
+      bewaarConcept();
+      sheetVanLijst(gekozen => {
+        gekozen.forEach(i => {
+          if(f.ingredienten.some(x => leerSleutel(x.naam) === leerSleutel(i.tekst))) return;
+          f.ingredienten.push({naam:i.tekst, hoeveelheid:i.hoeveelheid||"", cat:i.cat||"overig", vast:false});
+        });
+        sheetGerechtBewerk(bestaand, f);
+      }, () => sheetGerechtBewerk(bestaand, f));
+    };
+
+    /* alles wat je in de velden hebt staan even veiligstellen */
+    const bewaarConcept = () => {
+      f.naam = $("#gb-naam").value;
+      f.em = $("#gb-em").value;
+      f.notitie = $("#gb-notitie").value;
+    };
+
+    let pers = f.personen;
+    $("#gb-min").onclick = () => { if(pers > 1){ pers--; f.personen = pers; $("#gb-pers").textContent = pers; tril(6); } };
+    $("#gb-plus").onclick = () => { if(pers < 20){ pers++; f.personen = pers; $("#gb-pers").textContent = pers; tril(6); } };
+
+    $("#gb-foto").onclick = () => $("#gb-bestand").click();
+    $("#gb-bestand").onchange = async e => {
+      const file = e.target.files[0]; if(!file) return;
+      $("#gb-foto").innerHTML = `<span class="spinner"></span><span>Bezig…</span>`;
+      try{
+        const {klein} = await verkleinFoto(file);
+        f.fotoFile = file; f.fotoWeg = false;
+        $("#gb-fotovb").classList.remove("verborgen");
+        $("#gb-fotovb img").src = klein; $("#gb-fotovb img").classList.remove("laden");
+        $("#gb-foto").innerHTML = `${IK.herhaal}<span>Andere foto</span>`;
+      }catch(err){ toast("Die foto lukte niet"); $("#gb-foto").innerHTML = `${IK.camera}<span>Foto toevoegen</span>`; }
+      e.target.value = "";
+    };
+    $("#gb-fotoweg").onclick = () => {
+      f.fotoFile = null; f.fotoWeg = true;
+      $("#gb-fotovb").classList.add("verborgen");
+      $("#gb-foto").innerHTML = `${IK.camera}<span>Foto toevoegen</span>`;
+    };
+
+    $("#gb-annuleer").onclick = () => bestaand ? sheetGerecht(bestaand, null) : sluitSheet();
+    $("#gb-opslaan").onclick = async () => {
+      const naam = $("#gb-naam").value.trim();
+      if(naam.length < 2){ $("#gb-naam").focus(); $("#gb-naam").style.borderColor = "var(--rood)"; return; }
+      const knop = $("#gb-opslaan");
+      knop.disabled = true; knop.innerHTML = `<span class="spinner"></span> Opslaan…`;
+      try{
+        const gegevens = {
+          naam, em: $("#gb-em").value.trim() || "🍽️", personen: f.personen,
+          notitie: $("#gb-notitie").value.trim(),
+          ingredienten: f.ingredienten
+            .map(i => ({naam:(i.naam||"").trim(), hoeveelheid:(i.hoeveelheid||"").trim(),
+                        cat:i.cat||"overig", vast:!!i.vast}))
+            .filter(i => i.naam.length > 0)
+        };
+        if(bestaand){
+          if(f.fotoFile){ await wisFoto(bestaand.fotoId); gegevens.fotoId = await bewaarFoto(f.fotoFile); }
+          else if(f.fotoWeg && bestaand.fotoId){ await wisFoto(bestaand.fotoId); gegevens.fotoId = null; }
+          await DB.zet(PAD.gerechten + "/" + bestaand.id, gegevens);
+          sluitSheet(); toast("Opgeslagen", "✓");
+        }else{
+          gegevens.fotoId = f.fotoFile ? await bewaarFoto(f.fotoFile) : null;
+          gegevens.door = S.ik.id; gegevens.gemaakt = nu();
+          await DB.voegToe(PAD.gerechten, gegevens);
+          sluitSheet(); tekenNu();
+          toast(naam + " opgeslagen", "🍲");
+        }
+      }catch(e){
+        console.error(e); toast("Opslaan lukte niet");
+        knop.disabled = false; knop.innerHTML = nieuw ? "Gerecht opslaan" : "Opslaan";
+      }
+    };
+  }});
+}
+
+/* ---------- ingrediënten van je boodschappenlijst plukken ---------- */
+function sheetVanLijst(klaar, terug){
+  const open = openItems();
+  const gekozen = new Set();
+  const body = open.length === 0
+    ? `<div class="leeg" style="padding:26px 10px"><span class="em">🧺</span><h3>Je lijst is leeg</h3>
+       <p>Er staat op dit moment niets op de boodschappenlijst om over te nemen.</p></div>`
+    : `<p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+        Tik aan wat bij dit gerecht hoort. Ze worden als ingrediënt overgenomen —
+        je boodschappenlijst blijft zoals hij is.
+       </p>
+       <div class="lijst">
+        ${groepeer(open).map(g => `
+          <div class="rij" style="background:var(--card-2); padding:8px 15px">
+            <div class="tk"><b style="font-size:12px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)">${esc(g.naam)}</b></div>
+          </div>
+          ${g.items.map(i => `
+            <button class="rij" data-vl="${esc(i.id)}">
+              <span class="vink" style="margin:0"></span>
+              <div class="tk"><b>${i.hoeveelheid ? esc(i.hoeveelheid) + " " : ""}${esc(i.tekst)}</b></div>
+            </button>`).join("")}`).join("")}
+       </div>`;
+  const voet = open.length
+    ? `<button class="knop stil" id="vl-terug" style="flex:0 0 auto">Terug</button>
+       <button class="knop" id="vl-klaar" style="flex:1">Overnemen</button>`
+    : `<button class="knop vol" id="vl-terug">Terug</button>`;
+  sheet({titel:"Van mijn lijst", body, voet, sluitKnop:false, naTeken:() => {
+    $("#vl-terug").onclick = () => { if(terug) terug(); else sluitSheet(); };
+    $$("[data-vl]").forEach(b => b.onclick = () => {
+      const id = b.dataset.vl;
+      if(gekozen.has(id)) gekozen.delete(id); else gekozen.add(id);
+      b.classList.toggle("af", gekozen.has(id));
+      b.querySelector(".vink").classList.toggle("gevuld", gekozen.has(id));
+      b.querySelector(".vink").innerHTML = gekozen.has(id) ? IK.vink : "";
+      tril(6);
+    });
+    const k = $("#vl-klaar");
+    if(k) k.onclick = () => {
+      const items = [...gekozen].map(id => S.items.find(i => i.id === id)).filter(Boolean);
+      sluitSheet();
+      setTimeout(() => klaar(items), 60);
+    };
+  }});
+}
+
+
+/* ---------- ingrediënten op de boodschappenlijst zetten ---------- */
+function ingRegels(gerecht, personen){
+  const factor = (personen || gerecht.personen || 2) / (gerecht.personen || 2);
+  return (gerecht.ingredienten || []).map(i => {
+    const opLijst = staatOpLijst(i.naam);
+    return {
+      ...i,
+      hoeveelheid: schaalHoeveelheid(i.hoeveelheid, factor),
+      opLijst,
+      /* standaard aangevinkt, behalve wat je in huis hebt of al op de lijst staat */
+      aan: !i.vast && !opLijst,
+      gerecht: gerecht.naam, gerechtId: gerecht.id
+    };
+  });
+}
+
+function sheetNaarLijst(gerecht, personen, dagSleutel){
+  const regels = ingRegels(gerecht, personen);
+  const gekozen = new Set(regels.filter(r => r.aan).map(r => r.naam));
+
+  const teken = () => {
+    const body = regels.length === 0
+      ? `<div class="leeg" style="padding:26px 10px"><span class="em">📝</span><h3>Geen ingrediënten</h3>
+         <p>Bij dit gerecht staan nog geen ingrediënten. Voeg ze toe bij <i>Aanpassen</i>.</p></div>`
+      : `
+      <p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+        Voor <b>${personen} ${personen===1?"persoon":"personen"}</b>. Tik aan wat er op de
+        boodschappenlijst moet — wat je in huis hebt of er al op staat, staat uit.
+      </p>
+      <div class="lijst">
+        ${regels.map(r => `
+          <button class="rij ingkies ${gekozen.has(r.naam)?"aan":""} ${r.opLijst?"stil":""}" data-ing="${esc(r.naam)}">
+            <span class="vink" style="margin:0">${gekozen.has(r.naam) ? IK.vink : ""}</span>
+            <div class="tk">
+              <b>${r.hoeveelheid ? `<span class="item-hoev" style="font-size:12px">${esc(r.hoeveelheid)}</span> ` : ""}${esc(r.naam)}</b>
+              <span>${r.opLijst ? "staat al op je lijst" : r.vast ? "heb je meestal in huis" : catVan(r.cat).naam}</span>
+            </div>
+          </button>`).join("")}
+      </div>`;
+    const voet = regels.length
+      ? `<button class="knop stil" id="nl-alles" style="flex:0 0 auto">${gekozen.size === regels.length ? "Niets" : "Alles"}</button>
+         <button class="knop" id="nl-ok" style="flex:1">${IK.plus} ${gekozen.size ? gekozen.size + " op de lijst" : "Niets gekozen"}</button>`
+      : "";
+    sheet({titel:"Boodschappen voor " + gerecht.naam, body, voet, naTeken:() => {
+      $$("[data-ing]").forEach(b => b.onclick = () => {
+        const naam = b.dataset.ing;
+        if(gekozen.has(naam)) gekozen.delete(naam); else gekozen.add(naam);
+        tril(6); teken();
+      });
+      const a = $("#nl-alles");
+      if(a) a.onclick = () => {
+        if(gekozen.size === regels.length) gekozen.clear();
+        else regels.forEach(r => gekozen.add(r.naam));
+        tril(); teken();
+      };
+      const ok = $("#nl-ok");
+      if(ok) ok.onclick = async () => {
+        if(!gekozen.size){ sluitSheet(); return; }
+        ok.disabled = true; ok.innerHTML = `<span class="spinner"></span> Toevoegen…`;
+        let n = 0;
+        for(const r of regels){
+          if(!gekozen.has(r.naam)) continue;
+          if(r.opLijst) continue;                       /* niet twee keer */
+          await nieuwItem({
+            tekst: r.naam, hoeveelheid: r.hoeveelheid || "",
+            cat: r.cat || raadCategorie(r.naam) || "overig",
+            winkel: S.filter.winkel || "nvt",
+            gerecht: r.gerecht, gerechtId: r.gerechtId
+          });
+          n++;
+        }
+        sluitSheet(); tekenNu();
+        toast(n === 1 ? "1 boodschap toegevoegd" : n + " boodschappen toegevoegd", "🧺");
+      };
+    }});
+  };
+  teken();
+}
+
+/* ---------- alles van de geplande week in één keer ---------- */
+function sheetWeekBoodschappen(){
+  const dagen = weekDagen(S.weekOffset);
+  /* alle ingrediënten van de geplande dagen, dubbele bij elkaar opgeteld */
+  const samen = new Map();
+  dagen.forEach(d => {
+    const m = menuVan(datumSleutel(d));
+    if(!m || !m.gerechtId) return;
+    const g = gerechtVan(m.gerechtId);
+    if(!g) return;
+    ingRegels(g, m.personen || g.personen || 2).forEach(r => {
+      const sleutel = leerSleutel(r.naam) || r.naam;
+      if(samen.has(sleutel)){
+        const b = samen.get(sleutel);
+        if(!b.gerechten.includes(r.gerecht)) b.gerechten.push(r.gerecht);
+        if(r.hoeveelheid) b.hoeveelheden.push(r.hoeveelheid);
+        b.vast = b.vast && r.vast;
+      }else{
+        samen.set(sleutel, {
+          naam: r.naam, cat: r.cat, vast: r.vast, opLijst: r.opLijst,
+          hoeveelheden: r.hoeveelheid ? [r.hoeveelheid] : [],
+          gerechten: [r.gerecht], gerechtId: r.gerechtId
+        });
+      }
+    });
+  });
+  const regels = [...samen.values()].sort((a,b) => catIndex(a.cat) - catIndex(b.cat));
+  const gekozen = new Set(regels.filter(r => !r.vast && !r.opLijst).map(r => r.naam));
+
+  const teken = () => {
+    const body = regels.length === 0
+      ? `<div class="leeg" style="padding:26px 10px"><span class="em">📅</span><h3>Niets te halen</h3>
+         <p>De geplande gerechten hebben nog geen ingrediënten.</p></div>`
+      : `
+      <p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+        Alles van de geplande dagen bij elkaar. Komt iets in twee gerechten voor, dan staat
+        het hier één keer met beide hoeveelheden erbij.
+      </p>
+      <div class="lijst">
+        ${regels.map(r => `
+          <button class="rij ingkies ${gekozen.has(r.naam)?"aan":""} ${r.opLijst?"stil":""}" data-wing="${esc(r.naam)}">
+            <span class="vink" style="margin:0">${gekozen.has(r.naam) ? IK.vink : ""}</span>
+            <div class="tk">
+              <b>${r.hoeveelheden.length ? `<span class="item-hoev" style="font-size:12px">${esc(r.hoeveelheden.join(" + "))}</span> ` : ""}${esc(r.naam)}</b>
+              <span>${r.opLijst ? "staat al op je lijst · " : r.vast ? "meestal in huis · " : ""}${esc(r.gerechten.join(", "))}</span>
+            </div>
+          </button>`).join("")}
+      </div>`;
+    const voet = regels.length
+      ? `<button class="knop stil" id="wl-alles" style="flex:0 0 auto">${gekozen.size === regels.length ? "Niets" : "Alles"}</button>
+         <button class="knop" id="wl-ok" style="flex:1">${IK.plus} ${gekozen.size ? gekozen.size + " op de lijst" : "Niets gekozen"}</button>`
+      : "";
+    sheet({titel:"Boodschappen voor de week", body, voet, naTeken:() => {
+      $$("[data-wing]").forEach(b => b.onclick = () => {
+        const naam = b.dataset.wing;
+        if(gekozen.has(naam)) gekozen.delete(naam); else gekozen.add(naam);
+        tril(6); teken();
+      });
+      const a = $("#wl-alles");
+      if(a) a.onclick = () => {
+        if(gekozen.size === regels.length) gekozen.clear();
+        else regels.forEach(r => gekozen.add(r.naam));
+        tril(); teken();
+      };
+      const ok = $("#wl-ok");
+      if(ok) ok.onclick = async () => {
+        if(!gekozen.size){ sluitSheet(); return; }
+        ok.disabled = true; ok.innerHTML = `<span class="spinner"></span> Toevoegen…`;
+        let n = 0;
+        for(const r of regels){
+          if(!gekozen.has(r.naam) || r.opLijst) continue;
+          await nieuwItem({
+            tekst: r.naam, hoeveelheid: r.hoeveelheden.join(" + "),
+            cat: r.cat || "overig", winkel: S.filter.winkel || "nvt",
+            gerecht: r.gerechten.join(", "), gerechtId: r.gerechtId
+          });
+          n++;
+        }
+        sluitSheet(); S.tab = "lijst"; tekenNu(); naarBoven();
+        toast(n + " boodschappen voor deze week", "🧺");
+      };
+    }});
+  };
+  teken();
+}
+
 /* =====================================================================
    16 · NAVIGATIE & TEKENEN
    ===================================================================== */
@@ -4404,6 +5356,7 @@ function navHtml(){
   const open = openItems().length;
   const tabs = [
     {id:"lijst",    naam:"Lijst",    ik:IK.lijst, bel:open},
+    {id:"eten",     naam:"Eten",     ik:IK.pan},
     {id:"winkelen", naam:"Winkelen", ik:IK.kar},
     {id:"budget",   naam:"Budget",   ik:IK.euro},
     {id:"meer",     naam:"Meer",     ik:IK.meer}
@@ -4430,6 +5383,7 @@ function tekenNu(){
   let scherm = "";
   if(S.tab === "lijst")         scherm = schermLijst();
   else if(S.tab === "winkelen") scherm = schermWinkelen();
+  else if(S.tab === "eten")     scherm = schermEten();
   else if(S.tab === "budget")   scherm = schermBudget();
   else                          scherm = schermMeer();
 
@@ -4448,6 +5402,7 @@ function tekenNu(){
 
   if(S.tab === "lijst")         bindLijst();
   else if(S.tab === "winkelen") bindWinkelen();
+  else if(S.tab === "eten")     bindEten();
   else if(S.tab === "budget")   bindBudget();
   else                          bindMeer();
 
@@ -4509,6 +5464,11 @@ function startLuisteren(){
   });
   DB.luister(PAD.vast,   l => { S.vast = l;   if(S.geladen && S.tab === "meer") tekenNu(); });
   DB.luister(PAD.geleerd, l => { S.geleerd = l; });
+  DB.luister(PAD.gerechten, l => {
+    S.gerechten = l.sort((a,b) => (a.naam||"").localeCompare(b.naam||""));
+    if(S.geladen && S.tab === "eten") tekenNu();
+  });
+  DB.luister(PAD.menu, l => { S.menu = l; if(S.geladen && S.tab === "eten") tekenNu(); });
   DB.luister(PAD.cats, l => {
     if(!l.length) return;
     S.cats = l.sort((a,b) => (a.volgorde||50) - (b.volgorde||50));
@@ -4581,6 +5541,8 @@ async function start(){
   try{ S.bonnen = await metGrens(DB.haalAlles(PAD.bonnen), []); }catch(e){}
   try{ S.vast   = await metGrens(DB.haalAlles(PAD.vast), []); }catch(e){}
   try{ S.geleerd = await metGrens(DB.haalAlles(PAD.geleerd), []); }catch(e){}
+  try{ S.gerechten = await metGrens(DB.haalAlles(PAD.gerechten), []); }catch(e){}
+  try{ S.menu = await metGrens(DB.haalAlles(PAD.menu), []); }catch(e){}
 
   const bewaard = LS.get("boodschappen_ik_" + P, null);
   if(bewaard && S.leden.some(l => l.id === bewaard.id)){
