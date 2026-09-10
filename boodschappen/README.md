@@ -58,6 +58,15 @@ wie welke bon betaalde.
 - **Opruimen** wist de kar in één keer, of alleen wat ouder is dan een week.
 - **Groeperen** op winkel (standaard) of op categorie. De volgorde van de categorieën
   stel je in bij *Meer → Categorieën*.
+- **Meerdere tegelijk aanpassen** ☑️ — zet je iets snel op de lijst zonder erbij te
+  bedenken waar het te koop is, dan hoef je dat later niet één voor één goed te zetten.
+  Tik het vinkjes-knopje rechtsboven aan (of houd een boodschap even ingedrukt) en tik
+  dan alles aan wat bij elkaar hoort. Onderin kies je wat ermee moet gebeuren:
+  **winkel**, **categorie**, **spoed aan of uit**, in één keer **afvinken** of
+  **verwijderen**. *Alles* bovenin pakt de hele lijst, en per kop staat er ook een
+  *Alles* — filter eerst op *Nog niet gekozen*, tik *Alles*, kies Jumbo en je bent klaar.
+  Zet je zo een categorie recht, dan onthoudt de app dat net zo goed als bij één losse
+  boodschap.
 - **Koppen in- en uitklappen**: tik op een kop en die groep vouwt dicht, met het aantal
   ernaast zodat je nog steeds ziet hoeveel er onder zit. *In de kar* klapt net zo dicht.
   Wat je dichtgevouwen hebt, blijft zo staan als je de app afsluit — het is jouw
