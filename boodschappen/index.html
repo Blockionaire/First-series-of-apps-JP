@@ -479,6 +479,28 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
 .wm-item.af .tk b{text-decoration:line-through; color:var(--muted);}
 .wm-item .tk span{font-size:13px; color:var(--muted);}
 
+/* ---------- groepen op de lijst in- en uitklappen ---------- */
+.vouwknop{
+  display:flex; align-items:center; gap:9px; background:none; border:none;
+  padding:0; text-align:left; flex:none; max-width:72%;
+}
+.vouwknop:active{opacity:.6;}
+.vouwknop h2{
+  margin:0; font-size:12px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--muted); display:flex; align-items:center; gap:7px; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.vouwknop .telw{
+  font-size:11px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums;
+  background:var(--bg-2); padding:2px 7px; border-radius:999px; flex:none;
+}
+.vouwknop .chev{
+  display:grid; place-items:center; color:var(--line-2); flex:none;
+  transition:transform var(--vt);
+}
+.vouwknop .chev svg{width:16px; height:16px; stroke-width:2.4;}
+.vouwknop.open .chev{transform:rotate(90deg);}
+
 /* ---------- winkelmodus: groepen en "niet nu" ---------- */
 .groepkop{
   width:100%; text-align:left; background:none; border:none;
@@ -681,6 +703,13 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
   background:var(--bg-2); border:1px solid var(--line);
 }
 .gfoto.geenfoto{display:grid; place-items:center; font-size:21px; border:none; background:var(--bg-2);}
+
+.statuswissel{
+  flex:none; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+  color:var(--muted); background:var(--bg-2); padding:4px 9px; border-radius:999px;
+}
+.rij[data-inhuis] .statuswissel{transition:background var(--vt), color var(--vt);}
+.rij[data-inhuis]:active .statuswissel{background:var(--accent-zacht); color:var(--accent);}
 
 .stepper{display:flex; align-items:center; gap:12px;}
 .stepper button{
@@ -1928,6 +1957,20 @@ function startHartslag(){
 /* =====================================================================
    7 · ITEMS — filteren, groeperen, acties
    ===================================================================== */
+/* welke groepen heb je op de lijst dichtgeklapt? Dat is een kijkvoorkeur,
+   dus die blijft op je eigen telefoon staan. */
+const VOUW = () => "boodschappen_vouw_" + P;
+function isDicht(sleutel){
+  const alles = LS.get(VOUW(), {});
+  return !!alles[S.filter.groep + ":" + sleutel];
+}
+function vouwWissel(sleutel){
+  const alles = LS.get(VOUW(), {});
+  const k = S.filter.groep + ":" + sleutel;
+  if(alles[k]) delete alles[k]; else alles[k] = true;
+  LS.zet(VOUW(), alles);
+}
+
 function openItems(){ return S.items.filter(i => !i.af); }
 function afItems(){ return S.items.filter(i => i.af); }
 
@@ -2078,29 +2121,41 @@ function schermLijst(){
         ${S.syncFout ? `<div class="banner">${IK.waarsch}<span>${esc(S.syncFout)}</span></div>` : ""}
         ${DB && DB.demo ? `<div class="banner info">${IK.info}<span>Demo-modus — deze lijst staat alleen op dit apparaat.</span></div>` : ""}
 
-        ${zichtbaar.length === 0 ? legeLijst(alleOpen.length) : groepen.map(g => `
+        ${zichtbaar.length === 0 ? legeLijst(alleOpen.length) : groepen.map(g => {
+          const dicht = isDicht(g.sleutel);
+          return `
           <div class="sectie">
             <div class="sectie-kop">
-              <h2>${g.em ? `<span style="font-size:14px">${g.em}</span>` : ""}${esc(g.naam)}</h2>
-              <span class="telw">${g.items.length}</span>
+              <button class="vouwknop ${dicht?"":"open"}" data-vouw="${esc(g.sleutel)}">
+                <span class="chev">${IK.pijl}</span>
+                <h2>${g.em ? `<span style="font-size:14px">${g.em}</span>` : ""}${esc(g.naam)}</h2>
+                <span class="telw">${g.items.length}</span>
+              </button>
               <span class="lijn"></span>
               ${S.filter.groep === "winkel" && g.sleutel !== "nvt"
                 ? `<button class="mini" data-winkelen="${esc(g.sleutel)}">Winkelen ›</button>` : ""}
             </div>
-            <div class="lijst">${g.items.map(itemHtml).join("")}</div>
-          </div>`).join("")}
+            ${dicht ? "" : `<div class="lijst fade">${g.items.map(itemHtml).join("")}</div>`}
+          </div>`;
+        }).join("")}
 
-        ${af.length ? `
+        ${af.length ? (() => {
+          const dicht = isDicht("__kar");
+          return `
           <div class="sectie">
             <div class="sectie-kop">
-              <h2>In de kar</h2>
-              <span class="telw">${af.length}</span>
+              <button class="vouwknop ${dicht?"":"open"}" data-vouw="__kar">
+                <span class="chev">${IK.pijl}</span>
+                <h2>In de kar</h2>
+                <span class="telw">${af.length}</span>
+              </button>
               <span class="lijn"></span>
               <button class="mini" id="wis-af">Opruimen</button>
             </div>
-            <div class="lijst">${af.slice(0,40).map(itemHtml).join("")}</div>
-            ${af.length > 40 ? `<div class="hint" style="text-align:center">en nog ${af.length-40} eerder afgevinkt</div>` : ""}
-          </div>` : ""}
+            ${dicht ? "" : `<div class="lijst fade">${af.slice(0,40).map(itemHtml).join("")}</div>
+              ${af.length > 40 ? `<div class="hint" style="text-align:center">en nog ${af.length-40} eerder afgevinkt</div>` : ""}`}
+          </div>`;
+        })() : ""}
       </div>
     </div>
 
@@ -2185,6 +2240,9 @@ function bindLijst(){
     S.filter = Object.assign(S.filter, {winkel:null, cat:null, door:null, urgent:false, zoek:"", zoekOpen:false});
     tekenNu();
   };
+  $$("[data-vouw]").forEach(b => b.onclick = () => {
+    vouwWissel(b.dataset.vouw); tril(6); tekenAlleenInhoud();
+  });
   $$("[data-winkelen]").forEach(b => b.onclick = () => {
     S.winkelSessie = {winkelId:b.dataset.winkelen, gestart:nu()};
     S.tab = "winkelen"; tril(); tekenNu();
@@ -4727,17 +4785,18 @@ function bindEten(){
 /* de ingrediënten met hun status, voor een gekozen aantal personen */
 function ingRijenHtml(g, personen){
   const factor = (personen || g.personen || 2) / (g.personen || 2);
-  return (g.ingredienten || []).map(i => {
+  return (g.ingredienten || []).map((i, idx) => {
     const opLijst = staatOpLijst(i.naam);
-    return `<div class="rij">
+    return `<button class="rij" data-inhuis="${idx}">
       <span class="ik" style="background:${i.vast ? "var(--groen-zacht)" : opLijst ? "var(--accent-zacht)" : "var(--bg-2)"};
                   color:${i.vast ? "var(--groen)" : opLijst ? "var(--accent)" : "var(--ink-2)"}">
         ${i.vast ? IK.vink : opLijst ? IK.lijst : catVan(i.cat).em}</span>
       <div class="tk">
         <b>${i.hoeveelheid ? `<span class="item-hoev" style="font-size:12px">${esc(schaalHoeveelheid(i.hoeveelheid, factor))}</span> ` : ""}${esc(i.naam)}</b>
-        <span>${i.vast ? "heb je meestal in huis" : opLijst ? "staat al op je lijst" : "nog te halen"}</span>
+        <span>${i.vast ? "heb je in huis" : opLijst ? "staat al op je lijst" : "nog te halen"}</span>
       </div>
-    </div>`;
+      <span class="statuswissel">${i.vast ? "in huis" : "halen"}</span>
+    </button>`;
   }).join("");
 }
 
@@ -4780,7 +4839,9 @@ function sheetGerecht(g, dagSleutel){
     <div class="sectie" style="margin-top:6px">
       <div class="sectie-kop"><h2>Ingrediënten</h2><span class="lijn"></span></div>
       ${ing.length === 0 ? `<div class="hint">Er staan nog geen ingrediënten bij dit gerecht.</div>`
-        : `<div class="lijst" id="g-ing">${ingRijenHtml(g, personen)}</div>`}
+        : `<div class="lijst" id="g-ing">${ingRijenHtml(g, personen)}</div>
+           <div class="hint">Tik een ingrediënt aan om te wisselen tussen <b>nog halen</b> en
+             <b>in huis</b>. Wat je in huis hebt, wordt niet op de boodschappenlijst gezet.</div>`}
     </div>
 
     ${g.notitie ? `
@@ -4824,10 +4885,20 @@ function sheetGerecht(g, dagSleutel){
     vulFotos($(".sheet"));
     let pers = personen;
     const gf = $("#g-foto"); if(gf) gf.onclick = () => openKijker(g.fotoId, g.naam);
+    const bindIngKnoppen = () => {
+      $$("[data-inhuis]").forEach(b => b.onclick = async () => {
+        const i = g.ingredienten[+b.dataset.inhuis];
+        if(!i) return;
+        i.vast = !i.vast; tril(10);
+        bijwerken();
+        try{ await DB.zet(PAD.gerechten + "/" + g.id, {ingredienten: g.ingredienten}); }
+        catch(e){ console.error(e); toast("Opslaan lukte niet"); }
+      });
+    };
     const bijwerken = async () => {
       $("#g-pers").textContent = pers;
       const vak = $("#g-ing");
-      if(vak) vak.innerHTML = ingRijenHtml(g, pers);
+      if(vak){ vak.innerHTML = ingRijenHtml(g, pers); bindIngKnoppen(); }
       const tel = $("#g-naarlijst .tk span");
       if(tel){
         const n = nogTeHalen(g, pers).length;
@@ -4835,6 +4906,7 @@ function sheetGerecht(g, dagSleutel){
       }
       if(dagSleutel) await DB.zet(PAD.menu + "/" + dagSleutel, {personen: pers});
     };
+    bindIngKnoppen();
     $("#g-min").onclick = () => { if(pers > 1){ pers--; tril(6); bijwerken(); } };
     $("#g-plus").onclick = () => { if(pers < 20){ pers++; tril(6); bijwerken(); } };
     $("#g-naarlijst").onclick = () => sheetNaarLijst(g, pers, dagSleutel);
