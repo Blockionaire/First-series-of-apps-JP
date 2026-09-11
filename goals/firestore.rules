@@ -1,0 +1,28 @@
+rules_version = '2';
+
+/* =====================================================================
+   GOALS — database rules
+   =====================================================================
+   One rule, and it is the whole security model: you may read and write
+   the documents under your own user id, and nothing else. Paste this
+   into Firestore → Rules and press Publish.
+
+   This is the part that actually protects your data. The checks in the
+   app run in a browser and can be edited by anyone; these run at
+   Google and cannot.
+   ===================================================================== */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* Your own goals, logs, topics and notes. */
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    /* Everything else is closed. */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

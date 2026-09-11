@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+<title>Goals</title>
+<meta name="description" content="What I am trying to achieve, and what I am learning.">
+<meta name="theme-color" content="#f7f4ef">
+<meta name="color-scheme" content="light dark">
+
+<!-- On the iPhone the app opens without a browser bar once it is on
+     the home screen. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Goals">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="stylesheet" href="css/app.css">
+
+<script src="firebase-config.js"></script>
+</head>
+<body>
+
+<!-- Something calm to look at while IndexedDB opens. -->
+<div class="loading" id="splash">
+  <span class="loading__mark">Goals</span>
+  <span class="visually-hidden">Loading your goals…</span>
+</div>
+
+<div id="app"></div>
+
+<noscript>
+  <div style="padding:28px;font-family:Georgia,serif;max-width:40em">
+    <h1 style="font-weight:400">Goals</h1>
+    <p>This app needs JavaScript. Turn it on and reload the page.</p>
+  </div>
+</noscript>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
