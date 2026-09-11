@@ -49,7 +49,7 @@ export function engagementView() {
       <div class="head__row">
         <div>
           <h1 class="t-display">${esc(c.name)}</h1>
-          <p class="t-lede">
+          <p class="t-lede t-lede--meta">
             ${esc(e.fy)} ${esc(e.type.toLowerCase())} · period end ${esc(e.periodEnd)} ·
             ${esc(e.framework)}${e.materiality ? ` · materiality ${esc(e.materiality)}` : ""}
           </p>
@@ -82,41 +82,44 @@ export function engagementView() {
       </div>
     </section>
 
-    <section class="sec--loose">
-      <div class="sec__h"><h2 class="t-h">Interim — processes in scope</h2></div>
-      <p class="t-sub sec__h measure">
-        ${inScope.length} of ${processCatalogue.length} processes are in scope. Each is carried
-        through the full interim workflow independently.</p>
-      ${rows(inScope.map(procRow).join(""))}
-      ${inScope.length < processCatalogue.length ? `<p class="t-meta sec__note">
-        Not in scope: ${esc(processCatalogue.filter((p) => !inScope.some((x) => x.id === p.id))
-          .map((p) => p.name).join(", "))}.</p>` : ""}
-    </section>
+    <div class="lay lay--main-aside sec--loose">
+      <section>
+        <div class="sec__h"><h2 class="t-h">Interim — processes in scope</h2></div>
+        <p class="t-sub sec__h measure">
+          ${inScope.length} of ${processCatalogue.length} processes are in scope. Each is carried
+          through the full interim workflow independently.</p>
+        ${rows(inScope.map(procRow).join(""))}
+        ${inScope.length < processCatalogue.length ? `<p class="t-meta sec__note">
+          Not in scope: ${esc(processCatalogue.filter((p) => !inScope.some((x) => x.id === p.id))
+            .map((p) => p.name).join(", "))}.</p>` : ""}
+      </section>
 
-    <section class="sec--loose">
-      <div class="sec__h">
-        <h2 class="t-h">Audit team</h2>
-        <span class="sp"></span>
-        ${btn("Firm people", "nav", { variant: "ghost", size: "sm", data: { href: "#/people" } })}
-      </div>
-      ${st.engTeam(e).length ? rows(st.engTeam(e).map((t) => row({
-        lead: icon("people", 17),
-        title: `<span class="b">${esc(t.user.name)}</span>${t.user.isMe ? ` <span class="t-meta">you</span>` : ""}`,
-        detail: `Firm role ${esc(t.user.role)} · ${esc(t.user.email)}`,
-        side: `${tag(t.role, t.role === "Partner" ? "accent" : "quiet")}
-          <div class="t-meta" style="margin-top:4px">on this engagement</div>`,
-      })).join(""))
-      : empty("No team assigned", "Somebody has to prepare and review the file.", "people")}
-    </section>
+      <aside>
+        <div class="sec__h">
+          <h2 class="t-h">Audit team</h2>
+          <span class="sp"></span>
+          ${btn("Firm people", "nav", { variant: "ghost", size: "sm", data: { href: "#/people" } })}
+        </div>
+        ${st.engTeam(e).length ? rows(st.engTeam(e).map((t) => row({
+          lead: icon("people", 17),
+          title: `<span class="b">${esc(t.user.name)}</span>${t.user.isMe ? ` <span class="t-meta">you</span>` : ""}`,
+          detail: `Firm role ${esc(t.user.role)}`,
+          side: tag(t.role, t.role === "Partner" ? "accent" : "quiet"),
+        })).join(""))
+        : empty("No team assigned", "Somebody has to prepare and review the file.", "people")}
+        <p class="t-meta sec__note">The tag is the role on <b class="ink2">this engagement</b>.</p>
 
-    <section class="sec--loose">
-      ${callout(`<b>Where this sits.</b> Interim comes after the entity and process understanding and
-        the inherent risk factors, and before risk analysis and the final audit. This product covers
-        the interim work on a process. Risk analysis is the next phase and is deliberately outside it.`)}
-    </section>
+        <div class="sec--loose">
+          ${callout(`<b>Where this sits.</b> Interim comes after the entity and process understanding
+            and the inherent risk factors, and before risk analysis and the final audit. This product
+            covers the interim work on a process. Risk analysis is the next phase and is deliberately
+            outside it.`)}
+        </div>
+      </aside>
+    </div>
   `;
 
-  return engScreen(body, { width: "reading" });
+  return engScreen(body, { width: "overview" });
 }
 
 /* ── The process workspace, on an engagement that has no process work ──────
@@ -261,7 +264,7 @@ export function processHome() {
     </section>
   `;
 
-  return screen(null, body, { width: "wide" });
+  return screen(null, body, { width: "workspace" });
 }
 
 /* ── Step 1 — Prepare ────────────────────────────────────────────────────── */
@@ -336,7 +339,8 @@ export function prepare() {
       </div>
     </section>
 
-    <section class="sec--loose">
+    <div class="lay lay--60-40 sec--loose">
+    <section>
       <div class="sec__h">
         <h2 class="t-h">People relevant to Revenue</h2>
         <span class="sp"></span>
@@ -376,7 +380,7 @@ export function prepare() {
       </div>`, S.disclosed.addpeople)}
     </section>
 
-    <section class="sec--loose">
+    <section>
       <div class="sec__h"><h2 class="t-h">Systems relevant to Revenue</h2></div>
       <p class="t-sub sec__h measure">
         From the systems on the client record. Revenue does not need all of them.</p>
@@ -402,6 +406,7 @@ export function prepare() {
         </div>
       </div>`, S.disclosed.addsys)}
     </section>
+    </div>
 
     <section class="sec--loose">
       <div class="sec__h">
@@ -414,26 +419,28 @@ export function prepare() {
         `<b>${esc(t.user.name)}</b> <span class="t-meta">${esc(t.role)}</span>`).join(" · ")}</p>
     </section>
 
-    <section class="sec--loose">
-      <div class="sec__h"><h2 class="t-eyebrow">What we already have</h2></div>
-      ${rows(Object.values(sources).map((sy) => row({
-        lead: icon(SRC_IC[sy.kind] || "document", 17),
-        title: esc(sy.name), detail: esc(sy.detail) })).join(""))}
-      <div class="acts sec__note">
-        ${btn("Add a document", "mock", { size: "sm", ic: "document" })}
-        ${btn("Import a transcript", "mock", { size: "sm", ic: "transcript" })}
-      </div>
-    </section>
+    <div class="lay lay--60-40 sec--loose">
+      <section>
+        <div class="sec__h"><h2 class="t-eyebrow">What we already have</h2></div>
+        ${rows(Object.values(sources).map((sy) => row({
+          lead: icon(SRC_IC[sy.kind] || "document", 17),
+          title: esc(sy.name), detail: esc(sy.detail) })).join(""))}
+        <div class="acts sec__note">
+          ${btn("Add a document", "mock", { size: "sm", ic: "document" })}
+          ${btn("Import a transcript", "mock", { size: "sm", ic: "transcript" })}
+        </div>
+      </section>
 
-    <section class="sec--loose">
-      <div class="sec__h"><h2 class="t-eyebrow">Still outstanding</h2></div>
-      <p class="t-body measure">
-        ${cov.mandatoryOpen.length
-          ? `${cov.mandatoryOpen.length} required areas were not established by the documents alone
-             and need to be covered in the interview.`
-          : "Nothing outstanding from the preparation."}
-      </p>
-    </section>
+      <section>
+        <div class="sec__h"><h2 class="t-eyebrow">Still outstanding</h2></div>
+        <p class="t-body">
+          ${cov.mandatoryOpen.length
+            ? `${cov.mandatoryOpen.length} required areas were not established by the documents alone
+               and need to be covered in the interview.`
+            : "Nothing outstanding from the preparation."}
+        </p>
+      </section>
+    </div>
 
     <hr class="rule">
     <section class="sec">
@@ -456,7 +463,7 @@ export function prepare() {
     </section>
   `;
 
-  return screen("prepare", body);
+  return screen("prepare", body, { width: "standard" });
 }
 
 const SRC_IC = { transcript: "transcript", client_answer: "questionnaire", prior_year: "document",

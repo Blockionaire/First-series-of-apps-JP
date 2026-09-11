@@ -59,7 +59,8 @@ export function complete() {
       </div>
     </div>
 
-    <section class="sec">
+    <div class="lay lay--equal sec">
+    <section>
       <div class="sec__h"><h2 class="t-eyebrow">The work</h2></div>
       ${rows(workGates.map((g) => row({
         lead: g.ok ? `<span class="state state--ok">${icon("check", 17)}</span>`
@@ -76,7 +77,7 @@ export function complete() {
       </p>
     </section>
 
-    <section class="sec--loose">
+    <section>
       <div class="sec__h"><h2 class="t-h">Sign-off</h2></div>
       <p class="t-sub sec__h measure">
         Signing is what a person does, not what the platform does. Each signature records who and when.</p>
@@ -153,6 +154,7 @@ export function complete() {
         finished, reviewed and approved. What it produced is listed below and is now an input to risk
         analysis — which is a different phase and deliberately not part of this product.`, "ok") : ""}
     </section>
+    </div>
 
     <section class="sec--loose">
       <div class="sec__h"><h2 class="t-h">Export</h2></div>
@@ -224,7 +226,7 @@ export function complete() {
     </section>
   `;
 
-  return screen("complete", body);
+  return screen("complete", body, { width: "overview" });
 }
 
 /* ── Review points ────────────────────────────────────────────────────────
@@ -357,8 +359,8 @@ export function matrix() {
       <div class="gridwrap">
         <table class="agrid">
           <thead><tr>
-            <th>Risk signal</th><th>Assertions</th><th>Control</th><th>Owner</th>
-            <th>Nature</th><th>Conclusion</th>
+            <th class="c-risk">Risk signal</th><th>Assertions</th><th class="c-ctl">Control</th>
+            <th class="c-owner">Owner</th><th class="c-nature">Nature</th><th class="c-num">Conclusion</th>
           </tr></thead>
           <tbody>
             ${shown.map(({ risk: r, control: c, gap: g }) => {
@@ -374,8 +376,8 @@ export function matrix() {
                   chip(a.replace(/_/g, " "))).join("")}</span>` : ""}</td>
                 <td class="c-ctl">${c ? esc(c.title)
                   : `<span class="agrid__none">No control identified${g ? ` — gap ${esc(g.id)}` : ""}</span>`}</td>
-                <td>${c ? esc(c.owner || "not established") : "—"}</td>
-                <td>${c ? esc(NAT[c.nature]) : "—"}</td>
+                <td class="c-owner">${c ? esc(c.owner || "not established") : "—"}</td>
+                <td class="c-nature">${c ? esc(NAT[c.nature]) : "—"}</td>
                 <td class="c-num">${c ? (cd === "key" ? tag("key control", "ok", "check")
                   : cd === "not_key" ? tag("not key", "quiet")
                   : cd === "carried_forward" ? tag("carried forward", "warn")
@@ -399,7 +401,7 @@ export function matrix() {
     </section>
   `;
 
-  return screen("controls", body, { width: "full" });
+  return screen("controls", body, { width: "data" });
 }
 
 /* ── Client questionnaire — a separate, plainer surface ──────────────────── */

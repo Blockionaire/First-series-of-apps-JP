@@ -78,7 +78,36 @@
   --ease: cubic-bezier(.2,.8,.3,1);
 
   --measure: 68ch;
+
+  /* --- Canvas: width follows the task ------------------------------------
+     Seven spatial modes, not one column. A screen declares what kind of work
+     it is and the wrapper follows; nothing sets its own max-width.
+
+       focus      one professional judgement at a time
+       reading    the working paper and long-form narrative
+       form       setup forms — legible field pairs, never a giant form
+       standard   structured sequential work
+       overview   orientation: where is this, what needs me
+       workspace  spatial work — the process map, the trace
+       data       genuinely tabular
+
+     See V3-DESIGN-DIRECTION.md → RESPONSIVE CANVAS & TASK WIDTH.
+     ---------------------------------------------------------------------- */
+  --w-focus:      780px;
+  --w-reading:    880px;
+  --w-form:       960px;
+  --w-standard:  1160px;
+  --w-overview:  1300px;
+  --w-workspace: 1480px;
+  --w-data:      1600px;
+
+  /* The gutter is the framing, and it grows with the screen rather than the
+     content growing to fill it. */
+  --gutter: 40px;
 }
+
+@media (min-width: 1600px) { :root { --gutter: 56px; } }
+@media (max-width: 700px)  { :root { --gutter: 18px; } }
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -125,6 +154,9 @@ svg { display: block; flex: none; }
 .ink3   { color: var(--ink-3); } .ink4 { color: var(--ink-4); } .ink5 { color: var(--ink-5); }
 .nowrap { white-space: nowrap; }
 .measure { max-width: 62ch; }
+/* Header metadata — a run of facts, not a sentence, so it takes a wider measure
+   than body copy and does not break after a separator. */
+.t-lede--meta { max-width: 100ch; }
 
 /* ==========================================================================
    LAYOUT
@@ -132,11 +164,37 @@ svg { display: block; flex: none; }
 
 #app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .canvas { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--ground); }
-.wrap { max-width: 1000px; margin: 0 auto; padding: var(--s-8) var(--s-6) 140px; }
-.wrap--narrow { max-width: 780px; }
-.wrap--reading { max-width: 860px; }
-.wrap--wide { max-width: 1240px; }
-.wrap--full { max-width: 1560px; }
+/* One formula. `--w` is the only thing a spatial mode changes. */
+.wrap {
+  --w: var(--w-standard);
+  width: min(100% - var(--gutter) * 2, var(--w));
+  margin-inline: auto;
+  padding: var(--s-8) 0 140px;
+}
+.wrap--focus     { --w: var(--w-focus); }
+.wrap--reading   { --w: var(--w-reading); }
+.wrap--form      { --w: var(--w-form); }
+.wrap--standard  { --w: var(--w-standard); }
+.wrap--overview  { --w: var(--w-overview); }
+.wrap--workspace { --w: var(--w-workspace); }
+.wrap--data      { --w: var(--w-data); }
+
+/* --- Composition ------------------------------------------------------------
+   A small, reusable set. Extra width is spent on composition, never on larger
+   components or longer text lines. Everything collapses to one column at the
+   point where a second column stops helping rather than at a device size.
+   -------------------------------------------------------------------------- */
+.lay { display: grid; gap: var(--s-6) var(--s-7); align-items: start; }
+.lay--main-aside { grid-template-columns: minmax(0, 1.9fr) minmax(300px, 1fr); }
+.lay--60-40      { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+.lay--equal      { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 1120px) {
+  .lay--main-aside, .lay--60-40, .lay--equal { grid-template-columns: 1fr; }
+}
+/* A field pair inside a composition column has half the room, so it stacks. */
+.lay .grid2 { grid-template-columns: 1fr; }
+/* A section that is already a column does not need its own top margin. */
+.lay > .sec, .lay > .sec--loose { margin-top: 0; }
 
 .page-in { animation: pagein var(--t-fast) var(--ease); }
 @keyframes pagein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -162,6 +220,10 @@ svg { display: block; flex: none; }
 .sec--loose { margin-top: var(--s-8); }
 .sec__h { display: flex; align-items: baseline; gap: var(--s-3); margin-bottom: var(--s-4); }
 .sec__h .sp { flex: 1; }
+/* `sec__h` is also used as spacing on the sentence under a heading. A paragraph
+   is never a header row, so it must not become a flex container — inline <b>
+   inside one would otherwise be laid out as a second column. */
+p.sec__h, p.sec__note { display: block; }
 .sec__note { margin-top: var(--s-3); }
 .rule { border: 0; border-top: 1px solid var(--line); margin: var(--s-7) 0 0; }
 
@@ -466,8 +528,11 @@ button.rw:hover, .rw.is-hot:hover { background: var(--surface); }
 .next:hover { box-shadow: inset 0 0 0 1px var(--accent-line), var(--sh-2); transform: translateY(-1px); }
 .next__m { flex: 1; min-width: 0; }
 .next__e { display: flex; align-items: center; gap: 8px; color: var(--accent-mid); }
-.next__t { font-size: 23px; font-weight: 600; letter-spacing: -.017em; line-height: 1.3; margin-top: 10px; }
-.next__d { font-size: 15px; color: var(--ink-3); line-height: 1.55; margin-top: 7px; max-width: 58ch; }
+/* Spans inside a button: they have to be told to stack. */
+.next__t { display: block; font-size: 23px; font-weight: 600; letter-spacing: -.017em;
+           line-height: 1.3; margin-top: 10px; max-width: 42ch; }
+.next__d { display: block; font-size: 15px; color: var(--ink-3); line-height: 1.55;
+           margin-top: 7px; max-width: 62ch; }
 .next__go {
   flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--accent-soft);
   color: var(--accent); display: flex; align-items: center; justify-content: center;
@@ -772,6 +837,13 @@ button.rw:hover, .rw.is-hot:hover { background: var(--surface); }
 .mapnode.is-na { opacity: .45; box-shadow: inset 0 0 0 1px var(--line); }
 .mapnode.is-na:hover { opacity: .7; transform: none; }
 
+/* The queue on a workspace-width screen. Two columns show four items where one
+   showed two, at exactly the same card size and the same text measure — the
+   items stay numbered, so the priority order still reads. Below the threshold
+   it is the single focused column it has always been. */
+.aq--split { display: grid; gap: var(--s-3); }
+@media (min-width: 1340px) { .aq--split { grid-template-columns: 1fr 1fr; } }
+
 .maplegend { display: flex; gap: var(--s-4); font-size: 12.5px; color: var(--ink-4); align-items: center; flex-wrap: wrap; }
 .maplegend span { display: inline-flex; align-items: center; gap: 6px; }
 .maplegend b { color: var(--ink-3); }
@@ -781,7 +853,7 @@ button.rw:hover, .rw.is-hot:hover { background: var(--surface); }
   border-radius: var(--r-3); box-shadow: inset 0 0 0 1px var(--line), var(--sh-1);
   animation: rise var(--t-base) var(--ease);
 }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5) var(--s-6); align-items: start; }
 @media (max-width: 920px) { .grid2 { grid-template-columns: 1fr; } }
 
 /* ==========================================================================
@@ -872,8 +944,13 @@ button.rw:hover, .rw.is-hot:hover { background: var(--surface); }
 .agrid tbody tr:hover { background: var(--surface); }
 .agrid tbody tr.is-group td { background: var(--recessed); font-weight: 600; color: var(--ink); }
 .agrid tbody tr.is-group:hover td { background: var(--recessed); }
-.agrid .c-risk { font-weight: 550; color: var(--ink); min-width: 260px; }
-.agrid .c-ctl { min-width: 240px; }
+/* Column widths are set deliberately: the two text columns take the room the
+   extra canvas provides, and the short factual ones stop wrapping. */
+.agrid th.c-risk, .agrid td.c-risk { min-width: 250px; width: 24%; }
+.agrid td.c-risk { font-weight: 550; color: var(--ink); }
+.agrid th.c-ctl, .agrid td.c-ctl { min-width: 240px; width: 29%; }
+.agrid th.c-owner, .agrid td.c-owner { width: 13%; min-width: 132px; }
+.agrid th.c-nature, .agrid td.c-nature { width: 9%; min-width: 104px; white-space: nowrap; }
 .agrid .c-num { text-align: right; white-space: nowrap; }
 .agrid .sub { display: block; font-size: 12.5px; color: var(--ink-4); margin-top: 3px; }
 .agrid__none { color: var(--danger); }
@@ -930,7 +1007,9 @@ select.field { cursor: pointer; }
 .flabel { display: block; margin-bottom: 6px; }
 .fgroup + .fgroup { margin-top: var(--s-4); }
 .grid2 + .grid2, .fgroup + .grid2, .grid2 + .fgroup { margin-top: var(--s-4); }
-.grid2 .fgroup + .fgroup { margin-top: var(--s-4); }
+/* No sibling margin inside the pair: the grid's own gap spaces the fields in
+   both states, and a margin here pushes the right-hand label out of line with
+   the left-hand one whenever only one of them carries a hint. */
 
 /* ==========================================================================
    OVERLAYS
@@ -1107,10 +1186,10 @@ select.field { cursor: pointer; }
 .rp__q { font: 17px/1.6 var(--serif); color: var(--ink); margin-top: var(--s-3); max-width: 60ch; }
 .rp__meta { font-size: 13px; color: var(--ink-4); margin-top: 5px; }
 
-@media (max-width: 1200px) { .wrap { padding-left: var(--s-5); padding-right: var(--s-5); } }
+
 @media (max-width: 700px) {
   .hdr { padding: 0 var(--s-4); } .jrn { padding: 0 var(--s-4); }
-  .wrap { padding: var(--s-6) var(--s-4) 120px; }
+  .wrap { padding: var(--s-6) 0 120px; }
   .t-display { font-size: 27px; } .t-title { font-size: 22px; }
 }
 
@@ -5327,7 +5406,8 @@ function work() {
 
     ${nextAction(next)}
 
-    <section class="sec--loose">
+    <div class="lay lay--equal sec--loose">
+    <section>
       <div class="sec__h"><h2 class="t-eyebrow">Also waiting</h2></div>
       ${waiting.length ? rows(waiting.map((x) => row({
         lead: icon(x.ic, 17),
@@ -5342,7 +5422,7 @@ function work() {
             "No process work has been started on this engagement.", "check")}
     </section>
 
-    <section class="sec--loose">
+    <section>
       <div class="sec__h">
         <h2 class="t-eyebrow">Engagements</h2>
         <span class="sp"></span>
@@ -5371,6 +5451,7 @@ function work() {
         });
       }).join(""))}
     </section>
+    </div>
 
     <section class="sec--loose">
       ${callout(`<b>This is a prototype.</b> Fictional client, mock data, no model call and no
@@ -5381,7 +5462,7 @@ function work() {
     </section>
   `;
 
-  return `${header(null)}<div class="canvas"><div class="wrap wrap--narrow page-in">${body}</div></div>`;
+  return `${header(null)}<div class="canvas"><div class="wrap wrap--overview page-in">${body}</div></div>`;
 }
 
 /** What comes next on an engagement with no loaded process file. Engagement
@@ -5681,7 +5762,7 @@ function engagementView() {
       <div class="head__row">
         <div>
           <h1 class="t-display">${esc(c.name)}</h1>
-          <p class="t-lede">
+          <p class="t-lede t-lede--meta">
             ${esc(e.fy)} ${esc(e.type.toLowerCase())} · period end ${esc(e.periodEnd)} ·
             ${esc(e.framework)}${e.materiality ? ` · materiality ${esc(e.materiality)}` : ""}
           </p>
@@ -5714,41 +5795,44 @@ function engagementView() {
       </div>
     </section>
 
-    <section class="sec--loose">
-      <div class="sec__h"><h2 class="t-h">Interim — processes in scope</h2></div>
-      <p class="t-sub sec__h measure">
-        ${inScope.length} of ${processCatalogue.length} processes are in scope. Each is carried
-        through the full interim workflow independently.</p>
-      ${rows(inScope.map(procRow).join(""))}
-      ${inScope.length < processCatalogue.length ? `<p class="t-meta sec__note">
-        Not in scope: ${esc(processCatalogue.filter((p) => !inScope.some((x) => x.id === p.id))
-          .map((p) => p.name).join(", "))}.</p>` : ""}
-    </section>
+    <div class="lay lay--main-aside sec--loose">
+      <section>
+        <div class="sec__h"><h2 class="t-h">Interim — processes in scope</h2></div>
+        <p class="t-sub sec__h measure">
+          ${inScope.length} of ${processCatalogue.length} processes are in scope. Each is carried
+          through the full interim workflow independently.</p>
+        ${rows(inScope.map(procRow).join(""))}
+        ${inScope.length < processCatalogue.length ? `<p class="t-meta sec__note">
+          Not in scope: ${esc(processCatalogue.filter((p) => !inScope.some((x) => x.id === p.id))
+            .map((p) => p.name).join(", "))}.</p>` : ""}
+      </section>
 
-    <section class="sec--loose">
-      <div class="sec__h">
-        <h2 class="t-h">Audit team</h2>
-        <span class="sp"></span>
-        ${btn("Firm people", "nav", { variant: "ghost", size: "sm", data: { href: "#/people" } })}
-      </div>
-      ${st.engTeam(e).length ? rows(st.engTeam(e).map((t) => row({
-        lead: icon("people", 17),
-        title: `<span class="b">${esc(t.user.name)}</span>${t.user.isMe ? ` <span class="t-meta">you</span>` : ""}`,
-        detail: `Firm role ${esc(t.user.role)} · ${esc(t.user.email)}`,
-        side: `${tag(t.role, t.role === "Partner" ? "accent" : "quiet")}
-          <div class="t-meta" style="margin-top:4px">on this engagement</div>`,
-      })).join(""))
-      : empty("No team assigned", "Somebody has to prepare and review the file.", "people")}
-    </section>
+      <aside>
+        <div class="sec__h">
+          <h2 class="t-h">Audit team</h2>
+          <span class="sp"></span>
+          ${btn("Firm people", "nav", { variant: "ghost", size: "sm", data: { href: "#/people" } })}
+        </div>
+        ${st.engTeam(e).length ? rows(st.engTeam(e).map((t) => row({
+          lead: icon("people", 17),
+          title: `<span class="b">${esc(t.user.name)}</span>${t.user.isMe ? ` <span class="t-meta">you</span>` : ""}`,
+          detail: `Firm role ${esc(t.user.role)}`,
+          side: tag(t.role, t.role === "Partner" ? "accent" : "quiet"),
+        })).join(""))
+        : empty("No team assigned", "Somebody has to prepare and review the file.", "people")}
+        <p class="t-meta sec__note">The tag is the role on <b class="ink2">this engagement</b>.</p>
 
-    <section class="sec--loose">
-      ${callout(`<b>Where this sits.</b> Interim comes after the entity and process understanding and
-        the inherent risk factors, and before risk analysis and the final audit. This product covers
-        the interim work on a process. Risk analysis is the next phase and is deliberately outside it.`)}
-    </section>
+        <div class="sec--loose">
+          ${callout(`<b>Where this sits.</b> Interim comes after the entity and process understanding
+            and the inherent risk factors, and before risk analysis and the final audit. This product
+            covers the interim work on a process. Risk analysis is the next phase and is deliberately
+            outside it.`)}
+        </div>
+      </aside>
+    </div>
   `;
 
-  return engScreen(body, { width: "reading" });
+  return engScreen(body, { width: "overview" });
 }
 
 /* ── The process workspace, on an engagement that has no process work ──────
@@ -5893,7 +5977,7 @@ function processHome() {
     </section>
   `;
 
-  return screen(null, body, { width: "wide" });
+  return screen(null, body, { width: "workspace" });
 }
 
 /* ── Step 1 — Prepare ────────────────────────────────────────────────────── */
@@ -5968,7 +6052,8 @@ function prepare() {
       </div>
     </section>
 
-    <section class="sec--loose">
+    <div class="lay lay--60-40 sec--loose">
+    <section>
       <div class="sec__h">
         <h2 class="t-h">People relevant to Revenue</h2>
         <span class="sp"></span>
@@ -6008,7 +6093,7 @@ function prepare() {
       </div>`, S.disclosed.addpeople)}
     </section>
 
-    <section class="sec--loose">
+    <section>
       <div class="sec__h"><h2 class="t-h">Systems relevant to Revenue</h2></div>
       <p class="t-sub sec__h measure">
         From the systems on the client record. Revenue does not need all of them.</p>
@@ -6034,6 +6119,7 @@ function prepare() {
         </div>
       </div>`, S.disclosed.addsys)}
     </section>
+    </div>
 
     <section class="sec--loose">
       <div class="sec__h">
@@ -6046,26 +6132,28 @@ function prepare() {
         `<b>${esc(t.user.name)}</b> <span class="t-meta">${esc(t.role)}</span>`).join(" · ")}</p>
     </section>
 
-    <section class="sec--loose">
-      <div class="sec__h"><h2 class="t-eyebrow">What we already have</h2></div>
-      ${rows(Object.values(sources).map((sy) => row({
-        lead: icon(SRC_IC[sy.kind] || "document", 17),
-        title: esc(sy.name), detail: esc(sy.detail) })).join(""))}
-      <div class="acts sec__note">
-        ${btn("Add a document", "mock", { size: "sm", ic: "document" })}
-        ${btn("Import a transcript", "mock", { size: "sm", ic: "transcript" })}
-      </div>
-    </section>
+    <div class="lay lay--60-40 sec--loose">
+      <section>
+        <div class="sec__h"><h2 class="t-eyebrow">What we already have</h2></div>
+        ${rows(Object.values(sources).map((sy) => row({
+          lead: icon(SRC_IC[sy.kind] || "document", 17),
+          title: esc(sy.name), detail: esc(sy.detail) })).join(""))}
+        <div class="acts sec__note">
+          ${btn("Add a document", "mock", { size: "sm", ic: "document" })}
+          ${btn("Import a transcript", "mock", { size: "sm", ic: "transcript" })}
+        </div>
+      </section>
 
-    <section class="sec--loose">
-      <div class="sec__h"><h2 class="t-eyebrow">Still outstanding</h2></div>
-      <p class="t-body measure">
-        ${cov.mandatoryOpen.length
-          ? `${cov.mandatoryOpen.length} required areas were not established by the documents alone
-             and need to be covered in the interview.`
-          : "Nothing outstanding from the preparation."}
-      </p>
-    </section>
+      <section>
+        <div class="sec__h"><h2 class="t-eyebrow">Still outstanding</h2></div>
+        <p class="t-body">
+          ${cov.mandatoryOpen.length
+            ? `${cov.mandatoryOpen.length} required areas were not established by the documents alone
+               and need to be covered in the interview.`
+            : "Nothing outstanding from the preparation."}
+        </p>
+      </section>
+    </div>
 
     <hr class="rule">
     <section class="sec">
@@ -6088,7 +6176,7 @@ function prepare() {
     </section>
   `;
 
-  return screen("prepare", body);
+  return screen("prepare", body, { width: "standard" });
 }
 
 const SRC_IC = { transcript: "transcript", client_answer: "questionnaire", prior_year: "document",
@@ -6159,7 +6247,8 @@ function complete() {
       </div>
     </div>
 
-    <section class="sec">
+    <div class="lay lay--equal sec">
+    <section>
       <div class="sec__h"><h2 class="t-eyebrow">The work</h2></div>
       ${rows(workGates.map((g) => row({
         lead: g.ok ? `<span class="state state--ok">${icon("check", 17)}</span>`
@@ -6176,7 +6265,7 @@ function complete() {
       </p>
     </section>
 
-    <section class="sec--loose">
+    <section>
       <div class="sec__h"><h2 class="t-h">Sign-off</h2></div>
       <p class="t-sub sec__h measure">
         Signing is what a person does, not what the platform does. Each signature records who and when.</p>
@@ -6253,6 +6342,7 @@ function complete() {
         finished, reviewed and approved. What it produced is listed below and is now an input to risk
         analysis — which is a different phase and deliberately not part of this product.`, "ok") : ""}
     </section>
+    </div>
 
     <section class="sec--loose">
       <div class="sec__h"><h2 class="t-h">Export</h2></div>
@@ -6324,7 +6414,7 @@ function complete() {
     </section>
   `;
 
-  return screen("complete", body);
+  return screen("complete", body, { width: "overview" });
 }
 
 /* ── Review points ────────────────────────────────────────────────────────
@@ -6457,8 +6547,8 @@ function matrix() {
       <div class="gridwrap">
         <table class="agrid">
           <thead><tr>
-            <th>Risk signal</th><th>Assertions</th><th>Control</th><th>Owner</th>
-            <th>Nature</th><th>Conclusion</th>
+            <th class="c-risk">Risk signal</th><th>Assertions</th><th class="c-ctl">Control</th>
+            <th class="c-owner">Owner</th><th class="c-nature">Nature</th><th class="c-num">Conclusion</th>
           </tr></thead>
           <tbody>
             ${shown.map(({ risk: r, control: c, gap: g }) => {
@@ -6474,8 +6564,8 @@ function matrix() {
                   chip(a.replace(/_/g, " "))).join("")}</span>` : ""}</td>
                 <td class="c-ctl">${c ? esc(c.title)
                   : `<span class="agrid__none">No control identified${g ? ` — gap ${esc(g.id)}` : ""}</span>`}</td>
-                <td>${c ? esc(c.owner || "not established") : "—"}</td>
-                <td>${c ? esc(NAT[c.nature]) : "—"}</td>
+                <td class="c-owner">${c ? esc(c.owner || "not established") : "—"}</td>
+                <td class="c-nature">${c ? esc(NAT[c.nature]) : "—"}</td>
                 <td class="c-num">${c ? (cd === "key" ? tag("key control", "ok", "check")
                   : cd === "not_key" ? tag("not key", "quiet")
                   : cd === "carried_forward" ? tag("carried forward", "warn")
@@ -6499,7 +6589,7 @@ function matrix() {
     </section>
   `;
 
-  return screen("controls", body, { width: "full" });
+  return screen("controls", body, { width: "data" });
 }
 
 /* ── Client questionnaire — a separate, plainer surface ──────────────────── */
@@ -6804,7 +6894,7 @@ function interview() {
       <section class="sec--loose">
         <div class="sec__h"><h2 class="t-h">What we still need to understand</h2></div>
         <p class="t-sub sec__h measure">Resolving any of these updates coverage immediately.</p>
-        <div class="aq">${gaps.map(gapRow).join("")}</div>
+        <div class="aq aq--split">${gaps.map(gapRow).join("")}</div>
       </section>` : `
       <section class="sec--loose">
         ${callout(`<b>Nothing outstanding.</b> Every applicable area has been established.`, "ok")}
@@ -6887,7 +6977,7 @@ function interview() {
       </section>` : ""}
   `;
 
-  return screen("interview", body);
+  return screen("interview", body, { width: "standard" });
 }
 
 
@@ -7020,7 +7110,7 @@ function generateView() {
         </div>`, S.disclosed.genstages)}
       </div>`}
   `;
-  return screen("understanding", body, { width: "narrow" });
+  return screen("understanding", body, { width: "reading" });
 }
 
 function fill(t) {
@@ -7104,7 +7194,7 @@ function triage() {
         <p class="t-sub sec__h measure">
           Contradictions first, then statements the drafting could not support. Everything else is
           already traced.</p>
-        <div class="aq">${queue.map(item).join("")}</div>
+        <div class="aq aq--split">${queue.map(item).join("")}</div>
       </section>` : `
       <section class="sec">
         ${callout(`<b>Every judgement is made.</b> Nothing in the documentation is unsupported or
@@ -7151,7 +7241,7 @@ function triage() {
     </div>
   `;
 
-  return screen("understanding", body, { width: "wide" });
+  return screen("understanding", body, { width: "workspace" });
 }
 
 /* ── Decision Workspace: one judgement at a time ─────────────────────────── */
@@ -7384,7 +7474,7 @@ function readView() {
     </div>
   </div></div>`;
 
-  const body = `<div class="wrap wrap--wide page-in" style="padding-top:32px">
+  const body = `<div class="wrap wrap--reading page-in" style="padding-top:32px">
     <div class="reader">${railHtml}${docHtml}</div>
   </div>`;
 
@@ -7524,7 +7614,7 @@ function analysisView() {
           </div>
         </div>` : ""}`}
   `;
-  return screen("controls", body, { width: "narrow" });
+  return screen("controls", body, { width: "reading" });
 }
 
 function triage() {
@@ -7638,7 +7728,7 @@ function triage() {
         <p class="t-sub sec__h measure">
           Confirm, modify or dismiss each one. Severity is a professional judgement and stays yours.
           These feed the ISA 265 communication to management.</p>
-        <div class="aq">${fs.pending.slice(0, 4).map(findingItem).join("")}</div>
+        <div class="aq aq--split">${fs.pending.slice(0, 4).map(findingItem).join("")}</div>
       </section>` : `
       <section class="sec--loose">
         <div class="sec__h"><h2 class="t-h">Findings concluded</h2></div>
@@ -7678,7 +7768,7 @@ function triage() {
     </section>
   `;
 
-  return screen("controls", body, { width: "wide" });
+  return screen("controls", body, { width: "workspace" });
 }
 
 /* ── Control decision ────────────────────────────────────────────────────── */
@@ -7892,7 +7982,7 @@ function controlsStep() {
         "Controls are analysed from the process understanding, so step 3 has to run first.", "document")}
       <div class="acts" style="justify-content:center">
         ${btn("Go to the process understanding", "nav", { variant: "primary", ic: "arrow", data: { href: "#/understanding" } })}
-      </div>`, { width: "narrow" });
+      </div>`, { width: "reading" });
   }
   const n = st.narrativeSummary();
   if (n.pending) {
@@ -7901,7 +7991,7 @@ function controlsStep() {
         "Step 4 analyses the understanding you have accepted. Proposing controls from a draft nobody has read would put the analysis ahead of the judgement it depends on.", "document")}
       <div class="acts" style="justify-content:center">
         ${btn("Finish reviewing the understanding", "nav", { variant: "primary", ic: "arrow", data: { href: "#/understanding" } })}
-      </div>`, { width: "narrow" });
+      </div>`, { width: "reading" });
   }
   if (!S.analysed || !S.anaSeen) return analysisView();
   if (S.reviewMode === "focus" && S.focusKind === "controls") return controlFocus();
@@ -8078,7 +8168,7 @@ function overview() {
       </div>
     </section>` : ""}
   `;
-  return screen("trace", body, { width: "wide" });
+  return screen("trace", body, { width: "workspace" });
 }
 
 /* --- The progress ribbon: where the auditor is in this transaction --------
@@ -8320,7 +8410,7 @@ function txnSummary() {
     </section>
   `;
 
-  return screen("trace", body, { width: "wide" });
+  return screen("trace", body, { width: "workspace" });
 }
 
 /* --- Entry ----------------------------------------------------------------- */
@@ -8332,7 +8422,7 @@ function trace() {
         "A line walkthrough tests a real transaction against the documented process, so the process has to be documented first.", "walkthrough")}
       <div class="acts" style="justify-content:center">
         ${btn("Go to the process understanding", "nav", { variant: "primary", ic: "arrow", data: { href: "#/understanding" } })}
-      </div>`, { width: "narrow" });
+      </div>`, { width: "reading" });
   }
   if (!S.analysed) {
     return screen("trace", `
@@ -8340,7 +8430,7 @@ function trace() {
         "A line walkthrough compares a real transaction with the documented process and the controls identified on it, so step 4 has to run first.", "control")}
       <div class="acts" style="justify-content:center">
         ${btn("Go to controls and findings", "nav", { variant: "primary", ic: "arrow", data: { href: "#/controls" } })}
-      </div>`, { width: "narrow" });
+      </div>`, { width: "reading" });
   }
   if (!S.traceTxn) return overview();
   if (S.reviewMode === "focus" && S.focusKind === "trace") return stepFocus();
@@ -8591,7 +8681,7 @@ function testing() {
         "Testing operates on controls you intend to rely on. Conclude the controls in step 4 and any key control appears here — including, legitimately, none.", "test")}
       <div class="acts" style="justify-content:center">
         ${btn("Go to controls and findings", "nav", { variant: "primary", ic: "arrow", data: { href: "#/controls" } })}
-      </div>`, { width: "narrow" });
+      </div>`, { width: "reading" });
   }
 
   const showTest = sc.rows.some(
@@ -8639,7 +8729,7 @@ function testing() {
     </section>
   `;
 
-  return screen("testing", body, { width: "reading" });
+  return screen("testing", body, { width: "standard" });
 }
 
 
@@ -8820,7 +8910,7 @@ function resolve() {
 
   `;
 
-  return screen(null, body);
+  return screen(null, body, { width: "standard" });
 }
 
 
@@ -9037,7 +9127,7 @@ function clientsView() {
       : empty("No client matches that", "Try a different name, city or sector.", "search")}
     </section>
   `;
-  return setupScreen(crumb([["Clients", null, true]]), body, "reading");
+  return setupScreen(crumb([["Clients", null, true]]), body, "overview");
 }
 
 /* ══ Client detail ═══════════════════════════════════════════════════════ */
@@ -9093,7 +9183,8 @@ function clientView() {
       : empty("No engagement yet", "An engagement is created per financial year. It carries the team, the scope and the period.", "process")}
     </section>
 
-    <section class="sec--loose">
+    <div class="lay lay--equal sec--loose">
+    <section>
       <div class="sec__h">
         <h2 class="t-h">Client contacts</h2>
         <span class="sp"></span>
@@ -9140,7 +9231,7 @@ function clientView() {
       : empty("No contacts yet", "Add the people you expect to speak to.", "people")}
     </section>
 
-    <section class="sec--loose">
+    <section>
       <div class="sec__h">
         <h2 class="t-h">Systems</h2>
         <span class="sp"></span>
@@ -9183,9 +9274,10 @@ function clientView() {
           })).join(""))
       : empty("No systems yet", "Add the applications the entity runs.", "system")}
     </section>
+    </div>
   `;
 
-  return setupScreen(crumb([["Clients", "#/clients"], [c.short, null, true]]), body, "reading");
+  return setupScreen(crumb([["Clients", "#/clients"], [c.short, null, true]]), body, "overview");
 }
 
 /* ══ New client ══════════════════════════════════════════════════════════ */
@@ -9253,7 +9345,7 @@ function newClientView() {
       ${!ok ? `<p class="t-meta sec__note">A legal name is required. Everything else can be added later.</p>` : ""}
     </section>
   `;
-  return setupScreen(crumb([["Clients", "#/clients"], ["New client", null, true]]), body, "reading");
+  return setupScreen(crumb([["Clients", "#/clients"], ["New client", null, true]]), body, "form");
 }
 
 /* ══ New engagement ══════════════════════════════════════════════════════
@@ -9404,7 +9496,7 @@ function newEngagementView() {
   `;
 
   return setupScreen(crumb([["Clients", "#/clients"], [c.short, "#/client"],
-                            ["New engagement", null, true]]), body, "reading");
+                            ["New engagement", null, true]]), body, "form");
 }
 
 /* ══ Firm people ═════════════════════════════════════════════════════════ */
@@ -9471,7 +9563,7 @@ function peopleView() {
         session state.`)}
     </section>
   `;
-  return setupScreen(crumb([["Firm people", null, true]]), body, "reading");
+  return setupScreen(crumb([["Firm people", null, true]]), body, "form");
 }
 
 

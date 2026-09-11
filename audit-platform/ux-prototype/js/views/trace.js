@@ -164,7 +164,7 @@ function overview() {
       </div>
     </section>` : ""}
   `;
-  return screen("trace", body, { width: "wide" });
+  return screen("trace", body, { width: "workspace" });
 }
 
 /* --- The progress ribbon: where the auditor is in this transaction --------
@@ -406,7 +406,7 @@ function txnSummary() {
     </section>
   `;
 
-  return screen("trace", body, { width: "wide" });
+  return screen("trace", body, { width: "workspace" });
 }
 
 /* --- Entry ----------------------------------------------------------------- */
@@ -418,7 +418,7 @@ export function trace() {
         "A line walkthrough tests a real transaction against the documented process, so the process has to be documented first.", "walkthrough")}
       <div class="acts" style="justify-content:center">
         ${btn("Go to the process understanding", "nav", { variant: "primary", ic: "arrow", data: { href: "#/understanding" } })}
-      </div>`, { width: "narrow" });
+      </div>`, { width: "reading" });
   }
   if (!S.analysed) {
     return screen("trace", `
@@ -426,7 +426,7 @@ export function trace() {
         "A line walkthrough compares a real transaction with the documented process and the controls identified on it, so step 4 has to run first.", "control")}
       <div class="acts" style="justify-content:center">
         ${btn("Go to controls and findings", "nav", { variant: "primary", ic: "arrow", data: { href: "#/controls" } })}
-      </div>`, { width: "narrow" });
+      </div>`, { width: "reading" });
   }
   if (!S.traceTxn) return overview();
   if (S.reviewMode === "focus" && S.focusKind === "trace") return stepFocus();

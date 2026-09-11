@@ -238,7 +238,7 @@ export function testing() {
         "Testing operates on controls you intend to rely on. Conclude the controls in step 4 and any key control appears here — including, legitimately, none.", "test")}
       <div class="acts" style="justify-content:center">
         ${btn("Go to controls and findings", "nav", { variant: "primary", ic: "arrow", data: { href: "#/controls" } })}
-      </div>`, { width: "narrow" });
+      </div>`, { width: "reading" });
   }
 
   const showTest = sc.rows.some(
@@ -286,5 +286,5 @@ export function testing() {
     </section>
   `;
 
-  return screen("testing", body, { width: "reading" });
+  return screen("testing", body, { width: "standard" });
 }

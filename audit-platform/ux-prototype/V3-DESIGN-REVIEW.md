@@ -218,6 +218,53 @@ avatar menu. The process journey correctly does not render on any of the five.
 
 ---
 
+## The responsive canvas pass
+
+The layout was one narrow column on a wide screen: Work at 780px and the Engagement page at 860px
+meant roughly 550px of unused canvas either side of the application on a 1920 monitor, and a
+process map that scrolled horizontally on a screen with room to show all of it. Seven named width
+modes now replace four ad-hoc ones, and every view declares which kind of work it is rather than
+picking a number — see `V3-DESIGN-DIRECTION.md` → **RESPONSIVE CANVAS & TASK WIDTH**.
+
+**What got wider.** Work, Clients, Client profile, Engagement and Complete moved to *overview*
+(1300); Revenue home, the two triage screens and the line walkthrough to *workspace* (1480); the
+RCM to *data* (1600); Prepare, the process interview, control testing and open matters to
+*standard* (1160).
+
+**What did not.** The Decision Workspace is still 760px and the questionnaire still 640 — both are
+fixed, not capped, because they are single-purpose surfaces. The working paper's document is still
+68ch inside an 880px wrapper. The new-client and new-engagement forms are 960.
+
+**What the width bought.** At 1440 the whole process map is on screen with no horizontal scroll, all
+four judgement items sit above the fold, and the RCM shows six columns; at 1920 the map has room to
+spare. Five screens lost roughly a third of their vertical length by arranging existing content in
+two columns rather than stacking it — nothing was added to fill space.
+
+**Three bugs the width exposed and this pass fixed.** `.sec__h` is used both as a header row and as
+spacing on the sentence beneath a heading; being `display: flex`, any such sentence containing a
+`<b>` was laid out as two or three columns — very visible at 1300px, wrong at any width. The
+next-action card's title and description are `<span>`s inside a `<button>` and ran together on one
+line. And `.grid2 .fgroup + .fgroup` gave the right-hand field of every pair a 16px top margin, so
+its label sat below the left-hand one whenever only one of the two carried a hint.
+
+### What is weak about it
+
+1. **Two-column sections depend on the two sides being roughly the same height.** Controls and
+   findings was tried as a pair and reverted: with no parked controls the left column is a heading
+   and a sentence next to four finding cards, which reads worse than the stack. The helpers make
+   the arrangement easy and give no warning when the content does not suit it.
+2. **The split Attention Queue changes the reading order from one column to two.** The items stay
+   numbered and priority-ordered, so it survives, but a queue is a sequence and a grid is not.
+3. **`.lay` collapses at a viewport breakpoint, not a container one.** A `.lay` nested inside
+   something narrow would keep two columns it cannot afford. Container queries would state the
+   actual rule; this pass did not introduce them.
+4. **The head-right tally drifts far from the title on a workspace-width screen.** At 1480 there is
+   a metre of empty space between the page title and its two numbers, which weakens the pairing.
+5. **The convergence divider on the process map is now very wide.** It was drawn as a full-width
+   rule with a centred label, and at 1480 it reads more like a section separator than a join.
+
+---
+
 ## What is still not good enough
 
 Honest list. None of these are blocking, all of them are real.

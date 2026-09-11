@@ -428,28 +428,109 @@ earned: it is the product showing its work.
 
 ## 18. Screen density — one template does not fit seven steps
 
-| Screen | Density | Measure | Character |
+| Screen | Density | Width mode | Character |
 |---|---|---|---|
-| Work | calm | 780px | one question, enormous next action |
-| Engagement | calm | 1080px | hierarchy, phases as a rail |
-| Process home | spatial | 1240px | map first, next action second |
-| Prepare | grouped | 940px | carried context as recessed cards |
-| Process interview | medium | 940px | attention items as raised cards |
-| Generation | focused | 720px | five plain-language stages, technical detail on demand |
-| Triage | focused | 900px | the Attention Queue |
-| Decision | focused | 760px | Decision Workspace |
-| Working paper | editorial | 68ch | document, rail, Source Lens |
-| Controls | spatial → focused | 1240px → 760px | map, then queue |
-| Line walkthrough | rich | 1240px | variants, then trace with a progress ribbon |
-| Control testing | structured | 1040px | staged, with a real results table |
-| Resolve | grouped | 940px | by impact, with dependencies |
-| RCM | dense | full | a proper data grid |
-| Complete | calm | 860px | readiness, then signature |
-| Questionnaire | generous | 640px | one question, large type, mobile-first |
+| Work | calm | overview | one question, enormous next action |
+| Clients · Client profile | calm | overview | searchable lists, master data |
+| Engagement | calm | overview | phases, then processes beside the team |
+| New client · New engagement · Firm people | focused | form | field pairs, never a giant form |
+| Process home | spatial | workspace | map first, next action second |
+| Prepare | grouped | standard | carried context as recessed cards |
+| Process interview | medium | standard | attention items as raised cards |
+| Generation | focused | reading | plain-language stages, technical detail on demand |
+| Triage | spatial → focused | workspace | the Attention Queue, two abreast |
+| Decision | focused | 760px fixed | Decision Workspace |
+| Working paper | editorial | reading, doc at 68ch | document, rail, Source Lens |
+| Controls | spatial → focused | workspace → 760px | map, then queue |
+| Line walkthrough | rich | workspace | variants, then trace with a progress ribbon |
+| Control testing | structured | standard | staged, with a real results table |
+| Resolve | grouped | standard | by impact, with dependencies |
+| RCM | dense | data | a proper data grid |
+| Complete | calm | overview | readiness beside signature |
+| Questionnaire | generous | 640px fixed | one question, large type, mobile-first |
 
 **The RCM gets a real table.** V2's anti-table rule was right for narrative and wrong for a matrix:
 sticky header, grouped risk rows, 13.5px tabular figures, subtle row separation, expandable detail,
 search and filter chips, full keyboard navigation. Tabular information gets a table.
+
+---
+
+## 18b. RESPONSIVE CANVAS & TASK WIDTH
+
+### Why not every screen uses the same width
+
+A single content column is a website's answer, not a workstation's. This product does several
+different kinds of work, and they do not want the same amount of canvas. A partner reading an
+approved narrative wants a page; an auditor reading a fifteen-row risk and control matrix wants a
+table; somebody tracing a transaction through an eight-step process wants the process on screen at
+once. One width serves one of those three well and the other two badly.
+
+So width is a property of the task, declared per screen, and the wrapper follows:
+
+```css
+--w-focus:      780px   /* one professional judgement at a time */
+--w-reading:    880px   /* the working paper, long-form narrative */
+--w-form:       960px   /* setup forms — legible field pairs */
+--w-standard:  1160px   /* structured sequential work */
+--w-overview:  1300px   /* orientation: where is this, what needs me */
+--w-workspace: 1480px   /* spatial work — the process map, the trace */
+--w-data:      1600px   /* genuinely tabular */
+```
+
+One formula, one variable:
+
+```css
+.wrap { width: min(100% - var(--gutter) * 2, var(--w)); margin-inline: auto; }
+```
+
+No screen sets its own `max-width`. A view declares its spatial mode (`wrap--overview`,
+`wrap--workspace`, …) and nothing else. The two that are deliberately outside the system —
+the Decision Workspace at 760px and the client questionnaire at 640px — are fixed because they are
+single-purpose surfaces, not pages, and they must not move when the window does.
+
+### Laptop and desktop
+
+The gutter is the framing, and the gutter grows with the screen — the content does not grow to fill
+it. 40px at laptop widths, 56px from 1600px up, 18px on a phone. That gives roughly:
+
+| | 1440 × 900 | 1920 × 1080 |
+|---|---|---|
+| overview | 1300, 70px margins | 1300, 310px margins |
+| workspace | 1360, 40px margins | 1480, 220px margins |
+| data | 1360, 40px margins | 1600, 160px margins |
+| reading | 880 | 880 |
+
+The important number is not the margin, it is what fits. At 1440 the whole process map is on screen
+with no horizontal scroll, all four attention items are above the fold, and the RCM shows six
+columns. At 1920 the same screens grow; the working paper and the Decision Workspace do not.
+
+### Composition, not size
+
+Extra width is spent on layout, never on larger components. Buttons, cards, map nodes, form
+controls and type are identical at 1440 and 1920. What changes is arrangement, through four
+reusable helpers that all collapse to one column at 1120px:
+
+```
+.lay--main-aside   minmax(0, 1.9fr) / minmax(300px, 1fr)
+.lay--60-40        minmax(0, 1.45fr) / minmax(0, 1fr)
+.lay--equal        1fr / 1fr
+.aq--split         the Attention Queue, two abreast above 1340px
+```
+
+Engagement puts processes beside the team. The client profile puts contacts beside systems. Prepare
+puts people beside systems, and sources beside what is outstanding. Work puts the waiting list
+beside the engagement list, under a next action that stays full width because it is the loudest
+thing on the screen. Complete puts the readiness gates beside the signatures. None of them gained a
+single new element: the same content, arranged.
+
+### Why long-form text stays narrow
+
+A 1300px paragraph is unreadable at any font size — the eye loses the line on the return sweep.
+So content width and text width are two different things (§17 of the layout rules, and the reason
+`.measure` exists). A header, its metadata and its actions may span the full wrapper; the sentence
+underneath is capped at ~62 characters, and the working paper document itself at 68. The working
+paper is the clearest case: its wrapper is `reading` and the document inside it is `68ch`, which is
+the same measure it had before this pass and will have after the next one.
 
 ---
 

@@ -173,5 +173,5 @@ export function resolve() {
 
   `;
 
-  return screen(null, body);
+  return screen(null, body, { width: "standard" });
 }

@@ -69,7 +69,36 @@
   --ease: cubic-bezier(.2,.8,.3,1);
 
   --measure: 68ch;
+
+  /* --- Canvas: width follows the task ------------------------------------
+     Seven spatial modes, not one column. A screen declares what kind of work
+     it is and the wrapper follows; nothing sets its own max-width.
+
+       focus      one professional judgement at a time
+       reading    the working paper and long-form narrative
+       form       setup forms — legible field pairs, never a giant form
+       standard   structured sequential work
+       overview   orientation: where is this, what needs me
+       workspace  spatial work — the process map, the trace
+       data       genuinely tabular
+
+     See V3-DESIGN-DIRECTION.md → RESPONSIVE CANVAS & TASK WIDTH.
+     ---------------------------------------------------------------------- */
+  --w-focus:      780px;
+  --w-reading:    880px;
+  --w-form:       960px;
+  --w-standard:  1160px;
+  --w-overview:  1300px;
+  --w-workspace: 1480px;
+  --w-data:      1600px;
+
+  /* The gutter is the framing, and it grows with the screen rather than the
+     content growing to fill it. */
+  --gutter: 40px;
 }
+
+@media (min-width: 1600px) { :root { --gutter: 56px; } }
+@media (max-width: 700px)  { :root { --gutter: 18px; } }
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -116,6 +145,9 @@ svg { display: block; flex: none; }
 .ink3   { color: var(--ink-3); } .ink4 { color: var(--ink-4); } .ink5 { color: var(--ink-5); }
 .nowrap { white-space: nowrap; }
 .measure { max-width: 62ch; }
+/* Header metadata — a run of facts, not a sentence, so it takes a wider measure
+   than body copy and does not break after a separator. */
+.t-lede--meta { max-width: 100ch; }
 
 /* ==========================================================================
    LAYOUT
@@ -123,11 +155,37 @@ svg { display: block; flex: none; }
 
 #app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .canvas { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--ground); }
-.wrap { max-width: 1000px; margin: 0 auto; padding: var(--s-8) var(--s-6) 140px; }
-.wrap--narrow { max-width: 780px; }
-.wrap--reading { max-width: 860px; }
-.wrap--wide { max-width: 1240px; }
-.wrap--full { max-width: 1560px; }
+/* One formula. `--w` is the only thing a spatial mode changes. */
+.wrap {
+  --w: var(--w-standard);
+  width: min(100% - var(--gutter) * 2, var(--w));
+  margin-inline: auto;
+  padding: var(--s-8) 0 140px;
+}
+.wrap--focus     { --w: var(--w-focus); }
+.wrap--reading   { --w: var(--w-reading); }
+.wrap--form      { --w: var(--w-form); }
+.wrap--standard  { --w: var(--w-standard); }
+.wrap--overview  { --w: var(--w-overview); }
+.wrap--workspace { --w: var(--w-workspace); }
+.wrap--data      { --w: var(--w-data); }
+
+/* --- Composition ------------------------------------------------------------
+   A small, reusable set. Extra width is spent on composition, never on larger
+   components or longer text lines. Everything collapses to one column at the
+   point where a second column stops helping rather than at a device size.
+   -------------------------------------------------------------------------- */
+.lay { display: grid; gap: var(--s-6) var(--s-7); align-items: start; }
+.lay--main-aside { grid-template-columns: minmax(0, 1.9fr) minmax(300px, 1fr); }
+.lay--60-40      { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+.lay--equal      { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 1120px) {
+  .lay--main-aside, .lay--60-40, .lay--equal { grid-template-columns: 1fr; }
+}
+/* A field pair inside a composition column has half the room, so it stacks. */
+.lay .grid2 { grid-template-columns: 1fr; }
+/* A section that is already a column does not need its own top margin. */
+.lay > .sec, .lay > .sec--loose { margin-top: 0; }
 
 .page-in { animation: pagein var(--t-fast) var(--ease); }
 @keyframes pagein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -153,6 +211,10 @@ svg { display: block; flex: none; }
 .sec--loose { margin-top: var(--s-8); }
 .sec__h { display: flex; align-items: baseline; gap: var(--s-3); margin-bottom: var(--s-4); }
 .sec__h .sp { flex: 1; }
+/* `sec__h` is also used as spacing on the sentence under a heading. A paragraph
+   is never a header row, so it must not become a flex container — inline <b>
+   inside one would otherwise be laid out as a second column. */
+p.sec__h, p.sec__note { display: block; }
 .sec__note { margin-top: var(--s-3); }
 .rule { border: 0; border-top: 1px solid var(--line); margin: var(--s-7) 0 0; }
 
@@ -457,8 +519,11 @@ button.rw:hover, .rw.is-hot:hover { background: var(--surface); }
 .next:hover { box-shadow: inset 0 0 0 1px var(--accent-line), var(--sh-2); transform: translateY(-1px); }
 .next__m { flex: 1; min-width: 0; }
 .next__e { display: flex; align-items: center; gap: 8px; color: var(--accent-mid); }
-.next__t { font-size: 23px; font-weight: 600; letter-spacing: -.017em; line-height: 1.3; margin-top: 10px; }
-.next__d { font-size: 15px; color: var(--ink-3); line-height: 1.55; margin-top: 7px; max-width: 58ch; }
+/* Spans inside a button: they have to be told to stack. */
+.next__t { display: block; font-size: 23px; font-weight: 600; letter-spacing: -.017em;
+           line-height: 1.3; margin-top: 10px; max-width: 42ch; }
+.next__d { display: block; font-size: 15px; color: var(--ink-3); line-height: 1.55;
+           margin-top: 7px; max-width: 62ch; }
 .next__go {
   flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--accent-soft);
   color: var(--accent); display: flex; align-items: center; justify-content: center;
@@ -763,6 +828,13 @@ button.rw:hover, .rw.is-hot:hover { background: var(--surface); }
 .mapnode.is-na { opacity: .45; box-shadow: inset 0 0 0 1px var(--line); }
 .mapnode.is-na:hover { opacity: .7; transform: none; }
 
+/* The queue on a workspace-width screen. Two columns show four items where one
+   showed two, at exactly the same card size and the same text measure — the
+   items stay numbered, so the priority order still reads. Below the threshold
+   it is the single focused column it has always been. */
+.aq--split { display: grid; gap: var(--s-3); }
+@media (min-width: 1340px) { .aq--split { grid-template-columns: 1fr 1fr; } }
+
 .maplegend { display: flex; gap: var(--s-4); font-size: 12.5px; color: var(--ink-4); align-items: center; flex-wrap: wrap; }
 .maplegend span { display: inline-flex; align-items: center; gap: 6px; }
 .maplegend b { color: var(--ink-3); }
@@ -772,7 +844,7 @@ button.rw:hover, .rw.is-hot:hover { background: var(--surface); }
   border-radius: var(--r-3); box-shadow: inset 0 0 0 1px var(--line), var(--sh-1);
   animation: rise var(--t-base) var(--ease);
 }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-6); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5) var(--s-6); align-items: start; }
 @media (max-width: 920px) { .grid2 { grid-template-columns: 1fr; } }
 
 /* ==========================================================================
@@ -863,8 +935,13 @@ button.rw:hover, .rw.is-hot:hover { background: var(--surface); }
 .agrid tbody tr:hover { background: var(--surface); }
 .agrid tbody tr.is-group td { background: var(--recessed); font-weight: 600; color: var(--ink); }
 .agrid tbody tr.is-group:hover td { background: var(--recessed); }
-.agrid .c-risk { font-weight: 550; color: var(--ink); min-width: 260px; }
-.agrid .c-ctl { min-width: 240px; }
+/* Column widths are set deliberately: the two text columns take the room the
+   extra canvas provides, and the short factual ones stop wrapping. */
+.agrid th.c-risk, .agrid td.c-risk { min-width: 250px; width: 24%; }
+.agrid td.c-risk { font-weight: 550; color: var(--ink); }
+.agrid th.c-ctl, .agrid td.c-ctl { min-width: 240px; width: 29%; }
+.agrid th.c-owner, .agrid td.c-owner { width: 13%; min-width: 132px; }
+.agrid th.c-nature, .agrid td.c-nature { width: 9%; min-width: 104px; white-space: nowrap; }
 .agrid .c-num { text-align: right; white-space: nowrap; }
 .agrid .sub { display: block; font-size: 12.5px; color: var(--ink-4); margin-top: 3px; }
 .agrid__none { color: var(--danger); }
@@ -921,7 +998,9 @@ select.field { cursor: pointer; }
 .flabel { display: block; margin-bottom: 6px; }
 .fgroup + .fgroup { margin-top: var(--s-4); }
 .grid2 + .grid2, .fgroup + .grid2, .grid2 + .fgroup { margin-top: var(--s-4); }
-.grid2 .fgroup + .fgroup { margin-top: var(--s-4); }
+/* No sibling margin inside the pair: the grid's own gap spaces the fields in
+   both states, and a margin here pushes the right-hand label out of line with
+   the left-hand one whenever only one of them carries a hint. */
 
 /* ==========================================================================
    OVERLAYS
@@ -1098,9 +1177,9 @@ select.field { cursor: pointer; }
 .rp__q { font: 17px/1.6 var(--serif); color: var(--ink); margin-top: var(--s-3); max-width: 60ch; }
 .rp__meta { font-size: 13px; color: var(--ink-4); margin-top: 5px; }
 
-@media (max-width: 1200px) { .wrap { padding-left: var(--s-5); padding-right: var(--s-5); } }
+
 @media (max-width: 700px) {
   .hdr { padding: 0 var(--s-4); } .jrn { padding: 0 var(--s-4); }
-  .wrap { padding: var(--s-6) var(--s-4) 120px; }
+  .wrap { padding: var(--s-6) 0 120px; }
   .t-display { font-size: 27px; } .t-title { font-size: 22px; }
 }

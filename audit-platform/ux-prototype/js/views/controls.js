@@ -119,7 +119,7 @@ function analysisView() {
           </div>
         </div>` : ""}`}
   `;
-  return screen("controls", body, { width: "narrow" });
+  return screen("controls", body, { width: "reading" });
 }
 
 function triage() {
@@ -233,7 +233,7 @@ function triage() {
         <p class="t-sub sec__h measure">
           Confirm, modify or dismiss each one. Severity is a professional judgement and stays yours.
           These feed the ISA 265 communication to management.</p>
-        <div class="aq">${fs.pending.slice(0, 4).map(findingItem).join("")}</div>
+        <div class="aq aq--split">${fs.pending.slice(0, 4).map(findingItem).join("")}</div>
       </section>` : `
       <section class="sec--loose">
         <div class="sec__h"><h2 class="t-h">Findings concluded</h2></div>
@@ -273,7 +273,7 @@ function triage() {
     </section>
   `;
 
-  return screen("controls", body, { width: "wide" });
+  return screen("controls", body, { width: "workspace" });
 }
 
 /* ── Control decision ────────────────────────────────────────────────────── */
@@ -487,7 +487,7 @@ export function controlsStep() {
         "Controls are analysed from the process understanding, so step 3 has to run first.", "document")}
       <div class="acts" style="justify-content:center">
         ${btn("Go to the process understanding", "nav", { variant: "primary", ic: "arrow", data: { href: "#/understanding" } })}
-      </div>`, { width: "narrow" });
+      </div>`, { width: "reading" });
   }
   const n = st.narrativeSummary();
   if (n.pending) {
@@ -496,7 +496,7 @@ export function controlsStep() {
         "Step 4 analyses the understanding you have accepted. Proposing controls from a draft nobody has read would put the analysis ahead of the judgement it depends on.", "document")}
       <div class="acts" style="justify-content:center">
         ${btn("Finish reviewing the understanding", "nav", { variant: "primary", ic: "arrow", data: { href: "#/understanding" } })}
-      </div>`, { width: "narrow" });
+      </div>`, { width: "reading" });
   }
   if (!S.analysed || !S.anaSeen) return analysisView();
   if (S.reviewMode === "focus" && S.focusKind === "controls") return controlFocus();

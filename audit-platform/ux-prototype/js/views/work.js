@@ -78,7 +78,8 @@ export function work() {
 
     ${nextAction(next)}
 
-    <section class="sec--loose">
+    <div class="lay lay--equal sec--loose">
+    <section>
       <div class="sec__h"><h2 class="t-eyebrow">Also waiting</h2></div>
       ${waiting.length ? rows(waiting.map((x) => row({
         lead: icon(x.ic, 17),
@@ -93,7 +94,7 @@ export function work() {
             "No process work has been started on this engagement.", "check")}
     </section>
 
-    <section class="sec--loose">
+    <section>
       <div class="sec__h">
         <h2 class="t-eyebrow">Engagements</h2>
         <span class="sp"></span>
@@ -122,6 +123,7 @@ export function work() {
         });
       }).join(""))}
     </section>
+    </div>
 
     <section class="sec--loose">
       ${callout(`<b>This is a prototype.</b> Fictional client, mock data, no model call and no
@@ -132,7 +134,7 @@ export function work() {
     </section>
   `;
 
-  return `${header(null)}<div class="canvas"><div class="wrap wrap--narrow page-in">${body}</div></div>`;
+  return `${header(null)}<div class="canvas"><div class="wrap wrap--overview page-in">${body}</div></div>`;
 }
 
 /** What comes next on an engagement with no loaded process file. Engagement

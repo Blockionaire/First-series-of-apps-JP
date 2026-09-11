@@ -125,7 +125,7 @@ function generateView() {
         </div>`, S.disclosed.genstages)}
       </div>`}
   `;
-  return screen("understanding", body, { width: "narrow" });
+  return screen("understanding", body, { width: "reading" });
 }
 
 function fill(t) {
@@ -209,7 +209,7 @@ function triage() {
         <p class="t-sub sec__h measure">
           Contradictions first, then statements the drafting could not support. Everything else is
           already traced.</p>
-        <div class="aq">${queue.map(item).join("")}</div>
+        <div class="aq aq--split">${queue.map(item).join("")}</div>
       </section>` : `
       <section class="sec">
         ${callout(`<b>Every judgement is made.</b> Nothing in the documentation is unsupported or
@@ -256,7 +256,7 @@ function triage() {
     </div>
   `;
 
-  return screen("understanding", body, { width: "wide" });
+  return screen("understanding", body, { width: "workspace" });
 }
 
 /* ── Decision Workspace: one judgement at a time ─────────────────────────── */
@@ -489,7 +489,7 @@ function readView() {
     </div>
   </div></div>`;
 
-  const body = `<div class="wrap wrap--wide page-in" style="padding-top:32px">
+  const body = `<div class="wrap wrap--reading page-in" style="padding-top:32px">
     <div class="reader">${railHtml}${docHtml}</div>
   </div>`;
 

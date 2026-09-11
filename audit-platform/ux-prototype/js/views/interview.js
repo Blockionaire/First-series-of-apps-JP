@@ -155,7 +155,7 @@ export function interview() {
       <section class="sec--loose">
         <div class="sec__h"><h2 class="t-h">What we still need to understand</h2></div>
         <p class="t-sub sec__h measure">Resolving any of these updates coverage immediately.</p>
-        <div class="aq">${gaps.map(gapRow).join("")}</div>
+        <div class="aq aq--split">${gaps.map(gapRow).join("")}</div>
       </section>` : `
       <section class="sec--loose">
         ${callout(`<b>Nothing outstanding.</b> Every applicable area has been established.`, "ok")}
@@ -238,5 +238,5 @@ export function interview() {
       </section>` : ""}
   `;
 
-  return screen("interview", body);
+  return screen("interview", body, { width: "standard" });
 }

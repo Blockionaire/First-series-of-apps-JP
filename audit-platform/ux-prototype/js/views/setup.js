@@ -109,7 +109,7 @@ export function clientsView() {
       : empty("No client matches that", "Try a different name, city or sector.", "search")}
     </section>
   `;
-  return setupScreen(crumb([["Clients", null, true]]), body, "reading");
+  return setupScreen(crumb([["Clients", null, true]]), body, "overview");
 }
 
 /* ══ Client detail ═══════════════════════════════════════════════════════ */
@@ -165,7 +165,8 @@ export function clientView() {
       : empty("No engagement yet", "An engagement is created per financial year. It carries the team, the scope and the period.", "process")}
     </section>
 
-    <section class="sec--loose">
+    <div class="lay lay--equal sec--loose">
+    <section>
       <div class="sec__h">
         <h2 class="t-h">Client contacts</h2>
         <span class="sp"></span>
@@ -212,7 +213,7 @@ export function clientView() {
       : empty("No contacts yet", "Add the people you expect to speak to.", "people")}
     </section>
 
-    <section class="sec--loose">
+    <section>
       <div class="sec__h">
         <h2 class="t-h">Systems</h2>
         <span class="sp"></span>
@@ -255,9 +256,10 @@ export function clientView() {
           })).join(""))
       : empty("No systems yet", "Add the applications the entity runs.", "system")}
     </section>
+    </div>
   `;
 
-  return setupScreen(crumb([["Clients", "#/clients"], [c.short, null, true]]), body, "reading");
+  return setupScreen(crumb([["Clients", "#/clients"], [c.short, null, true]]), body, "overview");
 }
 
 /* ══ New client ══════════════════════════════════════════════════════════ */
@@ -325,7 +327,7 @@ export function newClientView() {
       ${!ok ? `<p class="t-meta sec__note">A legal name is required. Everything else can be added later.</p>` : ""}
     </section>
   `;
-  return setupScreen(crumb([["Clients", "#/clients"], ["New client", null, true]]), body, "reading");
+  return setupScreen(crumb([["Clients", "#/clients"], ["New client", null, true]]), body, "form");
 }
 
 /* ══ New engagement ══════════════════════════════════════════════════════
@@ -476,7 +478,7 @@ export function newEngagementView() {
   `;
 
   return setupScreen(crumb([["Clients", "#/clients"], [c.short, "#/client"],
-                            ["New engagement", null, true]]), body, "reading");
+                            ["New engagement", null, true]]), body, "form");
 }
 
 /* ══ Firm people ═════════════════════════════════════════════════════════ */
@@ -543,5 +545,5 @@ export function peopleView() {
         session state.`)}
     </section>
   `;
-  return setupScreen(crumb([["Firm people", null, true]]), body, "reading");
+  return setupScreen(crumb([["Firm people", null, true]]), body, "form");
 }
