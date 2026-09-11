@@ -165,10 +165,14 @@ export async function save(collection, values) {
   const list = state[collection];
   if (!list) throw new Error(`Unknown collection: ${collection}`);
 
-  const existing = values.id ? list.find(r => r.id === values.id) : null;
+  /* An explicit `undefined` in `values` must not wipe a field — and it
+     certainly must not wipe the id of a new record. */
+  const fields = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
+
+  const existing = fields.id ? list.find(r => r.id === fields.id) : null;
   const record = {
-    ...(existing || { id: values.id || newId(), created: now() }),
-    ...values,
+    ...(existing || { id: fields.id || newId(), created: now() }),
+    ...fields,
     updated: now(),
   };
 
@@ -305,7 +309,8 @@ export async function restore(data, { replace = false } = {}) {
   }
 
   if (Array.isArray(data.settings) && data.settings[0]) {
-    const { id, ...rest } = data.settings[0];
+    const rest = { ...data.settings[0] };
+    delete rest.id;
     await saveSettings(rest);
   }
 

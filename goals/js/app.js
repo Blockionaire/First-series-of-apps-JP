@@ -11,16 +11,21 @@
    ===================================================================== */
 
 import { state, subscribe, start, Sync, activePeriod } from "./store.js";
-import { $, applyTheme, esc, toast } from "./util.js";
+import { $, applyTheme, esc } from "./util.js";
 import { icon } from "./icons.js";
 
 import * as Home     from "./views/home.js";
+import * as Goals    from "./views/goals.js";
+import * as Goal     from "./views/goal.js";
 import * as Settings from "./views/settings.js";
 import * as Search   from "./views/search.js";
 import * as Account  from "./views/account.js";
+import { openLog } from "./log.js";
 
 const SCREENS = {
   home: Home,
+  goals: Goals,
+  goal: Goal,
   settings: Settings,
   search: Search,
 };
@@ -146,11 +151,6 @@ function hookChrome() {
   if (button) button.addEventListener("click", () => openLog());
 }
 
-/* Filled in by the logging screen once it exists; kept here so any
-   view can ask for the sheet without importing the whole thing. */
-let openLog = () => toast("Logging arrives with the goals.");
-
-export function registerLogger(fn) { openLog = fn; }
 export const log = (...args) => openLog(...args);
 
 /* ---------------------------------------------------------------

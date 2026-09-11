@@ -475,6 +475,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .goal-card__arrow { color: var(--ink-faint); font-size: 1.1rem; }
+
+.goal-card__unit {
+  font-family: var(--sans);
+  font-size: .74rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-left: 4px;
+}
 .goal-card__target { color: var(--ink-faint); }
 
 .goal-card__next {
@@ -589,9 +598,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* ----------------------------- Metrics ------------------------------ */
 .metric-grid {
   display: grid;
-  gap: 28px;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 26px 24px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
+
+@media (min-width: 700px) { .metric-grid { gap: 34px 30px; } }
 
 .metric__value {
   font-family: var(--serif);
@@ -884,3 +895,79 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .tabbar, .masthead, .quick { display: none; }
   body { background: #fff; }
 }
+
+/* ------------------------------ Detail ------------------------------ */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .84rem;
+  color: var(--ink-faint);
+  text-decoration: none;
+  padding: 6px 0;
+}
+
+.back:hover { color: var(--ink); }
+
+.period-line { max-width: 420px; }
+
+.metric { min-width: 0; }
+
+/* ------------------------------- Notes ------------------------------ */
+.note {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+}
+
+.note:first-of-type { border-top: 1px solid var(--rule); }
+.note__title { font-family: var(--serif); font-size: 1.05rem; font-weight: 400; }
+.note__text { color: var(--ink-soft); line-height: 1.6; margin-top: 8px; max-width: var(--measure); }
+
+.note__prompt {
+  font-size: .78rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 14px;
+}
+
+/* --------------------------- The log sheet -------------------------- */
+.log-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+
+.log-picker__item {
+  appearance: none;
+  border: 0;
+  background: var(--paper);
+  padding: 16px 14px;
+  text-align: left;
+  cursor: pointer;
+  display: block;
+  transition: background .12s ease;
+}
+
+.log-picker__item:hover { background: var(--paper-sunk); }
+.log-picker__label { display: block; font-size: .95rem; }
+
+.log-picker__goal {
+  display: block;
+  font-size: .72rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 3px;
+}
+
+.log-prompt {
+  font-size: .84rem;
+  color: var(--ink-soft);
+  margin: 14px 0 6px;
+}
+
+.textarea--small { min-height: 62px; }
