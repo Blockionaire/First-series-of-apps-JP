@@ -23,6 +23,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Minimal runtime bundle for the container: Next traces only the modules the
+  // server actually needs. public/ and .next/static/ are NOT included by
+  // standalone output and are copied explicitly in the Dockerfile.
+  output: "standalone",
   serverExternalPackages: ["better-sqlite3"],
   poweredByHeader: false,
   async headers() {

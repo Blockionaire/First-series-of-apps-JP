@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   // Stop billing before the record disappears, or the customer keeps paying
   // for an account that no longer exists.
-  const sub = activeSubscription(user.id) as { stripe_subscription?: string | null } | undefined;
+  const sub = activeSubscription(user.id);
   const stripe = stripeClient();
   if (stripe && sub?.stripe_subscription) {
     try {

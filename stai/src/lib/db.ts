@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import { dataDir } from "./config";
 
 /**
  * SQLite is the platform's content store and CMS backing.
@@ -12,15 +13,55 @@ import fs from "fs";
 
 let _db: Database.Database | null = null;
 
+/** Absolute path to the database file. Its -wal and -shm siblings sit beside it. */
+export function dbPath(): string {
+  return path.join(dataDir(), "stai.db");
+}
+
 export function db(): Database.Database {
   if (_db) return _db;
-  const dir = path.join(process.cwd(), "data");
+  const dir = dataDir();
   fs.mkdirSync(dir, { recursive: true });
-  _db = new Database(path.join(dir, "stai.db"));
+  _db = new Database(dbPath());
   _db.pragma("journal_mode = WAL");
   _db.pragma("foreign_keys = ON");
+  // Without this SQLite's busy timeout is 0: any two concurrent writers (a
+  // signup arriving during a Stripe webhook, say) throw SQLITE_BUSY instantly
+  // and surface as a 500. Five seconds is far longer than any write here takes.
+  _db.pragma("busy_timeout = 5000");
   migrate(_db);
+  registerShutdownHook();
   return _db;
+}
+
+let _hookRegistered = false;
+/**
+ * Checkpoint and close on process exit so a redeploy never leaves a hot WAL.
+ *
+ * Registered here rather than in instrumentation.ts because that file is
+ * compiled for the edge runtime too, which has no `path`/`fs`. Reaching this
+ * function at all proves we are in the Node runtime.
+ *
+ * `exit` is the right hook: it is synchronous (as closeDb is), and it fires
+ * after Next's own SIGTERM handling calls process.exit(). Attaching a bare
+ * SIGTERM listener would suppress Node's default termination instead.
+ */
+function registerShutdownHook() {
+  if (_hookRegistered) return;
+  _hookRegistered = true;
+  process.on("exit", () => closeDb());
+}
+
+/** Checkpoint and close — called on SIGTERM so a redeploy leaves no hot WAL. */
+export function closeDb() {
+  if (!_db) return;
+  try {
+    _db.pragma("wal_checkpoint(TRUNCATE)");
+    _db.close();
+  } catch {
+    // shutting down anyway
+  }
+  _db = null;
 }
 
 const SEED_VERSION = "2";
@@ -214,6 +255,15 @@ function migrate(d: Database.Database) {
   addColumn(d, "assessments", "jurisdiction", "TEXT NOT NULL DEFAULT ''");
   addColumn(d, "assessments", "role", "TEXT NOT NULL DEFAULT ''");
 
+  // Stripe subscription lifecycle. Entitlement is derived from these, so they
+  // mirror Stripe's own vocabulary rather than a local approximation.
+  addColumn(d, "subscriptions", "current_period_end", "INTEGER"); // unix seconds
+  addColumn(d, "subscriptions", "cancel_at_period_end", "INTEGER NOT NULL DEFAULT 0");
+  addColumn(d, "subscriptions", "updated_at", "TEXT");
+  d.exec(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_stripe ON subscriptions(stripe_subscription) WHERE stripe_subscription IS NOT NULL"
+  );
+
   const seeded = d.prepare("SELECT value FROM settings WHERE key='seed_version'").get() as
     | { value: string }
     | undefined;
@@ -249,6 +299,13 @@ function runDataMigrations(d: Database.Database) {
   // tooling (adapt-with-AI, Ask STAI). So the library opens up and only the
   // deepest, most specialised prompts stay behind the gate. Every category
   // keeps at least one open prompt: a locked category reads as an empty shelf.
+  // Align legacy local status values with Stripe's vocabulary, so one set of
+  // rules governs entitlement regardless of which provider wrote the row.
+  if (!done("mig_sub_status_stripe_vocab")) {
+    d.prepare("UPDATE subscriptions SET status='canceled' WHERE status='cancelled'").run();
+    mark("mig_sub_status_stripe_vocab");
+  }
+
   if (!done("mig_prompt_gating_v2")) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { PREMIUM_PROMPT_SLUGS } = require("./seed/gating") as typeof import("./seed/gating");

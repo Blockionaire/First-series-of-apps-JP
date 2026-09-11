@@ -1,17 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
-import { activateSubscription, foundingAvailable, PLANS, type PlanId } from "@/lib/billing";
-import { stripeClient } from "@/lib/billing";
+import { upsertSubscription, foundingAvailable, PLANS, type PlanId } from "@/lib/billing";
+import { sandboxCheckoutAllowed, isProduction } from "@/lib/config";
 import { sendMail } from "@/lib/mail";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
+/**
+ * Development-only checkout simulation.
+ *
+ * This route grants membership WITHOUT payment. It must therefore be
+ * unreachable in production under every configuration — including the case
+ * that motivated this guard: a production deployment with no Stripe key, where
+ * the previous version happily activated STAI+ for anyone who asked.
+ *
+ * Fails closed: production returns 404 before any other logic runs, so the
+ * endpoint is indistinguishable from one that does not exist.
+ */
 export async function POST(req: NextRequest) {
+  if (isProduction() || !sandboxCheckoutAllowed()) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const blocked = guard(req, "checkout-sandbox", 20, WINDOW.hour);
   if (blocked) return blocked;
-
-  // Sandbox completion only exists when Stripe is NOT configured — it can
-  // never bypass real billing in a keyed environment.
-  if (stripeClient()) return NextResponse.json({ error: "Sandbox disabled" }, { status: 403 });
 
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
@@ -23,13 +34,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Founding seats are gone" }, { status: 409 });
   }
 
-  activateSubscription(user.id, plan, "sandbox");
+  const periodDays = plan === "annual" ? 365 : 30;
+  upsertSubscription({
+    userId: user.id,
+    plan,
+    provider: "sandbox",
+    status: "active",
+    stripeSubscription: `sandbox_${user.id}_${Date.now()}`,
+    currentPeriodEnd: Math.floor(Date.now() / 1000) + periodDays * 86400,
+    cancelAtPeriodEnd: false,
+  });
+
   await sendMail(
     user.email,
     plan === "founding" ? "Welcome, founding member" : "Welcome to STAI+",
-    `Hi ${user.name.split(" ")[0]},\n\nSTAI+ is live on your account: the full prompt library, adapt-with-AI, unlimited Ask STAI, and every briefing.\n${
-      plan === "founding" ? "\nYour founding rate of €12/month is locked for the life of your subscription.\n" : ""
-    }\n— STAI`
+    `Hi ${user.name.split(" ")[0]},\n\nSTAI+ is live on your account (development sandbox).\n\n— STAI`
   );
   return NextResponse.json({ ok: true });
 }

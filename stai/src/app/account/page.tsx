@@ -95,8 +95,19 @@ export default async function AccountPage({
                 </p>
                 <p className="f-mono mt-1 text-[0.68rem] tracking-[0.06em]" style={{ color: "var(--ink-faint)" }}>
                   Since {fmtDate(sub.started_at.slice(0, 10))}
-                  {sub.renews_at ? ` · renews ${fmtDate(sub.renews_at.slice(0, 10))}` : ""} · via {sub.provider}
+                  {sub.renews_at
+                    ? sub.cancel_at_period_end
+                      ? ` · access until ${fmtDate(sub.renews_at.slice(0, 10))}`
+                      : ` · renews ${fmtDate(sub.renews_at.slice(0, 10))}`
+                    : ""} · via {sub.provider}
+                  {sub.status === "past_due" ? " · payment retrying" : ""}
                 </p>
+                {sub.cancel_at_period_end === 1 && (
+                  <p className="mt-2 max-w-md text-sm" style={{ color: "var(--ink-muted)" }}>
+                    Cancellation is scheduled. You keep every STAI+ feature until the period you have already
+                    paid for ends — nothing is withdrawn early.
+                  </p>
+                )}
               </>
             ) : (
               <>

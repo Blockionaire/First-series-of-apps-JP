@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { foundingStatus, allPrompts } from "@/lib/content";
+import { checkoutAvailable } from "@/lib/config";
 import { currentUser } from "@/lib/auth";
 import { SPlusMark } from "@/components/Logo";
 import CheckoutButton from "@/components/plus/CheckoutButton";
@@ -38,6 +39,9 @@ export default async function PlusPage() {
   const FEATURES = features(prompts.filter((p) => !p.premium).length, prompts.length);
   const user = await currentUser();
   const isPlus = user?.plan === "plus";
+  // No Stripe key in production means no way to take money. Say so plainly
+  // rather than rendering buttons that fail — and never offer a bypass.
+  const canCheckout = checkoutAvailable();
   const pct = Math.round((founding.claimed / founding.total) * 100);
 
   return (
@@ -70,6 +74,20 @@ export default async function PlusPage() {
             </Link>
             .
           </p>
+        </div>
+      ) : !canCheckout ? (
+        <div className="mt-10 border p-6 rule-strong" role="status">
+          <p className="f-mono text-[0.7rem] font-bold tracking-[0.16em] uppercase text-cream-100">
+            Membership opens shortly
+          </p>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+            Checkout isn&apos;t live on this deployment yet, so nothing can be purchased and nothing has been
+            charged. Join The STAI Brief below and we&apos;ll tell you the moment founding membership opens —
+            the rate and the seat count on this page are what you&apos;ll get.
+          </p>
+          <Link href="/briefing" className="btn btn-ghost mt-5">
+            Read the Briefing meanwhile
+          </Link>
         </div>
       ) : (
         <>

@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
+import { ENTITLEMENT_SQL } from "./billing";
 
 export type User = {
   id: number;
@@ -62,15 +63,30 @@ export async function currentUser(): Promise<User | null> {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
+  // `plan` is DERIVED from live subscription state, never read from the users
+  // row. A stored "plus" flag has no expiry, so a lapsed or cancelled member
+  // would otherwise keep access indefinitely. One rule (ENTITLEMENT_SQL),
+  // evaluated here, governs every gate on the platform.
   const row = db()
     .prepare(
-      `SELECT u.id, u.email, u.name, u.firm, u.role, u.plan, u.founding
+      `SELECT u.id, u.email, u.name, u.firm, u.role,
+              EXISTS (
+                SELECT 1 FROM subscriptions sub
+                WHERE sub.user_id = u.id AND ${ENTITLEMENT_SQL}
+              ) AS entitled,
+              EXISTS (
+                SELECT 1 FROM subscriptions sub
+                WHERE sub.user_id = u.id AND sub.plan = 'founding' AND ${ENTITLEMENT_SQL}
+              ) AS founding
        FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.token=? AND s.expires_at > datetime('now')`
     )
-    .get(token) as (Omit<User, "plan" | "founding"> & { plan: string; founding: number }) | undefined;
+    .get(token) as
+    | (Omit<User, "plan" | "founding"> & { entitled: number; founding: number })
+    | undefined;
   if (!row) return null;
-  return { ...row, plan: row.plan === "plus" ? "plus" : "free", founding: !!row.founding };
+  const { entitled, ...rest } = row;
+  return { ...rest, plan: entitled ? "plus" : "free", founding: !!row.founding };
 }
 
 /** Read-only anon id — safe in server components (no cookie write). */

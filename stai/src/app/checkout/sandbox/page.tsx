@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/seo";
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { PLANS, stripeClient, type PlanId } from "@/lib/billing";
+import { PLANS, type PlanId } from "@/lib/billing";
+import { sandboxCheckoutAllowed, isProduction } from "@/lib/config";
 import SandboxCheckout from "@/components/plus/SandboxCheckout";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +20,9 @@ export default async function SandboxCheckoutPage({
 }: {
   searchParams: Promise<{ plan?: string }>;
 }) {
-  // This page only exists in environments without Stripe keys.
-  if (stripeClient()) redirect("/plus");
+  // Fails closed, and identically to the API route: in production this page
+  // does not exist, whether or not Stripe is configured.
+  if (isProduction() || !sandboxCheckoutAllowed()) notFound();
   const user = await currentUser();
   if (!user) redirect("/signup?next=/plus");
   if (user.plan === "plus") redirect("/account");

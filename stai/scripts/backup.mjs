@@ -19,8 +19,11 @@ import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
 
-const SRC = path.join(process.cwd(), "data", "stai.db");
-const DEST_DIR = process.argv[2] ?? path.join(process.cwd(), "backups");
+// Must resolve the SAME directory the app writes to, or backups silently
+// snapshot an empty database. Mirrors dataDir() in src/lib/config.ts.
+const DATA_DIR = process.env.STAI_DATA_DIR || path.join(process.cwd(), "data");
+const SRC = path.join(DATA_DIR, "stai.db");
+const DEST_DIR = process.argv[2] ?? process.env.BACKUP_DIR ?? path.join(DATA_DIR, "backups");
 const KEEP = parseInt(process.env.BACKUP_KEEP ?? "168", 10); // hourly for a week
 
 if (!fs.existsSync(SRC)) {
