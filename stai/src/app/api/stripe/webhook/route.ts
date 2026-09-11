@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripeClient, syncFromStripe } from "@/lib/billing";
+import { stripeClient, syncFromStripe, confirmFirstPayment } from "@/lib/billing";
 import type Stripe from "stripe";
 
 /**
@@ -52,10 +52,45 @@ export async function POST(req: NextRequest) {
       break;
     }
 
-    // Payment outcomes. `invoice.paid` is what confirms a delayed method;
-    // `payment_failed` moves Stripe to past_due, which deliberately KEEPS
-    // access while Stripe works its retry schedule.
-    case "invoice.paid":
+    // THE payment-confirmation signal. Money has actually settled.
+    case "invoice.paid": {
+      const inv = event.data.object as Stripe.Invoice & { subscription?: string | { id: string } };
+      subscriptionId =
+        typeof inv.subscription === "string" ? inv.subscription : inv.subscription?.id ?? null;
+      if (!subscriptionId) {
+        return NextResponse.json({ received: true, note: "invoice has no subscription" });
+      }
+
+      // Verify the invoice really is paid for a positive amount. Every current
+      // STAI plan costs money, so a zero-amount paid invoice (a 100% coupon,
+      // or a trial we do not offer) is not evidence of a successful payment
+      // and must not unlock premium.
+      const genuinelyPaid = inv.status === "paid" && (inv.amount_paid ?? 0) > 0;
+      if (!genuinelyPaid) {
+        return NextResponse.json({
+          received: true,
+          confirmed: false,
+          note: `invoice not a positive paid amount (status=${inv.status}, amount_paid=${inv.amount_paid ?? 0})`,
+        });
+      }
+
+      try {
+        // Sync FIRST so the subscription row is guaranteed to exist and to
+        // carry Stripe's current status. This makes event order irrelevant:
+        // whether invoice.paid arrives before or after the subscription
+        // events, the row is present and current before we confirm against it.
+        const synced = await syncFromStripe(subscriptionId);
+        const confirmed = confirmFirstPayment(subscriptionId);
+        return NextResponse.json({ received: true, synced, confirmed });
+      } catch {
+        return NextResponse.json({ error: "Sync failed" }, { status: 500 });
+      }
+    }
+
+    // A failed payment moves Stripe to past_due, which deliberately KEEPS
+    // access for an already-confirmed subscriber while Stripe retries. For a
+    // never-confirmed subscription it changes nothing: the flag stays 0 and
+    // entitlement is still withheld.
     case "invoice.payment_failed": {
       const inv = event.data.object as Stripe.Invoice & { subscription?: string | { id: string } };
       subscriptionId =

@@ -53,7 +53,9 @@ COPY --from=builder --chown=node:node /app/scripts/backup.mjs ./scripts/backup.m
 
 USER node
 EXPOSE 3000
-VOLUME ["/data"]
+# No VOLUME instruction: persistence is declared explicitly in
+# docker-compose.yml. Declaring it here would also create surprise anonymous
+# volumes for anyone running the image with a bare `docker run`.
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

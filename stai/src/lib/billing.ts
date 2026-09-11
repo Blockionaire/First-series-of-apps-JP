@@ -24,20 +24,35 @@ export const PLANS: Record<PlanId, { label: string; price: string; interval: str
 };
 
 /**
- * Statuses that grant access.
+ * Statuses that can grant access — but only alongside a confirmed payment.
  *
  * `past_due` KEEPS access deliberately: Stripe is still retrying the card on
  * the schedule the account configures, and cutting a paying member off during
- * dunning is both hostile and usually wrong. Stripe moves the subscription to
+ * dunning is hostile and usually wrong. Stripe moves the subscription to
  * `unpaid` or `canceled` when that grace period genuinely ends — those revoke.
- * `incomplete` never grants access, which is what makes delayed payment
- * methods (SEPA) safe: the subscription exists before the money arrives.
+ *
+ * `trialing` is absent: we offer no trials, so implementing hypothetical trial
+ * behaviour would be untested code guarding real money.
  */
-export const ACCESS_GRANTING_STATUSES = ["active", "trialing", "past_due"] as const;
+export const ACCESS_GRANTING_STATUSES = ["active", "past_due"] as const;
 
-/** SQL fragment shared by every entitlement read, so there is exactly one rule. */
+/**
+ * The one entitlement rule.
+ *
+ * `first_payment_confirmed` is the load-bearing clause. Subscription status
+ * alone cannot express "money actually arrived": with asynchronous payment
+ * methods (SEPA Direct Debit, and the iDEAL/Bancontact mandates that become
+ * SEPA), Stripe can report a subscription as `active` while the initial
+ * PaymentIntent is still `processing`, and can leave it `active` after that
+ * payment later fails. A first invoice that fails outright lands in `past_due`.
+ * In all three cases status-only entitlement would hand out premium for money
+ * that never arrived.
+ *
+ * So: positive confirmation first, status second.
+ */
 export const ENTITLEMENT_SQL = `
-  status IN ('active','trialing','past_due')
+  first_payment_confirmed = 1
+  AND status IN ('active','past_due')
   AND NOT (
     cancel_at_period_end = 1
     AND current_period_end IS NOT NULL
@@ -91,15 +106,41 @@ export type SubscriptionRecord = {
   stripeSubscription?: string | null;
   currentPeriodEnd?: number | null;
   cancelAtPeriodEnd?: boolean;
+  /**
+   * ONLY the development sandbox may set this at creation, where it stands in
+   * for a payment that really did succeed. The Stripe path must leave it false
+   * and let invoice.paid confirm — checkout.session.completed, an `active`
+   * status and a `past_due` status are each insufficient proof of payment.
+   */
+  firstPaymentConfirmed?: boolean;
 };
+
+/**
+ * Claim a founding seat for a subscription that has just become genuinely
+ * entitled. Caller must already be inside a transaction.
+ *
+ * Tied to the payment-confirmation transition rather than to status, so an
+ * unpaid SEPA subscription sitting at `active` cannot burn one of the 200.
+ * Returns the plan the row should carry.
+ */
+function claimFoundingSeat(plan: PlanId): { plan: PlanId; seatTaken: boolean } {
+  if (plan !== "founding") return { plan, seatTaken: false };
+  const total = parseInt(getSetting("founding_total") ?? "200", 10);
+  const claimed = parseInt(getSetting("founding_claimed") ?? "0", 10);
+  if (claimed >= total) {
+    // Window closed mid-flight; support reconciles the rate.
+    return { plan: "monthly", seatTaken: false };
+  }
+  setSetting("founding_claimed", String(claimed + 1));
+  return { plan: "founding", seatTaken: true };
+}
 
 /**
  * Insert-or-update one subscription, keyed on the Stripe subscription id.
  *
- * Idempotent by construction: repeated deliveries of the same event rewrite
- * identical values. The founding seat is consumed only on the transition into
- * an access-granting state, and only once per subscription — tracked by the
- * row's own prior status, so a replayed webhook cannot double-count.
+ * Idempotent by construction: a repeated delivery rewrites identical values.
+ * The UPDATE branch deliberately omits first_payment_confirmed — the flag is
+ * sticky, and only confirmFirstPayment() may raise it.
  */
 export function upsertSubscription(rec: SubscriptionRecord): { entitled: boolean; seatTaken: boolean } {
   const d = db();
@@ -111,30 +152,12 @@ export function upsertSubscription(rec: SubscriptionRecord): { entitled: boolean
           .get(rec.stripeSubscription) as { id: number; status: string; plan: string } | undefined)
       : undefined;
 
-    const grants = (ACCESS_GRANTING_STATUSES as readonly string[]).includes(rec.status);
-    const previouslyGranted =
-      !!existing && (ACCESS_GRANTING_STATUSES as readonly string[]).includes(existing.status);
-
     let effectivePlan: PlanId = rec.plan;
     let seatTaken = false;
 
-    // Consume a founding seat only on the first transition into access, and
-    // only while seats remain. Checked inside the transaction so two
-    // simultaneous activations cannot both take the last seat.
-    if (effectivePlan === "founding" && grants && !previouslyGranted) {
-      const total = parseInt(getSetting("founding_total") ?? "200", 10);
-      const claimed = parseInt(getSetting("founding_claimed") ?? "0", 10);
-      if (claimed >= total) {
-        effectivePlan = "monthly"; // window closed mid-flight; support reconciles the rate
-      } else {
-        setSetting("founding_claimed", String(claimed + 1));
-        seatTaken = true;
-      }
-    } else if (existing && effectivePlan === "founding") {
-      effectivePlan = existing.plan as PlanId; // never re-grade an existing row
-    }
-
     if (existing) {
+      // Never re-grade or re-price an existing row from a later event.
+      effectivePlan = existing.plan as PlanId;
       d.prepare(
         `UPDATE subscriptions SET status=@status, stripe_customer=@customer,
            current_period_end=@periodEnd, cancel_at_period_end=@cancelAtEnd,
@@ -149,12 +172,22 @@ export function upsertSubscription(rec: SubscriptionRecord): { entitled: boolean
         renewsAt: rec.currentPeriodEnd ? new Date(rec.currentPeriodEnd * 1000).toISOString() : null,
       });
     } else {
+      // A brand-new subscription always begins unconfirmed unless the sandbox
+      // explicitly vouches for it. Nothing about the user's history carries
+      // over: confirmation is a property of this subscription alone.
+      const confirmed = rec.firstPaymentConfirmed ? 1 : 0;
+      if (confirmed === 1) {
+        const claim = claimFoundingSeat(effectivePlan);
+        effectivePlan = claim.plan;
+        seatTaken = claim.seatTaken;
+      }
       d.prepare(
         `INSERT INTO subscriptions
            (user_id, plan, status, provider, stripe_customer, stripe_subscription,
-            current_period_end, cancel_at_period_end, renews_at, updated_at)
+            current_period_end, cancel_at_period_end, renews_at, updated_at,
+            first_payment_confirmed)
          VALUES (@userId, @plan, @status, @provider, @customer, @subscription,
-                 @periodEnd, @cancelAtEnd, @renewsAt, datetime('now'))`
+                 @periodEnd, @cancelAtEnd, @renewsAt, datetime('now'), @confirmed)`
       ).run({
         userId: rec.userId,
         plan: effectivePlan,
@@ -165,11 +198,56 @@ export function upsertSubscription(rec: SubscriptionRecord): { entitled: boolean
         periodEnd: rec.currentPeriodEnd ?? null,
         cancelAtEnd: rec.cancelAtPeriodEnd ? 1 : 0,
         renewsAt: rec.currentPeriodEnd ? new Date(rec.currentPeriodEnd * 1000).toISOString() : null,
+        confirmed,
       });
     }
 
     refreshUserPlan(rec.userId);
     return { entitled: hasEntitlement(rec.userId), seatTaken };
+  });
+
+  return tx();
+}
+
+/**
+ * Positively confirm that THIS subscription has received a successful payment.
+ *
+ * The only path that may raise first_payment_confirmed on a Stripe
+ * subscription. Driven exclusively by invoice.paid — never by
+ * checkout.session.completed, never by an `active` status, never by
+ * `past_due`, none of which prove money arrived.
+ *
+ * Sticky and idempotent: the WHERE clause makes the 0→1 transition happen at
+ * most once, so a duplicate invoice.paid changes nothing and cannot claim a
+ * second founding seat. A later renewal failure never clears it.
+ *
+ * Returns true only on the transition itself.
+ */
+export function confirmFirstPayment(stripeSubscriptionId: string): boolean {
+  const d = db();
+
+  const tx = d.transaction((): boolean => {
+    const row = d
+      .prepare(
+        "SELECT id, user_id, plan, first_payment_confirmed FROM subscriptions WHERE stripe_subscription=?"
+      )
+      .get(stripeSubscriptionId) as
+      | { id: number; user_id: number; plan: PlanId; first_payment_confirmed: number }
+      | undefined;
+    // No mapping to a STAI subscription — nothing to confirm. Fails closed.
+    if (!row) return false;
+    if (row.first_payment_confirmed === 1) return false; // already confirmed; idempotent
+
+    const claim = claimFoundingSeat(row.plan);
+    const info = d
+      .prepare(
+        "UPDATE subscriptions SET plan=?, first_payment_confirmed=1, updated_at=datetime('now') WHERE id=? AND first_payment_confirmed=0"
+      )
+      .run(claim.plan, row.id);
+    if (info.changes === 0) return false;
+
+    refreshUserPlan(row.user_id);
+    return true;
   });
 
   return tx();

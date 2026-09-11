@@ -260,6 +260,11 @@ function migrate(d: Database.Database) {
   addColumn(d, "subscriptions", "current_period_end", "INTEGER"); // unix seconds
   addColumn(d, "subscriptions", "cancel_at_period_end", "INTEGER NOT NULL DEFAULT 0");
   addColumn(d, "subscriptions", "updated_at", "TEXT");
+  // Positive proof that THIS subscription has received a successful payment at
+  // least once. Belongs to the subscription, never to the user: a brand-new
+  // Stripe subscription always starts unconfirmed, even for a customer who
+  // paid on a previous one. Sticky — set once by invoice.paid, never cleared.
+  addColumn(d, "subscriptions", "first_payment_confirmed", "INTEGER NOT NULL DEFAULT 0");
   d.exec(
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_stripe ON subscriptions(stripe_subscription) WHERE stripe_subscription IS NOT NULL"
   );
@@ -304,6 +309,20 @@ function runDataMigrations(d: Database.Database) {
   if (!done("mig_sub_status_stripe_vocab")) {
     d.prepare("UPDATE subscriptions SET status='canceled' WHERE status='cancelled'").run();
     mark("mig_sub_status_stripe_vocab");
+  }
+
+  // Backfill the payment-confirmation flag for rows that predate it.
+  //
+  // Any subscription already in an access-granting state was admitted under
+  // the previous rule (status alone). Defaulting those to 0 would revoke a
+  // paying member's access until their NEXT invoice — so they are grandfathered
+  // to 1 exactly once. Every row created after this migration starts at 0 and
+  // must earn the flag through invoice.paid.
+  if (!done("mig_first_payment_backfill")) {
+    d.prepare(
+      "UPDATE subscriptions SET first_payment_confirmed = 1 WHERE status IN ('active','past_due','trialing')"
+    ).run();
+    mark("mig_first_payment_backfill");
   }
 
   if (!done("mig_prompt_gating_v2")) {

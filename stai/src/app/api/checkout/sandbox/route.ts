@@ -43,6 +43,10 @@ export async function POST(req: NextRequest) {
     stripeSubscription: `sandbox_${user.id}_${Date.now()}`,
     currentPeriodEnd: Math.floor(Date.now() / 1000) + periodDays * 86400,
     cancelAtPeriodEnd: false,
+    // The sandbox simulates a payment that succeeded. This is the ONLY place
+    // outside confirmFirstPayment() allowed to vouch for one, and it is
+    // unreachable in production.
+    firstPaymentConfirmed: true,
   });
 
   await sendMail(
