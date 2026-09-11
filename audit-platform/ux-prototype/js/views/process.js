@@ -7,7 +7,7 @@
 import { esc, cx, act as btn, row, rows, dot, icon, tag, callout, empty,
          nextAction, card, more } from "../ui.js";
 import { client, engagement, sources } from "../data-sources.js";
-import { processCatalogue, PARTICIPANT_ROLES } from "../data-firm.js";
+import { processCatalogue, PARTICIPANT_ROLES, PHASES } from "../data-firm.js";
 import { journey, carriedContext, variants } from "../data-process.js";
 import * as st from "../state.js";
 import { idline, engContext, engScreen, screen } from "./shell.js";
@@ -22,12 +22,12 @@ export function engagementView() {
   const c = st.activeClient();
   const prog = st.processProgress();
   const cov = st.coverageSummary();
-  const canonical = st.isCanonical(e);
+  const hasWork = st.processWorkspaceAvailable(e, "revenue");
   const inScope = st.engProcesses(e);
 
   const procRow = (p) => {
     const isRevenue = p.id === "revenue";
-    const live = isRevenue && canonical;
+    const live = isRevenue && hasWork;
     return row({
       lead: icon("process", 17),
       title: live ? `<span class="b">${esc(p.name)}</span>`
@@ -60,15 +60,14 @@ export function engagementView() {
       </div>
     </div>
 
-    ${!canonical ? `<section class="sec">${callout(`<b>This engagement has no loaded evidence.</b>
-      It is a real record — period, team and scope are yours — but the prototype ships a
-      methodology pack, a transcript and documents for one engagement only:
-      <b>Vandersteen FY2026</b>. The seven-step workflow will open and tell you the same thing
-      rather than inventing a process understanding.
+    ${!hasWork ? `<section class="sec">${callout(`<b>Process work belongs to this engagement.</b>
+      Period, team and scope are real records here, and nothing is carried in from another
+      engagement. The prototype ships one loaded process file — <b>Vandersteen FY2026 Revenue</b> —
+      so the processes below open as not started.
       <div class="acts sec__note">
         ${btn("Open the populated demo engagement", "open-engagement",
-          { size: "sm", variant: "primary", data: { id: "ENG-2026-0142" } })}
-      </div>`, "warn")}</section>` : ""}
+          { size: "sm", data: { id: "ENG-2026-0142" } })}
+      </div>`)}</section>` : ""}
 
     <section class="sec">
       <div class="sec__h"><h2 class="t-eyebrow">Audit phases</h2></div>
@@ -77,7 +76,7 @@ export function engagementView() {
           <div class="${cx("phase", "is-" + p.state)}">
             <div class="phase__n">${esc(p.name)}</div>
             <div class="phase__d">${esc(p.detail ||
-              (p.state === "on" && canonical && p.id === "interim"
+              (p.state === "on" && hasWork && p.id === "interim"
                 ? `Revenue · step ${prog.current.n} of 7` : p.state === "done" ? "Complete" : "Not started"))}</div>
           </div>`).join("")}
       </div>
@@ -103,8 +102,9 @@ export function engagementView() {
       ${st.engTeam(e).length ? rows(st.engTeam(e).map((t) => row({
         lead: icon("people", 17),
         title: `<span class="b">${esc(t.user.name)}</span>${t.user.isMe ? ` <span class="t-meta">you</span>` : ""}`,
-        detail: esc(t.user.email),
-        side: tag(t.role, t.role === "Partner" ? "accent" : "quiet"),
+        detail: `Firm role ${esc(t.user.role)} · ${esc(t.user.email)}`,
+        side: `${tag(t.role, t.role === "Partner" ? "accent" : "quiet")}
+          <div class="t-meta" style="margin-top:4px">on this engagement</div>`,
       })).join(""))
       : empty("No team assigned", "Somebody has to prepare and review the file.", "people")}
     </section>
@@ -113,6 +113,58 @@ export function engagementView() {
       ${callout(`<b>Where this sits.</b> Interim comes after the entity and process understanding and
         the inherent risk factors, and before risk analysis and the final audit. This product covers
         the interim work on a process. Risk analysis is the next phase and is deliberately outside it.`)}
+    </section>
+  `;
+
+  return engScreen(body, { width: "reading" });
+}
+
+/* ── The process workspace, on an engagement that has no process work ──────
+   Audit work is engagement-scoped. Only one engagement in the prototype ships
+   with a loaded Revenue file, so every other engagement gets this — a valid
+   new-engagement state, not an error. It answers three questions: where am I,
+   what is the state, and what can I do.
+   ───────────────────────────────────────────────────────────────────────── */
+
+export function processUnavailable() {
+  const e = st.activeEngagement();
+  const c = st.activeClient();
+  const proc = processCatalogue.find((p) => p.id === st.WORKSPACE_PROCESS);
+  const inScope = (e?.processes || []).includes(st.WORKSPACE_PROCESS);
+  const phase = (PHASES.find((p) => p.id === e?.phase) || {}).name || "Planning";
+
+  const body = `
+    <div class="head">
+      ${btn(`${c ? c.short : "Client"} ${e ? e.fy : ""}`, "nav",
+        { variant: "ghost", size: "sm", ic: "back", data: { href: "#/engagement" } })}
+      <div class="head__row" style="margin-top:10px">
+        <div>
+          <h1 class="t-display">${esc(proc ? proc.name.split(" / ")[0] : "Revenue")}</h1>
+          <p class="t-lede">
+            ${esc(c ? c.name : "")} · ${esc(e ? e.fy : "")} · ${esc(phase)}
+          </p>
+        </div>
+        ${inScope ? tag("in scope · not started", "quiet") : tag("not in scope", "quiet")}
+      </div>
+    </div>
+
+    <section class="sec--loose">
+      ${empty(
+        inScope ? "No Revenue work has been started yet"
+                : "Revenue is not in scope for this engagement",
+        inScope
+          ? "Revenue is in scope for this engagement, but no process evidence has been loaded in this prototype."
+          : "Put it in scope on the engagement before any process work can begin.",
+        "process")}
+      <div class="acts" style="justify-content:center">
+        ${inScope ? btn("Start process work — prototype placeholder", "mock", { variant: "primary" }) : ""}
+        ${btn("Open the populated demo engagement", "open-engagement",
+          { data: { id: "ENG-2026-0142" } })}
+        ${btn("Back to the engagement", "nav", { variant: "ghost", data: { href: "#/engagement" } })}
+      </div>
+      <p class="t-meta sec__note measure" style="margin:18px auto 0;text-align:center">
+        The full Revenue demo dataset is available on Vandersteen FY2026. Audit work belongs to one
+        engagement and is never shared between them.</p>
     </section>
   `;
 

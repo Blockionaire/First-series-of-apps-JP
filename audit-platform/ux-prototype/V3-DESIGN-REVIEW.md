@@ -178,11 +178,18 @@ required; the primary is disabled until it is there.
 
 **New engagement** · three stages, using the trace ribbon component as the stage indicator — the
 same shape that shows progress through a transaction now shows progress through a form, which is
-reuse rather than a new pattern. Team and scope are selectable cards; everything else is defaulted
-from the client.
+reuse rather than a new pattern. Scope is selectable cards; everything else is defaulted from the
+client. The team stage became a row list rather than cards when it had to carry two facts per
+person: the firm role as read-only context on the left, the engagement role as a select on the
+right. A card cannot hold a control without becoming a form, and a row can.
 
-**Firm people** · a structured list with audit role and access level in separate tags, and a callout
+**Firm people** · a structured list with firm role and access level in separate tags, and a callout
 saying plainly that authentication is not built.
+
+**The empty process state** · what Revenue looks like on an engagement with no loaded file. Three
+answers in one screen — where you are, what the state is, what you can do — using the standard
+empty block and a centred action row. Deliberately not a warning: a new engagement with no work on
+it is a correct state, not a failure, so there is no amber, no red and no callout.
 
 **Navigation** · no sidebar was added. Clients is reached from Work and ⌘K; firm people from a new
 avatar menu. The process journey correctly does not render on any of the five.
@@ -198,8 +205,16 @@ avatar menu. The process journey correctly does not render on any of the five.
    motion — they get the standard rise, nothing more.
 4. **Engagement rows on Work now list every engagement including closed ones.** Honest, but the
    Work screen's job is what needs you today, and four rows is already one more than it wants.
-5. **The non-canonical Revenue state is a callout, not a designed screen.** It says the right thing
-   and it is not beautiful.
+5. ~~**The non-canonical Revenue state is a callout, not a designed screen.**~~ **Fixed in the
+   integrity pass.** It is now its own screen behind a routing guard, with the client, the financial
+   year and the phase in the header and three actions beneath the empty block. It is still built
+   from the generic empty component, so weakness 6 below applies to it.
+6. **The engagement-role select sits in a row's side slot.** It works and it is labelled, but the
+   side slot was designed for tags and small buttons; a 150px select is the largest thing that has
+   ever gone in one, and a second control would break it.
+7. **Two "Edit" affordances now sit on client rows.** Contacts and systems each gained a ghost
+   button on the right. They are quiet, but the client page is the densest row list in the setup
+   layer and it is one affordance away from busy.
 
 ---
 

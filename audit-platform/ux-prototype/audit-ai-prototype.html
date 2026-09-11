@@ -3310,11 +3310,32 @@ const shownClient = () => clientById(S.clientId) || activeClient();
  *  evidence loaded. Everything else is a real record with no work behind it. */
 const isCanonical = (e = activeEngagement()) => !!e?.canonical;
 
+/** Does this engagement have loaded process work for `proc`?
+ *
+ *  The product concept is engagement-scoped audit work: every engagement owns
+ *  its own process file, and nothing crosses between them. The prototype ships
+ *  one populated file — Vandersteen FY2026 Revenue — so this resolves to the
+ *  canonical engagement today. Views ask this question, never "is this the
+ *  demo engagement", so the boundary survives the prototype. */
+const processWorkspaceAvailable = (e = activeEngagement(), proc = "revenue") =>
+  !!e?.canonical &&
+  (e.processes || []).includes(proc) &&
+  !!processCatalogue.find((p) => p.id === proc)?.workflow;
+
+/** The process the workspace routes belong to. One process has a workflow, so
+ *  this is a constant today and a lookup the day a second pack exists. */
+const WORKSPACE_PROCESS = "revenue";
+
 const engProcesses = (e = activeEngagement()) =>
   (e?.processes || []).map((id) => processCatalogue.find((p) => p.id === id)).filter(Boolean);
 
 const engTeam = (e = activeEngagement()) =>
   (e?.team || []).map((t) => ({ ...t, user: firmUser(t.userId) })).filter((t) => t.user);
+
+/** A person's responsibility on ONE engagement, which is not their firm role.
+ *  Sign-off, review and approval all read this, never `firmUser.role`. */
+const engagementRole = (userId, e = activeEngagement()) =>
+  (e?.team || []).find((t) => t.userId === userId)?.role || null;
 
 const phaseStates = (e = activeEngagement()) => {
   const order = PHASES.map((p) => p.id);
@@ -4120,6 +4141,24 @@ const act = {
       ? cur.filter((x) => x !== value) : [...cur, value] };
     commit();
   },
+  /** Put a colleague on the draft team. Their FIRM role seeds the ENGAGEMENT
+   *  role and then the two are independent — the engagement role is what this
+   *  person is responsible for here, not who they are at the firm. */
+  draftTeam(userId) {
+    const cur = S.draft.team || [];
+    const roles = { ...(S.draft.teamRoles || {}) };
+    let team;
+    if (cur.includes(userId)) { team = cur.filter((x) => x !== userId); delete roles[userId]; }
+    else { team = [...cur, userId]; roles[userId] = roles[userId] || firmUser(userId)?.role || "Assistant"; }
+    S.draft = { ...S.draft, team, teamRoles: roles };
+    commit();
+  },
+  /** Set the engagement role for one draft team member. Never writes back to
+   *  the firm record. */
+  draftRole(userId, role) {
+    S.draft = { ...S.draft, teamRoles: { ...(S.draft.teamRoles || {}), [userId]: role } };
+    commit();
+  },
 
   /* --- Clients ----------------------------------------------------------- */
   createClient(d) {
@@ -4162,6 +4201,22 @@ const act = {
     S.draft = {};
     commit(`${d.name} added as a client contact — not a platform account`, true);
   },
+  /** Edit a contact IN PLACE. Process participants, questionnaire grants and
+   *  recorded evidence all reference the contact id, so the record is mutated
+   *  rather than replaced — one person, one client record. */
+  updateContact(clientId, contactId, d) {
+    checkpoint("contact edited");
+    const c = clientById(clientId);
+    const p = (c?.contacts || []).find((x) => x.id === contactId);
+    if (!p) return;
+    if ((d.name || "").trim()) p.name = d.name.trim();
+    if ((d.role || "").trim()) p.role = d.role.trim();
+    if (d.email !== undefined) p.email = (d.email || "").trim();
+    if (d.department !== undefined) p.department = (d.department || "").trim();
+    S.editing = null; S.draft = {};
+    commit(`${p.name} updated everywhere they are referenced`, true);
+  },
+
   addSystem(clientId, d) {
     checkpoint("system added");
     const c = clientById(clientId);
@@ -4172,6 +4227,21 @@ const act = {
     }];
     S.draft = {};
     commit(`${d.name} added to the client profile`, true);
+  },
+
+  /** Edit a system IN PLACE, for the same reason: process-level selections
+   *  reference the system id. */
+  updateSystem(clientId, systemId, d) {
+    checkpoint("system edited");
+    const c = clientById(clientId);
+    const x = (c?.systems || []).find((y) => y.id === systemId);
+    if (!x) return;
+    if ((d.name || "").trim()) x.name = d.name.trim();
+    if (d.role !== undefined) x.role = (d.role || "").trim();
+    if (d.owner !== undefined) x.owner = (d.owner || "").trim();
+    if (d.note !== undefined) x.note = (d.note || "").trim();
+    S.editing = null; S.draft = {};
+    commit(`${x.name} updated on the client record`, true);
   },
 
   /* --- Engagements ------------------------------------------------------- */
@@ -4191,7 +4261,12 @@ const act = {
       performanceMateriality: "",
       phase: "planning",
       phaseDetail: { planning: "In progress", interim: "", final: "", completion: "" },
-      team: (d.team || []).map((userId) => ({ userId, role: firmUser(userId)?.role || "Member" })),
+      /* The engagement role, defaulted from the firm role at creation and then
+         independent of it. Never re-derived from firmUser.role afterwards. */
+      team: (d.team || []).map((userId) => ({
+        userId,
+        role: (d.teamRoles || {})[userId] || firmUser(userId)?.role || "Assistant",
+      })),
       processes: d.processes && d.processes.length ? d.processes : ["revenue"],
     };
     S.engagements = [...S.engagements, e];
@@ -4677,7 +4752,7 @@ function focusLength() {
 }
 
 
-__exp(exports, { S: () => S, canUndo: () => canUndo, onChange: () => onChange, firmUsers: () => firmUsers, firmUser: () => firmUser, me: () => me, allClients: () => allClients, clientById: () => clientById, allEngagements: () => allEngagements, engagementById: () => engagementById, engagementsFor: () => engagementsFor, activeEngagement: () => activeEngagement, activeClient: () => activeClient, shownClient: () => shownClient, isCanonical: () => isCanonical, engProcesses: () => engProcesses, engTeam: () => engTeam, phaseStates: () => phaseStates, contactById: () => contactById, systemById: () => systemById, reviewerName: () => reviewerName, partnerName: () => partnerName, questionnaireTo: () => questionnaireTo, claimText: () => claimText, claimBlocking: () => claimBlocking, sectionDecision: () => sectionDecision, sectionBlockers: () => sectionBlockers, sectionEdited: () => sectionEdited, sectionApprovable: () => sectionApprovable, covFacts: () => covFacts, factSettled: () => factSettled, factContradictory: () => factContradictory, covReason: () => covReason, stepsForVariantCount: () => stepsForVariantCount, allItems: () => allItems, coverageSettled: () => coverageSettled, sectionOf: () => sectionOf, claimById: () => claimById, controlDecision: () => controlDecision, CONCLUDED_CONTROL: () => CONCLUDED_CONTROL, controlOpen: () => controlOpen, findingDecision: () => findingDecision, findingOutcome: () => findingOutcome, findingOpen: () => findingOpen, lwRequirement: () => lwRequirement, lwProposal: () => lwProposal, traceVerdict: () => traceVerdict, traceConcluded: () => traceConcluded, txnForVariant: () => txnForVariant, traceStepFor: () => traceStepFor, testScopeFor: () => testScopeFor, controlTest: () => controlTest, hasWorkpaper: () => hasWorkpaper, signOff: () => signOff, reviewRequired: () => reviewRequired, partnerRequired: () => partnerRequired, openReviewPoints: () => openReviewPoints, reviewPointById: () => reviewPointById, canResubmit: () => canResubmit, itemState: () => itemState, allOpenItems: () => allOpenItems, QUESTION_FACTS: () => QUESTION_FACTS, questionState: () => questionState, questionAnswer: () => questionAnswer, itemCarry: () => itemCarry, journeyStep: () => journeyStep, readyToSign: () => readyToSign, act: () => act, undo: () => undo, commit: () => commit, procParticipants: () => procParticipants, procSystemsFor: () => procSystemsFor, claimState: () => claimState, sectionState: () => sectionState, covState: () => covState, coverageCounts: () => coverageCounts, coverageSummary: () => coverageSummary, coverageGaps: () => coverageGaps, narrativeSummary: () => narrativeSummary, claimQueue: () => claimQueue, riskSummary: () => riskSummary, controlSummary: () => controlSummary, allFindings: () => allFindings, findingSummary: () => findingSummary, traceProgress: () => traceProgress, variantWalkthroughs: () => variantWalkthroughs, traceSummary: () => traceSummary, testingScope: () => testingScope, testSummary: () => testSummary, testingSatisfied: () => testingSatisfied, reviewPoints: () => reviewPoints, workComplete: () => workComplete, processState: () => processState, openItemSummary: () => openItemSummary, rcmRows: () => rcmRows, sessionFacts: () => sessionFacts, questionnaireItems: () => questionnaireItems, itemEvidence: () => itemEvidence, journeyStates: () => journeyStates, interviewComplete: () => interviewComplete, processProgress: () => processProgress, gateStates: () => gateStates, nextAction: () => nextAction, focusLength: () => focusLength });
+__exp(exports, { S: () => S, canUndo: () => canUndo, onChange: () => onChange, firmUsers: () => firmUsers, firmUser: () => firmUser, me: () => me, allClients: () => allClients, clientById: () => clientById, allEngagements: () => allEngagements, engagementById: () => engagementById, engagementsFor: () => engagementsFor, activeEngagement: () => activeEngagement, activeClient: () => activeClient, shownClient: () => shownClient, isCanonical: () => isCanonical, processWorkspaceAvailable: () => processWorkspaceAvailable, WORKSPACE_PROCESS: () => WORKSPACE_PROCESS, engProcesses: () => engProcesses, engTeam: () => engTeam, engagementRole: () => engagementRole, phaseStates: () => phaseStates, contactById: () => contactById, systemById: () => systemById, reviewerName: () => reviewerName, partnerName: () => partnerName, questionnaireTo: () => questionnaireTo, claimText: () => claimText, claimBlocking: () => claimBlocking, sectionDecision: () => sectionDecision, sectionBlockers: () => sectionBlockers, sectionEdited: () => sectionEdited, sectionApprovable: () => sectionApprovable, covFacts: () => covFacts, factSettled: () => factSettled, factContradictory: () => factContradictory, covReason: () => covReason, stepsForVariantCount: () => stepsForVariantCount, allItems: () => allItems, coverageSettled: () => coverageSettled, sectionOf: () => sectionOf, claimById: () => claimById, controlDecision: () => controlDecision, CONCLUDED_CONTROL: () => CONCLUDED_CONTROL, controlOpen: () => controlOpen, findingDecision: () => findingDecision, findingOutcome: () => findingOutcome, findingOpen: () => findingOpen, lwRequirement: () => lwRequirement, lwProposal: () => lwProposal, traceVerdict: () => traceVerdict, traceConcluded: () => traceConcluded, txnForVariant: () => txnForVariant, traceStepFor: () => traceStepFor, testScopeFor: () => testScopeFor, controlTest: () => controlTest, hasWorkpaper: () => hasWorkpaper, signOff: () => signOff, reviewRequired: () => reviewRequired, partnerRequired: () => partnerRequired, openReviewPoints: () => openReviewPoints, reviewPointById: () => reviewPointById, canResubmit: () => canResubmit, itemState: () => itemState, allOpenItems: () => allOpenItems, QUESTION_FACTS: () => QUESTION_FACTS, questionState: () => questionState, questionAnswer: () => questionAnswer, itemCarry: () => itemCarry, journeyStep: () => journeyStep, readyToSign: () => readyToSign, act: () => act, undo: () => undo, commit: () => commit, procParticipants: () => procParticipants, procSystemsFor: () => procSystemsFor, claimState: () => claimState, sectionState: () => sectionState, covState: () => covState, coverageCounts: () => coverageCounts, coverageSummary: () => coverageSummary, coverageGaps: () => coverageGaps, narrativeSummary: () => narrativeSummary, claimQueue: () => claimQueue, riskSummary: () => riskSummary, controlSummary: () => controlSummary, allFindings: () => allFindings, findingSummary: () => findingSummary, traceProgress: () => traceProgress, variantWalkthroughs: () => variantWalkthroughs, traceSummary: () => traceSummary, testingScope: () => testingScope, testSummary: () => testSummary, testingSatisfied: () => testingSatisfied, reviewPoints: () => reviewPoints, workComplete: () => workComplete, processState: () => processState, openItemSummary: () => openItemSummary, rcmRows: () => rcmRows, sessionFacts: () => sessionFacts, questionnaireItems: () => questionnaireItems, itemEvidence: () => itemEvidence, journeyStates: () => journeyStates, interviewComplete: () => interviewComplete, processProgress: () => processProgress, gateStates: () => gateStates, nextAction: () => nextAction, focusLength: () => focusLength });
 
 };
 __defs['js/palette.js'] = function (exports, __req, __exp) {
@@ -4698,13 +4773,45 @@ function index() {
   const items = [];
   const add = (group, name, hint, run, ic) => items.push({ group, name, hint, run, ic });
 
+  /* Audit work is engagement-scoped, so the search index is too. Controls,
+     findings, sources, sections and open items belong to ONE engagement's
+     Revenue file; with a different engagement open they are simply not
+     searchable, rather than quietly teleporting the user into someone else's
+     working paper. Clients, engagements and firm people are firm-level and
+     always present. */
+  const inWorkspace = st.processWorkspaceAvailable();
+
+  add("Go to", "Engagement", "client, year, processes", () => { location.hash = "#/engagement"; }, "process");
+  add("Go to", "Clients", `${st.allClients().length} clients`, () => { location.hash = "#/clients"; }, "process");
+  add("Go to", "Firm people", `${st.firmUsers().length} colleagues`, () => { location.hash = "#/people"; }, "people");
+  add("Do", "New client", "create a client profile", () => { location.hash = "#/client/new"; }, "plus");
+  add("Do", "New engagement", "a financial year for a client", () => { location.hash = "#/engagement/new"; }, "plus");
+  add("Do", "Guided demo", "the five-minute walkthrough", () => window.__demoStart());
+  add("Do", "Keyboard shortcuts", "?", () => st.act.sheet("keys"));
+  add("Do", "Reset the prototype", "back to the beginning", () => st.act.reset());
+
+  st.allEngagements().forEach((e) => {
+    const c = st.clientById(e.clientId);
+    add("Engagements", `${c ? c.short : e.clientId} · ${e.fy}`,
+      `${e.type}${e.id === st.S.engId ? " · open" : ""}`,
+      () => { st.act.selectEngagement(e.id); location.hash = "#/engagement"; }, "process");
+  });
+
+  st.allClients().forEach((c) =>
+    add("Clients", c.name, `${c.city || c.country} · ${c.sectorShort || ""}`,
+      () => { st.act.openClient(c.id); location.hash = "#/client"; }, "process"));
+
+  st.firmUsers().forEach((u) =>
+    add("Firm people", u.name, `${u.role} · ${u.access}`, () => { location.hash = "#/people"; }, "people"));
+
+  if (!inWorkspace) return items;
+
   const STEP_IC = { prepare: "document", interview: "questionnaire", understanding: "document",
                     controls: "control", trace: "walkthrough", testing: "test", complete: "signature" };
   st.journeyStates().forEach((s) =>
     add("Steps", `${s.n}. ${s.name}`, s.c, () => { location.hash = s.href; }, STEP_IC[s.id] || "step"));
 
   add("Go to", "Revenue process home", "the map and the journey", () => { location.hash = "#/revenue"; }, "map");
-  add("Go to", "Engagement", "client, year, processes", () => { location.hash = "#/engagement"; }, "process");
   add("Go to", "Open matters", `${st.openItemSummary().open} open`, () => { location.hash = "#/resolve"; }, "question");
   add("Go to", "Read the working paper", "the full narrative",
     () => { S.reviewMode = "read"; location.hash = "#/understanding"; }, "document");
@@ -4740,10 +4847,6 @@ function index() {
         ? "conclude the scoped test" : "decide which key controls to test",
         () => { location.hash = "#/testing"; });
   }
-  add("Do", "Guided demo", "the five-minute walkthrough", () => window.__demoStart());
-  add("Do", "Keyboard shortcuts", "?", () => st.act.sheet("keys"));
-  add("Do", "Reset the prototype", "back to the beginning", () => st.act.reset());
-
   processSteps.forEach((p) =>
     add("Process steps", p.name, `${p.actor} · ${p.system}`, () => {
       S.mapStep = p.id; location.hash = st.S.generated ? "#/controls" : "#/revenue";
@@ -4784,25 +4887,6 @@ function index() {
 
   Object.values(sources).forEach((s) =>
     add("Sources", s.name, s.detail, () => { location.hash = "#/interview"; }));
-
-  add("Go to", "Clients", `${st.allClients().length} clients`, () => { location.hash = "#/clients"; }, "process");
-  add("Go to", "Firm people", `${st.firmUsers().length} colleagues`, () => { location.hash = "#/people"; }, "people");
-  add("Do", "New client", "create a client profile", () => { location.hash = "#/client/new"; }, "plus");
-  add("Do", "New engagement", "a financial year for a client", () => { location.hash = "#/engagement/new"; }, "plus");
-
-  st.allEngagements().forEach((e) => {
-    const c = st.clientById(e.clientId);
-    add("Engagements", `${c ? c.short : e.clientId} · ${e.fy}`,
-      `${e.type}${e.id === st.S.engId ? " · open" : ""}`,
-      () => { st.act.selectEngagement(e.id); location.hash = "#/engagement"; }, "process");
-  });
-
-  st.allClients().forEach((c) =>
-    add("Clients", c.name, `${c.city || c.country} · ${c.sectorShort || ""}`,
-      () => { st.act.openClient(c.id); location.hash = "#/client"; }, "process"));
-
-  st.firmUsers().forEach((u) =>
-    add("Firm people", u.name, `${u.role} · ${u.access}`, () => { location.hash = "#/people"; }, "people"));
 
   return items;
 }
@@ -5023,7 +5107,13 @@ function demoGo(step) {
   if (location.hash !== s.route) location.hash = s.route; else commit();
 }
 
-function demoStart() { S.demo = true; demoGo(0); }
+/** The guided demo is a tour of the populated file, so it says so and moves
+ *  there explicitly — the demo bar names the engagement it is showing. */
+function demoStart() {
+  S.demo = true;
+  act.selectEngagement("ENG-2026-0142");
+  demoGo(0);
+}
 function demoExit() { S.demo = false; commit(); }
 
 
@@ -5168,7 +5258,11 @@ const { client, user, engagement } = __req('js/data-sources.js');
 const st = __req('js/state.js');
 const { header } = __req('js/views/shell.js');
 function work() {
-  const next = st.nextAction();
+  /* The queue below belongs to the engagement that is open. Audit work is
+     engagement-scoped, so an engagement with no loaded process file shows its
+     own honest status rather than somebody else's step 4. */
+  const hasWork = st.processWorkspaceAvailable();
+  const next = hasWork ? st.nextAction() : engagementNext();
   const n = st.narrativeSummary();
   const oi = st.openItemSummary();
   const cov = st.coverageSummary();
@@ -5177,7 +5271,7 @@ function work() {
   const tr = st.traceSummary();
   const prog = st.processProgress();
 
-  const waiting = [
+  const waiting = !hasWork ? [] : [
     oi.contradictions && {
       tone: "alert", ic: "contradiction",
       t: "Two sources disagree about who can change a credit limit",
@@ -5242,7 +5336,10 @@ function work() {
         action: "nav", data: { href: x.href },
         mod: x.tone === "alert" ? "conflict" : x.tone === "warn" ? "attn" : "",
       })).join(""))
-        : empty("Nothing else is waiting", "Everything that needed you has been dealt with.", "check")}
+        : hasWork
+        ? empty("Nothing else is waiting", "Everything that needed you has been dealt with.", "check")
+        : empty(`Nothing is waiting on ${st.activeClient().short} ${st.activeEngagement().fy}`,
+            "No process work has been started on this engagement.", "check")}
     </section>
 
     <section class="sec--loose">
@@ -5253,19 +5350,23 @@ function work() {
       </div>
       ${rows(st.allEngagements().map((e) => {
         const c = st.clientById(e.clientId);
-        const live = st.isCanonical(e);
+        // Only an engagement that has its own loaded process file may show
+        // process progress. Everything else shows engagement-level status.
+        const live = st.processWorkspaceAvailable(e, "revenue");
         const active = e.id === st.S.engId;
         return row({
           lead: icon("process", 17),
           title: `<span class="${live || active ? "b" : "b ink3"}">${esc(c ? c.name : e.clientId)}</span>`,
           detail: `${esc(e.fy)} · ${esc(e.type)} · ${
             e.phase === "complete" ? "completed"
-            : e.phase === "interim" ? `Interim · Revenue — ${esc(prog.current.name)}`
+            : live ? `Interim · Revenue — ${esc(prog.current.name)}`
+            : e.phase === "interim" ? "Interim · Revenue not started"
             : `${esc(e.phase)} in progress`}`,
           side: live
             ? `<span class="b ink2">Step ${prog.current.n} of 7</span>
                <div class="t-meta">${cov.pct}% understood</div>`
-            : `<span class="t-meta">${e.phase === "complete" ? "closed" : "—"}</span>`,
+            : `<span class="t-meta">${e.phase === "complete" ? "closed"
+                : active ? "open" : "—"}</span>`,
           action: "open-engagement", data: { id: e.id },
         });
       }).join(""))}
@@ -5281,6 +5382,25 @@ function work() {
   `;
 
   return `${header(null)}<div class="canvas"><div class="wrap wrap--narrow page-in">${body}</div></div>`;
+}
+
+/** What comes next on an engagement with no loaded process file. Engagement
+ *  level, never a step number borrowed from another engagement. */
+function engagementNext() {
+  const e = st.activeEngagement();
+  const c = st.activeClient();
+  const inScope = (e?.processes || []).includes("revenue");
+  if (e?.phase === "complete") {
+    return { t: `${c.short} ${e.fy} is closed`,
+      d: "Nothing is outstanding. Open another engagement to carry on.", href: "#/engagement" };
+  }
+  return {
+    t: `Open ${c.short} ${e.fy}`,
+    d: inScope
+      ? "Revenue is in scope and has not been started on this engagement."
+      : "Set the scope for interim on this engagement.",
+    href: "#/engagement",
+  };
 }
 
 
@@ -5520,7 +5640,7 @@ __defs['js/views/process.js'] = function (exports, __req, __exp) {
 
 const { esc, cx, act: btn, row, rows, dot, icon, tag, callout, empty, nextAction, card, more } = __req('js/ui.js');
 const { client, engagement, sources } = __req('js/data-sources.js');
-const { processCatalogue, PARTICIPANT_ROLES } = __req('js/data-firm.js');
+const { processCatalogue, PARTICIPANT_ROLES, PHASES } = __req('js/data-firm.js');
 const { journey, carriedContext, variants } = __req('js/data-process.js');
 const st = __req('js/state.js');
 const { idline, engContext, engScreen, screen } = __req('js/views/shell.js');
@@ -5534,12 +5654,12 @@ function engagementView() {
   const c = st.activeClient();
   const prog = st.processProgress();
   const cov = st.coverageSummary();
-  const canonical = st.isCanonical(e);
+  const hasWork = st.processWorkspaceAvailable(e, "revenue");
   const inScope = st.engProcesses(e);
 
   const procRow = (p) => {
     const isRevenue = p.id === "revenue";
-    const live = isRevenue && canonical;
+    const live = isRevenue && hasWork;
     return row({
       lead: icon("process", 17),
       title: live ? `<span class="b">${esc(p.name)}</span>`
@@ -5572,15 +5692,14 @@ function engagementView() {
       </div>
     </div>
 
-    ${!canonical ? `<section class="sec">${callout(`<b>This engagement has no loaded evidence.</b>
-      It is a real record — period, team and scope are yours — but the prototype ships a
-      methodology pack, a transcript and documents for one engagement only:
-      <b>Vandersteen FY2026</b>. The seven-step workflow will open and tell you the same thing
-      rather than inventing a process understanding.
+    ${!hasWork ? `<section class="sec">${callout(`<b>Process work belongs to this engagement.</b>
+      Period, team and scope are real records here, and nothing is carried in from another
+      engagement. The prototype ships one loaded process file — <b>Vandersteen FY2026 Revenue</b> —
+      so the processes below open as not started.
       <div class="acts sec__note">
         ${btn("Open the populated demo engagement", "open-engagement",
-          { size: "sm", variant: "primary", data: { id: "ENG-2026-0142" } })}
-      </div>`, "warn")}</section>` : ""}
+          { size: "sm", data: { id: "ENG-2026-0142" } })}
+      </div>`)}</section>` : ""}
 
     <section class="sec">
       <div class="sec__h"><h2 class="t-eyebrow">Audit phases</h2></div>
@@ -5589,7 +5708,7 @@ function engagementView() {
           <div class="${cx("phase", "is-" + p.state)}">
             <div class="phase__n">${esc(p.name)}</div>
             <div class="phase__d">${esc(p.detail ||
-              (p.state === "on" && canonical && p.id === "interim"
+              (p.state === "on" && hasWork && p.id === "interim"
                 ? `Revenue · step ${prog.current.n} of 7` : p.state === "done" ? "Complete" : "Not started"))}</div>
           </div>`).join("")}
       </div>
@@ -5615,8 +5734,9 @@ function engagementView() {
       ${st.engTeam(e).length ? rows(st.engTeam(e).map((t) => row({
         lead: icon("people", 17),
         title: `<span class="b">${esc(t.user.name)}</span>${t.user.isMe ? ` <span class="t-meta">you</span>` : ""}`,
-        detail: esc(t.user.email),
-        side: tag(t.role, t.role === "Partner" ? "accent" : "quiet"),
+        detail: `Firm role ${esc(t.user.role)} · ${esc(t.user.email)}`,
+        side: `${tag(t.role, t.role === "Partner" ? "accent" : "quiet")}
+          <div class="t-meta" style="margin-top:4px">on this engagement</div>`,
       })).join(""))
       : empty("No team assigned", "Somebody has to prepare and review the file.", "people")}
     </section>
@@ -5625,6 +5745,58 @@ function engagementView() {
       ${callout(`<b>Where this sits.</b> Interim comes after the entity and process understanding and
         the inherent risk factors, and before risk analysis and the final audit. This product covers
         the interim work on a process. Risk analysis is the next phase and is deliberately outside it.`)}
+    </section>
+  `;
+
+  return engScreen(body, { width: "reading" });
+}
+
+/* ── The process workspace, on an engagement that has no process work ──────
+   Audit work is engagement-scoped. Only one engagement in the prototype ships
+   with a loaded Revenue file, so every other engagement gets this — a valid
+   new-engagement state, not an error. It answers three questions: where am I,
+   what is the state, and what can I do.
+   ───────────────────────────────────────────────────────────────────────── */
+
+function processUnavailable() {
+  const e = st.activeEngagement();
+  const c = st.activeClient();
+  const proc = processCatalogue.find((p) => p.id === st.WORKSPACE_PROCESS);
+  const inScope = (e?.processes || []).includes(st.WORKSPACE_PROCESS);
+  const phase = (PHASES.find((p) => p.id === e?.phase) || {}).name || "Planning";
+
+  const body = `
+    <div class="head">
+      ${btn(`${c ? c.short : "Client"} ${e ? e.fy : ""}`, "nav",
+        { variant: "ghost", size: "sm", ic: "back", data: { href: "#/engagement" } })}
+      <div class="head__row" style="margin-top:10px">
+        <div>
+          <h1 class="t-display">${esc(proc ? proc.name.split(" / ")[0] : "Revenue")}</h1>
+          <p class="t-lede">
+            ${esc(c ? c.name : "")} · ${esc(e ? e.fy : "")} · ${esc(phase)}
+          </p>
+        </div>
+        ${inScope ? tag("in scope · not started", "quiet") : tag("not in scope", "quiet")}
+      </div>
+    </div>
+
+    <section class="sec--loose">
+      ${empty(
+        inScope ? "No Revenue work has been started yet"
+                : "Revenue is not in scope for this engagement",
+        inScope
+          ? "Revenue is in scope for this engagement, but no process evidence has been loaded in this prototype."
+          : "Put it in scope on the engagement before any process work can begin.",
+        "process")}
+      <div class="acts" style="justify-content:center">
+        ${inScope ? btn("Start process work — prototype placeholder", "mock", { variant: "primary" }) : ""}
+        ${btn("Open the populated demo engagement", "open-engagement",
+          { data: { id: "ENG-2026-0142" } })}
+        ${btn("Back to the engagement", "nav", { variant: "ghost", data: { href: "#/engagement" } })}
+      </div>
+      <p class="t-meta sec__note measure" style="margin:18px auto 0;text-align:center">
+        The full Revenue demo dataset is available on Vandersteen FY2026. Audit work belongs to one
+        engagement and is never shared between them.</p>
     </section>
   `;
 
@@ -5923,7 +6095,7 @@ const SRC_IC = { transcript: "transcript", client_answer: "questionnaire", prior
                  access_log: "system", assurance_report: "document", auditor_note: "note" };
 
 
-__exp(exports, { engagementView: () => engagementView, processHome: () => processHome, prepare: () => prepare });
+__exp(exports, { engagementView: () => engagementView, processUnavailable: () => processUnavailable, processHome: () => processHome, prepare: () => prepare });
 
 };
 __defs['js/views/complete.js'] = function (exports, __req, __exp) {
@@ -8944,12 +9116,27 @@ function clientView() {
         </div>
       </div>` : ""}
 
-      ${c.contacts.length ? rows(c.contacts.map((p) => row({
-        lead: icon("people", 17),
-        title: `<span class="b">${esc(p.name)}</span>`,
-        detail: `${esc(p.role)}${p.email ? ` · ${esc(p.email)}` : ""}${p.department ? ` · ${esc(p.department)}` : ""}`,
-        side: tag("client contact", "quiet"),
-      })).join(""))
+      ${c.contacts.length ? rows(c.contacts.map((p) => adding === `contact:${p.id}`
+        ? `<div class="s-surface pad">
+            <div class="t-eyebrow rail__h">Edit ${esc(p.name)} <span class="mono t-meta">${esc(p.id)}</span></div>
+            ${pair(field("ce-name", "Name", { value: p.name }),
+                   field("ce-role", "Professional role", { value: p.role }))}
+            ${pair(field("ce-email", "E-mail", { type: "email", value: p.email || "" }),
+                   field("ce-dept", "Department", { value: p.department || "" }))}
+            <div class="acts sec">
+              ${btn("Save", "save-contact-edit", { variant: "primary", data: { client: c.id, id: p.id } })}
+              ${btn("Cancel", "cancel-edit", { variant: "ghost" })}
+            </div>
+            <p class="t-meta sec__note measure">The same record is updated. Everywhere this person is
+            referenced — process participants, the questionnaire recipient — follows automatically.</p>
+          </div>`
+        : row({
+            lead: icon("people", 17),
+            title: `<span class="b">${esc(p.name)}</span>`,
+            detail: `${esc(p.role)}${p.email ? ` · ${esc(p.email)}` : ""}${p.department ? ` · ${esc(p.department)}` : ""}`,
+            side: `${tag("client contact", "quiet")}
+              ${btn("Edit", "edit-open", { variant: "ghost", size: "sm", data: { id: `contact:${p.id}` } })}`,
+          })).join(""))
       : empty("No contacts yet", "Add the people you expect to speak to.", "people")}
     </section>
 
@@ -8973,11 +9160,27 @@ function clientView() {
         </div>
       </div>` : ""}
 
-      ${c.systems.length ? rows(c.systems.map((x) => row({
-        lead: icon("system", 17),
-        title: `<span class="b">${esc(x.name)}</span>`,
-        detail: `${esc(x.role)}${x.owner ? ` · ${esc(x.owner)}` : ""}${x.note ? ` · ${esc(x.note)}` : ""}`,
-      })).join(""))
+      ${c.systems.length ? rows(c.systems.map((x) => adding === `system:${x.id}`
+        ? `<div class="s-surface pad">
+            <div class="t-eyebrow rail__h">Edit ${esc(x.name)} <span class="mono t-meta">${esc(x.id)}</span></div>
+            ${pair(field("se-name", "System", { value: x.name }),
+                   field("se-owner", "Owner", { value: x.owner || "" }))}
+            ${field("se-role", "What it is used for", { value: x.role || "" })}
+            ${field("se-note", "Note", { value: x.note || "",
+              placeholder: "e.g. outsourced since March 2026 — service organisation" })}
+            <div class="acts sec">
+              ${btn("Save", "save-system-edit", { variant: "primary", data: { client: c.id, id: x.id } })}
+              ${btn("Cancel", "cancel-edit", { variant: "ghost" })}
+            </div>
+            <p class="t-meta sec__note measure">The same record is updated. Any process that has
+            selected this system shows the new information.</p>
+          </div>`
+        : row({
+            lead: icon("system", 17),
+            title: `<span class="b">${esc(x.name)}</span>`,
+            detail: `${esc(x.role)}${x.owner ? ` · ${esc(x.owner)}` : ""}${x.note ? ` · ${esc(x.note)}` : ""}`,
+            side: btn("Edit", "edit-open", { variant: "ghost", size: "sm", data: { id: `system:${x.id}` } }),
+          })).join(""))
       : empty("No systems yet", "Add the applications the entity runs.", "system")}
     </section>
   `;
@@ -9072,8 +9275,10 @@ function newEngagementView() {
   // Seed the defaults into the draft, so what is shown and what is stored are
   // the same thing — a default nobody edits still has to be saved.
   if (d.team === undefined) S.draft.team = [st.me().id];
+  if (d.teamRoles === undefined) S.draft.teamRoles = { [st.me().id]: st.me().role };
   if (d.processes === undefined) S.draft.processes = ["revenue"];
   const team = S.draft.team;
+  const teamRoles = S.draft.teamRoles;
   const procs = S.draft.processes;
   const periodEnd = d.periodEnd !== undefined ? d.periodEnd : `${c.yearEnd} ${new Date().getFullYear() + 1}`;
   const fy = d.fy !== undefined ? d.fy : fyFromPeriodEnd(periodEnd);
@@ -9081,8 +9286,12 @@ function newEngagementView() {
   if (d.periodEnd === undefined) { S.draft.periodEnd = periodEnd; S.draft.fy = fy; }
 
   const okStage1 = !!fy && !!periodEnd;
-  const roleOf = (id) => st.firmUser(id)?.role || "";
-  const hasSenior = team.some((id) => ["Manager", "Senior"].includes(roleOf(id)));
+  /* The firm role is who they are at the firm; the engagement role is what
+     they are responsible for HERE. The file needs a preparer and a reviewer,
+     so that gate reads the engagement role. */
+  const firmRoleOf = (id) => st.firmUser(id)?.role || "";
+  const engRoleOf = (id) => teamRoles[id] || firmRoleOf(id);
+  const hasSenior = team.some((id) => ["Manager", "Senior"].includes(engRoleOf(id)));
 
   const stageNav = `<div class="ribbon sec__h">
     ${STAGES.map((x, i) => `<div class="${cx("rbn", x.n < stage && "is-ok", x.n === stage && "is-now")}">
@@ -9129,24 +9338,29 @@ function newEngagementView() {
           ${btn("Firm people", "nav", { variant: "ghost", size: "sm", data: { href: "#/people" } })}
         </div>
         <p class="t-sub sec__h measure">
-          Colleagues from firm people. They are not copied — the engagement references them, so a
-          role change at firm level is not silently forked here.</p>
-        <div class="cards cards--2">
-          ${st.firmUsers().map((u) => {
-            const on = team.includes(u.id);
-            return `<button class="${cx("card", on && "card--accent")}"
-                data-act="eng-team" data-id="${esc(u.id)}">
-              <span class="card__hd">
-                <span class="rw__lead">${icon(on ? "check" : "people", 18)}</span>
-                <span class="sp">
-                  <span class="card__t">${esc(u.name)}${u.isMe ? ` <span class="t-meta">(you)</span>` : ""}</span>
-                  <span class="card__d">${esc(u.role)} · ${esc(u.access)}</span>
-                </span>
-                ${on ? tag("on the team", "accent") : ""}
-              </span>
-            </button>`;
-          }).join("")}
-        </div>
+          Colleagues from firm people. The engagement references them, so nothing is copied — and
+          the role someone carries <b class="ink2">on this engagement</b> is set here, defaulted
+          from their firm role and independent of it from then on.</p>
+        ${rows(st.firmUsers().map((u) => {
+          const on = team.includes(u.id);
+          return row({
+            mod: on ? "attn" : "",
+            lead: icon(on ? "check" : "people", 17),
+            title: `<span class="${on ? "b" : "b ink3"}">${esc(u.name)}</span>${
+              u.isMe ? ` <span class="t-meta">you</span>` : ""}`,
+            detail: `Firm role <b class="ink2">${esc(u.role)}</b> · ${esc(u.access)} · ${esc(u.email)}`,
+            side: `${on ? `<label class="t-meta nowrap" for="er-${esc(u.id)}"
+                style="display:block;margin-bottom:3px">Engagement role</label>
+              <select class="field" id="er-${esc(u.id)}" data-eng-role="${esc(u.id)}" style="width:150px">
+                ${AUDIT_ROLES.map((r) => `<option${r === engRoleOf(u.id) ? " selected" : ""}>${esc(r)}</option>`).join("")}
+              </select>` : ""}
+              ${btn(on ? "Remove" : "Add", "eng-team",
+                { variant: on ? "ghost" : "", size: "sm", data: { id: u.id } })}`,
+          });
+        }).join(""))}
+        <p class="t-meta sec__note measure">
+          Changing someone's engagement role here does not change their firm role, and a firm-level
+          change later does not rewrite an engagement already created.</p>
         ${!hasSenior ? `<div class="sec__note">${callout(`<b>No manager or senior assigned.</b>
           The file can be created, but somebody has to prepare and review it.`, "warn")}</div>` : ""}
         <div class="acts sec">
@@ -9206,8 +9420,9 @@ function peopleView() {
         <div>
           <h1 class="t-display">Firm people</h1>
           <p class="t-lede">
-            Colleagues at ${esc(firm.name)} who use Audit AI. Client contacts are not listed here —
-            they live on the client record and never become accounts.
+            Colleagues at ${esc(firm.name)} who use Audit AI, with their firm role and their access
+            level. Client contacts are not listed here — they live on the client record and never
+            become accounts.
           </p>
         </div>
         <div class="acts">
@@ -9221,8 +9436,8 @@ function peopleView() {
       <div class="sec__h"><h2 class="t-eyebrow">Invite a colleague</h2></div>
       ${pair(field("i-name", "Name", { placeholder: "e.g. Milan Jansen" }),
              field("i-email", "Work e-mail", { type: "email", placeholder: "name@kuyperbergman.nl" }))}
-      ${pair(field("i-role", "Audit role", { value: d["i-role"] || "Assistant", options: AUDIT_ROLES,
-               hint: "What they do on an engagement." }),
+      ${pair(field("i-role", "Firm role", { value: d["i-role"] || "Assistant", options: AUDIT_ROLES,
+               hint: "Their grade at the firm. It defaults their role on a new engagement." }),
              field("i-access", "Access level", { value: d["i-access"] || "Member", options: ACCESS_LEVELS,
                hint: "What they can do in the software. A different thing." }))}
       <div class="acts sec">
@@ -9243,9 +9458,11 @@ function peopleView() {
           u.pending ? `<div class="t-meta" style="margin-top:4px">added in this session</div>` : ""}`,
       })).join(""))}
       <p class="t-meta sec__note measure">
-        <b class="ink2">Audit role</b> and <b class="ink2">access level</b> are separate on purpose.
+        <b class="ink2">Firm role</b> and <b class="ink2">access level</b> are separate on purpose.
         A partner is not automatically an administrator, and an administrator is not automatically
-        a reviewer.</p>
+        a reviewer. A third thing is separate again: the <b class="ink2">engagement role</b> — what
+        somebody is responsible for on one file. It is set on the engagement, defaults from the firm
+        role, and changing it there never rewrites anything here.</p>
     </section>
 
     <section class="sec--loose">
@@ -9276,7 +9493,7 @@ const { S, act, undo, canUndo } = __req('js/state.js');
 const { palette, runPalette, matches } = __req('js/palette.js');
 const { demoBar, demoGo, demoStart, demoExit, STEPS } = __req('js/demo.js');
 const { work } = __req('js/views/work.js');
-const { engagementView, processHome, prepare } = __req('js/views/process.js');
+const { engagementView, processHome, prepare, processUnavailable } = __req('js/views/process.js');
 const { interview } = __req('js/views/interview.js');
 const { understanding } = __req('js/views/understanding.js');
 const { controlsStep } = __req('js/views/controls.js');
@@ -9294,6 +9511,7 @@ window.__S = S;
 window.__st = st;
 window.__act = act;
 window.__narrative = narrative;
+window.__palette = matches;   // what the ⌘K index would offer right now
 window.__refs = (ids) => ids.map((id) => srcRef(id)).filter(Boolean);
 
 const ROUTES = {
@@ -9326,6 +9544,20 @@ const FOCUS_ROUTES = ["#/understanding", "#/controls", "#/trace"];
 /* Above the engagement: no process journey, and leaving them clears any
    half-finished setup form. */
 const SETUP_ROUTES = ["#/clients", "#/client", "#/client/new", "#/engagement/new", "#/people"];
+
+/* ── The engagement boundary ───────────────────────────────────────────────
+   Every screen below is part of ONE engagement's Revenue file. Audit work is
+   engagement-scoped: if the active engagement has no loaded process work, each
+   of these resolves to the empty process state instead — one guard, not twelve
+   checks scattered through the views. Typing a route by hand goes through it
+   too, because the router is the only way in.
+   ───────────────────────────────────────────────────────────────────────── */
+const PROCESS_ROUTES = ["#/revenue", "#/prepare", "#/interview", "#/understanding",
+  "#/controls", "#/trace", "#/testing", "#/complete", "#/resolve", "#/matrix",
+  "#/questionnaire", "#/cockpit"];
+
+const workspaceLocked = (hash = S.route) =>
+  PROCESS_ROUTES.includes(hash) && !st.processWorkspaceAvailable();
 
 /* --- Overlays -------------------------------------------------------------- */
 
@@ -9398,7 +9630,7 @@ function render() {
   if (hash !== lastRoute) S.menu = false;
   lastRoute = hash;
   S.route = hash;
-  const view = ROUTES[hash] || work;
+  const view = workspaceLocked(hash) ? processUnavailable : (ROUTES[hash] || work);
 
   document.getElementById("app").innerHTML = view();
   document.getElementById("overlay").innerHTML = palette() + keysSheet() + undoBar() + demoBar();
@@ -9468,6 +9700,14 @@ document.addEventListener("click", (e) => {
     case "save-system": act.addSystem(d.client, {
       name: val("s-name"), role: val("s-role"), owner: val("s-owner"),
     }); break;
+    /* Editing mutates the existing record — the id is what participants,
+       questionnaire grants and process selections point at. */
+    case "save-contact-edit": act.updateContact(d.client, d.id, {
+      name: val("ce-name"), role: val("ce-role"), email: val("ce-email"), department: val("ce-dept"),
+    }); break;
+    case "save-system-edit": act.updateSystem(d.client, d.id, {
+      name: val("se-name"), role: val("se-role"), owner: val("se-owner"), note: val("se-note"),
+    }); break;
     case "eng-stage": {
       // Capture stage 1 before leaving it, so Back does not lose the answers.
       if (document.getElementById("fy")) act.draftMany({
@@ -9477,11 +9717,12 @@ document.addEventListener("click", (e) => {
       act.draftStage(Number(d.n));
       break;
     }
-    case "eng-team": act.draftToggle("team", d.id); break;
+    case "eng-team": act.draftTeam(d.id); break;
     case "eng-proc": act.draftToggle("processes", d.id); break;
     case "create-engagement": act.createEngagement(d.client, {
       ...S.draft,
       team: S.draft.team || [st.me().id],
+      teamRoles: S.draft.teamRoles || {},
       processes: S.draft.processes || ["revenue"],
     }); break;
     case "save-colleague": act.inviteColleague({
@@ -9625,6 +9866,9 @@ document.addEventListener("click", (e) => {
 document.addEventListener("change", (e) => {
   const rf = e.target.dataset?.roleFor;
   if (rf) { act.setParticipantRole(rf, e.target.value); return; }
+  // The engagement role for one draft team member. Never the firm role.
+  const er = e.target.dataset?.engRole;
+  if (er) { act.draftRole(er, e.target.value); return; }
   if (e.target.dataset?.draft) syncDraft(e.target);
 });
 
@@ -9701,6 +9945,10 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "ArrowRight") { e.preventDefault(); demoGo(S.demoStep + 1); return; }
     if (e.key === "ArrowLeft") { e.preventDefault(); demoGo(S.demoStep - 1); return; }
   }
+
+  // Past this point every shortcut acts on the Revenue file. If the active
+  // engagement has none, there is nothing for them to act on.
+  if (workspaceLocked()) return;
 
   const k = e.key.toLowerCase();
 
@@ -9817,7 +10065,8 @@ function checkRoutes() {
   const valid = new Set(Object.keys(ROUTES));
   const bad = new Set();
   const probe = document.createElement("div");
-  Object.entries(ROUTES).forEach(([route, view]) => {
+  Object.entries({ ...ROUTES, "the empty process state": processUnavailable })
+    .forEach(([route, view]) => {
     let html = "";
     try { html = view(); } catch { return; }        // a view that needs state we lack
     probe.innerHTML = html;

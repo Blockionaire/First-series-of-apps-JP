@@ -200,11 +200,32 @@ export const shownClient = () => clientById(S.clientId) || activeClient();
  *  evidence loaded. Everything else is a real record with no work behind it. */
 export const isCanonical = (e = activeEngagement()) => !!e?.canonical;
 
+/** Does this engagement have loaded process work for `proc`?
+ *
+ *  The product concept is engagement-scoped audit work: every engagement owns
+ *  its own process file, and nothing crosses between them. The prototype ships
+ *  one populated file — Vandersteen FY2026 Revenue — so this resolves to the
+ *  canonical engagement today. Views ask this question, never "is this the
+ *  demo engagement", so the boundary survives the prototype. */
+export const processWorkspaceAvailable = (e = activeEngagement(), proc = "revenue") =>
+  !!e?.canonical &&
+  (e.processes || []).includes(proc) &&
+  !!processCatalogue.find((p) => p.id === proc)?.workflow;
+
+/** The process the workspace routes belong to. One process has a workflow, so
+ *  this is a constant today and a lookup the day a second pack exists. */
+export const WORKSPACE_PROCESS = "revenue";
+
 export const engProcesses = (e = activeEngagement()) =>
   (e?.processes || []).map((id) => processCatalogue.find((p) => p.id === id)).filter(Boolean);
 
 export const engTeam = (e = activeEngagement()) =>
   (e?.team || []).map((t) => ({ ...t, user: firmUser(t.userId) })).filter((t) => t.user);
+
+/** A person's responsibility on ONE engagement, which is not their firm role.
+ *  Sign-off, review and approval all read this, never `firmUser.role`. */
+export const engagementRole = (userId, e = activeEngagement()) =>
+  (e?.team || []).find((t) => t.userId === userId)?.role || null;
 
 export const phaseStates = (e = activeEngagement()) => {
   const order = PHASES.map((p) => p.id);
@@ -1010,6 +1031,24 @@ export const act = {
       ? cur.filter((x) => x !== value) : [...cur, value] };
     commit();
   },
+  /** Put a colleague on the draft team. Their FIRM role seeds the ENGAGEMENT
+   *  role and then the two are independent — the engagement role is what this
+   *  person is responsible for here, not who they are at the firm. */
+  draftTeam(userId) {
+    const cur = S.draft.team || [];
+    const roles = { ...(S.draft.teamRoles || {}) };
+    let team;
+    if (cur.includes(userId)) { team = cur.filter((x) => x !== userId); delete roles[userId]; }
+    else { team = [...cur, userId]; roles[userId] = roles[userId] || firmUser(userId)?.role || "Assistant"; }
+    S.draft = { ...S.draft, team, teamRoles: roles };
+    commit();
+  },
+  /** Set the engagement role for one draft team member. Never writes back to
+   *  the firm record. */
+  draftRole(userId, role) {
+    S.draft = { ...S.draft, teamRoles: { ...(S.draft.teamRoles || {}), [userId]: role } };
+    commit();
+  },
 
   /* --- Clients ----------------------------------------------------------- */
   createClient(d) {
@@ -1052,6 +1091,22 @@ export const act = {
     S.draft = {};
     commit(`${d.name} added as a client contact — not a platform account`, true);
   },
+  /** Edit a contact IN PLACE. Process participants, questionnaire grants and
+   *  recorded evidence all reference the contact id, so the record is mutated
+   *  rather than replaced — one person, one client record. */
+  updateContact(clientId, contactId, d) {
+    checkpoint("contact edited");
+    const c = clientById(clientId);
+    const p = (c?.contacts || []).find((x) => x.id === contactId);
+    if (!p) return;
+    if ((d.name || "").trim()) p.name = d.name.trim();
+    if ((d.role || "").trim()) p.role = d.role.trim();
+    if (d.email !== undefined) p.email = (d.email || "").trim();
+    if (d.department !== undefined) p.department = (d.department || "").trim();
+    S.editing = null; S.draft = {};
+    commit(`${p.name} updated everywhere they are referenced`, true);
+  },
+
   addSystem(clientId, d) {
     checkpoint("system added");
     const c = clientById(clientId);
@@ -1062,6 +1117,21 @@ export const act = {
     }];
     S.draft = {};
     commit(`${d.name} added to the client profile`, true);
+  },
+
+  /** Edit a system IN PLACE, for the same reason: process-level selections
+   *  reference the system id. */
+  updateSystem(clientId, systemId, d) {
+    checkpoint("system edited");
+    const c = clientById(clientId);
+    const x = (c?.systems || []).find((y) => y.id === systemId);
+    if (!x) return;
+    if ((d.name || "").trim()) x.name = d.name.trim();
+    if (d.role !== undefined) x.role = (d.role || "").trim();
+    if (d.owner !== undefined) x.owner = (d.owner || "").trim();
+    if (d.note !== undefined) x.note = (d.note || "").trim();
+    S.editing = null; S.draft = {};
+    commit(`${x.name} updated on the client record`, true);
   },
 
   /* --- Engagements ------------------------------------------------------- */
@@ -1081,7 +1151,12 @@ export const act = {
       performanceMateriality: "",
       phase: "planning",
       phaseDetail: { planning: "In progress", interim: "", final: "", completion: "" },
-      team: (d.team || []).map((userId) => ({ userId, role: firmUser(userId)?.role || "Member" })),
+      /* The engagement role, defaulted from the firm role at creation and then
+         independent of it. Never re-derived from firmUser.role afterwards. */
+      team: (d.team || []).map((userId) => ({
+        userId,
+        role: (d.teamRoles || {})[userId] || firmUser(userId)?.role || "Assistant",
+      })),
       processes: d.processes && d.processes.length ? d.processes : ["revenue"],
     };
     S.engagements = [...S.engagements, e];

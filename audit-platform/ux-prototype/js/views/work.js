@@ -9,7 +9,11 @@ import * as st from "../state.js";
 import { header } from "./shell.js";
 
 export function work() {
-  const next = st.nextAction();
+  /* The queue below belongs to the engagement that is open. Audit work is
+     engagement-scoped, so an engagement with no loaded process file shows its
+     own honest status rather than somebody else's step 4. */
+  const hasWork = st.processWorkspaceAvailable();
+  const next = hasWork ? st.nextAction() : engagementNext();
   const n = st.narrativeSummary();
   const oi = st.openItemSummary();
   const cov = st.coverageSummary();
@@ -18,7 +22,7 @@ export function work() {
   const tr = st.traceSummary();
   const prog = st.processProgress();
 
-  const waiting = [
+  const waiting = !hasWork ? [] : [
     oi.contradictions && {
       tone: "alert", ic: "contradiction",
       t: "Two sources disagree about who can change a credit limit",
@@ -83,7 +87,10 @@ export function work() {
         action: "nav", data: { href: x.href },
         mod: x.tone === "alert" ? "conflict" : x.tone === "warn" ? "attn" : "",
       })).join(""))
-        : empty("Nothing else is waiting", "Everything that needed you has been dealt with.", "check")}
+        : hasWork
+        ? empty("Nothing else is waiting", "Everything that needed you has been dealt with.", "check")
+        : empty(`Nothing is waiting on ${st.activeClient().short} ${st.activeEngagement().fy}`,
+            "No process work has been started on this engagement.", "check")}
     </section>
 
     <section class="sec--loose">
@@ -94,19 +101,23 @@ export function work() {
       </div>
       ${rows(st.allEngagements().map((e) => {
         const c = st.clientById(e.clientId);
-        const live = st.isCanonical(e);
+        // Only an engagement that has its own loaded process file may show
+        // process progress. Everything else shows engagement-level status.
+        const live = st.processWorkspaceAvailable(e, "revenue");
         const active = e.id === st.S.engId;
         return row({
           lead: icon("process", 17),
           title: `<span class="${live || active ? "b" : "b ink3"}">${esc(c ? c.name : e.clientId)}</span>`,
           detail: `${esc(e.fy)} · ${esc(e.type)} · ${
             e.phase === "complete" ? "completed"
-            : e.phase === "interim" ? `Interim · Revenue — ${esc(prog.current.name)}`
+            : live ? `Interim · Revenue — ${esc(prog.current.name)}`
+            : e.phase === "interim" ? "Interim · Revenue not started"
             : `${esc(e.phase)} in progress`}`,
           side: live
             ? `<span class="b ink2">Step ${prog.current.n} of 7</span>
                <div class="t-meta">${cov.pct}% understood</div>`
-            : `<span class="t-meta">${e.phase === "complete" ? "closed" : "—"}</span>`,
+            : `<span class="t-meta">${e.phase === "complete" ? "closed"
+                : active ? "open" : "—"}</span>`,
           action: "open-engagement", data: { id: e.id },
         });
       }).join(""))}
@@ -122,4 +133,23 @@ export function work() {
   `;
 
   return `${header(null)}<div class="canvas"><div class="wrap wrap--narrow page-in">${body}</div></div>`;
+}
+
+/** What comes next on an engagement with no loaded process file. Engagement
+ *  level, never a step number borrowed from another engagement. */
+function engagementNext() {
+  const e = st.activeEngagement();
+  const c = st.activeClient();
+  const inScope = (e?.processes || []).includes("revenue");
+  if (e?.phase === "complete") {
+    return { t: `${c.short} ${e.fy} is closed`,
+      d: "Nothing is outstanding. Open another engagement to carry on.", href: "#/engagement" };
+  }
+  return {
+    t: `Open ${c.short} ${e.fy}`,
+    d: inScope
+      ? "Revenue is in scope and has not been started on this engagement."
+      : "Set the scope for interim on this engagement.",
+    href: "#/engagement",
+  };
 }

@@ -141,5 +141,11 @@ export function demoGo(step) {
   if (location.hash !== s.route) location.hash = s.route; else commit();
 }
 
-export function demoStart() { S.demo = true; demoGo(0); }
+/** The guided demo is a tour of the populated file, so it says so and moves
+ *  there explicitly — the demo bar names the engagement it is showing. */
+export function demoStart() {
+  S.demo = true;
+  act.selectEngagement("ENG-2026-0142");
+  demoGo(0);
+}
 export function demoExit() { S.demo = false; commit(); }

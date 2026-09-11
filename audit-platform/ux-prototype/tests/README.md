@@ -1,6 +1,6 @@
 # Tests
 
-Six Playwright suites, run against Chromium. They exist because the prototype has real state now
+Seven Playwright suites, run against Chromium. They exist because the prototype has real state now
 and a screenshot cannot tell you whether a gate is honest.
 
 ```
@@ -10,6 +10,7 @@ node tests/smoke.mjs           # every route renders, plus route integrity
 node tests/state-integrity.mjs # cases A-F: 50 assertions on the state model
 node tests/ui-walk.mjs         # the seven-step workflow driven through the DOM
 node tests/filecheck.mjs       # the standalone bundle, over file://
+node tests/boundary-tests.mjs  # engagement boundaries: isolation, roles, master-data edits
 ```
 
 The browser path is hard-coded to `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`; change it
@@ -22,6 +23,7 @@ if yours is elsewhere.
 | `ui-walk.mjs` | The same journey through the interface — clicks and keystrokes only — from Prepare to reviewer approval, plus the twelve-beat demo. |
 | `filecheck.mjs` | `audit-ai-prototype.html` boots and works from `file://`, which is how design partners will open it. |
 | `undo-reset.mjs` | Every decision the later passes added is undoable, session evidence is undone with the answer that created it, and reset returns a valid start state. |
+| `boundary-tests.mjs` | The engagement boundary. No fragment of the Vandersteen Revenue file reaches another engagement through any of the twelve process routes, the keyboard or ⌘K; switching engagements and back leaves both intact; firm role and engagement role move independently; editing a client contact or system mutates the existing record and propagates by id without duplicating anybody. |
 | `setup-tests.mjs` | The setup layer: creating a client, adding a contact and a system, the three-stage new-engagement flow, financial year propagating as real state, firm people staying separate from client contacts, and Prepare consuming the client record. |
 
 `tests/` is prototype tooling. It is not a production test strategy, and nothing here touches

@@ -16,13 +16,45 @@ function index() {
   const items = [];
   const add = (group, name, hint, run, ic) => items.push({ group, name, hint, run, ic });
 
+  /* Audit work is engagement-scoped, so the search index is too. Controls,
+     findings, sources, sections and open items belong to ONE engagement's
+     Revenue file; with a different engagement open they are simply not
+     searchable, rather than quietly teleporting the user into someone else's
+     working paper. Clients, engagements and firm people are firm-level and
+     always present. */
+  const inWorkspace = st.processWorkspaceAvailable();
+
+  add("Go to", "Engagement", "client, year, processes", () => { location.hash = "#/engagement"; }, "process");
+  add("Go to", "Clients", `${st.allClients().length} clients`, () => { location.hash = "#/clients"; }, "process");
+  add("Go to", "Firm people", `${st.firmUsers().length} colleagues`, () => { location.hash = "#/people"; }, "people");
+  add("Do", "New client", "create a client profile", () => { location.hash = "#/client/new"; }, "plus");
+  add("Do", "New engagement", "a financial year for a client", () => { location.hash = "#/engagement/new"; }, "plus");
+  add("Do", "Guided demo", "the five-minute walkthrough", () => window.__demoStart());
+  add("Do", "Keyboard shortcuts", "?", () => st.act.sheet("keys"));
+  add("Do", "Reset the prototype", "back to the beginning", () => st.act.reset());
+
+  st.allEngagements().forEach((e) => {
+    const c = st.clientById(e.clientId);
+    add("Engagements", `${c ? c.short : e.clientId} · ${e.fy}`,
+      `${e.type}${e.id === st.S.engId ? " · open" : ""}`,
+      () => { st.act.selectEngagement(e.id); location.hash = "#/engagement"; }, "process");
+  });
+
+  st.allClients().forEach((c) =>
+    add("Clients", c.name, `${c.city || c.country} · ${c.sectorShort || ""}`,
+      () => { st.act.openClient(c.id); location.hash = "#/client"; }, "process"));
+
+  st.firmUsers().forEach((u) =>
+    add("Firm people", u.name, `${u.role} · ${u.access}`, () => { location.hash = "#/people"; }, "people"));
+
+  if (!inWorkspace) return items;
+
   const STEP_IC = { prepare: "document", interview: "questionnaire", understanding: "document",
                     controls: "control", trace: "walkthrough", testing: "test", complete: "signature" };
   st.journeyStates().forEach((s) =>
     add("Steps", `${s.n}. ${s.name}`, s.c, () => { location.hash = s.href; }, STEP_IC[s.id] || "step"));
 
   add("Go to", "Revenue process home", "the map and the journey", () => { location.hash = "#/revenue"; }, "map");
-  add("Go to", "Engagement", "client, year, processes", () => { location.hash = "#/engagement"; }, "process");
   add("Go to", "Open matters", `${st.openItemSummary().open} open`, () => { location.hash = "#/resolve"; }, "question");
   add("Go to", "Read the working paper", "the full narrative",
     () => { S.reviewMode = "read"; location.hash = "#/understanding"; }, "document");
@@ -58,10 +90,6 @@ function index() {
         ? "conclude the scoped test" : "decide which key controls to test",
         () => { location.hash = "#/testing"; });
   }
-  add("Do", "Guided demo", "the five-minute walkthrough", () => window.__demoStart());
-  add("Do", "Keyboard shortcuts", "?", () => st.act.sheet("keys"));
-  add("Do", "Reset the prototype", "back to the beginning", () => st.act.reset());
-
   processSteps.forEach((p) =>
     add("Process steps", p.name, `${p.actor} · ${p.system}`, () => {
       S.mapStep = p.id; location.hash = st.S.generated ? "#/controls" : "#/revenue";
@@ -102,25 +130,6 @@ function index() {
 
   Object.values(sources).forEach((s) =>
     add("Sources", s.name, s.detail, () => { location.hash = "#/interview"; }));
-
-  add("Go to", "Clients", `${st.allClients().length} clients`, () => { location.hash = "#/clients"; }, "process");
-  add("Go to", "Firm people", `${st.firmUsers().length} colleagues`, () => { location.hash = "#/people"; }, "people");
-  add("Do", "New client", "create a client profile", () => { location.hash = "#/client/new"; }, "plus");
-  add("Do", "New engagement", "a financial year for a client", () => { location.hash = "#/engagement/new"; }, "plus");
-
-  st.allEngagements().forEach((e) => {
-    const c = st.clientById(e.clientId);
-    add("Engagements", `${c ? c.short : e.clientId} · ${e.fy}`,
-      `${e.type}${e.id === st.S.engId ? " · open" : ""}`,
-      () => { st.act.selectEngagement(e.id); location.hash = "#/engagement"; }, "process");
-  });
-
-  st.allClients().forEach((c) =>
-    add("Clients", c.name, `${c.city || c.country} · ${c.sectorShort || ""}`,
-      () => { st.act.openClient(c.id); location.hash = "#/client"; }, "process"));
-
-  st.firmUsers().forEach((u) =>
-    add("Firm people", u.name, `${u.role} · ${u.access}`, () => { location.hash = "#/people"; }, "people"));
 
   return items;
 }

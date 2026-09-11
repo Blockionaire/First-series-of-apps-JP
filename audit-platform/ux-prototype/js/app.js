@@ -13,7 +13,7 @@ import { palette, runPalette, matches } from "./palette.js";
 import { demoBar, demoGo, demoStart, demoExit, STEPS } from "./demo.js";
 
 import { work } from "./views/work.js";
-import { engagementView, processHome, prepare } from "./views/process.js";
+import { engagementView, processHome, prepare, processUnavailable } from "./views/process.js";
 import { interview } from "./views/interview.js";
 import { understanding } from "./views/understanding.js";
 import { controlsStep } from "./views/controls.js";
@@ -32,6 +32,7 @@ window.__S = S;
 window.__st = st;
 window.__act = act;
 window.__narrative = narrative;
+window.__palette = matches;   // what the ⌘K index would offer right now
 window.__refs = (ids) => ids.map((id) => srcRef(id)).filter(Boolean);
 
 const ROUTES = {
@@ -64,6 +65,20 @@ const FOCUS_ROUTES = ["#/understanding", "#/controls", "#/trace"];
 /* Above the engagement: no process journey, and leaving them clears any
    half-finished setup form. */
 const SETUP_ROUTES = ["#/clients", "#/client", "#/client/new", "#/engagement/new", "#/people"];
+
+/* ── The engagement boundary ───────────────────────────────────────────────
+   Every screen below is part of ONE engagement's Revenue file. Audit work is
+   engagement-scoped: if the active engagement has no loaded process work, each
+   of these resolves to the empty process state instead — one guard, not twelve
+   checks scattered through the views. Typing a route by hand goes through it
+   too, because the router is the only way in.
+   ───────────────────────────────────────────────────────────────────────── */
+const PROCESS_ROUTES = ["#/revenue", "#/prepare", "#/interview", "#/understanding",
+  "#/controls", "#/trace", "#/testing", "#/complete", "#/resolve", "#/matrix",
+  "#/questionnaire", "#/cockpit"];
+
+const workspaceLocked = (hash = S.route) =>
+  PROCESS_ROUTES.includes(hash) && !st.processWorkspaceAvailable();
 
 /* --- Overlays -------------------------------------------------------------- */
 
@@ -136,7 +151,7 @@ function render() {
   if (hash !== lastRoute) S.menu = false;
   lastRoute = hash;
   S.route = hash;
-  const view = ROUTES[hash] || work;
+  const view = workspaceLocked(hash) ? processUnavailable : (ROUTES[hash] || work);
 
   document.getElementById("app").innerHTML = view();
   document.getElementById("overlay").innerHTML = palette() + keysSheet() + undoBar() + demoBar();
@@ -206,6 +221,14 @@ document.addEventListener("click", (e) => {
     case "save-system": act.addSystem(d.client, {
       name: val("s-name"), role: val("s-role"), owner: val("s-owner"),
     }); break;
+    /* Editing mutates the existing record — the id is what participants,
+       questionnaire grants and process selections point at. */
+    case "save-contact-edit": act.updateContact(d.client, d.id, {
+      name: val("ce-name"), role: val("ce-role"), email: val("ce-email"), department: val("ce-dept"),
+    }); break;
+    case "save-system-edit": act.updateSystem(d.client, d.id, {
+      name: val("se-name"), role: val("se-role"), owner: val("se-owner"), note: val("se-note"),
+    }); break;
     case "eng-stage": {
       // Capture stage 1 before leaving it, so Back does not lose the answers.
       if (document.getElementById("fy")) act.draftMany({
@@ -215,11 +238,12 @@ document.addEventListener("click", (e) => {
       act.draftStage(Number(d.n));
       break;
     }
-    case "eng-team": act.draftToggle("team", d.id); break;
+    case "eng-team": act.draftTeam(d.id); break;
     case "eng-proc": act.draftToggle("processes", d.id); break;
     case "create-engagement": act.createEngagement(d.client, {
       ...S.draft,
       team: S.draft.team || [st.me().id],
+      teamRoles: S.draft.teamRoles || {},
       processes: S.draft.processes || ["revenue"],
     }); break;
     case "save-colleague": act.inviteColleague({
@@ -363,6 +387,9 @@ document.addEventListener("click", (e) => {
 document.addEventListener("change", (e) => {
   const rf = e.target.dataset?.roleFor;
   if (rf) { act.setParticipantRole(rf, e.target.value); return; }
+  // The engagement role for one draft team member. Never the firm role.
+  const er = e.target.dataset?.engRole;
+  if (er) { act.draftRole(er, e.target.value); return; }
   if (e.target.dataset?.draft) syncDraft(e.target);
 });
 
@@ -439,6 +466,10 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "ArrowRight") { e.preventDefault(); demoGo(S.demoStep + 1); return; }
     if (e.key === "ArrowLeft") { e.preventDefault(); demoGo(S.demoStep - 1); return; }
   }
+
+  // Past this point every shortcut acts on the Revenue file. If the active
+  // engagement has none, there is nothing for them to act on.
+  if (workspaceLocked()) return;
 
   const k = e.key.toLowerCase();
 
@@ -555,7 +586,8 @@ function checkRoutes() {
   const valid = new Set(Object.keys(ROUTES));
   const bad = new Set();
   const probe = document.createElement("div");
-  Object.entries(ROUTES).forEach(([route, view]) => {
+  Object.entries({ ...ROUTES, "the empty process state": processUnavailable })
+    .forEach(([route, view]) => {
     let html = "";
     try { html = view(); } catch { return; }        // a view that needs state we lack
     probe.innerHTML = html;

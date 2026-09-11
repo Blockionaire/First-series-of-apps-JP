@@ -89,7 +89,11 @@ ok('breadcrumb shows FY2027, not FY2026',
    await p.locator('.crumb').innerText());
 await p.evaluate(() => { location.hash = '#/revenue'; }); await p.waitForTimeout(400);
 ok('the process header shows FY2027', await has('FY2027'));
-ok('and the journey bar is back inside process work', await p.locator('.jrn').count() === 1);
+/* Audit work is engagement-scoped: a brand-new engagement has no loaded
+   Revenue file, so the workspace — journey bar included — is not there to
+   borrow. The boundary itself is tested in boundary-tests.mjs. */
+ok('and a new engagement gets the empty process state, not another engagement\'s workspace',
+   await p.locator('.jrn').count() === 0 && await has('No Revenue work has been started yet'));
 await p.evaluate(() => { location.hash = '#/'; }); await p.waitForTimeout(350);
 ok('the Work engagement list shows FY2027', await has('FY2027'));
 await p.evaluate(() => { location.hash = '#/questionnaire'; }); await p.waitForTimeout(350);

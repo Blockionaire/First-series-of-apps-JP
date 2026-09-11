@@ -1,2 +1,4 @@
 audit-platform/audit-engine/node_modules/
 audit-platform/audit-engine/out/
+audit-platform/ux-prototype/node_modules/
+audit-platform/ux-prototype/tests/*.png

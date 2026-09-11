@@ -112,6 +112,78 @@ rewriting them per engagement would be faking evidence.
 
 ---
 
+## 5b. Process work is engagement-scoped
+
+The setup layer lets anyone create a real client, a real financial year and a real scope. The audit
+work behind Revenue is a different kind of object, and it does not travel.
+
+- **Every engagement conceptually owns its own process file** — its understanding, sources,
+  controls, findings, walkthroughs, tests, open items, review points and completion state.
+- **The prototype ships exactly one populated file**: Vandersteen FY2026 Revenue. It is the only
+  engagement with a methodology pack, a transcript and documents behind it.
+- **Every other engagement shows an empty process state** — deliberately, not as an error. It names
+  the client, the financial year and the phase, says Revenue is in scope and not started, and
+  offers a way into the populated demo.
+- **No data is shared across engagements.** Nothing from Vandersteen's file appears on another
+  engagement: no map, no coverage percentage, no source, no control, no finding, no questionnaire.
+- **Production will need true per-engagement persistence.** The boundary here is a routing guard
+  over one in-memory file, not a storage model.
+
+One capability check carries this, asked as a product question rather than a demo check:
+
+```js
+st.processWorkspaceAvailable(engagement, "revenue")   // does this engagement have loaded process work?
+```
+
+The router applies it once, to every route that is part of a Revenue file — `#/revenue`,
+`#/prepare`, `#/interview`, `#/understanding`, `#/controls`, `#/trace`, `#/testing`, `#/complete`,
+`#/resolve`, `#/matrix`, `#/questionnaire`, `#/cockpit`. Typing one by hand goes through the same
+guard, because the router is the only way in. The keyboard model and the ⌘K index are scoped the
+same way: with another engagement open, Revenue's controls, findings, sources, sections, coverage
+areas and open items are simply not searchable, rather than silently switching the user's
+engagement out from under them.
+
+---
+
+## 5c. Firm role, access level, engagement role
+
+Three axes, not two:
+
+| | Set on | Means | Changed by |
+|---|---|---|---|
+| **Firm role** | Firm people | Their grade at the firm — Partner / Manager / Senior / Assistant | Firm people |
+| **Access level** | Firm people | What they can do in the software — Member / Admin | Firm people |
+| **Engagement role** | The engagement team | What they are responsible for on *this* file | The engagement |
+
+Sanne Bakker is a Senior at the firm and can be a Manager on one engagement. The new-engagement team
+stage shows both: her firm role as read-only context, her engagement role as a select, defaulted
+from the firm role and independent of it from then on. In state the team is `{ userId, role }`,
+where `role` is the engagement role, written once at creation and never re-derived from
+`firmUser.role` afterwards — so a firm-level promotion cannot rewrite an engagement that has already
+been signed off, and an engagement role cannot promote anyone at the firm.
+
+Sign-off reads the engagement role: `reviewerName()` and `partnerName()` look at the team on the
+engagement, which is the correct source for engagement responsibility.
+
+---
+
+## 5d. Editing client master data
+
+Client contacts and client systems can be edited in place from the client profile — name, role,
+e-mail, department for a contact; name, purpose, owner, note for a system.
+
+The edit **mutates the existing record**. `CC-01` stays `CC-01`. That matters because process
+participants, questionnaire grants and recorded evidence reference the contact by id, and systems
+are selected into a process by id: replacing the record would fork one person into two. Everything
+that resolves through the id — the client profile, Prepare's people and systems, the questionnaire
+recipient picker and the current assignment — shows the new values immediately, with no second
+person and no duplicate system.
+
+Deletion, archiving, change history, per-record permissions and anything else CRM-shaped is
+deliberately absent.
+
+---
+
 ## 6. Materiality
 
 Engagement context, stored and displayed on the engagement overview. It is optional, and **nothing

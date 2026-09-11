@@ -188,12 +188,27 @@ export function clientView() {
         </div>
       </div>` : ""}
 
-      ${c.contacts.length ? rows(c.contacts.map((p) => row({
-        lead: icon("people", 17),
-        title: `<span class="b">${esc(p.name)}</span>`,
-        detail: `${esc(p.role)}${p.email ? ` · ${esc(p.email)}` : ""}${p.department ? ` · ${esc(p.department)}` : ""}`,
-        side: tag("client contact", "quiet"),
-      })).join(""))
+      ${c.contacts.length ? rows(c.contacts.map((p) => adding === `contact:${p.id}`
+        ? `<div class="s-surface pad">
+            <div class="t-eyebrow rail__h">Edit ${esc(p.name)} <span class="mono t-meta">${esc(p.id)}</span></div>
+            ${pair(field("ce-name", "Name", { value: p.name }),
+                   field("ce-role", "Professional role", { value: p.role }))}
+            ${pair(field("ce-email", "E-mail", { type: "email", value: p.email || "" }),
+                   field("ce-dept", "Department", { value: p.department || "" }))}
+            <div class="acts sec">
+              ${btn("Save", "save-contact-edit", { variant: "primary", data: { client: c.id, id: p.id } })}
+              ${btn("Cancel", "cancel-edit", { variant: "ghost" })}
+            </div>
+            <p class="t-meta sec__note measure">The same record is updated. Everywhere this person is
+            referenced — process participants, the questionnaire recipient — follows automatically.</p>
+          </div>`
+        : row({
+            lead: icon("people", 17),
+            title: `<span class="b">${esc(p.name)}</span>`,
+            detail: `${esc(p.role)}${p.email ? ` · ${esc(p.email)}` : ""}${p.department ? ` · ${esc(p.department)}` : ""}`,
+            side: `${tag("client contact", "quiet")}
+              ${btn("Edit", "edit-open", { variant: "ghost", size: "sm", data: { id: `contact:${p.id}` } })}`,
+          })).join(""))
       : empty("No contacts yet", "Add the people you expect to speak to.", "people")}
     </section>
 
@@ -217,11 +232,27 @@ export function clientView() {
         </div>
       </div>` : ""}
 
-      ${c.systems.length ? rows(c.systems.map((x) => row({
-        lead: icon("system", 17),
-        title: `<span class="b">${esc(x.name)}</span>`,
-        detail: `${esc(x.role)}${x.owner ? ` · ${esc(x.owner)}` : ""}${x.note ? ` · ${esc(x.note)}` : ""}`,
-      })).join(""))
+      ${c.systems.length ? rows(c.systems.map((x) => adding === `system:${x.id}`
+        ? `<div class="s-surface pad">
+            <div class="t-eyebrow rail__h">Edit ${esc(x.name)} <span class="mono t-meta">${esc(x.id)}</span></div>
+            ${pair(field("se-name", "System", { value: x.name }),
+                   field("se-owner", "Owner", { value: x.owner || "" }))}
+            ${field("se-role", "What it is used for", { value: x.role || "" })}
+            ${field("se-note", "Note", { value: x.note || "",
+              placeholder: "e.g. outsourced since March 2026 — service organisation" })}
+            <div class="acts sec">
+              ${btn("Save", "save-system-edit", { variant: "primary", data: { client: c.id, id: x.id } })}
+              ${btn("Cancel", "cancel-edit", { variant: "ghost" })}
+            </div>
+            <p class="t-meta sec__note measure">The same record is updated. Any process that has
+            selected this system shows the new information.</p>
+          </div>`
+        : row({
+            lead: icon("system", 17),
+            title: `<span class="b">${esc(x.name)}</span>`,
+            detail: `${esc(x.role)}${x.owner ? ` · ${esc(x.owner)}` : ""}${x.note ? ` · ${esc(x.note)}` : ""}`,
+            side: btn("Edit", "edit-open", { variant: "ghost", size: "sm", data: { id: `system:${x.id}` } }),
+          })).join(""))
       : empty("No systems yet", "Add the applications the entity runs.", "system")}
     </section>
   `;
@@ -316,8 +347,10 @@ export function newEngagementView() {
   // Seed the defaults into the draft, so what is shown and what is stored are
   // the same thing — a default nobody edits still has to be saved.
   if (d.team === undefined) S.draft.team = [st.me().id];
+  if (d.teamRoles === undefined) S.draft.teamRoles = { [st.me().id]: st.me().role };
   if (d.processes === undefined) S.draft.processes = ["revenue"];
   const team = S.draft.team;
+  const teamRoles = S.draft.teamRoles;
   const procs = S.draft.processes;
   const periodEnd = d.periodEnd !== undefined ? d.periodEnd : `${c.yearEnd} ${new Date().getFullYear() + 1}`;
   const fy = d.fy !== undefined ? d.fy : fyFromPeriodEnd(periodEnd);
@@ -325,8 +358,12 @@ export function newEngagementView() {
   if (d.periodEnd === undefined) { S.draft.periodEnd = periodEnd; S.draft.fy = fy; }
 
   const okStage1 = !!fy && !!periodEnd;
-  const roleOf = (id) => st.firmUser(id)?.role || "";
-  const hasSenior = team.some((id) => ["Manager", "Senior"].includes(roleOf(id)));
+  /* The firm role is who they are at the firm; the engagement role is what
+     they are responsible for HERE. The file needs a preparer and a reviewer,
+     so that gate reads the engagement role. */
+  const firmRoleOf = (id) => st.firmUser(id)?.role || "";
+  const engRoleOf = (id) => teamRoles[id] || firmRoleOf(id);
+  const hasSenior = team.some((id) => ["Manager", "Senior"].includes(engRoleOf(id)));
 
   const stageNav = `<div class="ribbon sec__h">
     ${STAGES.map((x, i) => `<div class="${cx("rbn", x.n < stage && "is-ok", x.n === stage && "is-now")}">
@@ -373,24 +410,29 @@ export function newEngagementView() {
           ${btn("Firm people", "nav", { variant: "ghost", size: "sm", data: { href: "#/people" } })}
         </div>
         <p class="t-sub sec__h measure">
-          Colleagues from firm people. They are not copied — the engagement references them, so a
-          role change at firm level is not silently forked here.</p>
-        <div class="cards cards--2">
-          ${st.firmUsers().map((u) => {
-            const on = team.includes(u.id);
-            return `<button class="${cx("card", on && "card--accent")}"
-                data-act="eng-team" data-id="${esc(u.id)}">
-              <span class="card__hd">
-                <span class="rw__lead">${icon(on ? "check" : "people", 18)}</span>
-                <span class="sp">
-                  <span class="card__t">${esc(u.name)}${u.isMe ? ` <span class="t-meta">(you)</span>` : ""}</span>
-                  <span class="card__d">${esc(u.role)} · ${esc(u.access)}</span>
-                </span>
-                ${on ? tag("on the team", "accent") : ""}
-              </span>
-            </button>`;
-          }).join("")}
-        </div>
+          Colleagues from firm people. The engagement references them, so nothing is copied — and
+          the role someone carries <b class="ink2">on this engagement</b> is set here, defaulted
+          from their firm role and independent of it from then on.</p>
+        ${rows(st.firmUsers().map((u) => {
+          const on = team.includes(u.id);
+          return row({
+            mod: on ? "attn" : "",
+            lead: icon(on ? "check" : "people", 17),
+            title: `<span class="${on ? "b" : "b ink3"}">${esc(u.name)}</span>${
+              u.isMe ? ` <span class="t-meta">you</span>` : ""}`,
+            detail: `Firm role <b class="ink2">${esc(u.role)}</b> · ${esc(u.access)} · ${esc(u.email)}`,
+            side: `${on ? `<label class="t-meta nowrap" for="er-${esc(u.id)}"
+                style="display:block;margin-bottom:3px">Engagement role</label>
+              <select class="field" id="er-${esc(u.id)}" data-eng-role="${esc(u.id)}" style="width:150px">
+                ${AUDIT_ROLES.map((r) => `<option${r === engRoleOf(u.id) ? " selected" : ""}>${esc(r)}</option>`).join("")}
+              </select>` : ""}
+              ${btn(on ? "Remove" : "Add", "eng-team",
+                { variant: on ? "ghost" : "", size: "sm", data: { id: u.id } })}`,
+          });
+        }).join(""))}
+        <p class="t-meta sec__note measure">
+          Changing someone's engagement role here does not change their firm role, and a firm-level
+          change later does not rewrite an engagement already created.</p>
         ${!hasSenior ? `<div class="sec__note">${callout(`<b>No manager or senior assigned.</b>
           The file can be created, but somebody has to prepare and review it.`, "warn")}</div>` : ""}
         <div class="acts sec">
@@ -450,8 +492,9 @@ export function peopleView() {
         <div>
           <h1 class="t-display">Firm people</h1>
           <p class="t-lede">
-            Colleagues at ${esc(firm.name)} who use Audit AI. Client contacts are not listed here —
-            they live on the client record and never become accounts.
+            Colleagues at ${esc(firm.name)} who use Audit AI, with their firm role and their access
+            level. Client contacts are not listed here — they live on the client record and never
+            become accounts.
           </p>
         </div>
         <div class="acts">
@@ -465,8 +508,8 @@ export function peopleView() {
       <div class="sec__h"><h2 class="t-eyebrow">Invite a colleague</h2></div>
       ${pair(field("i-name", "Name", { placeholder: "e.g. Milan Jansen" }),
              field("i-email", "Work e-mail", { type: "email", placeholder: "name@kuyperbergman.nl" }))}
-      ${pair(field("i-role", "Audit role", { value: d["i-role"] || "Assistant", options: AUDIT_ROLES,
-               hint: "What they do on an engagement." }),
+      ${pair(field("i-role", "Firm role", { value: d["i-role"] || "Assistant", options: AUDIT_ROLES,
+               hint: "Their grade at the firm. It defaults their role on a new engagement." }),
              field("i-access", "Access level", { value: d["i-access"] || "Member", options: ACCESS_LEVELS,
                hint: "What they can do in the software. A different thing." }))}
       <div class="acts sec">
@@ -487,9 +530,11 @@ export function peopleView() {
           u.pending ? `<div class="t-meta" style="margin-top:4px">added in this session</div>` : ""}`,
       })).join(""))}
       <p class="t-meta sec__note measure">
-        <b class="ink2">Audit role</b> and <b class="ink2">access level</b> are separate on purpose.
+        <b class="ink2">Firm role</b> and <b class="ink2">access level</b> are separate on purpose.
         A partner is not automatically an administrator, and an administrator is not automatically
-        a reviewer.</p>
+        a reviewer. A third thing is separate again: the <b class="ink2">engagement role</b> — what
+        somebody is responsible for on one file. It is set on the engagement, defaults from the firm
+        role, and changing it there never rewrites anything here.</p>
     </section>
 
     <section class="sec--loose">

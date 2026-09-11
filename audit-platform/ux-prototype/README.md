@@ -78,7 +78,7 @@ browser against mock data: no model is called, no request leaves the page, nothi
 | `js/state.js` | State, derivations, the exception model and the undo stack. Every headline number is computed here |
 | `js/palette.js` | ⌘K — the navigation |
 | `js/views/` | One module per stage |
-| `tests/` | Four Playwright suites — route integrity, state model, UI walkthrough, standalone bundle |
+| `tests/` | Seven Playwright suites — route integrity, state model, UI walkthrough, undo and reset, the setup layer, engagement boundaries, standalone bundle |
 
 ## The workflow
 
