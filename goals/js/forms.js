@@ -10,7 +10,8 @@
 import { state, save, remove, removeCascade, byId, metricsOf, standardsOf,
          milestonesOf, saveSettings } from "./store.js";
 import { ACTIVITY_TYPES, UNITS, AGGREGATIONS, activityType } from "./data/types.js";
-import { $, esc, sheet, confirmSheet, toast, todayISO, monthOf, monthName } from "./util.js";
+import { $, esc, sheet, confirmSheet, toast, todayISO, monthOf, monthName,
+         readImage } from "./util.js";
 
 /* Read a field of a sheet by id. */
 const read = (dialog, id) => {
@@ -554,6 +555,248 @@ export function editResource(resource = null, { topicId = null, moduleId = null,
       });
     },
   });
+}
+
+
+/* ---------------------------------------------------------------
+   Curiosity topics
+   --------------------------------------------------------------- */
+export function editTopic(topic = null) {
+  const months = nextMonths(14);
+
+  return sheet({
+    title: topic ? "Edit topic" : "New topic",
+    body: `
+      <label class="field">
+        <span class="field__label">Topic</span>
+        <input class="input" id="title" maxlength="60" value="${esc(topic ? topic.title : "")}"
+               placeholder="Watches">
+      </label>
+      <label class="field">
+        <span class="field__label">What do you want to get out of it?</span>
+        <textarea class="textarea" id="outcome" rows="3"
+                  placeholder="Understand movements, categories, brands and what makes a watch good.">${esc(topic ? topic.outcome || "" : "")}</textarea>
+      </label>
+      <div class="field field--split">
+        <label>
+          <span class="field__label">Month</span>
+          <select class="select" id="month">
+            <option value="">Later</option>
+            ${months.map(month => `
+              <option value="${month}" ${topic && topic.month === month ? "selected" : ""}>${monthName(month)}</option>`).join("")}
+          </select>
+        </label>
+        <label>
+          <span class="field__label">Status</span>
+          <select class="select" id="status">
+            ${[["current", "Currently learning"], ["upcoming", "Coming up"], ["completed", "Done"]].map(([id, label]) => `
+              <option value="${id}" ${topic && topic.status === id ? "selected" : ""}>${label}</option>`).join("")}
+          </select>
+        </label>
+      </div>
+      <div class="field">
+        <span class="field__label">Cover (optional)</span>
+        <div class="cover-picker">
+          <div class="cover-picker__preview topic__cover ${topic && topic.cover ? "" : "topic__cover--tinted"}"
+               id="preview" style="--tint:${topic ? topic.tint || 30 : 30}">
+            ${topic && topic.cover
+              ? `<img src="${esc(topic.cover)}" alt="">`
+              : `<span class="topic__letter">${esc((topic ? topic.title : "?").slice(0, 1))}</span>`}
+          </div>
+          <div class="stack">
+            <button type="button" class="button button--small" data-pick-cover>Choose a photo</button>
+            ${topic && topic.cover ? `<button type="button" class="button button--small button--ghost" data-drop-cover>Remove</button>` : ""}
+            <input type="file" id="cover" accept="image/*" hidden>
+          </div>
+        </div>
+      </div>`,
+    footer: `
+      ${topic ? `<button class="button button--ghost" data-delete>Delete</button>` : ""}
+      <button class="button button--ghost" data-close>Cancel</button>
+      <button class="button button--solid" data-save>Save</button>`,
+    onMount: (dialog, close) => {
+      let cover = topic ? topic.cover : null;
+      const preview = $("#preview", dialog);
+      const file = $("#cover", dialog);
+
+      $("[data-pick-cover]", dialog).addEventListener("click", () => file.click());
+      file.addEventListener("change", async event => {
+        const chosen = event.target.files[0];
+        if (!chosen) return;
+        try {
+          cover = await readImage(chosen, { max: 1200, quality: .72 });
+          preview.classList.remove("topic__cover--tinted");
+          preview.innerHTML = `<img src="${cover}" alt="">`;
+        } catch (e) {
+          console.error(e);
+          toast("That image could not be read.", "bad");
+        }
+      });
+
+      const drop = $("[data-drop-cover]", dialog);
+      if (drop) drop.addEventListener("click", () => {
+        cover = null;
+        preview.classList.add("topic__cover--tinted");
+        preview.innerHTML = `<span class="topic__letter">${esc((topic.title || "?").slice(0, 1))}</span>`;
+      });
+
+      $("[data-save]", dialog).addEventListener("click", async () => {
+        const title = read(dialog, "title").trim();
+        if (!title) return toast("A topic needs a name.", "bad");
+        const status = read(dialog, "status");
+
+        /* Only one topic is the current one. */
+        if (status === "current") {
+          for (const other of state.topics) {
+            if (other.status === "current" && (!topic || other.id !== topic.id)) {
+              await save("topics", { ...other, status: "upcoming" });
+            }
+          }
+        }
+
+        const saved = await save("topics", {
+          id: topic ? topic.id : undefined,
+          title,
+          outcome: read(dialog, "outcome").trim(),
+          month: read(dialog, "month") || null,
+          status,
+          cover,
+          tint: topic ? topic.tint || tintFor(title) : tintFor(title),
+          order: topic ? topic.order : state.topics.length,
+        });
+        close(saved);
+        toast("Saved.");
+      });
+
+      hookDelete(dialog, close, topic, "topics", {
+        title: "Delete this topic?",
+        message: "Its modules and saved resources go with it.",
+      });
+    },
+  });
+}
+
+/* A colour for the cover, derived from the name so it never changes. */
+function tintFor(title) {
+  let hash = 0;
+  for (const character of title) hash = (hash * 31 + character.charCodeAt(0)) % 360;
+  return hash;
+}
+
+function nextMonths(count) {
+  const months = [];
+  const today = new Date();
+  for (let i = -2; i < count - 2; i++) {
+    const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    months.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
+  }
+  return months;
+}
+
+/* ---------------------------------------------------------------
+   Learning modules
+   --------------------------------------------------------------- */
+export function editModule(module = null, topicId = null) {
+  const owner = module ? module.topicId : topicId;
+
+  return sheet({
+    title: module ? "Edit module" : "New module",
+    body: `
+      <label class="field">
+        <span class="field__label">Module</span>
+        <input class="input" id="title" maxlength="80" value="${esc(module ? module.title : "")}"
+               placeholder="How a mechanical watch works">
+      </label>`,
+    footer: `
+      ${module ? `<button class="button button--ghost" data-delete>Delete</button>` : ""}
+      <button class="button button--ghost" data-close>Cancel</button>
+      <button class="button button--solid" data-save>Save</button>`,
+    onMount: (dialog, close) => {
+      $("[data-save]", dialog).addEventListener("click", async () => {
+        const title = read(dialog, "title").trim();
+        if (!title) return toast("A module needs a name.", "bad");
+
+        const saved = await save("modules", {
+          id: module ? module.id : undefined,
+          topicId: owner,
+          title,
+          done: module ? module.done : false,
+          doneAt: module ? module.doneAt : null,
+          notes: module ? module.notes : "",
+          order: module ? module.order : state.modules.filter(m => m.topicId === owner).length,
+        });
+        close(saved);
+        toast("Saved.");
+      });
+
+      hookDelete(dialog, close, module, "modules", {
+        title: "Delete this module?",
+        message: "Your notes on it go too.",
+      });
+    },
+  });
+}
+
+/* ---------------------------------------------------------------
+   The curiosity backlog
+   --------------------------------------------------------------- */
+export function editBacklog(item = null) {
+  return sheet({
+    title: item ? "Edit curiosity" : "Add a curiosity",
+    subtitle: item ? "" : "Something to look into later.",
+    body: `
+      <label class="field">
+        <span class="field__label">What?</span>
+        <input class="input" id="title" maxlength="60" value="${esc(item ? item.title : "")}"
+               placeholder="Monetary policy">
+      </label>
+      <label class="field">
+        <span class="field__label">Why (optional)</span>
+        <input class="input" id="note" maxlength="140" value="${esc(item ? item.note || "" : "")}">
+      </label>`,
+    footer: `
+      ${item ? `<button class="button button--ghost" data-delete>Delete</button>` : ""}
+      <button class="button button--ghost" data-close>Cancel</button>
+      <button class="button button--solid" data-save>Save</button>`,
+    onMount: (dialog, close) => {
+      $("[data-save]", dialog).addEventListener("click", async () => {
+        const title = read(dialog, "title").trim();
+        if (!title) return toast("Give it a name.", "bad");
+
+        const saved = await save("backlog", {
+          id: item ? item.id : undefined,
+          title,
+          note: read(dialog, "note").trim(),
+          order: item ? item.order : state.backlog.length,
+        });
+        close(saved);
+        toast("Added to the backlog.");
+      });
+
+      hookDelete(dialog, close, item, "backlog", {
+        title: "Remove this?",
+        message: "You can always add it again.",
+      });
+    },
+  });
+}
+
+/* A backlog item that has waited long enough becomes a real topic, with
+   its note carried over as the outcome. */
+export async function promoteBacklog(item) {
+  const topic = await save("topics", {
+    title: item.title,
+    outcome: item.note || "",
+    month: null,
+    status: "upcoming",
+    cover: null,
+    tint: tintFor(item.title),
+    order: state.topics.length,
+    notes: "",
+  });
+  await remove("backlog", item.id);
+  toast(`${item.title} is a topic now.`);
+  return topic;
 }
 
 /* ---------------------------------------------------------------

@@ -7,7 +7,7 @@
    ===================================================================== */
 
 import { state, activePeriod, goalsOf, standardsOf, currentTopic,
-         entriesFor, loggableTypes, byId } from "../store.js";
+         entriesFor, loggableTypes } from "../store.js";
 import { periodProgress, topicProgress } from "../progress.js";
 import { goalCard, standardRow, periodLine } from "../cards.js";
 import { openLog } from "../log.js";

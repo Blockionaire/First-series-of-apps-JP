@@ -17,6 +17,11 @@ import { icon } from "./icons.js";
 import * as Home     from "./views/home.js";
 import * as Goals    from "./views/goals.js";
 import * as Goal     from "./views/goal.js";
+import * as Curiosity from "./views/curiosity.js";
+import * as Topic    from "./views/topic.js";
+import * as Module   from "./views/module.js";
+import * as Reviews  from "./views/reviews.js";
+import * as Review   from "./views/review.js";
 import * as Settings from "./views/settings.js";
 import * as Search   from "./views/search.js";
 import * as Account  from "./views/account.js";
@@ -26,6 +31,11 @@ const SCREENS = {
   home: Home,
   goals: Goals,
   goal: Goal,
+  curiosity: Curiosity,
+  topic: Topic,
+  module: Module,
+  reviews: Reviews,
+  review: Review,
   settings: Settings,
   search: Search,
 };

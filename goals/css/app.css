@@ -1037,3 +1037,92 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .learning__title { font-family: var(--serif); font-size: 1.6rem; margin-top: 6px; }
 .learning__next { margin-top: 14px; font-size: .9rem; color: var(--ink-soft); }
 .learning:hover .button { border-color: var(--ink); }
+
+/* ---------------------------- Scoreboard ---------------------------- */
+.scoreboard { border-top: 1px solid var(--rule); }
+
+.score {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.score__label { color: var(--ink-soft); font-size: .94rem; }
+.score__value { font-size: .96rem; white-space: nowrap; }
+.score__value.is-met { color: var(--good); }
+.score__value.is-missed { color: var(--ink-faint); }
+
+.score__change {
+  color: var(--ink-faint);
+  font-size: .84rem;
+  padding-left: 6px;
+}
+
+.milestone__mark { color: var(--ink-faint); width: 17px; flex: none; text-align: center; }
+.milestone__mark.is-done { color: var(--good); }
+
+/* --------------------------- Topic details -------------------------- */
+.topic-hero {
+  aspect-ratio: 16 / 9;
+  margin-bottom: 0;
+}
+
+@media (min-width: 700px) { .topic-hero { aspect-ratio: 21 / 9; } }
+
+.module__mark { color: var(--ink-faint); display: grid; place-items: center; }
+
+.module-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid var(--rule);
+  padding-top: 20px;
+}
+
+.module-nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--ink-soft);
+  font-size: .9rem;
+  max-width: 46%;
+}
+
+.module-nav__link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-nav__link:hover { color: var(--ink); }
+.module-nav__link--next { text-align: right; margin-left: auto; }
+
+.textarea--page {
+  background: transparent;
+  border: 1px solid var(--rule);
+  min-height: 220px;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  line-height: 1.65;
+  padding: 18px;
+}
+
+.textarea--page:focus { background: var(--paper-raised); }
+
+/* --------------------------- Cover picker --------------------------- */
+.cover-picker {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.cover-picker__preview { aspect-ratio: 4 / 3; margin: 0; }
+.cover-picker .stack { display: grid; gap: 8px; }
+
+.backlog { cursor: default; }
+.backlog .list__main { cursor: pointer; }

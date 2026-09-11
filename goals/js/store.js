@@ -160,8 +160,12 @@ async function persist(collection, record) {
   Sync.push(collection, record);
 }
 
-/* Add or update. Returns the stored record. */
-export async function save(collection, values) {
+/* Add or update. Returns the stored record.
+
+   `quiet` skips the redraw: used while you are typing into a field that
+   saves itself, because redrawing the screen under a cursor moves it to
+   the end of the text. */
+export async function save(collection, values, { quiet = false } = {}) {
   const list = state[collection];
   if (!list) throw new Error(`Unknown collection: ${collection}`);
 
@@ -180,7 +184,7 @@ export async function save(collection, values) {
   else list.push(record);
 
   sortAll();
-  notify();
+  if (!quiet) notify();
   await persist(collection, record);
   return record;
 }
