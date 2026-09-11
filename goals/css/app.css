@@ -21,7 +21,7 @@
 
   --ink:          #16181a;   /* near-black */
   --ink-soft:     #5f5c55;
-  --ink-faint:    #918c82;
+  --ink-faint:    #6b665e;
 
   --navy:         #1b2a44;   /* the single accent */
   --navy-soft:    #33445f;
@@ -55,7 +55,7 @@
 
   --ink:          #f2efe9;
   --ink-soft:     #a7a49d;
-  --ink-faint:    #7b7872;
+  --ink-faint:    #8f8c85;
 
   --navy:         #c8d4e8;
   --navy-soft:    #9fb0cb;
@@ -80,7 +80,7 @@
 
     --ink:          #f2efe9;
     --ink-soft:     #a7a49d;
-    --ink-faint:    #7b7872;
+    --ink-faint:    #8f8c85;
 
     --navy:         #c8d4e8;
     --navy-soft:    #9fb0cb;
@@ -101,6 +101,7 @@ html, body { height: 100%; }
 
 body {
   margin: 0;
+  -webkit-tap-highlight-color: transparent;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--sans);
@@ -198,6 +199,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .page {
+  animation: settle .22s ease both;
   width: 100%;
   max-width: var(--page);
   margin: 0 auto;
@@ -231,6 +233,23 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .rule { height: 1px; background: var(--rule); border: 0; margin: 0; }
+
+/* ---------------------------- Skip link ----------------------------- */
+.skip {
+  position: absolute;
+  left: 12px;
+  top: -60px;
+  z-index: 90;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 10px 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: .88rem;
+  transition: top .15s ease;
+}
+
+.skip:focus { top: calc(var(--safe-top) + 12px); }
 
 /* --------------------------- Top masthead --------------------------- */
 .masthead {
@@ -547,8 +566,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .checkbox {
   appearance: none;
-  width: 17px; height: 17px;
-  margin: 2px 0 0;
+  width: 20px; height: 20px;
+  margin: 1px 0 0;
   border: 1px solid var(--rule-strong);
   border-radius: 50%;
   cursor: pointer;
@@ -563,8 +582,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .checkbox:checked::after {
   content: "✓";
   color: var(--paper);
-  font-size: .62rem;
+  font-size: .68rem;
   line-height: 1;
+}
+
+/* The visible circle is small; the area that answers a thumb is not. */
+.milestone .checkbox, .module .checkbox { position: relative; }
+
+.milestone .checkbox::before, .module .checkbox::before {
+  content: "";
+  position: absolute;
+  inset: -13px -10px -13px -14px;
 }
 
 .milestone__text { flex: 1; min-width: 0; font-size: .97rem; }
@@ -750,6 +778,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .textarea { min-height: 110px; resize: vertical; line-height: 1.55; }
+
+.input::placeholder, .textarea::placeholder { color: var(--ink-faint); opacity: 1; }
 .input[type="date"] { font-variant-numeric: tabular-nums; }
 
 .field--split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -827,6 +857,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @media (min-width: 700px) { .sheet__foot .button { flex: none; } }
 
 @keyframes rise { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes settle { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
 /* ------------------------------ Toast ------------------------------- */

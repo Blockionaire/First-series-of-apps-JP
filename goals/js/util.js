@@ -326,7 +326,14 @@ export function sparkline(values, { width = 240, height = 44, target = null } = 
   const points = values.filter(v => typeof v === "number" && !isNaN(v));
   if (points.length < 2) return "";
 
-  const all = target === null ? points : points.concat([target]);
+  /* Only draw the target when it is near enough to share a scale. A
+     target of 44 next to a line that runs from 1 to 5 would flatten the
+     line into nothing, which is the opposite of the point. */
+  const low = Math.min(...points), high = Math.max(...points);
+  const reach = (high - low || Math.abs(high) || 1) * 1.5;
+  const showTarget = target !== null && target >= low - reach && target <= high + reach;
+
+  const all = showTarget ? points.concat([target]) : points;
   const min = Math.min(...all), max = Math.max(...all);
   const span = max - min || 1;
   const pad = 4;
@@ -334,7 +341,7 @@ export function sparkline(values, { width = 240, height = 44, target = null } = 
   const y = v => height - pad - ((v - min) / span) * (height - pad * 2);
 
   const path = points.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-  const targetLine = target === null ? "" :
+  const targetLine = !showTarget ? "" :
     `<line x1="0" x2="${width}" y1="${y(target).toFixed(1)}" y2="${y(target).toFixed(1)}"
            class="spark__target" stroke-dasharray="3 4" />`;
 

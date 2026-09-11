@@ -105,6 +105,9 @@ js/progress.js          metrics, standards, reviews — the sums
 js/db.js                IndexedDB
 js/sync.js              Firebase (optional)
 js/util.js              formatting, dates, the sheet, small charts
+js/forms.js             every add and edit, in one place
+js/log.js               the logging sheet and the activity list
+js/cards.js             the goal card and the standard row
 js/icons.js             the line icons
 js/data/types.js        what can be logged
 js/data/seed.js         the starting period, goals and topics

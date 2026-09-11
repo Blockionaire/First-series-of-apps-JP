@@ -386,8 +386,12 @@ export const currentTopic = () =>
    anything, and metrics read their series straight off this list.
    --------------------------------------------------------------- */
 export function logEntry({ type, date, value = null, duration = null, note = "",
-                           tags = [], goalId = null, topicId = null, moduleId = null,
+                           tags = [], goalId, topicId = null, moduleId = null,
                            reflection = null, id = null }) {
+  /* Which goal a log belongs to is a property of its type, so no caller
+     has to work it out — and none of them can get it wrong. */
+  if (goalId === undefined) goalId = goalForType(type);
+
   return save("entries", {
     id: id || undefined,
     type,

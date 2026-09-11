@@ -97,7 +97,7 @@ function draw() {
 
   /* An app with a cloud that insists on an account shows nothing else
      until you are in. */
-  const screen = Sync.needsAccount() ? Account : (SCREENS[name] || Home);
+  const screen = Sync.needsAccount() ? Account : (SCREENS[name] || NotFound);
   const isSame = current.name === name;
 
   if (current.cleanup) { try { current.cleanup(); } catch (e) { console.error(e); } }
@@ -105,14 +105,30 @@ function draw() {
 
   document.title = screen.title ? `${screen.title(params)} · Goals` : "Goals";
 
+  /* A screen that throws should cost you that screen, not the app. */
+  let body;
+  try {
+    body = screen.html(params);
+  } catch (error) {
+    console.error(error);
+    body = failed(error);
+  }
+
   app.innerHTML = `
     <div class="shell">
+      ${screen === Account ? "" : `<a class="skip" href="#main">Skip to content</a>`}
       ${screen === Account ? "" : masthead(name)}
-      <main class="page" id="main">${screen.html(params)}</main>
+      <main class="page" id="main">${body}</main>
       ${screen === Account ? "" : tabbar(name)}
     </div>`;
 
-  if (screen.mount) current.cleanup = screen.mount($("#main"), params) || null;
+  if (screen.mount) {
+    try {
+      current.cleanup = screen.mount($("#main"), params) || null;
+    } catch (error) {
+      console.error(error);
+    }
+  }
   current.name = name;
 
   if (!isSame) window.scrollTo({ top: 0 });
@@ -129,7 +145,8 @@ function masthead(active) {
         <a class="wordmark" href="#/home">Goals</a>
         <nav class="nav" aria-label="Main">
           ${NAV.map(item => `
-            <a class="nav__link ${tab === item.id ? "is-active" : ""}" href="${item.route}">${item.label}</a>
+            <a class="nav__link ${tab === item.id ? "is-active" : ""}" href="${item.route}"
+               ${tab === item.id ? 'aria-current="page"' : ""}>${item.label}</a>
           `).join("")}
         </nav>
         <div class="row">
@@ -149,7 +166,8 @@ function tabbar(active) {
              <span class="tabbar__glyph" aria-hidden="true">${icon(item.glyph, { size: 18 })}</span>
              <span>${item.label}</span>
            </button>`
-        : `<a class="tabbar__item ${tab === item.id ? "is-active" : ""}" href="${item.route}">
+        : `<a class="tabbar__item ${tab === item.id ? "is-active" : ""}" href="${item.route}"
+             ${tab === item.id ? 'aria-current="page"' : ""}>
              <span class="tabbar__glyph" aria-hidden="true">${icon(item.glyph, { size: 19 })}</span>
              <span>${item.label}</span>
            </a>`).join("")}
@@ -162,6 +180,27 @@ function hookChrome() {
 }
 
 export const log = (...args) => openLog(...args);
+
+function failed(error) {
+  return `
+    <div class="empty" style="padding-top:12vh">
+      <p class="empty__title">This screen could not be drawn.</p>
+      <p>${esc(error.message || String(error))}</p>
+      <p style="margin-top:16px"><a class="link" href="#/home">Back to Home</a></p>
+    </div>`;
+}
+
+/* A hash nobody recognises. Better to say so than to quietly show
+   something else and leave you wondering what you clicked. */
+const NotFound = {
+  title: () => "Not found",
+  html: () => `
+    <div class="empty" style="padding-top:14vh">
+      <p class="empty__title">There is nothing at this address.</p>
+      <p>It may have been deleted, or the link may be old.</p>
+      <p style="margin-top:16px"><a class="link" href="#/home">Back to Home</a></p>
+    </div>`,
+};
 
 /* ---------------------------------------------------------------
    Boot

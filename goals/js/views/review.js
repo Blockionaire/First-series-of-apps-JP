@@ -178,10 +178,10 @@ function monthReview(month) {
                   </div>`).join("")}
               </div>` : `<p class="meta" style="margin-top:12px">No milestones this month.</p>`}
 
-            ${row.weeks.length ? `
+            ${row.weeks.length && row.weeks[0].standards.length ? `
               <p class="meta num" style="margin-top:14px">
-                Standards kept in ${row.weeks.filter(w => w.standards.length && w.standards.every(s => s.met)).length}
-                of ${row.weeks.length} weeks
+                Standards kept in ${row.weeks.filter(w => w.standards.every(s => s.met)).length}
+                of ${row.weeks.length} ${row.weeks.length === 1 ? "week" : "weeks"} so far
               </p>` : ""}
           </div>`).join("")}
       </section>

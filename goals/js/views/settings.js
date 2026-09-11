@@ -66,7 +66,7 @@ export function html() {
             </span>
           </button>
         </div>
-        <input type="file" id="file" accept="application/json,.json" hidden>
+        <input type="file" id="file" accept="application/json,.json" aria-label="Backup file" hidden>
       </div>
 
       <div>

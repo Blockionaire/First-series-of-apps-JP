@@ -10,11 +10,11 @@
    for an amount.
    ===================================================================== */
 
-import { state, logEntry, remove, goalForType, loggableTypes,
+import { state, logEntry, remove, loggableTypes,
          byId, currentTopic, modulesOf } from "./store.js";
 import { activityType } from "./data/types.js";
 import { $, $$, esc, sheet, confirmSheet, toast, todayISO, formatValue,
-         formatDate, relativeDay } from "./util.js";
+         formatDate, formatDuration, relativeDay } from "./util.js";
 import { durationMinutes } from "./progress.js";
 
 /* ---------------------------------------------------------------
@@ -167,7 +167,6 @@ export function openForm(type, { entry = null, topicId = null, moduleId = null, 
           duration: number("duration"),
           note: read("note") || "",
           tags: $$("[data-tag].is-on", dialog).map(chip => chip.dataset.tag),
-          goalId: goalForType(type),
           topicId: chosenTopic,
           moduleId: chosenModule,
           reflection: Object.keys(reflection).length ? reflection : null,
@@ -255,10 +254,7 @@ export function entryLine(entry) {
   if (entry.value !== null && entry.value !== undefined && definition && definition.unit) {
     bits.push(formatValue(entry.value, definition.unit));
   }
-  if (entry.duration) {
-    const minutes = durationMinutes(entry);
-    bits.push(minutes >= 60 ? `${(minutes / 60).toFixed(minutes % 60 ? 1 : 0)}h` : `${Math.round(minutes)}m`);
-  }
+  if (entry.duration) bits.push(formatDuration(durationMinutes(entry)));
   if (entry.tags && entry.tags.length && definition && definition.tags) {
     bits.push(entry.tags
       .map(tag => (definition.tags.find(t => t.id === tag) || {}).label)

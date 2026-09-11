@@ -275,12 +275,15 @@ export function monthSummary(month = monthOf(todayISO())) {
       };
     });
 
-    /* Every week that started inside the month, so "4 out of 5 weeks"
-       means something. */
-    const weeks = weeksIn(from, to).map(w => ({
-      week: w,
-      standards: standardsOf(goal.id).map(s => standardWeek(s, w)),
-    }));
+    /* Only weeks that have actually started — a month in progress
+       should not report failures for weeks that have not happened. */
+    const today = todayISO();
+    const weeks = weeksIn(from, to)
+      .filter(w => w <= today)
+      .map(w => ({
+        week: w,
+        standards: standardsOf(goal.id).map(s => standardWeek(s, w)),
+      }));
 
     return {
       goal, milestones, metrics, weeks,

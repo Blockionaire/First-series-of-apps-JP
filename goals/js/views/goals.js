@@ -47,6 +47,7 @@ export function html() {
       </header>
 
       ${goals.length ? `
+        <h2 class="visually-hidden">Goals in this period</h2>
         <div class="goal-grid">
           ${goals.map(goal => goalCard(goal)).join("")}
         </div>` : `
