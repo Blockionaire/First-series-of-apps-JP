@@ -95,7 +95,7 @@ export function complete() {
         })}
         ${st.reviewRequired() ? row({
           lead: icon("reviewpoint", 17),
-          title: `<span class="b">${esc(engagement.team[1].name)}</span>`,
+          title: `<span class="b">${esc(st.reviewerName())}</span>`,
           detail: so.review === "approved" ? "Reviewed by · manager · approved"
             : so.review === "reopened" ? "Reviewed by · manager · sent back with review points"
             : so.review === "in_review" ? "Reviewed by · manager · reviewing now"
@@ -108,7 +108,7 @@ export function complete() {
         }) : ""}
         ${row({
           lead: `<span class="ink5">${icon("signature", 17)}</span>`,
-          title: `<span class="ink4">${esc(engagement.team[0].name)}</span>`,
+          title: `<span class="ink4">${esc(st.partnerName())}</span>`,
           detail: "Engagement partner",
           side: `<span class="t-meta">${methodologyConfig.requiresPartnerReview ? "review required" : "no review required at process level"}</span>`,
         })}`)}
@@ -208,8 +208,8 @@ export function complete() {
 
     <section class="sec--loose">
       ${more("footer", "What the export footer records", `<div class="meth"><dl>
-        <dt>entity</dt><dd>${esc(client.name)}</dd>
-        <dt>engagement</dt><dd>${esc(engagement.id)} · FY2026 interim</dd>
+        <dt>entity</dt><dd>${esc(st.activeClient().name)}</dd>
+        <dt>engagement</dt><dd>${esc(st.activeEngagement().id)} · ${esc(st.activeEngagement().fy)} interim</dd>
         <dt>process state</dt><dd>${esc(ps.label)}</dd>
         <dt>sources</dt><dd>${Object.keys(sources).length} — transcript, questionnaire, three documents, auditor notes</dd>
         <dt>coverage</dt><dd>${cov.covered} of ${cov.applicable} applicable areas · ${cov.na} not applicable</dd>
@@ -218,7 +218,7 @@ export function complete() {
         <dt>ai assistance</dt><dd>Used. Stage models and prompt versions recorded.</dd>
         <dt>prepared by</dt><dd>${esc(user.name)}${so.preparer === "signed" ? " · signed" : " · unsigned"}</dd>
         <dt>reviewed by</dt><dd>${st.reviewRequired()
-          ? esc(engagement.team[1].name) + (so.review === "approved" ? " · approved" : " · " + so.review.replace("_", " "))
+          ? esc(st.reviewerName()) + (so.review === "approved" ? " · approved" : " · " + so.review.replace("_", " "))
           : "no process-level review required"}</dd>
       </dl></div>`, S.disclosed.footer)}
     </section>
@@ -404,12 +404,60 @@ export function matrix() {
 
 /* ── Client questionnaire — a separate, plainer surface ──────────────────── */
 
+/* --- Who the questionnaire is for -----------------------------------------
+   A task-scoped grant to one client contact. It is not an account, and the
+   prototype does not claim to have e-mailed anybody.
+   -------------------------------------------------------------------------- */
+export function questionnaireRecipient() {
+  const to = st.questionnaireTo("revenue");
+  const cl = st.activeClient();
+  const picking = S.editing === "qto";
+
+  return `<section class="sec--loose">
+    <div class="sec__h">
+      <h2 class="t-h">Questionnaire recipient</h2>
+      <span class="sp"></span>
+      ${btn(to ? "Change" : "Assign", picking ? "cancel-edit" : "edit-open",
+        { size: "sm", variant: to ? "" : "primary", data: { id: "qto" } })}
+    </div>
+    <p class="t-sub sec__h measure">
+      One client contact gets access to this questionnaire and to nothing else. It does not create
+      an Audit AI account for them.</p>
+
+    ${to && to.contact ? rows(row({
+      lead: icon("questionnaire", 17),
+      title: `<span class="b">${esc(to.contact.name)}</span>`,
+      detail: `${esc(to.contact.role)}${to.contact.email ? ` · ${esc(to.contact.email)}` : ""} · assigned ${esc(to.assignedOn)}`,
+      side: `${tag("questionnaire access", "accent")}
+        ${btn("Remove", "clear-questionnaire", { variant: "ghost", size: "sm" })}`,
+    })) : `<div class="callout callout--warn">
+      <b>Nobody assigned.</b> The questionnaire cannot be opened by a client until a contact is
+      given access to it.</div>`}
+
+    ${picking ? `<div class="s-surface pad sec__note">
+      <div class="t-eyebrow rail__h">Choose a contact at ${esc(cl.short)}</div>
+      ${rows(cl.contacts.map((x) => row({
+        lead: icon("people", 17),
+        title: `<span class="b">${esc(x.name)}</span>`,
+        detail: `${esc(x.role)}${x.email ? ` · ${esc(x.email)}` : `  ·  <span style="color:var(--warn)">no e-mail on file</span>`}`,
+        side: btn("Assign", "assign-questionnaire", { size: "sm", variant: "primary", data: { id: x.id } }),
+      })).join(""))}
+      <div class="acts sec__note">
+        ${btn("Add a new client contact", "nav", { size: "sm", ic: "plus", data: { href: "#/client" } })}
+        ${btn("Cancel", "cancel-edit", { variant: "ghost", size: "sm" })}
+      </div>
+    </div>` : ""}
+  </section>`;
+}
+
 export function clientSurface() {
   const answeredNow = questionnaire.filter((q) => st.questionState(q) === "answer");
   const outstanding = questionnaire.filter((q) => !["answer"].includes(st.questionState(q)));
   const current = outstanding.find((q) => !S.answers[q.n]) || outstanding[0];
   const handled = questionnaire.filter((q) => S.answers[q.n]);
   const pct = Math.round((answeredNow.length / questionnaire.length) * 100);
+  const assigned = st.questionnaireTo("revenue");
+  const recipient = assigned && assigned.contact;
 
   const outcome = (q) => {
     const a = S.answers[q.n];
@@ -431,9 +479,10 @@ export function clientSurface() {
         </svg></span>
       <div>
         <div class="b">Revenue — a few questions</div>
-        <div class="t-meta">for ${esc(firm.name)} · ${esc(client.name)}</div>
+        <div class="t-meta">for ${esc(firm.name)} · ${esc(st.activeClient().name)}</div>
       </div>
       <span class="sp"></span>
+      ${recipient ? `<span class="t-meta nowrap">${esc(recipient.name)}</span>` : ""}
       <span class="t-meta nowrap">${answeredNow.length} of ${questionnaire.length}</span>
       ${btn("Auditor view", "nav", { size: "sm", variant: "ghost", data: { href: "#/interview" } })}
     </header>
@@ -442,8 +491,8 @@ export function clientSurface() {
       <div class="cq__prog" style="margin-bottom:36px"><i style="width:${pct}%"></i></div>
 
       <p class="t-lede" style="margin-bottom:44px">
-        Bas — these are about how sales get recorded. Answer in your own words; there are no wrong
-        answers, and you can stop and come back.
+        ${esc(recipient ? recipient.name.split(" ")[0] : "Hello")} — these are about how sales get
+        recorded. Answer in your own words; there are no wrong answers, and you can stop and come back.
       </p>
 
       ${current && !S.answers[current.n] ? `

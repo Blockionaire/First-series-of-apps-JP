@@ -17,6 +17,7 @@ const SRC_IC = { transcript: "transcript", client_answer: "questionnaire", prior
                  access_log: "system", assurance_report: "document", auditor_note: "note" };
 import * as st from "../state.js";
 import { screen } from "./shell.js";
+import { questionnaireRecipient } from "./complete.js";
 
 const S = st.S;
 
@@ -198,6 +199,8 @@ export function interview() {
     <section class="sec--loose">
       ${more("meth", "Show methodology", methodology(), S.disclosed.meth)}
     </section>
+
+    ${questionnaireRecipient()}
 
     <hr class="rule">
     <section class="sec">

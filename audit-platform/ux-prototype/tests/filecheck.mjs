@@ -10,7 +10,7 @@ let fails = 0;
 const ok = (n,c,x='')=>{console.log((c?'  PASS ':'  FAIL ')+n+(x?'  ['+x+']':''));if(!c)fails++;};
 ok('the bundle boots from file://', (await p.locator('#app').innerText()).includes('Good morning'));
 ok('route integrity clean', JSON.stringify(await p.evaluate(() => window.__checkRoutes())) === '[]');
-for (const r of ['#/engagement','#/revenue','#/prepare','#/interview','#/understanding','#/controls','#/trace','#/testing','#/complete','#/resolve','#/matrix','#/questionnaire','#/cockpit']) {
+for (const r of ['#/engagement','#/revenue','#/prepare','#/interview','#/understanding','#/controls','#/trace','#/testing','#/complete','#/resolve','#/matrix','#/questionnaire','#/cockpit','#/clients','#/client','#/client/new','#/engagement/new','#/people']) {
   await p.evaluate(x => location.hash = x, r); await p.waitForTimeout(150);
   const n = (await p.locator('#app').innerText()).length;
   if (n < 200) { console.log('  FAIL thin render at ' + r); fails++; }

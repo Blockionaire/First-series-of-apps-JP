@@ -161,6 +161,48 @@ quiet 320px rail. The person is the subject of the screen, which is the point.
 
 ---
 
+## The setup layer (added after V3)
+
+Five screens above the engagement, in the same V3 system — see `SETUP-LAYER-V1.md` for the model.
+
+**Clients** · a searchable list, not a CRM dashboard. One row per client with the live engagement's
+state as a tag. Designed for hundreds: search first, no cards.
+
+**Client detail** · the permanent home of the client. Profile as a quiet row group; engagements,
+contacts and systems as their own sections with inline add forms. Contacts carry a `client contact`
+tag on every row, because the one thing this screen must never imply is that adding a person creates
+an account.
+
+**New client** · a single page in five labelled groups, not a wizard. Only the legal name is
+required; the primary is disabled until it is there.
+
+**New engagement** · three stages, using the trace ribbon component as the stage indicator — the
+same shape that shows progress through a transaction now shows progress through a form, which is
+reuse rather than a new pattern. Team and scope are selectable cards; everything else is defaulted
+from the client.
+
+**Firm people** · a structured list with audit role and access level in separate tags, and a callout
+saying plainly that authentication is not built.
+
+**Navigation** · no sidebar was added. Clients is reached from Work and ⌘K; firm people from a new
+avatar menu. The process journey correctly does not render on any of the five.
+
+### What is weak about it
+
+1. **The engagement stage indicator is borrowed.** Reusing the trace ribbon is efficient and reads
+   fine, but a form is not a transaction and the component's vocabulary (*corroborated*, *tracing
+   now*) is one caption away from leaking into a setup screen.
+2. **Client detail is long.** Four sections down a reading column, and it will only get longer.
+   Above 1200px it wants two columns.
+3. **Inline add forms appear in place and push content down.** Correct behaviour, slightly abrupt
+   motion — they get the standard rise, nothing more.
+4. **Engagement rows on Work now list every engagement including closed ones.** Honest, but the
+   Work screen's job is what needs you today, and four rows is already one more than it wants.
+5. **The non-canonical Revenue state is a callout, not a designed screen.** It says the right thing
+   and it is not beautiful.
+
+---
+
 ## What is still not good enough
 
 Honest list. None of these are blocking, all of them are real.

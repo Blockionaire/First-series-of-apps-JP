@@ -321,7 +321,30 @@ svg { display: block; flex: none; }
   width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #eef2ee;
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 11.5px; font-weight: 650; letter-spacing: .02em; flex: none;
+  transition: box-shadow var(--t-fast) var(--ease);
 }
+button.avatar:hover { box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* The avatar menu — the only firm-level destination in the product */
+.menu-scrim { position: fixed; inset: 0; z-index: 90; }
+.menu {
+  position: absolute; top: 48px; right: var(--s-5); z-index: 91; width: 264px;
+  background: var(--paper); border-radius: var(--r-3); box-shadow: var(--sh-3);
+  padding: var(--s-2); animation: rise var(--t-base) var(--ease);
+}
+.menu__hd { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3); }
+.menu__n { display: block; font-size: 14px; font-weight: 600; color: var(--ink); }
+.menu__r { display: block; font-size: 12px; color: var(--ink-4); margin-top: 2px; }
+.menu__i {
+  display: flex; align-items: center; gap: var(--s-3); width: 100%; padding: 9px var(--s-3);
+  border-radius: var(--r-2); font-size: 14.5px; color: var(--ink-2);
+  transition: background var(--t-fast);
+}
+.menu__i:hover { background: var(--recessed); color: var(--ink); }
+.menu__i svg { color: var(--ink-4); flex: none; }
+.menu__i.is-off { color: var(--ink-5); }
+.menu__i.is-off:hover { background: none; cursor: default; }
+.menu__sep { height: 1px; background: var(--line); margin: var(--s-2) var(--s-3); }
 
 /* ==========================================================================
    PROCESS JOURNEY
@@ -897,6 +920,8 @@ textarea.field { font: 16px/1.7 var(--serif); resize: vertical; min-height: 108p
 select.field { cursor: pointer; }
 .flabel { display: block; margin-bottom: 6px; }
 .fgroup + .fgroup { margin-top: var(--s-4); }
+.grid2 + .grid2, .fgroup + .grid2, .grid2 + .fgroup { margin-top: var(--s-4); }
+.grid2 .fgroup + .fgroup { margin-top: var(--s-4); }
 
 /* ==========================================================================
    OVERLAYS

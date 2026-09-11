@@ -8,11 +8,6 @@ import { client, user, engagement } from "../data-sources.js";
 import * as st from "../state.js";
 import { header } from "./shell.js";
 
-const ENGAGEMENTS = [
-  { name: "Meerveld Zorggroep", detail: "FY2026 · Interim not started", side: "—", act: "mock" },
-  { name: "Brekelmans Bouw B.V.", detail: "FY2025 · Signed 22 May 2026", side: "closed", act: "mock" },
-];
-
 export function work() {
   const next = st.nextAction();
   const n = st.narrativeSummary();
@@ -84,7 +79,7 @@ export function work() {
       ${waiting.length ? rows(waiting.map((x) => row({
         lead: icon(x.ic, 17),
         title: esc(x.t), detail: esc(x.d),
-        side: `<span class="t-meta">${esc(client.short)} · Revenue</span>`,
+        side: `<span class="t-meta">${esc(st.activeClient().short)} · Revenue</span>`,
         action: "nav", data: { href: x.href },
         mod: x.tone === "alert" ? "conflict" : x.tone === "warn" ? "attn" : "",
       })).join(""))
@@ -92,23 +87,29 @@ export function work() {
     </section>
 
     <section class="sec--loose">
-      <div class="sec__h"><h2 class="t-eyebrow">Engagements</h2></div>
-      ${rows(`
-        ${row({
+      <div class="sec__h">
+        <h2 class="t-eyebrow">Engagements</h2>
+        <span class="sp"></span>
+        ${btn("All clients", "nav", { variant: "ghost", size: "sm", data: { href: "#/clients" } })}
+      </div>
+      ${rows(st.allEngagements().map((e) => {
+        const c = st.clientById(e.clientId);
+        const live = st.isCanonical(e);
+        const active = e.id === st.S.engId;
+        return row({
           lead: icon("process", 17),
-          title: `<span class="b">${esc(client.name)}</span>`,
-          detail: `FY2026 · Interim · Revenue — ${esc(prog.current.name)}`,
-          side: `<span class="b ink2">Step ${prog.current.n} of 7</span>
-                 <div class="t-meta">${cov.pct}% understood</div>`,
-          action: "nav", data: { href: "#/engagement" },
-        })}
-        ${ENGAGEMENTS.map((e) => row({
-          lead: icon("process", 17),
-          title: `<span class="b ink3">${esc(e.name)}</span>`,
-          detail: esc(e.detail),
-          side: `<span class="t-meta">${esc(e.side)}</span>`,
-          action: e.act,
-        })).join("")}`)}
+          title: `<span class="${live || active ? "b" : "b ink3"}">${esc(c ? c.name : e.clientId)}</span>`,
+          detail: `${esc(e.fy)} · ${esc(e.type)} · ${
+            e.phase === "complete" ? "completed"
+            : e.phase === "interim" ? `Interim · Revenue — ${esc(prog.current.name)}`
+            : `${esc(e.phase)} in progress`}`,
+          side: live
+            ? `<span class="b ink2">Step ${prog.current.n} of 7</span>
+               <div class="t-meta">${cov.pct}% understood</div>`
+            : `<span class="t-meta">${e.phase === "complete" ? "closed" : "—"}</span>`,
+          action: "open-engagement", data: { id: e.id },
+        });
+      }).join(""))}
     </section>
 
     <section class="sec--loose">

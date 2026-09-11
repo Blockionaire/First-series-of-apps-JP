@@ -7,7 +7,8 @@ p.on('console', m => { if (m.type() === 'error') errs.push('CONSOLE ' + m.text()
 await p.goto('http://localhost:8765/index.html#/'); await p.waitForTimeout(500);
 
 const routes = ['#/', '#/engagement', '#/revenue', '#/prepare', '#/interview', '#/understanding',
-  '#/controls', '#/trace', '#/testing', '#/complete', '#/resolve', '#/matrix', '#/questionnaire', '#/cockpit'];
+  '#/controls', '#/trace', '#/testing', '#/complete', '#/resolve', '#/matrix', '#/questionnaire', '#/cockpit',
+  '#/clients', '#/client', '#/client/new', '#/engagement/new', '#/people'];
 for (const r of routes) {
   await p.evaluate(x => { location.hash = x; }, r);
   await p.waitForTimeout(180);

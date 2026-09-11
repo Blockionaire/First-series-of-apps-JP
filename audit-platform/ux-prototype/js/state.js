@@ -12,6 +12,11 @@
 import { subProcesses, narrative, risks, controls, gaps, openItems } from "./data-model.js";
 import { questionnaire, recordAnswerEvidence, clearSessionEvidence,
          sessionEvidence } from "./data-sources.js";
+import { firmUsers as firmUsersSeed, clients as clientsSeed,
+         engagements as engagementsSeed, processParticipants as participantsSeed,
+         processSystems as processSystemsSeed,
+         questionnaireAssignments as questionnaireSeed,
+         processCatalogue, PHASES, fyFromPeriodEnd } from "./data-firm.js";
 import { journey, processSteps, processFindings, traceFindings, transactions, txnById,
          variants, stepsForVariant, lineWalkRequirements,
          controlTest as controlTestPack, reviewPointLibrary,
@@ -22,10 +27,31 @@ const DECISIONS = ["blocks", "sections", "coverage", "factOverrides", "controlDe
                    "controlCarry", "findingDecisions", "itemStates", "itemCarry",
                    "traceDecisions", "traceTxn", "traceStarted", "traceConcluded", "lwRequirements",
                    "testScope", "controlTests", "answers", "signOff", "reviewPoints",
-                   "prepared"];
+                   "prepared", "firmUsers", "clients", "engagements", "participants",
+                   "procSystems", "questionnaireTo"];
+
+const clone = (x) => JSON.parse(JSON.stringify(x));
 
 const initial = () => ({
   route: "#/",
+
+  /* --- The setup layer ---------------------------------------------------
+     Session-mutable copies of the seed, so a client or engagement created in
+     the prototype behaves like a real record until reset. */
+  firmUsers: clone(firmUsersSeed),
+  clients: clone(clientsSeed),
+  engagements: clone(engagementsSeed),
+  participants: clone(participantsSeed),     // "engId::procId" -> [{ contactId, role }]
+  procSystems: clone(processSystemsSeed),    // "engId::procId" -> [systemId]
+  questionnaireTo: clone(questionnaireSeed), // "engId::procId" -> { contactId, ... }
+
+  /* What the whole application is currently pointed at. The canonical
+     Vandersteen FY2026 engagement, so the prototype opens usable. */
+  engId: "ENG-2026-0142",
+  clientId: "CL-0142",
+  draft: {},               // in-flight new-client / new-engagement form
+  menu: false,             // the avatar menu
+  clientQuery: "",
   /* Step 3 — the process understanding is drafted. */
   generated: false,
   generating: false,
@@ -139,6 +165,86 @@ export function commit(label, undoable = false) {
   if (label) { S.toast = { label, undoable }; scheduleToastClear(); }
   renderFn();
 }
+
+
+/* ============================================================================
+   THE SETUP LAYER — firm, clients, engagements, people
+   ==========================================================================
+   Three kinds of people stay apart here as strictly as in the data:
+   `firmUsers` are colleagues who use Audit AI; `contacts` belong to a client
+   and never become accounts; `questionnaireTo` is a task-scoped grant.
+   ========================================================================== */
+
+export const firmUsers = () => S.firmUsers;
+export const firmUser = (id) => S.firmUsers.find((u) => u.id === id) || null;
+export const me = () => S.firmUsers.find((u) => u.isMe) || S.firmUsers[0];
+
+export const allClients = () => S.clients;
+export const clientById = (id) => S.clients.find((c) => c.id === id) || null;
+
+export const allEngagements = () => S.engagements;
+export const engagementById = (id) => S.engagements.find((e) => e.id === id) || null;
+export const engagementsFor = (clientId) =>
+  S.engagements.filter((e) => e.clientId === clientId)
+    .sort((a, b) => b.fy.localeCompare(a.fy));
+
+/** The engagement the whole application is pointed at. Everything dynamic —
+ *  breadcrumb, headers, financial year — reads from here, never from a literal. */
+export const activeEngagement = () => engagementById(S.engId) || S.engagements[0];
+export const activeClient = () => clientById(activeEngagement()?.clientId) || S.clients[0];
+
+/** The client whose detail page is open, which is not always the active one. */
+export const shownClient = () => clientById(S.clientId) || activeClient();
+
+/** Only the canonical engagement has a methodology pack, a transcript and
+ *  evidence loaded. Everything else is a real record with no work behind it. */
+export const isCanonical = (e = activeEngagement()) => !!e?.canonical;
+
+export const engProcesses = (e = activeEngagement()) =>
+  (e?.processes || []).map((id) => processCatalogue.find((p) => p.id === id)).filter(Boolean);
+
+export const engTeam = (e = activeEngagement()) =>
+  (e?.team || []).map((t) => ({ ...t, user: firmUser(t.userId) })).filter((t) => t.user);
+
+export const phaseStates = (e = activeEngagement()) => {
+  const order = PHASES.map((p) => p.id);
+  const at = order.indexOf(e?.phase === "complete" ? "completion" : e?.phase || "planning");
+  return PHASES.map((p, i) => ({
+    ...p,
+    state: e?.phase === "complete" ? "done" : i < at ? "done" : i === at ? "on" : "later",
+    detail: e?.phaseDetail?.[p.id] || "",
+  }));
+};
+
+/* --- Client contacts and systems, and what a process uses of them ---------- */
+
+export const contactById = (cid, clientId = activeClient()?.id) =>
+  (clientById(clientId)?.contacts || []).find((c) => c.id === cid) || null;
+export const systemById = (sid, clientId = activeClient()?.id) =>
+  (clientById(clientId)?.systems || []).find((x) => x.id === sid) || null;
+
+const pkey = (proc = "revenue", e = S.engId) => `${e}::${proc}`;
+
+/** Contacts the auditor has marked relevant to this process, with their role
+ *  on it. Client-level records, selected here — never duplicated. */
+export function procParticipants(proc = "revenue") {
+  return (S.participants[pkey(proc)] || [])
+    .map((p) => ({ ...p, contact: contactById(p.contactId) }))
+    .filter((p) => p.contact);
+}
+export function procSystemsFor(proc = "revenue") {
+  return (S.procSystems[pkey(proc)] || []).map((id) => systemById(id)).filter(Boolean);
+}
+/** The named reviewer and partner on the active engagement, for sign-off copy. */
+export const reviewerName = () =>
+  engTeam().find((t) => t.role === "Manager")?.user.name || "the manager";
+export const partnerName = () =>
+  engTeam().find((t) => t.role === "Partner")?.user.name || "the engagement partner";
+
+export const questionnaireTo = (proc = "revenue") => {
+  const a = S.questionnaireTo[pkey(proc)];
+  return a ? { ...a, contact: contactById(a.contactId) } : null;
+};
 
 /* --- Claim state ------------------------------------------------------------ */
 
@@ -870,6 +976,181 @@ export function nextAction() {
 export const act = {
   go(href) { location.hash = href; },
   toast(label) { commit(label); },
+
+
+  /* --- The setup layer ---------------------------------------------------
+     Everything here writes to session state. No backend, no persistence, and
+     nothing here claims to send an email or create an account.
+     -------------------------------------------------------------------- */
+
+  openMenu() { S.menu = !S.menu; commit(); },
+  closeMenu() { S.menu = false; commit(); },
+  clientQuery(q) { S.clientQuery = q; commit(); },
+
+  /** Point the whole application at an engagement. Breadcrumb, headers and
+   *  financial year all follow from this one value. */
+  selectEngagement(id) {
+    const e = engagementById(id);
+    if (!e) return;
+    S.engId = id; S.clientId = e.clientId;
+    S.menu = false;
+    commit();
+  },
+  openClient(id) { S.clientId = id; S.menu = false; commit(); },
+
+  /* --- Drafts ------------------------------------------------------------ */
+  draft(field, value) { S.draft = { ...S.draft, [field]: value }; commit(); },
+  draftMany(obj) { S.draft = { ...S.draft, ...obj }; commit(); },
+  clearDraft() { S.draft = {}; commit(); },
+  draftStage(n) { S.draft = { ...S.draft, stage: n }; commit(); },
+  /** Toggle membership of an array field on the draft — processes, team. */
+  draftToggle(field, value) {
+    const cur = S.draft[field] || [];
+    S.draft = { ...S.draft, [field]: cur.includes(value)
+      ? cur.filter((x) => x !== value) : [...cur, value] };
+    commit();
+  },
+
+  /* --- Clients ----------------------------------------------------------- */
+  createClient(d) {
+    checkpoint("client created");
+    const id = `CL-${String(1000 + S.clients.length * 7).slice(-4)}`;
+    const short = (d.short || d.name || "").replace(/\s+(B\.V\.|N\.V\.|B\.V|Ltd|GmbH)\.?$/i, "").trim();
+    const c = {
+      id, name: d.name, short: short || d.name,
+      country: d.country || "Netherlands", city: d.city || "",
+      sector: d.sector || "", sectorShort: (d.sector || "").split("—")[0].trim(),
+      framework: d.framework || "Dutch GAAP",
+      yearEnd: d.yearEnd || "31 December",
+      since: String(new Date().getFullYear()),
+      acceptance: "Not started", employees: null,
+      contacts: [], systems: [],
+    };
+    if (d.contactName) {
+      c.contacts.push({ id: `CC-${id}-1`, name: d.contactName,
+        role: d.contactRole || "Contact", email: d.contactEmail || "", department: "" });
+    }
+    if (d.systemName) {
+      c.systems.push({ id: `SY-${id}-1`, name: d.systemName,
+        role: d.systemRole || "Primary accounting system", owner: "" });
+    }
+    S.clients = [...S.clients, c];
+    S.clientId = id; S.draft = {};
+    commit(`${d.name} created`, true);
+    location.hash = "#/client";
+  },
+
+  addContact(clientId, d) {
+    checkpoint("contact added");
+    const c = clientById(clientId);
+    if (!c) return;
+    c.contacts = [...c.contacts, {
+      id: `CC-${clientId}-${c.contacts.length + 1}`,
+      name: d.name, role: d.role || "Contact", email: d.email || "",
+      department: d.department || "",
+    }];
+    S.draft = {};
+    commit(`${d.name} added as a client contact — not a platform account`, true);
+  },
+  addSystem(clientId, d) {
+    checkpoint("system added");
+    const c = clientById(clientId);
+    if (!c) return;
+    c.systems = [...c.systems, {
+      id: `SY-${clientId}-${c.systems.length + 1}`,
+      name: d.name, role: d.role || "", owner: d.owner || "", note: d.note || "",
+    }];
+    S.draft = {};
+    commit(`${d.name} added to the client profile`, true);
+  },
+
+  /* --- Engagements ------------------------------------------------------- */
+  createEngagement(clientId, d) {
+    checkpoint("engagement created");
+    const c = clientById(clientId);
+    if (!c) return;
+    const fy = d.fy || fyFromPeriodEnd(d.periodEnd);
+    const id = `ENG-${fy.replace("FY", "")}-${clientId.replace("CL-", "")}`;
+    const e = {
+      id, clientId, canonical: false,
+      fy, periodStart: d.periodStart || `1 January ${fy.replace("FY", "")}`,
+      periodEnd: d.periodEnd,
+      type: d.type || "Statutory audit",
+      framework: d.framework || c.framework,
+      materiality: d.materiality || "",
+      performanceMateriality: "",
+      phase: "planning",
+      phaseDetail: { planning: "In progress", interim: "", final: "", completion: "" },
+      team: (d.team || []).map((userId) => ({ userId, role: firmUser(userId)?.role || "Member" })),
+      processes: d.processes && d.processes.length ? d.processes : ["revenue"],
+    };
+    S.engagements = [...S.engagements, e];
+    S.engId = id; S.clientId = clientId; S.draft = {};
+    commit(`${fy} ${e.type.toLowerCase()} created for ${c.short}`, true);
+    location.hash = "#/engagement";
+  },
+
+  /* --- Firm people ------------------------------------------------------- */
+  inviteColleague(d) {
+    checkpoint("colleague added");
+    const id = `FU-${String(S.firmUsers.length + 1).padStart(2, "0")}`;
+    S.firmUsers = [...S.firmUsers, {
+      id, name: d.name, role: d.role || "Assistant", access: d.access || "Member",
+      email: d.email || "", joined: String(new Date().getFullYear()), pending: true,
+    }];
+    S.draft = {};
+    // Honest: nothing was sent. The record exists in this session and no more.
+    commit(`${d.name} added in the prototype — no invitation was sent`, true);
+  },
+  setAccess(id, access) {
+    checkpoint("access level changed");
+    const u = firmUser(id);
+    if (u) u.access = access;
+    commit(`${u ? u.name : id} is now ${access}`, true);
+  },
+
+  /* --- What a process uses of the client's people and systems ------------ */
+  toggleParticipant(contactId, proc = "revenue") {
+    checkpoint("process participants changed");
+    const k = `${S.engId}::${proc}`;
+    const cur = S.participants[k] || [];
+    S.participants[k] = cur.some((p) => p.contactId === contactId)
+      ? cur.filter((p) => p.contactId !== contactId)
+      : [...cur, { contactId, role: "Not yet contacted" }];
+    commit();
+  },
+  setParticipantRole(contactId, role, proc = "revenue") {
+    checkpoint("participant role set");
+    const k = `${S.engId}::${proc}`;
+    S.participants[k] = (S.participants[k] || []).map((p) =>
+      p.contactId === contactId ? { ...p, role } : p);
+    S.editing = null;
+    commit();
+  },
+  toggleProcSystem(systemId, proc = "revenue") {
+    checkpoint("process systems changed");
+    const k = `${S.engId}::${proc}`;
+    const cur = S.procSystems[k] || [];
+    S.procSystems[k] = cur.includes(systemId)
+      ? cur.filter((x) => x !== systemId) : [...cur, systemId];
+    commit();
+  },
+
+  /** A questionnaire grant is task-scoped access, not an account. */
+  assignQuestionnaire(contactId, proc = "revenue") {
+    checkpoint("questionnaire assigned");
+    S.questionnaireTo[`${S.engId}::${proc}`] = {
+      contactId, assignedOn: "11 September 2026", state: "assigned",
+    };
+    S.editing = null;
+    const c = contactById(contactId);
+    commit(`Questionnaire assigned to ${c ? c.name : contactId} — nothing was e-mailed`, true);
+  },
+  clearQuestionnaire(proc = "revenue") {
+    checkpoint("questionnaire unassigned");
+    delete S.questionnaireTo[`${S.engId}::${proc}`];
+    commit();
+  },
 
   /* palette + sheets */
   openPalette() { S.palette = true; S.palQuery = ""; S.palIx = 0; commit(); },

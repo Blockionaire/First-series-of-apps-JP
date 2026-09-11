@@ -22,6 +22,7 @@ import { testing } from "./views/testing.js";
 import { resolve } from "./views/resolve.js";
 import { complete, matrix, clientSurface } from "./views/complete.js";
 import { cockpit } from "./views/cockpit.js";
+import { clientsView, clientView, newClientView, newEngagementView, peopleView } from "./views/setup.js";
 
 window.__demoStart = demoStart;
 window.__demoSteps = STEPS.length;
@@ -48,10 +49,21 @@ const ROUTES = {
   "#/matrix": matrix,
   "#/questionnaire": clientSurface,
   "#/cockpit": cockpit,
+
+  /* The setup layer — above the engagement, so no process journey. */
+  "#/clients": clientsView,
+  "#/client": clientView,
+  "#/client/new": newClientView,
+  "#/engagement/new": newEngagementView,
+  "#/people": peopleView,
 };
 
 /* Screens that host a focus queue; leaving one drops out of it. */
 const FOCUS_ROUTES = ["#/understanding", "#/controls", "#/trace"];
+
+/* Above the engagement: no process journey, and leaving them clears any
+   half-finished setup form. */
+const SETUP_ROUTES = ["#/clients", "#/client", "#/client/new", "#/engagement/new", "#/people"];
 
 /* --- Overlays -------------------------------------------------------------- */
 
@@ -120,6 +132,8 @@ function render() {
   if (FOCUS_ROUTES.includes(lastRoute) && hash !== lastRoute) {
     S.reviewMode = "triage"; S.focusKind = null; S.focusIx = 0; S.editing = null;
   }
+  if (SETUP_ROUTES.includes(lastRoute) && hash !== lastRoute) { S.draft = {}; S.editing = null; }
+  if (hash !== lastRoute) S.menu = false;
   lastRoute = hash;
   S.route = hash;
   const view = ROUTES[hash] || work;
@@ -130,6 +144,10 @@ function render() {
   if (S.palette) {
     const inp = document.getElementById("pal-in");
     if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  }
+  const cq = document.getElementById("client-q");
+  if (cq && S.clientQuery && document.activeElement !== cq) {
+    cq.focus(); cq.setSelectionRange(cq.value.length, cq.value.length);
   }
   const gq = document.getElementById("grid-q");
   if (gq && S.gridQuery && document.activeElement !== gq) {
@@ -168,6 +186,52 @@ document.addEventListener("click", (e) => {
       } else location.hash = d.href;
       break;
     case "mock": act.toast("Mocked in this prototype — nothing is generated, sent or stored."); break;
+
+    /* --- setup layer -------------------------------------------------- */
+    case "open-menu": act.openMenu(); break;
+    case "close-menu": act.closeMenu(); break;
+    case "open-client": act.openClient(d.id); location.hash = "#/client"; break;
+    case "open-engagement": act.selectEngagement(d.id); location.hash = "#/engagement"; break;
+    case "edit-open": act.openEditor(d.id); break;
+    case "create-client": act.createClient({
+      name: val("name"), short: val("short"), sector: val("sector"),
+      country: sel("country"), city: val("city"),
+      framework: sel("framework"), yearEnd: val("yearEnd"),
+      contactName: val("contactName"), contactRole: val("contactRole"), contactEmail: val("contactEmail"),
+      systemName: val("systemName"), systemRole: val("systemRole"),
+    }); break;
+    case "save-contact": act.addContact(d.client, {
+      name: val("c-name"), role: val("c-role"), email: val("c-email"), department: val("c-dept"),
+    }); break;
+    case "save-system": act.addSystem(d.client, {
+      name: val("s-name"), role: val("s-role"), owner: val("s-owner"),
+    }); break;
+    case "eng-stage": {
+      // Capture stage 1 before leaving it, so Back does not lose the answers.
+      if (document.getElementById("fy")) act.draftMany({
+        fy: val("fy"), periodEnd: val("periodEnd"), type: sel("type"),
+        framework: sel("framework"), materiality: val("materiality"),
+      });
+      act.draftStage(Number(d.n));
+      break;
+    }
+    case "eng-team": act.draftToggle("team", d.id); break;
+    case "eng-proc": act.draftToggle("processes", d.id); break;
+    case "create-engagement": act.createEngagement(d.client, {
+      ...S.draft,
+      team: S.draft.team || [st.me().id],
+      processes: S.draft.processes || ["revenue"],
+    }); break;
+    case "save-colleague": act.inviteColleague({
+      name: val("i-name"), email: val("i-email"), role: sel("i-role"), access: sel("i-access"),
+    }); break;
+
+    /* --- what a process uses of the client's people and systems -------- */
+    case "toggle-participant": act.toggleParticipant(d.id); break;
+    case "participant-role": act.setParticipantRole(d.id, d.r); break;
+    case "toggle-proc-system": act.toggleProcSystem(d.id); break;
+    case "assign-questionnaire": act.assignQuestionnaire(d.id); break;
+    case "clear-questionnaire": act.clearQuestionnaire(); break;
 
     /* palette + sheets */
     case "palette": case "palette-eng": act.openPalette(); break;
@@ -296,9 +360,35 @@ document.addEventListener("click", (e) => {
 
 /* --- Palette typing --------------------------------------------------------- */
 
+document.addEventListener("change", (e) => {
+  const rf = e.target.dataset?.roleFor;
+  if (rf) { act.setParticipantRole(rf, e.target.value); return; }
+  if (e.target.dataset?.draft) syncDraft(e.target);
+});
+
+/* --- Setup forms ------------------------------------------------------------
+   A field marked `data-draft` writes straight into S.draft, silently. Nothing
+   re-renders while you type — a re-render would take the caret with it — so the
+   page is redrawn only when the validity of the primary action actually flips.
+   -------------------------------------------------------------------------- */
+function syncDraft(el) {
+  const wasValid = draftValid();
+  S.draft[el.dataset.draft] = el.value;
+  if (draftValid() !== wasValid) render();
+}
+
+function draftValid() {
+  if (S.route === "#/client/new") return (S.draft.name || "").trim().length > 1;
+  if (S.route === "#/engagement/new" && (S.draft.stage || 1) === 1)
+    return !!(S.draft.fy || "").trim() && !!(S.draft.periodEnd || "").trim();
+  return true;
+}
+
 document.addEventListener("input", (e) => {
   if (e.target.id === "pal-in") { S.palQuery = e.target.value; S.palIx = 0; render(); }
   if (e.target.id === "grid-q") { S.gridQuery = e.target.value; render(); }
+  if (e.target.id === "client-q") { S.clientQuery = e.target.value; render(); }
+  if (e.target.dataset?.draft) syncDraft(e.target);
 });
 
 /* --- Keyboard --------------------------------------------------------------- */

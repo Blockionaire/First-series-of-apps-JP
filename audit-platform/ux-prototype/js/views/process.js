@@ -5,8 +5,9 @@
    answers "where is this process?". */
 
 import { esc, cx, act as btn, row, rows, dot, icon, tag, callout, empty,
-         nextAction, card } from "../ui.js";
+         nextAction, card, more } from "../ui.js";
 import { client, engagement, sources } from "../data-sources.js";
+import { processCatalogue, PARTICIPANT_ROLES } from "../data-firm.js";
 import { journey, carriedContext, variants } from "../data-process.js";
 import * as st from "../state.js";
 import { idline, engContext, engScreen, screen } from "./shell.js";
@@ -17,75 +18,105 @@ const S = st.S;
 /* ── Engagement layer ────────────────────────────────────────────────────── */
 
 export function engagementView() {
+  const e = st.activeEngagement();
+  const c = st.activeClient();
   const prog = st.processProgress();
   const cov = st.coverageSummary();
+  const canonical = st.isCanonical(e);
+  const inScope = st.engProcesses(e);
 
-  const later = [
-    ["Purchasing", "Purchase-to-pay"], ["Payroll", "Hire-to-retire"],
-    ["Inventory", "Stock and costing"], ["Treasury", "Cash and financing"],
-    ["Financial close", "Close and reporting"],
-  ];
+  const procRow = (p) => {
+    const isRevenue = p.id === "revenue";
+    const live = isRevenue && canonical;
+    return row({
+      lead: icon("process", 17),
+      title: live ? `<span class="b">${esc(p.name)}</span>`
+        : `<span class="${isRevenue ? "b" : "ink3"}">${esc(p.name)}</span>`,
+      detail: live ? `${esc(prog.current.name)} — ${esc(prog.current.blurb)}`
+        : isRevenue ? "In scope · no sources loaded for this engagement in the prototype"
+        : esc(p.blurb),
+      side: live
+        ? `<span class="b ink2">Step ${prog.current.n} of 7</span>
+           <div class="t-meta">${cov.pct}% understood</div>`
+        : isRevenue ? tag("not started", "quiet") : tag("no methodology pack", "quiet"),
+      ...(live ? { action: "nav", data: { href: "#/revenue" } }
+        : isRevenue ? { action: "nav", data: { href: "#/revenue" } } : {}),
+    });
+  };
 
   const body = `
     <div class="head">
       <div class="head__row">
         <div>
-          <h1 class="t-display">${esc(client.name)}</h1>
+          <h1 class="t-display">${esc(c.name)}</h1>
           <p class="t-lede">
-            ${esc(engagement.period)} · ${esc(client.framework)} · materiality ${esc(engagement.materiality)}
+            ${esc(e.fy)} ${esc(e.type.toLowerCase())} · period end ${esc(e.periodEnd)} ·
+            ${esc(e.framework)}${e.materiality ? ` · materiality ${esc(e.materiality)}` : ""}
           </p>
+        </div>
+        <div class="acts">
+          ${btn("Client profile", "nav", { size: "sm", ic: "process", data: { href: "#/client" } })}
         </div>
       </div>
     </div>
 
+    ${!canonical ? `<section class="sec">${callout(`<b>This engagement has no loaded evidence.</b>
+      It is a real record — period, team and scope are yours — but the prototype ships a
+      methodology pack, a transcript and documents for one engagement only:
+      <b>Vandersteen FY2026</b>. The seven-step workflow will open and tell you the same thing
+      rather than inventing a process understanding.
+      <div class="acts sec__note">
+        ${btn("Open the populated demo engagement", "open-engagement",
+          { size: "sm", variant: "primary", data: { id: "ENG-2026-0142" } })}
+      </div>`, "warn")}</section>` : ""}
+
     <section class="sec">
       <div class="sec__h"><h2 class="t-eyebrow">Audit phases</h2></div>
       <div class="phases">
-        ${[["Planning", "done", "Signed 4 July 2026"],
-           ["Interim", "on", `Revenue · step ${prog.current.n} of 7`],
-           ["Final", "later", "From 12 January 2027"],
-           ["Completion", "later", ""]].map(([n, s, d]) => `
-          <div class="${cx("phase", "is-" + s)}">
-            <div class="phase__n">${esc(n)}</div>
-            <div class="phase__d">${esc(d || "Not started")}</div>
+        ${st.phaseStates(e).map((p) => `
+          <div class="${cx("phase", "is-" + p.state)}">
+            <div class="phase__n">${esc(p.name)}</div>
+            <div class="phase__d">${esc(p.detail ||
+              (p.state === "on" && canonical && p.id === "interim"
+                ? `Revenue · step ${prog.current.n} of 7` : p.state === "done" ? "Complete" : "Not started"))}</div>
           </div>`).join("")}
       </div>
     </section>
 
     <section class="sec--loose">
-      <div class="sec__h"><h2 class="t-h">Interim — processes</h2></div>
-      <p class="t-sub sec__h">
-        Each process is carried through the full interim workflow independently.
-        Only Revenue is in scope for the current methodology pack.</p>
-      ${rows(`
-        ${row({
-          lead: icon("process", 17),
-          title: `<span class="b">Revenue / order-to-cash</span>`,
-          detail: `${esc(prog.current.name)} — ${esc(prog.current.blurb)}`,
-          side: `<span class="b ink2">Step ${prog.current.n} of 7</span>
-                 <div class="t-meta">${cov.pct}% understood</div>`,
-          action: "nav", data: { href: "#/revenue" },
-        })}
-        ${later.map(([n, d]) => row({
-          lead: icon("process", 17),
-          title: `<span class="ink3">${esc(n)}</span>`,
-          detail: esc(d),
-          side: `<span class="t-meta">not started</span>`,
-        })).join("")}`)}
+      <div class="sec__h"><h2 class="t-h">Interim — processes in scope</h2></div>
+      <p class="t-sub sec__h measure">
+        ${inScope.length} of ${processCatalogue.length} processes are in scope. Each is carried
+        through the full interim workflow independently.</p>
+      ${rows(inScope.map(procRow).join(""))}
+      ${inScope.length < processCatalogue.length ? `<p class="t-meta sec__note">
+        Not in scope: ${esc(processCatalogue.filter((p) => !inScope.some((x) => x.id === p.id))
+          .map((p) => p.name).join(", "))}.</p>` : ""}
     </section>
 
     <section class="sec--loose">
-      <div class="sec__h"><h2 class="t-eyebrow">Team</h2></div>
-      <p class="inline-list">${engagement.team.map((t) =>
-        `<b>${esc(t.name)}</b> <span class="t-meta">${esc(t.role)}</span>`).join(" · ")}</p>
+      <div class="sec__h">
+        <h2 class="t-h">Audit team</h2>
+        <span class="sp"></span>
+        ${btn("Firm people", "nav", { variant: "ghost", size: "sm", data: { href: "#/people" } })}
+      </div>
+      ${st.engTeam(e).length ? rows(st.engTeam(e).map((t) => row({
+        lead: icon("people", 17),
+        title: `<span class="b">${esc(t.user.name)}</span>${t.user.isMe ? ` <span class="t-meta">you</span>` : ""}`,
+        detail: esc(t.user.email),
+        side: tag(t.role, t.role === "Partner" ? "accent" : "quiet"),
+      })).join(""))
+      : empty("No team assigned", "Somebody has to prepare and review the file.", "people")}
     </section>
 
-    ${callout(`<b>Where this sits.</b> Interim comes after the entity and process understanding and
-      the inherent risk factors, and before risk analysis and the final audit. This product covers
-      the interim work on a process. Risk analysis is the next phase and is deliberately outside it.`)}
+    <section class="sec--loose">
+      ${callout(`<b>Where this sits.</b> Interim comes after the entity and process understanding and
+        the inherent risk factors, and before risk analysis and the final audit. This product covers
+        the interim work on a process. Risk analysis is the next phase and is deliberately outside it.`)}
+    </section>
   `;
 
-  return engScreen(body);
+  return engScreen(body, { width: "reading" });
 }
 
 /* ── Revenue process home ────────────────────────────────────────────────── */
@@ -112,7 +143,7 @@ export function processHome() {
         <div>
           <h1 class="t-display">Revenue</h1>
           <p class="t-lede">
-            Order-to-cash, ${esc(client.short)} FY2026 interim.
+            Order-to-cash, ${esc(st.activeClient().short)} ${esc(st.activeEngagement().fy)} interim.
             ${S.analysed ? "The process as we understand it, and how far the work has got."
               : "The process as described so far. It fills in as the work progresses."}
           </p>
@@ -185,6 +216,10 @@ export function processHome() {
 
 export function prepare() {
   const cov = st.coverageSummary();
+  const cl = st.activeClient();
+  const eng = st.activeEngagement();
+  const parts = st.procParticipants("revenue");
+  const psys = st.procSystemsFor("revenue");
   const KIND_IC = { "Inherent risk factor": "finding", "Entity-level": "process",
                     "Systems in scope": "system", "Prior year": "clock" };
 
@@ -194,7 +229,7 @@ export function prepare() {
         <div>
           <h1 class="t-display">Prepare</h1>
           <p class="t-lede">
-            What we already know about Revenue at ${esc(client.short)}, and who we need to speak to.
+            What we already know about Revenue at ${esc(st.activeClient().short)}, and who we need to speak to.
             Everything here came from the prior year, the engagement file or documents already
             supplied — interim receives this work, it does not redo it.
           </p>
@@ -206,7 +241,10 @@ export function prepare() {
     <section class="sec">
       <div class="sec__h"><h2 class="t-eyebrow">Scope</h2></div>
       ${rows(`
-        ${row({ lead: icon("process", 17), title: "Process",
+        ${row({ lead: icon("process", 17), title: "Engagement",
+          detail: `${esc(eng.fy)} ${esc(eng.type.toLowerCase())} · period end ${esc(eng.periodEnd)} · ${esc(eng.framework)}`,
+          side: tag("interim", "accent"), action: "nav", data: { href: "#/engagement" } })}
+        ${row({ lead: icon("map", 17), title: "Process",
           detail: "Revenue — three process variants across two revenue streams",
           side: tag("in scope", "accent") })}
         ${variants.map((v) => row({
@@ -247,21 +285,81 @@ export function prepare() {
     </section>
 
     <section class="sec--loose">
-      <div class="grid2">
-        <div>
-          <div class="sec__h"><h2 class="t-eyebrow">Systems</h2></div>
-          ${rows(client.systems.map((sy) => row({
-            lead: icon("system", 17),
-            title: `<span class="b">${esc(sy.name)}</span>`, detail: esc(sy.role) })).join(""))}
-        </div>
-        <div>
-          <div class="sec__h"><h2 class="t-eyebrow">People</h2></div>
-          ${rows(client.contacts.map((c) => row({
-            lead: icon("people", 17),
-            title: `<span class="b">${esc(c.name)}</span>`, detail: esc(c.role),
-            side: c.tag ? tag(c.tag, "ok", "check") : `<span class="t-meta">not yet contacted</span>` })).join(""))}
-        </div>
+      <div class="sec__h">
+        <h2 class="t-h">People relevant to Revenue</h2>
+        <span class="sp"></span>
+        ${btn("Client profile", "nav", { variant: "ghost", size: "sm", data: { href: "#/client" } })}
       </div>
+      <p class="t-sub sec__h measure">
+        Selected from ${esc(cl.short)}'s client contacts. The client record is the source of truth —
+        this chooses who matters to this process, and what they are to it.</p>
+
+      ${parts.length ? rows(parts.map((p) => row({
+        lead: icon("people", 17),
+        title: `<span class="b">${esc(p.contact.name)}</span>`,
+        detail: `${esc(p.contact.role)}${p.contact.email ? ` · ${esc(p.contact.email)}` : ""}`,
+        side: `${S.editing === `pr:${p.contactId}`
+          ? `<select class="field" id="pr-role" data-role-for="${esc(p.contactId)}" style="width:210px">
+              ${PARTICIPANT_ROLES.map((r) => `<option${r === p.role ? " selected" : ""}>${esc(r)}</option>`).join("")}
+            </select>`
+          : `<button class="tag tag--quiet" data-act="edit-open" data-id="pr:${esc(p.contactId)}">${esc(p.role)}</button>`}
+          ${btn("Remove", "toggle-participant", { variant: "ghost", size: "sm", data: { id: p.contactId } })}`,
+      })).join(""))
+      : empty("Nobody selected yet", "Choose from the client's contacts below.", "people")}
+
+      ${more("addpeople", `Add someone from ${cl.short}'s contacts`, `<div class="meth">
+        ${cl.contacts.filter((x) => !parts.some((p) => p.contactId === x.id)).length
+          ? cl.contacts.filter((x) => !parts.some((p) => p.contactId === x.id)).map((x) => `
+            <div class="row meth__row">
+              <span class="ink4">${icon("people", 16)}</span>
+              <span style="flex:1"><b>${esc(x.name)}</b> <span class="t-meta">${esc(x.role)}</span></span>
+              ${btn("Add to Revenue", "toggle-participant", { size: "sm", data: { id: x.id } })}
+            </div>`).join("")
+          : `<p class="t-meta">Every contact on the client record is already on this process.</p>`}
+        <div class="acts" style="margin-top:14px">
+          ${btn("Add a new client contact", "nav", { size: "sm", ic: "plus", data: { href: "#/client" } })}
+        </div>
+        <p class="t-meta" style="margin-top:10px">A new contact is added to the client profile, not
+        to this process only — one person, one record.</p>
+      </div>`, S.disclosed.addpeople)}
+    </section>
+
+    <section class="sec--loose">
+      <div class="sec__h"><h2 class="t-h">Systems relevant to Revenue</h2></div>
+      <p class="t-sub sec__h measure">
+        From the systems on the client record. Revenue does not need all of them.</p>
+      ${psys.length ? rows(psys.map((x) => row({
+        lead: icon("system", 17),
+        title: `<span class="b">${esc(x.name)}</span>`,
+        detail: `${esc(x.role)}${x.note ? ` · ${esc(x.note)}` : ""}`,
+        side: btn("Remove", "toggle-proc-system", { variant: "ghost", size: "sm", data: { id: x.id } }),
+      })).join(""))
+      : empty("No systems selected", "Choose from the client's systems below.", "system")}
+
+      ${more("addsys", `Add a system from the client profile`, `<div class="meth">
+        ${cl.systems.filter((x) => !psys.some((p) => p.id === x.id)).length
+          ? cl.systems.filter((x) => !psys.some((p) => p.id === x.id)).map((x) => `
+            <div class="row meth__row">
+              <span class="ink4">${icon("system", 16)}</span>
+              <span style="flex:1"><b>${esc(x.name)}</b> <span class="t-meta">${esc(x.role)}</span></span>
+              ${btn("Add to Revenue", "toggle-proc-system", { size: "sm", data: { id: x.id } })}
+            </div>`).join("")
+          : `<p class="t-meta">Every system on the client record is already on this process.</p>`}
+        <div class="acts" style="margin-top:14px">
+          ${btn("Add a new client system", "nav", { size: "sm", ic: "plus", data: { href: "#/client" } })}
+        </div>
+      </div>`, S.disclosed.addsys)}
+    </section>
+
+    <section class="sec--loose">
+      <div class="sec__h">
+        <h2 class="t-h">Audit team on this engagement</h2>
+        <span class="sp"></span>
+        ${btn("Engagement", "nav", { variant: "ghost", size: "sm", data: { href: "#/engagement" } })}
+      </div>
+      <p class="t-sub sec__h measure">Auditors, not client people. The two never mix.</p>
+      <p class="inline-list">${st.engTeam().map((t) =>
+        `<b>${esc(t.user.name)}</b> <span class="t-meta">${esc(t.role)}</span>`).join(" · ")}</p>
     </section>
 
     <section class="sec--loose">

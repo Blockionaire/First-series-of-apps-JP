@@ -18,6 +18,10 @@ const preTrace = (txnId, n) => {
 };
 
 export const STEPS = [
+  { route: "#/clients", title: "The hierarchy above Revenue is real",
+    say: "Firms manage clients here, and a client carries its contacts, its systems and one engagement per financial year. Creating a client, creating FY2027, assigning the team and scoping the processes all happen above the workflow — for the demo we walk into an engagement already in progress.",
+    setup: () => { act.selectEngagement("ENG-2026-0142"); } },
+
   { route: "#/engagement", title: "Interim sits inside an engagement",
     say: "Client, financial year, the four audit phases, and six processes inside interim. Revenue is one process among several — this is not a Revenue application, it is where process-level interim work happens.",
     setup: () => {} },
@@ -103,8 +107,8 @@ export function demoBar() {
 }
 
 /** Two beats run a pipeline for real: step 3 documents, step 4 analyses. */
-const UNDERSTANDING_BEAT = 4;
-const ANALYSIS_BEAT = 7;
+const UNDERSTANDING_BEAT = 5;
+const ANALYSIS_BEAT = 8;
 
 export function demoGo(step) {
   S.demoStep = Math.max(0, Math.min(STEPS.length - 1, step));

@@ -1,6 +1,6 @@
 # Tests
 
-Five Playwright suites, run against Chromium. They exist because the prototype has real state now
+Six Playwright suites, run against Chromium. They exist because the prototype has real state now
 and a screenshot cannot tell you whether a gate is honest.
 
 ```
@@ -22,6 +22,7 @@ if yours is elsewhere.
 | `ui-walk.mjs` | The same journey through the interface — clicks and keystrokes only — from Prepare to reviewer approval, plus the twelve-beat demo. |
 | `filecheck.mjs` | `audit-ai-prototype.html` boots and works from `file://`, which is how design partners will open it. |
 | `undo-reset.mjs` | Every decision the later passes added is undoable, session evidence is undone with the answer that created it, and reset returns a valid start state. |
+| `setup-tests.mjs` | The setup layer: creating a client, adding a contact and a system, the three-stage new-engagement flow, financial year propagating as real state, firm people staying separate from client contacts, and Prepare consuming the client record. |
 
 `tests/` is prototype tooling. It is not a production test strategy, and nothing here touches
 `audit-engine`.

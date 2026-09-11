@@ -103,9 +103,24 @@ function index() {
   Object.values(sources).forEach((s) =>
     add("Sources", s.name, s.detail, () => { location.hash = "#/interview"; }));
 
-  add("Engagements", client.name, "FY2026 interim · Revenue", () => { location.hash = "#/engagement"; });
-  add("Engagements", "Meerveld Zorggroep", "FY2026 · not started", () => { location.hash = "#/"; });
-  add("Engagements", "Brekelmans Bouw B.V.", "FY2025 · signed", () => { location.hash = "#/"; });
+  add("Go to", "Clients", `${st.allClients().length} clients`, () => { location.hash = "#/clients"; }, "process");
+  add("Go to", "Firm people", `${st.firmUsers().length} colleagues`, () => { location.hash = "#/people"; }, "people");
+  add("Do", "New client", "create a client profile", () => { location.hash = "#/client/new"; }, "plus");
+  add("Do", "New engagement", "a financial year for a client", () => { location.hash = "#/engagement/new"; }, "plus");
+
+  st.allEngagements().forEach((e) => {
+    const c = st.clientById(e.clientId);
+    add("Engagements", `${c ? c.short : e.clientId} · ${e.fy}`,
+      `${e.type}${e.id === st.S.engId ? " · open" : ""}`,
+      () => { st.act.selectEngagement(e.id); location.hash = "#/engagement"; }, "process");
+  });
+
+  st.allClients().forEach((c) =>
+    add("Clients", c.name, `${c.city || c.country} · ${c.sectorShort || ""}`,
+      () => { st.act.openClient(c.id); location.hash = "#/client"; }, "process"));
+
+  st.firmUsers().forEach((u) =>
+    add("Firm people", u.name, `${u.role} · ${u.access}`, () => { location.hash = "#/people"; }, "people"));
 
   return items;
 }
@@ -133,6 +148,7 @@ export function matches() {
 }
 
 const GROUP_IC = {
+  Clients: "process", "Firm people": "people",
   Steps: "step", "Go to": "arrow", Do: "check", "Process steps": "map", Sections: "document",
   Controls: "control", Findings: "finding", "Risk signals (carried forward)": "finding",
   Coverage: "question", "Open items": "question", "Process variants": "variant",

@@ -7,10 +7,34 @@
    own state, and a step that has not started says why. */
 
 import { esc, cx, icon } from "../ui.js";
-import { client, user } from "../data-sources.js";
+import { firm } from "../data-sources.js";
 import * as st from "../state.js";
 
 const initials = (n) => n.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+
+/* --- The avatar menu -------------------------------------------------------
+   The only place firm-level destinations live. No admin sidebar: the setup
+   layer is reached from here and from Clients, and nowhere else.
+   -------------------------------------------------------------------------- */
+const menu = () => !st.S.menu ? "" : `
+  <div class="menu-scrim" data-act="close-menu"></div>
+  <div class="menu">
+    <div class="menu__hd">
+      <span class="avatar">${esc(initials(st.me().name))}</span>
+      <span>
+        <span class="menu__n">${esc(st.me().name)}</span>
+        <span class="menu__r">${esc(st.me().role)} · ${esc(st.me().access)} · ${esc(firm.name)}</span>
+      </span>
+    </div>
+    <button class="menu__i" data-act="mock">${icon("user", 16)}Profile</button>
+    <button class="menu__i" data-act="nav" data-href="#/people">${icon("people", 16)}Firm people</button>
+    <button class="menu__i is-off" data-act="mock">${icon("system", 16)}Firm settings
+      <span class="t-meta" style="margin-left:auto">future</span></button>
+    <div class="menu__sep"></div>
+    <button class="menu__i" data-act="keys">${icon("keyboard", 16)}Keyboard shortcuts
+      <span class="t-meta" style="margin-left:auto">?</span></button>
+    <button class="menu__i" data-act="reset">${icon("undo", 16)}Reset the prototype</button>
+  </div>`;
 
 /* --- The wordmark ------------------------------------------------------------
    A ledger rule with a check through it: the file, and the work on it. Drawn
@@ -26,15 +50,21 @@ const wordmark = () => `
     <span class="mark__t">Audit AI</span>
   </button>`;
 
-/** Client › FY › Interim › Revenue — each segment navigates up a layer. */
+/** Clients › Client › FY › Interim › Revenue.
+ *
+ *  Every segment is read from the *active engagement*, never from a literal —
+ *  which is what makes FY2025, FY2026 and FY2027 different places rather than
+ *  the same screen with a different label. */
 export function breadcrumb(deep = true) {
   const sep = `<span class="crumb__s">${icon("chevron", 12)}</span>`;
   const seg = (label, href, here) =>
     `<button class="${cx("crumb__i", here && "is-here")}" data-act="nav" data-href="${esc(href)}">${esc(label)}</button>`;
+  const e = st.activeEngagement();
+  const c = st.activeClient();
   return `<nav class="crumb" aria-label="Where you are">
-    ${seg(client.short, "#/engagement", !deep)}${sep}
-    ${seg("FY2026", "#/engagement")}${sep}
-    ${seg("Interim", "#/engagement")}${deep ? `${sep}${seg("Revenue", "#/revenue", true)}` : ""}
+    ${seg("Clients", "#/clients")}${sep}
+    ${seg(c ? c.short : "Client", "#/client")}${sep}
+    ${seg(e ? e.fy : "—", "#/engagement", !deep)}${deep ? `${sep}${seg("Interim", "#/engagement")}${sep}${seg("Revenue", "#/revenue", true)}` : ""}
   </nav>`;
 }
 
@@ -48,7 +78,9 @@ export function header(crumbs) {
       <button class="srch" data-act="palette" title="Search and commands">
         ${icon("search", 14)}<span>Search</span><span class="k">⌘K</span></button>
       <button class="iconbtn" data-act="keys" title="Keyboard shortcuts">${icon("keyboard", 17)}</button>
-      <span class="avatar" title="${esc(user.name)}">${esc(initials(user.name))}</span>
+      <button class="avatar" data-act="open-menu" title="${esc(st.me().name)}"
+        aria-haspopup="menu" aria-expanded="${!!st.S.menu}">${esc(initials(st.me().name))}</button>
+      ${menu()}
     </div>
   </header>`;
 }
