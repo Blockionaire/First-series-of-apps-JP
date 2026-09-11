@@ -66,7 +66,7 @@ function cardFooter(p) {
 }
 
 /* Gym  ●●●○○○○  3 / 4 */
-export function standardRow(standard, week) {
+export function standardRow(standard, week, { compact = false } = {}) {
   const s = standardWeek(standard, week);
   const definition = activityType(standard.type);
 
@@ -79,7 +79,7 @@ export function standardRow(standard, week) {
     <div class="standard ${s.met ? "is-met" : ""}">
       <div class="standard__label">
         <div class="standard__name">${esc(standard.title)}</div>
-        ${standard.note ? `<div class="standard__note">${esc(standard.note)}</div>` : ""}
+        ${standard.note && !compact ? `<div class="standard__note">${esc(standard.note)}</div>` : ""}
       </div>
       <div class="standard__count">${count}</div>
     </div>`;

@@ -137,6 +137,16 @@ export function formatRange(fromIso, toIso) {
   return `${left} – ${MONTHS_SHORT[b.getMonth()]} ${b.getFullYear()}`;
 }
 
+/* 7 – 13 September 2026, without saying September twice. */
+export function formatSpan(fromIso, toIso) {
+  const a = fromISO(fromIso), b = fromISO(toIso);
+  if (isNaN(a) || isNaN(b)) return "";
+  const sameMonth = a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+  if (sameMonth) return `${a.getDate()} – ${b.getDate()} ${MONTHS[b.getMonth()]} ${b.getFullYear()}`;
+  const sameYear = a.getFullYear() === b.getFullYear();
+  return `${a.getDate()} ${MONTHS_SHORT[a.getMonth()]}${sameYear ? "" : " " + a.getFullYear()} – ${b.getDate()} ${MONTHS_SHORT[b.getMonth()]} ${b.getFullYear()}`;
+}
+
 /* Relative day, for the activity feed. */
 export function relativeDay(iso) {
   const diff = daysBetween(iso, todayISO());

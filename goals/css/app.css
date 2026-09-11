@@ -523,7 +523,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .tick { font-size: .82rem; letter-spacing: .06em; }
 .tick--yes { color: var(--good); }
-.tick--no { color: var(--bad); }
+.tick--no { color: var(--ink-faint); }
 
 /* ---------------------------- Milestones ---------------------------- */
 .months { display: grid; gap: 34px; }
@@ -971,3 +971,69 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .textarea--small { min-height: 62px; }
+
+/* --------------------------- Quick logging -------------------------- */
+.quick {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+  margin: 0 -20px;
+  padding-inline: 20px;
+}
+
+.quick::-webkit-scrollbar { display: none; }
+
+@media (min-width: 700px) {
+  .quick { flex-wrap: wrap; overflow: visible; margin: 0; padding-inline: 0; }
+}
+
+.quick__button {
+  appearance: none;
+  border: 1px solid var(--rule-strong);
+  background: transparent;
+  border-radius: 999px;
+  padding: 8px 15px;
+  font-size: .86rem;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  transition: background .15s ease, border-color .15s ease;
+}
+
+.quick__button:hover { border-color: var(--ink); }
+.quick__button:active { background: var(--paper-sunk); }
+.quick__button--more { border-style: dashed; color: var(--ink-soft); }
+.quick__button .icon { color: var(--ink-faint); }
+
+/* ------------------------------ A week ------------------------------ */
+.week { display: grid; gap: 30px; }
+
+@media (min-width: 780px) {
+  .week { grid-template-columns: 1fr 1fr; gap: 30px 44px; }
+}
+
+.week__goal .eyebrow { margin-bottom: 8px; }
+.week__goal .standards { border-top: 1px solid var(--rule); }
+
+/* --------------------------- Now learning --------------------------- */
+.learning {
+  display: grid;
+  gap: 20px;
+  text-decoration: none;
+  color: inherit;
+}
+
+@media (min-width: 700px) {
+  .learning { grid-template-columns: minmax(0, 320px) 1fr; gap: 32px; align-items: start; }
+}
+
+.learning__cover { aspect-ratio: 16 / 10; margin-bottom: 0; }
+.learning__title { font-family: var(--serif); font-size: 1.6rem; margin-top: 6px; }
+.learning__next { margin-top: 14px; font-size: .9rem; color: var(--ink-soft); }
+.learning:hover .button { border-color: var(--ink); }
