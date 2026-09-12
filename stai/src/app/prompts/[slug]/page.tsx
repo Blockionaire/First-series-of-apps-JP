@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { promptBySlug, allPrompts } from "@/lib/content";
 import { currentUser } from "@/lib/auth";
+import { track } from "@/lib/analytics";
 import { db } from "@/lib/db";
 import CopyButton from "@/components/CopyButton";
 import BookmarkButton from "@/components/BookmarkButton";
@@ -27,6 +28,7 @@ export default async function PromptPage({ params }: Props) {
 
   const user = await currentUser();
   const isPlus = user?.plan === "plus";
+  track("prompt_view", { path: `/prompts/${prompt.slug}`, label: prompt.title });
   const lockedBody = prompt.premium && !isPlus;
   // Server-side cut: locked prompt bodies never reach the client.
   const visibleBody = lockedBody ? prompt.body.slice(0, 260) + "\n\n[…]" : prompt.body;
@@ -61,7 +63,7 @@ export default async function PromptPage({ params }: Props) {
         </p>
         <div className="f-mono mt-4 flex flex-wrap gap-x-6 gap-y-1 text-[0.65rem] tracking-[0.08em] uppercase" style={{ color: "var(--ink-faint)" }}>
           <span>Ref STAI-PL-{String(prompt.id).padStart(3, "0")}</span>
-          {prompt.uses > 0 && <span>{prompt.uses} uses this quarter</span>}
+          {prompt.uses > 0 && <span>{prompt.uses} {prompt.uses === 1 ? "use" : "uses"} logged</span>}
           <span>{prompt.variables.length} variables</span>
         </div>
       </header>

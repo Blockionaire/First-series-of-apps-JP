@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUser, startSession } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { guard, WINDOW } from "@/lib/ratelimit";
+import { track } from "@/lib/analytics";
 
 export async function POST(req: NextRequest) {
   const blocked = guard(req, "signup", 5, WINDOW.hour);
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const id = await createUser(email, password, name, firm);
+    track("signup", { path: "/signup" });
     await startSession(id);
     await sendMail(
       email,

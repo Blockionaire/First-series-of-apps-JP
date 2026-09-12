@@ -104,7 +104,7 @@ export default function PromptExplorer({ items, isPlus }: { items: PromptCard[];
             <p className="f-mono mt-4 flex items-center justify-between text-[0.62rem] tracking-[0.06em]" style={{ color: "var(--ink-faint)" }}>
               <span>
                 {p.variables} {p.variables === 1 ? "variable" : "variables"}
-                {p.uses > 0 ? ` · ${p.uses} uses` : ""}
+                {p.uses > 0 ? ` · ${p.uses} used` : ""}
               </span>
               <span className="transition-transform group-hover:translate-x-0.5">→</span>
             </p>

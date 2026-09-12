@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import { publicUrl } from "./config";
 
 export const SITE = {
-  url: "https://stai.ai",
+  // Follows APP_URL so canonicals, OG URLs and the sitemap match wherever
+  // this is deployed; falls back to the production domain.
+  url: publicUrl(),
   name: "STAI",
   legalName: "STAI — Signal & Training for Audit Intelligence",
   tagline: "Signal & training for audit intelligence",
   description:
-    "The intelligence platform for audit, accountancy and finance professionals across Europe. Editorial analysis, an audit-grade AI prompt library, a grounded research assistant, podcasts, and live training for firms.",
+    "The intelligence platform for audit, accountancy and finance professionals across Europe. Editorial analysis of AI regulation and standards, an audit-grade prompt library, a grounded research assistant, and live training for firms.",
   locale: "en_GB",
   twitter: "@stai_ai",
   city: "Amsterdam",

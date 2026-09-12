@@ -69,7 +69,7 @@ export default function FirmsPage() {
             {
               n: "02",
               h: "Training that didn't take",
-              p: "Our field data: firms running feature tours reach 34% weekly active use. Firms running scenario-based training reach 78%. The variable isn't the tool or the people — it's whether the training was built around the work.",
+              p: "Licences get rolled out, a feature tour gets delivered, and adoption stalls. The variable is rarely the tool or the people — it is whether the training was built around the work the team actually does, and whether anyone measured what happened afterwards.",
             },
             {
               n: "03",

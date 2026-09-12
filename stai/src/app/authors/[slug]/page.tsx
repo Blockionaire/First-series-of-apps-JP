@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!a) return {};
   return pageMeta({
     title: `${a.name} — ${a.role}`,
-    description: `${a.name}, ${a.role} at STAI. Writes on ${a.beats.slice(0, 3).join(", ").toLowerCase()} for European audit and finance professionals.`,
+    description: `${a.name} — the editorial desk behind STAI analysis of ${a.beats.slice(0, 3).join(", ").toLowerCase()} for European audit and finance professionals.`,
     path: `/authors/${a.slug}`,
   });
 }
@@ -43,14 +43,13 @@ export default async function AuthorPage({ params }: Props) {
             "@type": "ProfilePage",
             url: abs(`/authors/${author.slug}`),
             mainEntity: {
-              "@type": "Person",
-              "@id": abs(`/authors/${author.slug}#person`),
+              "@type": "Organization",
+              "@id": abs(`/authors/${author.slug}#desk`),
               name: author.name,
-              jobTitle: author.role,
               description: author.bio,
               url: abs(`/authors/${author.slug}`),
               knowsAbout: author.beats,
-              worksFor: { "@id": abs("/#organization") },
+              parentOrganization: { "@id": abs("/#organization") },
             },
           },
           breadcrumbSchema([
@@ -70,30 +69,24 @@ export default async function AuthorPage({ params }: Props) {
           {author.bio}
         </p>
 
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
-          <div>
-            <p className="f-label" style={{ color: "var(--ink-faint)" }}>
-              Background
-            </p>
-            <ul className="mt-2 space-y-1">
-              {author.credentials.map((c) => (
-                <li key={c} className="flex gap-2 text-sm" style={{ color: "var(--ink-muted)" }}>
-                  <span aria-hidden className="text-cream-400">
-                    —
-                  </span>
-                  {c}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="f-label" style={{ color: "var(--ink-faint)" }}>
-              Beats
-            </p>
-            <p className="f-mono mt-2 text-[0.72rem] leading-relaxed tracking-[0.04em] text-cream-400">
-              {author.beats.join(" · ")}
-            </p>
-          </div>
+        {/* Disclosure replaces the credentials list. We state what this byline
+            is and what it is not, rather than asserting qualifications. */}
+        <div className="mt-6 border p-5 rule">
+          <p className="f-label" style={{ color: "var(--ink-faint)" }}>
+            What this byline means
+          </p>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+            {author.disclosure}
+          </p>
+        </div>
+
+        <div className="mt-6">
+          <p className="f-label" style={{ color: "var(--ink-faint)" }}>
+            Subjects covered
+          </p>
+          <p className="f-mono mt-2 text-[0.72rem] leading-relaxed tracking-[0.04em] text-cream-400">
+            {author.beats.join(" · ")}
+          </p>
         </div>
       </header>
 
@@ -130,18 +123,15 @@ export default async function AuthorPage({ params }: Props) {
 
       <section className="mt-12 border-t pt-6 rule">
         <p className="f-label" style={{ color: "var(--ink-faint)" }}>
-          The rest of the desk
+          Keep reading
         </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {AUTHORS.filter((a) => a.slug !== author.slug).map((a) => (
-            <Link
-              key={a.slug}
-              href={`/authors/${a.slug}`}
-              className="f-mono border px-3 py-1.5 text-[0.68rem] tracking-[0.1em] uppercase rule text-cream-400 transition-colors hover:border-[var(--line-strong)] hover:text-cream-100"
-            >
-              {a.name}
-            </Link>
-          ))}
+        <div className="mt-3 flex flex-wrap gap-3">
+          <Link href="/briefing" className="btn btn-ghost">
+            The full Briefing
+          </Link>
+          <Link href="/ai-act" className="btn btn-ghost">
+            EU AI Act tracker
+          </Link>
         </div>
       </section>
     </div>

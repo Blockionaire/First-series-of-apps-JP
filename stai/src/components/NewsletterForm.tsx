@@ -25,7 +25,7 @@ export default function NewsletterForm({ source }: { source: string }) {
   if (state === "done") {
     return (
       <p className="f-mono border px-3 py-2.5 text-[0.72rem] tracking-[0.08em] rule-strong text-cream-100" role="status">
-        SUBSCRIBED — first Brief lands Tuesday.
+        ON THE LIST — we&apos;ll write when the Brief starts.
       </p>
     );
   }
@@ -33,7 +33,7 @@ export default function NewsletterForm({ source }: { source: string }) {
   return (
     <form onSubmit={submit} className="flex gap-2">
       <label htmlFor={`nl-${source}`} className="sr-only">
-        Work email for The STAI Brief
+        Work email — join the Brief waitlist
       </label>
       <input
         id={`nl-${source}`}
@@ -46,7 +46,7 @@ export default function NewsletterForm({ source }: { source: string }) {
         onChange={(e) => setEmail(e.target.value)}
       />
       <button type="submit" className="btn btn-primary" disabled={state === "busy"}>
-        {state === "busy" ? "…" : "Subscribe"}
+        {state === "busy" ? "…" : "Join waitlist"}
       </button>
       {state === "error" && (
         <span role="alert" className="sr-only">

@@ -244,6 +244,33 @@ function migrate(d: Database.Database) {
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- STAI+ early access. A waitlist, not a purchase: no payment state here.
+  CREATE TABLE IF NOT EXISTS early_access (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT '',
+    firm TEXT NOT NULL DEFAULT '',
+    role TEXT NOT NULL DEFAULT '',
+    interests TEXT NOT NULL DEFAULT '[]',
+    note TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT 'plus',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- First-party, aggregate-only analytics. One row per event, no IP address,
+  -- no user id, no device fingerprint — only a random per-session token that
+  -- expires with the browsing session.
+  CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    path TEXT NOT NULL DEFAULT '',
+    label TEXT NOT NULL DEFAULT '',
+    visitor TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_events_created ON events(created_at);
+  CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind, created_at);
+
   CREATE INDEX IF NOT EXISTS idx_articles_pub ON articles(published_at DESC);
   CREATE INDEX IF NOT EXISTS idx_articles_cat ON articles(category);
   CREATE INDEX IF NOT EXISTS idx_prompts_cat ON prompts(category);
@@ -323,6 +350,57 @@ function runDataMigrations(d: Database.Database) {
       "UPDATE subscriptions SET first_payment_confirmed = 1 WHERE status IN ('active','past_due','trialing')"
     ).run();
     mark("mig_first_payment_backfill");
+  }
+
+  /**
+   * Content trust pass before the free public launch.
+   *
+   * The seeded corpus was written as a demonstration and contains material
+   * that cannot be published to auditors as fact. Because seeding is additive,
+   * existing databases need these corrections applied explicitly.
+   */
+  if (!done("mig_content_trust_v1")) {
+    const tx = d.transaction(() => {
+      // 1. Unpublish articles built on fabricated primary research, invented
+      //    enforcement actions, or invented statistics. Kept as drafts rather
+      //    than deleted: the writing is salvageable once claims are sourced.
+      const UNPUBLISH = [
+        "afm-thematic-review-ai-audit-firms", // invented regulatory action, reported as news
+        "esma-cra-model-governance-fine", // invented enforcement action and fine amount
+        "iaasb-signals-isa-500-refresh", // unverifiable standard-setter news
+        "copilot-audit-room-90-day-field-report", // fabricated first-person field study
+        "materiality-for-model-risk", // invented industry statistics presented as convergence
+        "big-four-ai-arms-race-audited", // unsourced characterisation of named real firms
+      ];
+      const unpub = d.prepare("UPDATE articles SET status='draft' WHERE slug=?");
+      for (const slug of UNPUBLISH) unpub.run(slug);
+
+      // 2. Single transparent byline; no invented personas or credentials.
+      d.prepare("UPDATE articles SET author='STAI Editorial', author_role='Editorial desk'").run();
+
+      // 3. Remove fabricated podcast episodes and research citations outright.
+      //    These named real institutions and real journals.
+      d.prepare("DELETE FROM podcasts").run();
+      d.prepare("DELETE FROM research").run();
+
+      // 4. Ticker: replace the mixed set (verifiable milestones alongside
+      //    invented enforcement actions) with the verifiable-only list. Data
+      //    migrations run AFTER seeding, so this re-inserts rather than just
+      //    deleting — otherwise a fresh database would launch with no ticker.
+      d.prepare("DELETE FROM signals").run();
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { signals } = require("./seed/media") as typeof import("./seed/media");
+      const insSig = d.prepare(
+        "INSERT INTO signals (label, detail, kind, published_at) VALUES (@label, @detail, @kind, @publishedAt)"
+      );
+      for (const s of signals) insSig.run(s);
+
+      // 5. Prompt use counters were seeded fiction presented as social proof.
+      d.prepare("UPDATE prompts SET uses = 0").run();
+
+      mark("mig_content_trust_v1");
+    });
+    tx();
   }
 
   if (!done("mig_prompt_gating_v2")) {

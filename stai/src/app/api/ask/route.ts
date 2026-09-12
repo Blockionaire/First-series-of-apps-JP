@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { currentUser, anonId, bumpUsage, getUsage } from "@/lib/auth";
 import { retrieve, anthropicClient, buildAskSystemPrompt, numberHits, MODEL } from "@/lib/ai";
 import { guard, WINDOW } from "@/lib/ratelimit";
+import { track } from "@/lib/analytics";
 
 export const maxDuration = 60;
 
@@ -56,6 +57,9 @@ export async function POST(req: NextRequest) {
     }
     quota = { used: bumpUsage(`user:${user.id}`, "ask"), limit: FREE_QUOTA };
   }
+
+  // Counts a question. The question text itself is never stored.
+  track("ask_question", { path: "/ask" });
 
   const { numbered: hits, sources } = numberHits(retrieve(question, 6));
 

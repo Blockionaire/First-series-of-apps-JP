@@ -8,9 +8,8 @@ import MobileNav from "./MobileNav";
 export const NAV = [
   { href: "/briefing", label: "Briefing" },
   { href: "/prompts", label: "Prompts" },
+  { href: "/ai-act", label: "AI Act" },
   { href: "/ask", label: "Ask STAI" },
-  { href: "/podcast", label: "Podcast" },
-  { href: "/research", label: "Research" },
   { href: "/training", label: "Training" },
   // The B2B front door. Assessment moved out of the nav — it converts best as
   // a call to action inside pages, not as a browsing destination.

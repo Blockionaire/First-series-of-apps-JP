@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { pageMeta } from "@/lib/seo";
 import { allResearch } from "@/lib/content";
 
@@ -25,6 +26,24 @@ export default function ResearchPage() {
           into the one takeaway a practice leader should act on.
         </p>
       </header>
+
+      {papers.length === 0 && (
+        <div className="border p-8 rule-strong">
+          <p className="f-label" style={{ color: "var(--ink-faint)" }}>
+            In preparation
+          </p>
+          <h2 className="f-display mt-2 text-2xl text-cream-100">Nothing curated yet.</h2>
+          <p className="mt-3 max-w-xl leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+            This desk will summarise peer-reviewed and working-paper research on AI in audit and assurance —
+            each entry a paper we have actually read, cited so you can check it. We would rather show you an
+            empty shelf than a list you cannot verify.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/briefing" className="btn btn-primary">Read the Briefing</Link>
+            <Link href="/prompts" className="btn btn-ghost">Open the prompt library</Link>
+          </div>
+        </div>
+      )}
 
       <ol>
         {papers.map((r, i) => (

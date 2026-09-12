@@ -46,8 +46,9 @@ export default function Footer() {
               <span className="f-display text-xl text-cream-100">The STAI Brief</span>
             </div>
             <p className="mt-3 max-w-md text-sm" style={{ color: "var(--ink-muted)" }}>
-              One dispatch, every Tuesday. The regulatory moves, standards signals and field intelligence that
-              matter to European audit and finance — read in four minutes, quoted in your next partner meeting.
+              A weekly dispatch on the regulatory moves and standards signals that matter to European audit
+              and finance. It hasn&apos;t started yet — join the waitlist and we&apos;ll write to you once,
+              when the first issue is ready. No mail until then.
             </p>
             <div className="mt-4 max-w-md">
               <NewsletterForm source="footer" />
@@ -80,7 +81,7 @@ export default function Footer() {
             © {new Date().getFullYear()} STAI — stai.ai · Amsterdam
           </p>
           <p className="f-mono text-[0.65rem] tracking-[0.12em] uppercase" style={{ color: "var(--ink-faint)" }}>
-            Built to run inside your firewall — no external runtime dependencies
+            No trackers, no third-party scripts, no advertising
           </p>
         </div>
       </div>

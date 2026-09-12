@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { pageMeta } from "@/lib/seo";
 import { allPodcasts } from "@/lib/content";
 import { fmtDate } from "@/lib/format";
@@ -60,10 +61,24 @@ export default function PodcastPage() {
           The people shaping AI in the European profession — regulators, researchers, quality partners — in
           conversations long enough to get past the talking points.
         </p>
-        <p className="f-mono mt-4 text-[0.68rem] tracking-[0.1em] uppercase" style={{ color: "var(--ink-faint)" }}>
-          Also on Spotify · Apple Podcasts · RSS
-        </p>
       </header>
+
+      {episodes.length === 0 && (
+        <div className="border p-8 rule-strong">
+          <p className="f-label" style={{ color: "var(--ink-faint)" }}>
+            Not yet recording
+          </p>
+          <h2 className="f-display mt-2 text-2xl text-cream-100">No episodes published yet.</h2>
+          <p className="mt-3 max-w-xl leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+            The podcast launches when we have guests worth your commute — real practitioners, on the record.
+            Until then, the Briefing carries the analysis and the EU AI Act tracker carries the deadlines.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/briefing" className="btn btn-primary">Read the Briefing</Link>
+            <Link href="/ai-act" className="btn btn-ghost">EU AI Act tracker</Link>
+          </div>
+        </div>
+      )}
 
       <ol className="space-y-0">
         {episodes.map((ep) => (
@@ -95,9 +110,6 @@ export default function PodcastPage() {
                 </div>
                 <p className="mt-4 max-w-2xl leading-relaxed" style={{ color: "var(--ink-muted)" }}>
                   {ep.description}
-                </p>
-                <p className="f-mono mt-4 text-[0.65rem] tracking-[0.1em] uppercase" style={{ color: "var(--ink-faint)" }}>
-                  Listen on Spotify / Apple Podcasts — search “STAI”
                 </p>
               </div>
             </details>

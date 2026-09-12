@@ -83,9 +83,14 @@ export default async function AdminPage() {
           </p>
           <h1 className="f-display mt-2 text-4xl text-cream-100">The desk</h1>
         </div>
-        <Link href="/admin/content" className="btn btn-primary">
-          Content editor
-        </Link>
+        <div className="flex gap-3">
+          <Link href="/admin/growth" className="btn btn-ghost">
+            Growth
+          </Link>
+          <Link href="/admin/content" className="btn btn-primary">
+            Content editor
+          </Link>
+        </div>
       </header>
 
       <section className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">

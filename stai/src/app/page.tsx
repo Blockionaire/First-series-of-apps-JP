@@ -3,7 +3,6 @@ import {
   allArticles,
   featuredArticles,
   allPrompts,
-  foundingStatus,
   EARLY_BIRD_END_ISO,
 } from "@/lib/content";
 import { daysUntil } from "@/lib/format";
@@ -25,7 +24,6 @@ export default function Home() {
     .filter((p) => !p.premium)
     .slice(0, 2)
     .concat(allPrompts().filter((p) => p.premium).slice(0, 1));
-  const founding = foundingStatus();
   const earlyBirdDays = daysUntil(EARLY_BIRD_END_ISO);
 
   return (
@@ -105,20 +103,9 @@ export default function Home() {
             </div>
             <div className="pt-4">
               <p className="f-mono text-[0.68rem] leading-relaxed tracking-[0.02em]" style={{ color: "var(--ink-muted)" }}>
-                {founding.showProgress ? (
-                  <>
-                    <span className="text-cream-100">{founding.remaining}</span> of {founding.total}{" "}
-                    founding-member seats remain
-                  </>
-                ) : (
-                  <>
-                    Founding membership open — <span className="text-cream-100">{founding.total}</span> seats,
-                    then never again
-                  </>
-                )}{" "}
-                · €12/mo locked forever ·{" "}
+                STAI+ is in early access — not yet on sale ·{" "}
                 <Link href="/plus" className="underline underline-offset-2 hover:text-cream-100">
-                  claim yours
+                  join the list
                 </Link>
               </p>
             </div>
@@ -348,26 +335,24 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ——— Founding member band (gold — premium) ——— */}
+      {/* ——— STAI+ early access band (gold — premium) ——— */}
       <section className="border-t rule" style={{ background: "linear-gradient(180deg, rgba(201,168,76,0.07), rgba(201,168,76,0.02))" }}>
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-4 py-12 sm:px-6">
           <div className="max-w-2xl">
             <p className="f-mono text-[0.65rem] font-bold tracking-[0.18em] uppercase text-gold-300">
-              {founding.showProgress
-                ? `Founding membership — ${founding.remaining} of ${founding.total} seats left`
-                : `Founding membership — ${founding.total} seats, then never again`}
+              STAI+ early access — not yet on sale
             </p>
             <h2 className="f-display mt-2 text-3xl text-cream-100 sm:text-4xl">
-              €12 a month. Locked forever.
+              Help decide what the paid tier becomes.
             </h2>
             <p className="mt-3 max-w-xl" style={{ color: "var(--ink-muted)" }}>
-              The first 200 members keep founding pricing for the life of their subscription — full prompt
-              library, adapt-with-AI, unlimited Ask STAI, saved briefings. When the counter hits zero, it&apos;s
-              €19.
+              STAI+ isn&apos;t open yet, and there&apos;s nothing to pay. Tell us which of the planned
+              capabilities would actually be worth it to you — the full prompt library, unlimited grounded
+              answers, implementation guides — and you&apos;ll be first in when it opens.
             </p>
           </div>
           <Link href="/plus" className="btn btn-plus premium-focus">
-            Become a founding member
+            Join STAI+ early access
           </Link>
         </div>
       </section>

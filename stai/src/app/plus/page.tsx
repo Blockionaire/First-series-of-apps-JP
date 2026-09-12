@@ -6,12 +6,13 @@ import { checkoutAvailable } from "@/lib/config";
 import { currentUser } from "@/lib/auth";
 import { SPlusMark } from "@/components/Logo";
 import CheckoutButton from "@/components/plus/CheckoutButton";
+import EarlyAccessForm from "@/components/plus/EarlyAccessForm";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = pageMeta({
   title: "STAI+ membership",
-  description: "The full prompt library with adapt-with-AI, unlimited Ask STAI, every briefing and saved content. €19/month, €149/year, or €12/month locked forever as a founding member.",
+  description: "STAI+ is in early access and not yet on sale. See what the paid tier will include — the full prompt library, adapt-with-AI and unlimited Ask STAI — and tell us what would make it worth paying for.",
   path: "/plus",
 });
 
@@ -29,7 +30,7 @@ const features = (freeCount: number, total: number): { label: string; free: stri
   { label: "Ask STAI", free: "5 questions / month", plus: "Unlimited, with saved answers" },
   { label: "Working-paper export", free: "Ask STAI answers", plus: "Answers + adapted prompts" },
   { label: "Saved to your desk", free: "—", plus: "Bookmark briefings, prompts and answers" },
-  { label: "The STAI Brief", free: "Every Tuesday", plus: "Every Tuesday" },
+  { label: "The STAI Brief", free: "Waitlist open", plus: "Waitlist open" },
   { label: "AI-readiness assessment", free: "Included", plus: "Included" },
 ];
 
@@ -76,19 +77,29 @@ export default async function PlusPage() {
           </p>
         </div>
       ) : !canCheckout ? (
-        <div className="mt-10 border p-6 rule-strong" role="status">
-          <p className="f-mono text-[0.7rem] font-bold tracking-[0.16em] uppercase text-cream-100">
-            Membership opens shortly
+        <section
+          className="mt-10 border p-6 sm:p-8"
+          style={{
+            borderColor: "var(--gold-line)",
+            background: "linear-gradient(135deg, rgba(201,168,76,0.09), rgba(201,168,76,0.02))",
+          }}
+          aria-label="STAI+ early access"
+        >
+          <p className="f-mono text-[0.68rem] font-bold tracking-[0.18em] uppercase text-gold-300">
+            Early access — not yet on sale
           </p>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
-            Checkout isn&apos;t live on this deployment yet, so nothing can be purchased and nothing has been
-            charged. Join The STAI Brief below and we&apos;ll tell you the moment founding membership opens —
-            the rate and the seat count on this page are what you&apos;ll get.
+          <h2 className="f-display mt-3 text-3xl text-cream-100 sm:text-4xl">
+            STAI+ isn&apos;t open yet. Tell us what would make it worth paying for.
+          </h2>
+          <p className="mt-4 max-w-2xl leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+            No card, no charge, nothing to cancel. We&apos;re building the paid tier around what practitioners
+            actually say they need, and early access members get in first — and help decide the order things
+            get built in.
           </p>
-          <Link href="/briefing" className="btn btn-ghost mt-5">
-            Read the Briefing meanwhile
-          </Link>
-        </div>
+          <div className="mt-8 max-w-3xl">
+            <EarlyAccessForm defaultEmail={user?.email ?? ""} />
+          </div>
+        </section>
       ) : (
         <>
           {/* founding banner — live scarcity */}
@@ -218,7 +229,7 @@ export default async function PlusPage() {
         {[
           {
             h: "Costs less than the hour it saves",
-            p: "One adapted prompt that lands — a risk brainstorm, an estimate challenge, a TCWG letter — pays for the month. Members average eleven prompt uses a month.",
+            p: "One adapted prompt that lands — a risk brainstorm, an estimate challenge, a TCWG letter — is worth more than a month of most software. That is the bar we are building to.",
           },
           {
             h: "Answers you can file",

@@ -1,7 +1,14 @@
 /**
- * Author entities. Bylines link here and the pages emit Person structured
- * data — for professional advisory content, a named, credentialed author
- * with a stable URL is the E-E-A-T signal search engines weigh most.
+ * Author identity.
+ *
+ * STAI publishes under a single transparent editorial byline. There are no
+ * named personas, no biographies, no qualifications and no employment history,
+ * because none of that could be stated truthfully yet — and fabricating
+ * credentials for an audience of auditors would destroy the one asset this
+ * publication cannot rebuild.
+ *
+ * When real named contributors join, add them here with only facts they have
+ * confirmed about themselves.
  */
 
 export type Author = {
@@ -9,61 +16,30 @@ export type Author = {
   name: string;
   role: string;
   bio: string;
-  credentials: string[];
+  /** Honest statement of what this byline is. No credentials. */
+  disclosure: string;
   beats: string[];
 };
 
+export const EDITORIAL_SLUG = "stai-editorial";
+
 export const AUTHORS: Author[] = [
   {
-    slug: "marieke-van-dijk",
-    name: "Marieke van Dijk",
-    role: "Editor, STAI",
-    bio: "Marieke edits STAI. She spent eleven years in statutory audit — the last four as a quality partner at a Dutch mid-tier firm, where she owned the methodology response to ISQM 1 — before turning to writing about the profession full time. She covers the collision between AI governance and the standards framework, and takes the view that most of what firms need already exists in the standards they have.",
-    credentials: ["RA (Registeraccountant)", "Former quality partner, Dutch mid-tier", "ISQM 1 implementation lead"],
-    beats: ["EU AI Act", "ISQM 1", "Documentation & ISA 230", "Professional scepticism"],
-  },
-  {
-    slug: "jonas-keller",
-    name: "Jonas Keller",
-    role: "Contributing Analyst",
-    bio: "Jonas writes STAI's analytical desk pieces, translating regulation and model risk into the currency audit actually runs on: materiality. A former financial-services risk modeller who moved into audit advisory, he is the person to send the partner who says model risk cannot be quantified.",
-    credentials: ["MSc Quantitative Finance", "Former FS risk modelling, Frankfurt", "Audit advisory — model governance"],
-    beats: ["Model risk", "Materiality", "Fraud & evidence", "Market strategy"],
-  },
-  {
-    slug: "sofia-lindqvist",
-    name: "Sofia Lindqvist",
-    role: "Senior Correspondent",
-    bio: "Sofia reports on sustainability assurance and the supervisory landscape across the Nordics, Benelux and DACH. She has covered every CSRD assurance cycle since the first, and her reporting on the divergence between Dutch and German supervisory practice is cited inside more than one methodology team.",
-    credentials: ["Sustainability assurance specialist", "Nordic & DACH supervisory beat", "Former ESG assurance senior"],
-    beats: ["CSRD & ESRS", "Supervision", "Analytics", "Jurisdictional divergence"],
-  },
-  {
-    slug: "tom-verhagen",
-    name: "Tom Verhagen",
-    role: "Practice Editor",
-    bio: "Tom runs STAI's field research — the reporting that follows real firms through real deployments and publishes the numbers, including the unflattering ones. He designed the adoption telemetry behind our Copilot field reports and is unusually hard to sell to.",
-    credentials: ["Practice research lead", "Firm adoption telemetry design", "Former audit senior manager"],
-    beats: ["Adoption & tooling", "Procurement", "Training & talent", "Field research"],
-  },
-  {
-    slug: "stai-desk",
-    name: "STAI Desk",
-    role: "Newsroom",
-    bio: "The STAI newsroom: fast, sourced reporting on regulatory and standard-setting moves affecting European audit and finance. Desk pieces are written collectively and edited by Marieke van Dijk.",
-    credentials: ["Collective newsroom byline", "Edited by the Editor, STAI"],
-    beats: ["Breaking regulation", "Standard-setting", "Enforcement"],
+    slug: EDITORIAL_SLUG,
+    name: "STAI Editorial",
+    role: "Editorial desk",
+    bio: "STAI Editorial is the collective byline for everything published on this desk. Pieces are written and edited in-house, and cover the regulation, standards and practice questions facing audit, accountancy and finance professionals in Europe.",
+    disclosure:
+      "Articles under this byline are editorial analysis of publicly available regulation, standards and guidance. They are not reported interviews, and they do not present original field research. Where a piece draws on a specific rule or publication, that source is named in the text so you can check it yourself. Nothing here is professional advice; engagement-level judgement remains with the practitioner.",
+    beats: ["EU AI Act", "ISQM 1", "Audit standards", "CSRD assurance", "AI tooling in practice"],
   },
 ];
 
 export function authorSlug(name: string): string {
   const found = AUTHORS.find((a) => a.name.toLowerCase() === name.toLowerCase());
   if (found) return found.slug;
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
+  // Everything published today carries the editorial byline.
+  return EDITORIAL_SLUG;
 }
 
 export function authorBySlug(slug: string): Author | null {

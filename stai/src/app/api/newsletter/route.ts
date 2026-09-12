@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { sendMail } from "@/lib/mail";
 import { guard, WINDOW } from "@/lib/ratelimit";
+import { track } from "@/lib/analytics";
 
 export async function POST(req: NextRequest) {
   const blocked = guard(req, "newsletter", 5, WINDOW.hour);
@@ -23,11 +23,7 @@ export async function POST(req: NextRequest) {
   // become a way to mail the same stranger repeatedly.
   if (existing) return NextResponse.json({ ok: true });
 
-  await sendMail(
-    email,
-    "You're on The STAI Brief",
-    "Welcome to The STAI Brief.\n\nEvery Tuesday: the regulatory moves, standards signals and field intelligence that matter to European audit and finance — in four minutes.\n\nUntil then, the live desk is at https://stai.ai/briefing.\n\n— STAI"
-  );
+  track("brief_waitlist", { path: "/", label: String(source ?? "site") });
 
   return NextResponse.json({ ok: true });
 }

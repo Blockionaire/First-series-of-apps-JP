@@ -14,6 +14,7 @@ import JsonLd from "@/components/JsonLd";
 import { pageMeta, abs, breadcrumbSchema } from "@/lib/seo";
 import { authorSlug } from "@/lib/authors";
 import { categorySlug } from "@/lib/categories";
+import { track } from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,8 @@ export default async function ArticlePage({ params }: Props) {
   // Locked pieces are cut server-side — the full text never reaches the client.
   const source = locked ? markdownPreview(article.body_md, 3) : article.body_md;
   const { html, toc } = renderMarkdown(source);
+  track("article_view", { path: `/briefing/${article.slug}`, label: article.title });
+
   const related = relatedArticles(article, 4);
   const [readNext, ...alsoOnDesk] = related;
   const bookmarked = user
@@ -72,9 +75,8 @@ export default async function ArticlePage({ params }: Props) {
     url: abs(`/briefing/${article.slug}`),
     mainEntityOfPage: { "@type": "WebPage", "@id": abs(`/briefing/${article.slug}`) },
     author: {
-      "@type": "Person",
+      "@type": "Organization",
       name: article.author,
-      jobTitle: article.author_role,
       url: abs(`/authors/${authorSlug(article.author)}`),
     },
     publisher: { "@id": abs("/#organization") },
@@ -239,6 +241,12 @@ export default async function ArticlePage({ params }: Props) {
 
             {!locked && (
               <footer className="mt-12 border-t pt-6 rule">
+                <p className="mb-4 text-[0.82rem] leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+                  <span className="text-cream-200">Editorial analysis.</span> This piece interprets publicly
+                  available regulation, standards and guidance. It is not a reported interview and contains no
+                  original field research. Sources are named in the text so you can check them. Not
+                  professional advice — engagement-level judgement stays with you.
+                </p>
                 <p className="f-mono text-[0.65rem] leading-relaxed tracking-[0.06em]" style={{ color: "var(--ink-faint)" }}>
                   CITE THIS BRIEFING — {article.author}, “{article.title}”, STAI, {fmtDate(article.published_at)},
                   stai.ai/briefing/{article.slug}

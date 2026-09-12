@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/chrome/Header";
 import Footer from "@/components/chrome/Footer";
 import JsonLd from "@/components/JsonLd";
+import Analytics from "@/components/Analytics";
 import { SITE, abs, organizationSchema, websiteSchema } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -82,6 +83,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <Header />
         <main id="main">{children}</main>
         <Footer />
+        <Analytics />
       </body>
     </html>
   );
