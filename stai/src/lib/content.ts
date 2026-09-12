@@ -28,6 +28,8 @@ export type Prompt = {
   model_note: string;
   premium: boolean;
   uses: number;
+  status: string;
+  updated_at: string | null;
 };
 
 export type Podcast = {
@@ -100,14 +102,24 @@ export function relatedArticles(article: Article, limit = 3): Article[] {
   return rows.map(rowToArticle);
 }
 
+/**
+ * Every public prompt surface goes through these two functions — /prompts, a
+ * single prompt page, the home-page teasers, /plus, the sitemap and the
+ * adapt-with-AI endpoint. Filtering `status` here rather than at each call
+ * site is what makes "a draft is never visible" a property of the data layer
+ * instead of a convention six pages have to remember. Admin reads query the
+ * table directly and deliberately see drafts.
+ */
 export function allPrompts(): Prompt[] {
   return (
-    db().prepare("SELECT * FROM prompts ORDER BY premium ASC, uses DESC").all() as unknown[]
+    db()
+      .prepare("SELECT * FROM prompts WHERE status='published' ORDER BY premium ASC, uses DESC")
+      .all() as unknown[]
   ).map(rowToPrompt);
 }
 
 export function promptBySlug(slug: string): Prompt | null {
-  const r = db().prepare("SELECT * FROM prompts WHERE slug=?").get(slug);
+  const r = db().prepare("SELECT * FROM prompts WHERE slug=? AND status='published'").get(slug);
   return r ? rowToPrompt(r) : null;
 }
 

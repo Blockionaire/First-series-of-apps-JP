@@ -246,3 +246,18 @@ git pull && docker compose up -d --build
 
 Migrations run automatically at startup and are additive — seeding never
 overwrites CMS-authored content.
+
+Both content types are managed entirely from the back office, so an editorial
+change never needs a redeploy:
+
+| Surface | Route | Create | Edit | Publish / unpublish | Delete |
+| --- | --- | --- | --- | --- | --- |
+| Briefings | `/admin/content` | yes | yes | yes | no |
+| Prompt library | `/admin/prompts` | yes | yes | yes | no |
+
+Neither editor deletes. Taking something down means setting it to **draft**,
+which removes it from every public surface — index pages, its own URL, the
+sitemap — while keeping the text and the slug. `tests/prompt-cms.test.mjs`
+forces a re-seed against a live database and proves that a redeployment cannot
+overwrite an edit, reset premium/free gating, republish a draft, or duplicate a
+prompt whose slug an editor has changed.

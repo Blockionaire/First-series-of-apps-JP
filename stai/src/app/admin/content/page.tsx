@@ -38,9 +38,14 @@ export default async function AdminContentPage() {
             Edits publish instantly — no redeploy. The search index and Ask STAI grounding refresh on save.
           </p>
         </div>
-        <Link href="/admin/content/new" className="btn btn-primary">
-          + New briefing
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/admin/prompts" className="btn btn-ghost">
+            Prompt library
+          </Link>
+          <Link href="/admin/content/new" className="btn btn-primary">
+            + New briefing
+          </Link>
+        </div>
       </header>
 
       <ul className="mt-8">

@@ -101,7 +101,9 @@ function migrate(d: Database.Database) {
     variables TEXT NOT NULL DEFAULT '[]',
     model_note TEXT NOT NULL DEFAULT '',
     premium INTEGER NOT NULL DEFAULT 1,
-    uses INTEGER NOT NULL DEFAULT 0
+    uses INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'published',
+    updated_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS podcasts (
@@ -274,10 +276,19 @@ function migrate(d: Database.Database) {
   CREATE INDEX IF NOT EXISTS idx_articles_pub ON articles(published_at DESC);
   CREATE INDEX IF NOT EXISTS idx_articles_cat ON articles(category);
   CREATE INDEX IF NOT EXISTS idx_prompts_cat ON prompts(category);
+  CREATE INDEX IF NOT EXISTS idx_prompts_status ON prompts(status);
   CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
   `);
 
   // Additive column migrations — safe to run on every boot.
+
+  // Prompts became admin-editable, so they need the same draft/published
+  // lifecycle articles have. DEFAULT 'published' is the load-bearing part: on
+  // an existing database every prompt already in the library stays visible,
+  // and nothing about its premium/free gating is touched.
+  addColumn(d, "prompts", "status", "TEXT NOT NULL DEFAULT 'published'");
+  addColumn(d, "prompts", "updated_at", "TEXT");
+
   addColumn(d, "assessments", "firm_size", "TEXT NOT NULL DEFAULT ''");
   addColumn(d, "assessments", "jurisdiction", "TEXT NOT NULL DEFAULT ''");
   addColumn(d, "assessments", "role", "TEXT NOT NULL DEFAULT ''");
@@ -296,6 +307,8 @@ function migrate(d: Database.Database) {
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_stripe ON subscriptions(stripe_subscription) WHERE stripe_subscription IS NOT NULL"
   );
 
+  backfillSeedLedger(d);
+
   const seeded = d.prepare("SELECT value FROM settings WHERE key='seed_version'").get() as
     | { value: string }
     | undefined;
@@ -307,6 +320,49 @@ function migrate(d: Database.Database) {
   }
 
   runDataMigrations(d);
+}
+
+/**
+ * Give databases seeded before the ledger existed (see seed/run.ts) the ledger
+ * they would otherwise only acquire on the NEXT seed-version bump — which is
+ * exactly the moment it has to already be there.
+ *
+ * Only slugs whose row is actually present are recorded. Proving "the seed has
+ * offered this slug before" by the existence of the row is both true and
+ * conservative: a prompt added to the seed corpus in a later build is absent,
+ * stays out of the ledger, and is still inserted normally.
+ */
+function backfillSeedLedger(d: Database.Database) {
+  const seededBefore = !!d.prepare("SELECT 1 FROM settings WHERE key='seed_version'").get();
+  if (!seededBefore) return; // fresh database: run.ts writes the ledger itself
+
+  const corpus = (): { prompts: string[]; articles: string[] } => {
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const { prompts } = require("./seed/prompts") as typeof import("./seed/prompts");
+    const { articles1 } = require("./seed/articles-1") as typeof import("./seed/articles-1");
+    const { articles2 } = require("./seed/articles-2") as typeof import("./seed/articles-2");
+    /* eslint-enable @typescript-eslint/no-require-imports */
+    return {
+      prompts: prompts.map((p) => p.slug),
+      articles: [...articles1, ...articles2].map((a) => a.slug),
+    };
+  };
+
+  const targets: [string, string, "prompts" | "articles"][] = [
+    ["seeded_prompt_slugs", "prompts", "prompts"],
+    ["seeded_article_slugs", "articles", "articles"],
+  ];
+  const pending = targets.filter(([key]) => !d.prepare("SELECT 1 FROM settings WHERE key=?").get(key));
+  if (pending.length === 0) return;
+
+  const seedSlugs = corpus();
+  for (const [key, table, which] of pending) {
+    const present = new Set(
+      (d.prepare(`SELECT slug FROM ${table}`).all() as { slug: string }[]).map((r) => r.slug)
+    );
+    const known = seedSlugs[which].filter((s) => present.has(s));
+    d.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run(key, JSON.stringify(known));
+  }
 }
 
 /** ALTER TABLE ADD COLUMN, but idempotent. */
@@ -403,11 +459,24 @@ function runDataMigrations(d: Database.Database) {
     tx();
   }
 
+  /**
+   * One-time re-gating of the SEEDED prompt library.
+   *
+   * Scoped to the seeded slugs on purpose. Premium/free is now editable from
+   * /admin/prompts and the database is the source of truth, so a migration
+   * must never issue a blanket `UPDATE prompts SET premium = 0`: that would
+   * silently un-gate an admin-authored prompt. It is also keyed in settings,
+   * so it runs exactly once per database and never revisits an editor's later
+   * decision about a seeded prompt either.
+   */
   if (!done("mig_prompt_gating_v2")) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { PREMIUM_PROMPT_SLUGS } = require("./seed/gating") as typeof import("./seed/gating");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { prompts } = require("./seed/prompts") as typeof import("./seed/prompts");
     const tx = d.transaction(() => {
-      d.prepare("UPDATE prompts SET premium = 0").run();
+      const clear = d.prepare("UPDATE prompts SET premium = 0 WHERE slug = ?");
+      for (const p of prompts) clear.run(p.slug);
       const setPremium = d.prepare("UPDATE prompts SET premium = 1 WHERE slug = ?");
       for (const slug of PREMIUM_PROMPT_SLUGS) setPremium.run(slug);
       mark("mig_prompt_gating_v2");

@@ -29,6 +29,7 @@ export default async function AdminPage() {
     { label: "Training enquiries", n: count("SELECT COUNT(*) n FROM enquiries") },
     { label: "Assessments run", n: count("SELECT COUNT(*) n FROM assessments") },
     { label: "Published articles", n: count("SELECT COUNT(*) n FROM articles WHERE status='published'") },
+    { label: "Published prompts", n: count("SELECT COUNT(*) n FROM prompts WHERE status='published'") },
   ];
   const founding = foundingStatus();
 
@@ -83,9 +84,12 @@ export default async function AdminPage() {
           </p>
           <h1 className="f-display mt-2 text-4xl text-cream-100">The desk</h1>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Link href="/admin/growth" className="btn btn-ghost">
             Growth
+          </Link>
+          <Link href="/admin/prompts" className="btn btn-ghost">
+            Prompt library
           </Link>
           <Link href="/admin/content" className="btn btn-primary">
             Content editor
