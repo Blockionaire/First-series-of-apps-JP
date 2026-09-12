@@ -1,0 +1,84 @@
+# ─────────────────────────────────────────────────────────────
+# Internet → Caddy (only 80/443 published) → private network
+#          → app:3000 → SQLite on the stai-data volume
+#
+# The app container deliberately publishes NO ports. It is reachable
+# only from Caddy, over the compose network, by service name.
+# ─────────────────────────────────────────────────────────────
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: stai-app:latest
+    restart: unless-stopped
+    # NOTE: no `ports:` key. Adding one would expose Next.js directly to the
+    # internet and bypass TLS. `expose` is network-internal only.
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      STAI_DATA_DIR: /data
+      APP_URL: ${APP_URL:?APP_URL is required, e.g. https://stai.ai}
+      STAI_ADMIN_EMAIL: ${STAI_ADMIN_EMAIL:?set a real admin email}
+      STAI_ADMIN_PASSWORD: ${STAI_ADMIN_PASSWORD:?set a 12+ character admin password}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ASK_MONTHLY_CALL_CEILING: ${ASK_MONTHLY_CALL_CEILING:-5000}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-STAI <brief@stai.ai>}
+      TRAINING_INBOX: ${TRAINING_INBOX:-training@stai.ai}
+      FIRMS_INBOX: ${FIRMS_INBOX:-}
+      STAI_FOUNDING_TOTAL: ${STAI_FOUNDING_TOTAL:-200}
+    volumes:
+      # Every byte of persistent state — stai.db plus its -wal and -shm
+      # sidecars — lives here and survives `docker compose down`.
+      - stai-data:/data
+    networks:
+      - stai
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # Reap zombies and forward SIGTERM properly for a clean shutdown.
+    init: true
+    stop_grace_period: 20s
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    # The ONLY container that publishes ports.
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?set the public hostname, e.g. stai.ai}
+      ACME_EMAIL: ${ACME_EMAIL:?set an email for Let's Encrypt}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - stai
+    depends_on:
+      app:
+        condition: service_healthy
+
+networks:
+  stai:
+    driver: bridge
+
+volumes:
+  stai-data:
+  caddy-data:
+  caddy-config:
