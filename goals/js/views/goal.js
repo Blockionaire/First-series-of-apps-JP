@@ -152,9 +152,19 @@ function metricBlock(metric) {
             ? ` · ${esc(formatValue(v.remaining, metric.unit, { decimals }))} to go` : ""}
         </p>
         <div style="margin-top:10px">${progressBar(v.fraction, { label: `${metric.name}: ${Math.round((v.fraction || 0) * 100)}%` })}</div>`
-        : `<p class="metric__target">${v.lastDate ? `last ${formatDate(v.lastDate, "short")}` : "no readings yet"}</p>`}
+        : `<p class="metric__target">${metricNote(metric, v)}</p>`}
       ${line ? `<div style="margin-top:14px">${line}</div>` : ""}
     </div>`;
+}
+
+/* What to say under a figure that has no target: how it was arrived at,
+   or when it was last touched. */
+function metricNote(metric, value) {
+  if (!value.lastDate) return "nothing logged yet";
+  if (metric.aggregation === "pace") {
+    return `over ${value.samples} ${value.samples === 1 ? "run" : "runs"} · last ${formatDate(value.lastDate, "short")}`;
+  }
+  return `last ${formatDate(value.lastDate, "short")}`;
 }
 
 /* ---------------------------------------------------------------

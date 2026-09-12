@@ -11,7 +11,7 @@ import { state, save, remove, removeCascade, byId, metricsOf, standardsOf,
          milestonesOf, saveSettings } from "./store.js";
 import { ACTIVITY_TYPES, UNITS, AGGREGATIONS, activityType } from "./data/types.js";
 import { $, esc, sheet, confirmSheet, toast, todayISO, monthOf, monthName,
-         readImage } from "./util.js";
+         readImage, parseNumber } from "./util.js";
 
 /* Read a field of a sheet by id. */
 const read = (dialog, id) => {
@@ -21,10 +21,9 @@ const read = (dialog, id) => {
   return el.value;
 };
 
-const number = (dialog, id) => {
-  const raw = read(dialog, id);
-  return raw === null || raw === "" ? null : Number(raw);
-};
+/* Parsed rather than trusted: a number input drops a comma-decimal
+   without a word, and plenty of keyboards offer nothing else. */
+const number = (dialog, id) => parseNumber(read(dialog, id));
 
 /* ---------------------------------------------------------------
    Goal periods
@@ -279,12 +278,12 @@ export function editMetric(metric = null, goalId = null) {
       <div class="field field--split">
         <label>
           <span class="field__label">Starting point</span>
-          <input class="input num" type="number" step="any" id="start"
+          <input class="input num" type="text" inputmode="decimal" id="start"
                  value="${metric && metric.start !== null ? metric.start : ""}">
         </label>
         <label>
           <span class="field__label">Target</span>
-          <input class="input num" type="number" step="any" id="target"
+          <input class="input num" type="text" inputmode="decimal" id="target"
                  value="${metric && metric.target !== null ? metric.target : ""}">
         </label>
       </div>
@@ -380,12 +379,12 @@ export function editStandard(standard = null, goalId = null) {
       <div class="field field--split" id="range">
         <label>
           <span class="field__label">At least</span>
-          <input class="input num" type="number" step="any" min="0" id="min"
+          <input class="input num" type="text" inputmode="decimal" id="min"
                  value="${standard && standard.min !== null ? standard.min : 1}">
         </label>
         <label>
           <span class="field__label">Ideally up to</span>
-          <input class="input num" type="number" step="any" min="0" id="max"
+          <input class="input num" type="text" inputmode="decimal" id="max"
                  value="${standard && standard.max !== null ? standard.max : ""}">
         </label>
       </div>

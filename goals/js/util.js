@@ -156,6 +156,44 @@ export function relativeDay(iso) {
   return formatDate(iso, "short");
 }
 
+/* A number as typed on a phone. An iPhone set to Dutch puts a comma on
+   the decimal key, and <input type="number"> silently throws away a
+   value it cannot parse — which is why a 4,5 km run used to arrive as
+   nothing at all. So: text inputs with a decimal keypad, parsed here. */
+export function parseNumber(text) {
+  if (text === null || text === undefined) return null;
+  const cleaned = String(text).trim().replace(/\s/g, "").replace(",", ".").replace(/[^\d.-]/g, "");
+  if (!cleaned || cleaned === "." || cleaned === "-") return null;
+  const value = Number(cleaned);
+  return isNaN(value) ? null : value;
+}
+
+/* 24.566 minutes → "24:34". Used for anything timed to the second. */
+export function formatClock(minutes) {
+  if (minutes === null || minutes === undefined || isNaN(minutes)) return "–";
+  const seconds = Math.round(minutes * 60);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+/* 5.46 minutes per kilometre → "5:28 /km". */
+export function formatPace(minutesPerKm) {
+  if (!minutesPerKm || isNaN(minutesPerKm) || !isFinite(minutesPerKm)) return "–";
+  return `${formatClock(minutesPerKm)} /km`;
+}
+
+/* Minutes as a decimal, from a minutes field and a seconds field. */
+export function minutesFrom(minutes, seconds) {
+  if (minutes === null && seconds === null) return null;
+  return (minutes || 0) + (seconds || 0) / 60;
+}
+
+/* And back again, for the edit form. */
+export function splitMinutes(value) {
+  if (value === null || value === undefined || isNaN(value)) return { minutes: null, seconds: null };
+  const total = Math.round(value * 60);
+  return { minutes: Math.floor(total / 60), seconds: total % 60 };
+}
+
 export function formatNumber(value, decimals = 0) {
   if (value === null || value === undefined || isNaN(value)) return "–";
   return Number(value).toLocaleString("en-GB", {
@@ -193,6 +231,7 @@ export function formatValue(value, unit, { decimals = null } = {}) {
     case "sessions": return formatNumber(value);
     case "count":    return formatNumber(value);
     case "percent":  return `${formatNumber(value, decimals === null ? 0 : decimals)}%`;
+    case "pace":     return formatPace(value);
     default:         return formatNumber(value, decimals === null ? 0 : decimals);
   }
 }

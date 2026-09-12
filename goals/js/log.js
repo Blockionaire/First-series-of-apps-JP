@@ -14,7 +14,8 @@ import { state, logEntry, remove, loggableTypes,
          byId, currentTopic, modulesOf } from "./store.js";
 import { activityType } from "./data/types.js";
 import { $, $$, esc, sheet, confirmSheet, toast, todayISO, formatValue,
-         formatDate, formatDuration, relativeDay } from "./util.js";
+         formatDate, formatDuration, formatClock, formatPace, relativeDay,
+         parseNumber, minutesFrom, splitMinutes } from "./util.js";
 import { durationMinutes } from "./progress.js";
 
 /* ---------------------------------------------------------------
@@ -74,6 +75,7 @@ export function openForm(type, { entry = null, topicId = null, moduleId = null, 
 
   const value = existing ? existing.value : null;
   const duration = existing ? existing.duration : (definition.defaultDuration || null);
+  const clock = definition.seconds ? splitMinutes(duration) : { minutes: null, seconds: null };
 
   sheet({
     title: existing ? `Edit ${definition.label.toLowerCase()}` : definition.action || definition.label,
@@ -88,18 +90,31 @@ export function openForm(type, { entry = null, topicId = null, moduleId = null, 
       ${fields.includes("value") ? `
         <label class="field">
           <span class="field__label">${esc(definition.valueLabel || "Value")}${definition.unit ? ` (${unitWord(definition.unit)})` : ""}</span>
-          <input class="input num" type="number" inputmode="decimal" id="value"
-                 step="${definition.step || 1}" value="${value === null ? "" : value}"
+          <input class="input num" type="text" inputmode="decimal" id="value"
+                 autocomplete="off" value="${value === null ? "" : value}"
                  placeholder="${esc(definition.placeholder || "")}">
         </label>` : ""}
 
-      ${fields.includes("duration") ? `
-        <label class="field">
-          <span class="field__label">${esc(definition.durationLabel || "Duration")} (${definition.duration === "hours" ? "hours" : "minutes"})</span>
-          <input class="input num" type="number" inputmode="decimal" id="duration"
-                 step="${definition.duration === "hours" ? "0.25" : "5"}" min="0"
-                 value="${duration === null ? "" : duration}">
-        </label>` : ""}
+      ${fields.includes("duration") ? (definition.seconds
+        ? `<div class="field field--split">
+             <label>
+               <span class="field__label">${esc(definition.durationLabel || "Time")} — minutes</span>
+               <input class="input num" type="text" inputmode="numeric" id="duration"
+                      autocomplete="off" placeholder="24"
+                      value="${clock.minutes === null ? "" : clock.minutes}">
+             </label>
+             <label>
+               <span class="field__label">Seconds</span>
+               <input class="input num" type="text" inputmode="numeric" id="seconds"
+                      autocomplete="off" placeholder="34"
+                      value="${clock.seconds === null ? "" : clock.seconds}">
+             </label>
+           </div>`
+        : `<label class="field">
+             <span class="field__label">${esc(definition.durationLabel || "Duration")} (${definition.duration === "hours" ? "hours" : "minutes"})</span>
+             <input class="input num" type="text" inputmode="decimal" id="duration"
+                    autocomplete="off" value="${duration === null ? "" : duration}">
+           </label>`) : ""}
 
       ${fields.includes("tags") && definition.tags ? `
         <div class="field">
@@ -148,10 +163,13 @@ export function openForm(type, { entry = null, topicId = null, moduleId = null, 
 
       $("[data-save]", dialog).addEventListener("click", async () => {
         const read = id => { const el = $(`#${id}`, dialog); return el ? el.value : null; };
-        const number = id => {
-          const raw = read(id);
-          return raw === null || raw === "" ? null : Number(raw);
-        };
+        const number = id => parseNumber(read(id));
+
+        /* A timed type keeps its total in decimal minutes, so every sum
+           and every weekly total keeps working unchanged. */
+        const totalDuration = definition.seconds
+          ? minutesFrom(number("duration"), number("seconds"))
+          : number("duration");
 
         const reflection = {};
         $$("[data-reflect]", dialog).forEach(box => { reflection[box.dataset.reflect] = box.value.trim(); });
@@ -164,7 +182,7 @@ export function openForm(type, { entry = null, topicId = null, moduleId = null, 
           type,
           date: read("date") || todayISO(),
           value: number("value"),
-          duration: number("duration"),
+          duration: totalDuration,
           note: read("note") || "",
           tags: $$("[data-tag].is-on", dialog).map(chip => chip.dataset.tag),
           topicId: chosenTopic,
@@ -254,7 +272,14 @@ export function entryLine(entry) {
   if (entry.value !== null && entry.value !== undefined && definition && definition.unit) {
     bits.push(formatValue(entry.value, definition.unit));
   }
-  if (entry.duration) bits.push(formatDuration(durationMinutes(entry)));
+  if (entry.duration) {
+    bits.push(definition && definition.seconds
+      ? formatClock(durationMinutes(entry))
+      : formatDuration(durationMinutes(entry)));
+  }
+  if (definition && definition.pace && entry.value && entry.duration) {
+    bits.push(formatPace(durationMinutes(entry) / entry.value));
+  }
   if (entry.tags && entry.tags.length && definition && definition.tags) {
     bits.push(entry.tags
       .map(tag => (definition.tags.find(t => t.id === tag) || {}).label)

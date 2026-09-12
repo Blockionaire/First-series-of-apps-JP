@@ -74,6 +74,10 @@ export function seedData(newId) {
     start: 0, target: 14, direction: "up",
   });
   metric(health, {
+    name: "Average pace", unit: "pace", aggregation: "pace", source: "entry", type: "run",
+    start: null, target: null, direction: "down",
+  });
+  metric(health, {
     name: "Best lift", unit: "kg", aggregation: "max", source: "entry", type: "lift",
     start: null, target: null, direction: "up",
   });

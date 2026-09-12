@@ -62,6 +62,15 @@ export function metricValue(metric, { from = null, to = null } = {}) {
     case "max":
       current = numbers.length ? Math.max(...numbers.map(n => n.value)) : null;
       break;
+    case "pace": {
+      /* Total time over total distance — not the mean of each run's
+         pace, which would let a 1 km jog outweigh a 15 km long run. */
+      const timed = entries.filter(e => e.value > 0 && e.duration > 0);
+      const distance = timed.reduce((sum, e) => sum + Number(e.value), 0);
+      const minutes = timed.reduce((sum, e) => sum + durationMinutes(e), 0);
+      current = distance ? minutes / distance : null;
+      break;
+    }
     default: /* latest */
       current = numbers.length ? numbers[numbers.length - 1].value : null;
   }
@@ -79,6 +88,10 @@ export function metricValue(metric, { from = null, to = null } = {}) {
     });
   } else if (metric.aggregation === "count") {
     series = entries.map((e, i) => ({ date: e.date, value: i + 1 }));
+  } else if (metric.aggregation === "pace") {
+    series = entries
+      .filter(e => e.value > 0 && e.duration > 0)
+      .map(e => ({ date: e.date, value: durationMinutes(e) / Number(e.value) }));
   } else {
     series = numbers;
   }
@@ -86,6 +99,9 @@ export function metricValue(metric, { from = null, to = null } = {}) {
   return {
     metric,
     current,
+    samples: metric.aggregation === "pace"
+      ? entries.filter(e => e.value > 0 && e.duration > 0).length
+      : numbers.length,
     start: metric.start,
     target: metric.target,
     entries,

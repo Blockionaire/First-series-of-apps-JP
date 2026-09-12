@@ -50,6 +50,7 @@ export const state = {
     theme: "auto",
     periodId: null,     // the period shown on Home; empty means "the active one"
     seeded: false,
+    migrations: [],
     updated: 0,
   },
 };
@@ -105,6 +106,7 @@ export async function start() {
   }
 
   if (!state.settings.seeded && !state.periods.length) await seed();
+  await migrate();
 
   sortAll();
   state.loaded = true;
@@ -133,6 +135,40 @@ async function seed() {
   state.settings.seeded = true;
   state.settings.periodId = data.periods[0].id;
   await saveSettings({});
+}
+
+/* Changes that have to reach a copy of the app that was already
+   installed, since seeding only ever happens on an empty database. Each
+   one runs once and leaves a flag behind, and none of them touch
+   anything you edited yourself.  */
+async function migrate() {
+  const done = state.settings.migrations || [];
+
+  /* Average pace, for any goal that already tracks runs. */
+  if (!done.includes("pace")) {
+    for (const goal of state.goals) {
+      const tracksRuns = state.metrics.some(m => m.goalId === goal.id && m.type === "run") ||
+                         state.standards.some(s => s.goalId === goal.id && s.type === "run");
+      const hasPace = state.metrics.some(m => m.goalId === goal.id && m.aggregation === "pace");
+      if (!tracksRuns || hasPace) continue;
+
+      await save("metrics", {
+        goalId: goal.id,
+        name: "Average pace",
+        unit: "pace",
+        aggregation: "pace",
+        source: "entry",
+        type: "run",
+        start: null,
+        target: null,
+        direction: "down",
+        headline: false,
+        order: metricsOf(goal.id).length,
+      }, { quiet: true });
+    }
+    done.push("pace");
+    await saveSettings({ migrations: done });
+  }
 }
 
 function sortAll() {

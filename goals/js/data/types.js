@@ -26,7 +26,11 @@ export const ACTIVITY_TYPES = [
   {
     id: "run", label: "Run", action: "Log run",
     fields: ["value", "duration", "note"], unit: "km", step: 0.1,
-    valueLabel: "Distance", duration: "minutes", durationLabel: "Duration",
+    valueLabel: "Distance", duration: "minutes", durationLabel: "Time",
+    /* A run is timed to the second, so the form asks for minutes and
+       seconds and stores the total as decimal minutes. */
+    seconds: true,
+    pace: true,
   },
   {
     id: "lift", label: "Strength record", action: "Log strength",
@@ -123,6 +127,7 @@ export const UNITS = [
   { id: "sessions", label: "sessions" },
   { id: "count", label: "count" },
   { id: "percent", label: "percent" },
+  { id: "pace", label: "pace (min/km)" },
 ];
 
 /* How a metric turns a pile of entries into one number. */
@@ -132,4 +137,5 @@ export const AGGREGATIONS = [
   { id: "count",      label: "Number of logs", help: "How many times it happened, like gym sessions." },
   { id: "average",    label: "Average",        help: "The mean of everything logged." },
   { id: "max",        label: "Best",           help: "The highest value logged, like a lift." },
+  { id: "pace",       label: "Average pace",   help: "Total time divided by total distance." },
 ];
