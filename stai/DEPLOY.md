@@ -12,7 +12,7 @@ Internet
 
 ## 1. Server
 
-A small EU VPS is enough (Hetzner CX22, Falkenstein or Helsinki).
+A small EU VPS is enough (Hetzner CX23, Falkenstein or Helsinki).
 
 ```bash
 # Ubuntu 24.04, as root

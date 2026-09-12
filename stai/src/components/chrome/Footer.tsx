@@ -28,6 +28,7 @@ const COLS: { head: string; links: { href: string; label: string }[] }[] = [
     links: [
       { href: "/about", label: "About STAI" },
       { href: "/contact", label: "Contact" },
+      { href: "/legal/company", label: "Company information" },
       { href: "/legal/privacy", label: "Privacy" },
       { href: "/legal/terms", label: "Terms" },
     ],

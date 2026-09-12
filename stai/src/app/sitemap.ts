@@ -25,6 +25,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/research", priority: 0.7, freq: "weekly" },
     { path: "/about", priority: 0.5, freq: "yearly" },
     { path: "/contact", priority: 0.5, freq: "yearly" },
+    { path: "/legal/company", priority: 0.3, freq: "yearly" },
     { path: "/legal/privacy", priority: 0.2, freq: "yearly" },
     { path: "/legal/terms", priority: 0.2, freq: "yearly" },
   ];
