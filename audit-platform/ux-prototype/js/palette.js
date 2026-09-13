@@ -30,6 +30,9 @@ function index() {
   add("Do", "New client", "create a client profile", () => { location.hash = "#/client/new"; }, "plus");
   add("Do", "New engagement", "a financial year for a client", () => { location.hash = "#/engagement/new"; }, "plus");
   add("Do", "Guided demo", "the five-minute walkthrough", () => window.__demoStart());
+  add("Do", "Client experience demo", "the portal and the interview, from their side",
+    () => window.__demoStartClient());
+  add("Go to", "Client portal", "what the client sees", () => { location.hash = "#/portal"; }, "people");
   add("Do", "Keyboard shortcuts", "?", () => st.act.sheet("keys"));
   add("Do", "Reset the prototype", "back to the beginning", () => st.act.reset());
 

@@ -90,15 +90,69 @@ export const STEPS = [
                    S.disclosed.footer = true; } },
 ];
 
+/* ── The client-side demo ─────────────────────────────────────────────────
+   A separate, shorter track: two or three minutes answering the question
+   "what does the client actually experience?". It is kept apart from the
+   auditor tour because it is a different product for a different person.
+   ──────────────────────────────────────────────────────────────────────── */
+
+export const CLIENT_STEPS = [
+  { route: "#/interview", title: "The auditor asks",
+    say: "The questionnaire is assigned to one named client contact. That is a task-scoped grant, not an account — Bas Kuipers can open this questionnaire and nothing else in the product.",
+    setup: () => { S.prepared = true; act.assignQuestionnaire("CC-02"); S.toast = null; } },
+
+  { route: "#/portal", title: "What the client sees",
+    say: "A task inbox, and nothing else. No process journey, no coverage, no controls, no findings, no methodology. Four questions only: what do you need, why, what next, am I done. Bas sees his two tasks and not his colleague's interview.",
+    setup: () => { act.portalAs("CC-02"); } },
+
+  { route: "#/portal/questionnaire", title: "One question at a time",
+    say: "The same questionnaire the auditor assigned, in the portal's chrome. Answer in your own words — or say you don't know, or ask for a call. All three go somewhere; none of them is guessed.",
+    setup: () => { act.portalAs("CC-02"); } },
+
+  { route: "#/portal", title: "Back to the inbox",
+    say: "Progress updates on the task. The auditor's process interview screen shows the same number, because there is one questionnaire and not two.",
+    setup: () => { act.portalAs("CC-02"); } },
+
+  { route: "#/portal/interview", title: "An interview is a task too",
+    say: "Now as Ruud Timmermans, the financial controller. When, how long, with whom, what will be discussed, and what he needs to prepare — nothing.",
+    setup: () => { act.portalAs("CC-01"); S.interview.status = "scheduled"; S.interview.turn = 6; } },
+
+  { route: "#/portal/interview/waiting", title: "The waiting room",
+    say: "Not a video-conferencing product. What this is, who is in it, and one plain sentence about transcription that the client has to acknowledge before joining.",
+    setup: () => { act.portalAs("CC-01"); S.interview.status = "waiting"; S.interview.consent = false; } },
+
+  { route: "#/portal/interview/live", title: "The conversation is the product",
+    say: "The client sees who said what, and the subject. No coverage bar, no suggested question, no contradiction flag, no evidence request, no AI thinking out loud. All of that belongs to the auditor.",
+    setup: () => { act.portalAs("CC-01"); S.interview.consent = true; S.interview.status = "live";
+                   S.interview.turn = Math.max(S.interview.turn, 9); } },
+
+  { route: "#/cockpit", title: "The same interview, the other side",
+    say: "One interview, two radically different interfaces. Same turn, same words — plus the coverage filling in live, the contradiction with the commercial director's questionnaire answer, and the next question worth asking. Advance a turn here and the client's screen moves with it.",
+    setup: () => { S.interview.status = "live"; } },
+
+  { route: "#/portal/interview/done", title: "Thank you, and nothing more",
+    say: "No coverage percentage, no contradictions found, no controls identified. The client is told the thing that concerns them: it is finished, and somebody may follow up.",
+    setup: () => { act.portalAs("CC-01"); act.interviewEnd(); S.toast = null; } },
+
+  { route: "#/portal", title: "The interview created a follow-up",
+    say: "Back as Bas. The controller described the credit limits differently to the way Bas did in the questionnaire, so one question goes back to Bas — in his words, not the auditor's. No engine, no new surface: the same question screen.",
+    setup: () => { act.portalAs("CC-02"); S.interview.status = "complete"; } },
+
+  { route: "#/interview", title: "And the auditor sees where everything is",
+    say: "Contextually, where the auditor already is — not in a new dashboard. Who was asked for what, and how far it has got. The complexity stays on this side.",
+    setup: () => { S.prepared = true; } },
+];
+
 export function demoBar() {
   if (!S.demo) return "";
-  const i = S.demoStep, s = STEPS[i];
+  const track = S.demoTrack === "client" ? CLIENT_STEPS : STEPS;
+  const i = Math.min(S.demoStep, track.length - 1), s = track[i];
   return `<div class="demo">
-    <span class="demo__n">${i + 1}/${STEPS.length}</span>
+    <span class="demo__n">${i + 1}/${track.length}</span>
     <div class="demo__t"><b>${esc(s.title)}</b> — ${esc(s.say)}</div>
     <div class="acts">
       ${btn("Back", "demo-prev", { variant: "ghost", size: "sm", disabled: i === 0 })}
-      ${i === STEPS.length - 1
+      ${i === track.length - 1
         ? btn("Finish", "demo-exit", { variant: "primary", size: "sm" })
         : btn("Next", "demo-next", { variant: "primary", size: "sm", key: "→" })}
       ${btn("Exit", "demo-exit", { variant: "ghost", size: "sm" })}
@@ -111,6 +165,14 @@ const UNDERSTANDING_BEAT = 5;
 const ANALYSIS_BEAT = 8;
 
 export function demoGo(step) {
+  /* The client track is linear: no pipeline to run, nothing to pre-resolve. */
+  if (S.demoTrack === "client") {
+    S.demoStep = Math.max(0, Math.min(CLIENT_STEPS.length - 1, step));
+    const c = CLIENT_STEPS[S.demoStep];
+    c.setup();
+    if (location.hash !== c.route) location.hash = c.route; else commit();
+    return;
+  }
   S.demoStep = Math.max(0, Math.min(STEPS.length - 1, step));
   const s = STEPS[S.demoStep];
   if (S.demoStep === UNDERSTANDING_BEAT && !S.generated && !S.generating) {
@@ -145,6 +207,15 @@ export function demoGo(step) {
  *  there explicitly — the demo bar names the engagement it is showing. */
 export function demoStart() {
   S.demo = true;
+  S.demoTrack = "auditor";
+  act.selectEngagement("ENG-2026-0142");
+  demoGo(0);
+}
+
+/** The client-experience tour. Separate track, separate question. */
+export function demoStartClient() {
+  S.demo = true;
+  S.demoTrack = "client";
   act.selectEngagement("ENG-2026-0142");
   demoGo(0);
 }

@@ -1122,7 +1122,8 @@ select.field { cursor: pointer; }
   border-bottom: 1px solid var(--line); background: var(--ground);
   position: sticky; top: 0; z-index: 10;
 }
-.cq__body { max-width: 640px; margin: 0 auto; padding: var(--s-8) var(--s-5) var(--s-9); }
+/* The portal wrapper owns the width now; the body just flows inside it. */
+.cq__body { max-width: 100%; }
 .cq__q { font-size: 27px; font-weight: 600; line-height: 1.32; letter-spacing: -.018em; }
 .cq__prog { height: 4px; border-radius: var(--r-pill); background: var(--sunk); overflow: hidden; }
 .cq__prog i { display: block; height: 100%; background: var(--accent-mid); transition: width var(--t-slow) var(--ease); }
@@ -1131,9 +1132,270 @@ select.field { cursor: pointer; }
 .cq__done .aa { font: 16px/1.6 var(--serif); color: var(--ink-2); margin-top: 6px; }
 @media (max-width: 620px) {
   .cq__bar { padding: var(--s-3) var(--s-4); flex-wrap: wrap; }
-  .cq__body { padding: var(--s-6) var(--s-4) var(--s-8); }
   .cq__q { font-size: 23px; }
   .cq .btn { flex: 1 1 auto; }
+}
+
+/* ==========================================================================
+   THE CLIENT PORTAL
+
+   The other half of the product. Same identity — warm ground, mineral-green
+   ink, the same type and the same buttons — and a deliberately different
+   feel: larger body text, far more air, fewer things per screen, no small
+   grey labels. A client should never feel they are operating audit software.
+   ========================================================================== */
+
+.pt { min-height: 100vh; background: var(--ground); display: flex; flex-direction: column; }
+.pt--live { height: 100vh; overflow: hidden; }
+
+.pt__bar {
+  flex: none; display: flex; align-items: center; gap: var(--s-4);
+  padding: 0 var(--s-6); height: 62px; background: var(--ground);
+  border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10;
+}
+.pt__bar .sp { flex: 1; }
+.pt__mark { display: inline-flex; align-items: center; gap: 9px; color: var(--accent); flex: none; }
+.pt__mark span { font-size: 15px; font-weight: 650; letter-spacing: -.015em; color: var(--ink); }
+.pt__ctx { display: flex; align-items: baseline; gap: 8px; font-size: 14px; color: var(--ink-3);
+           padding-left: var(--s-4); border-left: 1px solid var(--line); }
+.pt__ctx b { color: var(--ink); font-weight: 600; }
+.pt__help { font-size: 14px; color: var(--ink-3); padding: 6px 10px; border-radius: var(--r-1); }
+.pt__help:hover { color: var(--ink); background: var(--surface); }
+.pt__me {
+  flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--accent);
+  color: #fff; font-size: 12px; font-weight: 650; letter-spacing: .02em;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* The prototype view switch. Marked as one, and styled so it can never be
+   mistaken for a production control. */
+.pt__dev {
+  flex: none; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 7px var(--s-6); background: var(--recessed);
+  border-bottom: 1px solid var(--line); font-size: 12px;
+}
+.pt__dev-k { color: var(--ink-4); text-transform: uppercase; letter-spacing: .09em;
+             font-weight: 650; font-size: 10.5px; margin-right: 4px; }
+.pt__dev-b {
+  font-size: 12px; color: var(--ink-3); padding: 3px 9px; border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.pt__dev-b:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink-5); }
+.pt__dev-b.is-on { background: var(--paper); color: var(--ink); font-weight: 600; }
+.pt__dev-s { flex: 1; }
+
+.pt__canvas { flex: 1; overflow-y: auto; }
+.pt__wrap { width: min(100% - 48px, 980px); margin-inline: auto; padding: var(--s-8) 0 var(--s-9); }
+.pt__wrap--narrow { width: min(100% - 48px, 720px); }
+.pt__wrap--wide { width: min(100% - 48px, 1080px); }
+
+/* --- Type. One step up from the auditor side everywhere. ----------------- */
+.pt__head { margin-bottom: var(--s-7); }
+.pt__head--centre { text-align: center; }
+.pt__head h1 { font-size: 34px; font-weight: 600; letter-spacing: -.022em; line-height: 1.18; }
+.pt__eyebrow {
+  font-size: 12px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--ink-4); margin-bottom: 10px;
+}
+.pt__lede { font-size: 18px; line-height: 1.6; color: var(--ink-2); margin-top: 12px; max-width: 56ch; }
+.pt__head--centre .pt__lede { margin-inline: auto; }
+.pt__head--centre ~ .pt__sec .pt__acts,
+.pt__head--centre ~ .pt__sec .pt__note { justify-content: center; margin-inline: auto; text-align: center; }
+.pt__sh { font-size: 17px; font-weight: 600; letter-spacing: -.01em; margin-bottom: var(--s-4); }
+.pt__sec { margin-top: var(--s-7); }
+.pt__note { font-size: 14px; color: var(--ink-4); line-height: 1.6; margin-top: var(--s-4); max-width: 58ch; }
+.pt__acts { display: flex; gap: var(--s-3); flex-wrap: wrap; margin-top: var(--s-6); }
+.pt__acts--centre { justify-content: center; }
+.pt__trust { font-size: 14px; color: var(--ink-4); line-height: 1.65; margin-top: var(--s-9);
+             padding-top: var(--s-5); border-top: 1px solid var(--line); max-width: 62ch; }
+
+/* --- A task. The only object on the portal home. ------------------------- */
+.ptask {
+  background: var(--paper); border-radius: var(--r-4); padding: var(--s-6);
+  box-shadow: inset 0 0 0 1px var(--line), var(--sh-1);
+}
+.ptask + .ptask { margin-top: var(--s-4); }
+.ptask--done { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.ptask__hd { display: flex; align-items: flex-start; gap: var(--s-4); }
+.ptask__ic { color: var(--accent-mid); flex: none; margin-top: 2px; }
+.ptask__t { flex: 1; min-width: 0; display: flex; align-items: baseline;
+            gap: var(--s-3); flex-wrap: wrap; }
+.ptask__t h2 { font-size: 21px; font-weight: 600; letter-spacing: -.013em; line-height: 1.3; }
+.ptask__w { font-size: 16px; line-height: 1.6; color: var(--ink-2); margin-top: 12px; max-width: 60ch; }
+.ptask__m { font-size: 14.5px; color: var(--ink-3); margin-top: 8px; }
+.ptask__go { margin-top: var(--s-5); }
+
+.ptag {
+  font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: var(--r-pill);
+  background: var(--recessed); color: var(--ink-3); white-space: nowrap;
+}
+.ptag--accent { background: var(--accent-soft); color: var(--accent); }
+.ptag--ok { background: var(--ok-soft); color: var(--ok); }
+
+.pdone { display: flex; align-items: flex-start; gap: var(--s-3); padding: 14px 0;
+         border-bottom: 1px solid var(--line); color: var(--ink-3); }
+.pdone:last-child { border-bottom: 0; }
+.pdone > span { color: var(--ok); flex: none; margin-top: 1px; }
+.pdone b { display: block; font-size: 15.5px; font-weight: 600; color: var(--ink-2); }
+.pdone div span { font-size: 14px; color: var(--ink-4); }
+
+.pt__empty { text-align: center; padding: var(--s-8) 0; }
+.pt__empty > span { color: var(--ok); display: inline-flex; }
+.pt__empty h2 { font-size: 21px; font-weight: 600; margin-top: var(--s-3); }
+.pt__empty p { font-size: 16px; color: var(--ink-3); margin-top: 8px; max-width: 46ch;
+               margin-inline: auto; line-height: 1.6; }
+.pt__tick { color: var(--ok); display: inline-flex; margin-bottom: var(--s-3); }
+
+/* --- Interview task, waiting room ---------------------------------------- */
+.pfacts { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-5);
+          background: var(--paper); border-radius: var(--r-4); padding: var(--s-6);
+          box-shadow: inset 0 0 0 1px var(--line), var(--sh-1); }
+.pfacts > div { display: flex; flex-direction: column; gap: 4px; }
+.pfacts span { font-size: 13px; color: var(--ink-4); text-transform: uppercase;
+               letter-spacing: .08em; font-weight: 650; }
+.pfacts b { font-size: 16.5px; font-weight: 600; line-height: 1.4; }
+.pfacts i { font-style: normal; font-size: 14px; color: var(--ink-3); }
+@media (max-width: 720px) { .pfacts { grid-template-columns: 1fr; gap: var(--s-4); } }
+
+.ptopics { display: grid; gap: 12px; }
+.ptopics li { display: flex; align-items: flex-start; gap: 10px; font-size: 16.5px;
+              color: var(--ink-2); line-height: 1.5; }
+.ptopics li svg { color: var(--ok); flex: none; margin-top: 3px; }
+
+.pwho { display: flex; align-items: center; gap: var(--s-3); padding: 12px 0; }
+.pwho > span { flex: none; width: 34px; height: 34px; border-radius: 50%;
+               background: var(--recessed); color: var(--ink-2); font-size: 12.5px;
+               font-weight: 650; display: inline-flex; align-items: center; justify-content: center; }
+.pwho b { display: block; font-size: 16px; font-weight: 600; }
+.pwho div span { font-size: 14px; color: var(--ink-3); }
+
+.pready { background: var(--paper); border-radius: var(--r-4);
+          box-shadow: inset 0 0 0 1px var(--line), var(--sh-1); overflow: hidden; }
+.pready__r { display: flex; align-items: flex-start; gap: var(--s-4); padding: var(--s-5) var(--s-6); }
+.pready__r + .pready__r { border-top: 1px solid var(--line); }
+.pready__i { color: var(--accent-mid); flex: none; margin-top: 2px; }
+.pready__r > div { flex: 1; }
+.pready__r b { display: block; font-size: 16px; font-weight: 600; }
+.pready__r div span { display: block; font-size: 14.5px; color: var(--ink-3);
+                      line-height: 1.6; margin-top: 4px; max-width: 52ch; }
+
+.pdot { width: 8px; height: 8px; border-radius: 50%; flex: none; margin-top: 8px; }
+.pdot--ok { background: var(--ok); }
+.pdot--rec { background: var(--danger); margin-top: 0; animation: ptpulse 2.4s infinite; }
+@keyframes ptpulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+.pconsent {
+  display: flex; align-items: flex-start; gap: 12px; margin-top: var(--s-5);
+  padding: var(--s-4) var(--s-5); border-radius: var(--r-3); cursor: pointer;
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 15.5px; line-height: 1.55; color: var(--ink-2);
+}
+.pconsent:hover { box-shadow: inset 0 0 0 1px var(--line-2); }
+.pconsent.is-on { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-line); }
+.pconsent input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
+
+/* --- Live: the conversation, and nothing that belongs to the auditor ----- */
+.plive__bar {
+  flex: none; display: flex; align-items: center; gap: var(--s-3);
+  padding: 0 var(--s-6); height: 62px; border-bottom: 1px solid var(--line); background: var(--ground);
+}
+.plive__bar .sp { flex: 1; }
+.plive__t b { display: block; font-size: 15.5px; font-weight: 600; }
+.plive__t span { display: block; font-size: 13.5px; color: var(--ink-3); }
+.plive__clock { font: 15px var(--mono); color: var(--ink-3); letter-spacing: -.02em; }
+.plive__topic {
+  flex: none; display: flex; align-items: baseline; gap: 10px;
+  padding: 10px var(--s-6); background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.plive__topic span { font-size: 11px; font-weight: 650; letter-spacing: .09em;
+                     text-transform: uppercase; color: var(--ink-4); }
+.plive__topic b { font-size: 14.5px; font-weight: 600; color: var(--ink-2); }
+.plive__body { flex: 1; overflow-y: auto; padding: var(--s-7) var(--s-6) var(--s-8); }
+.plive__in { width: min(100%, 720px); margin-inline: auto; }
+.plive__foot {
+  flex: none; display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-4) var(--s-6); border-top: 1px solid var(--line); background: var(--surface);
+}
+.plive__foot .sp { flex: 1; }
+
+.pturn { margin-bottom: var(--s-6); opacity: .74; transition: opacity var(--t-slow) var(--ease); }
+.pturn.is-new { opacity: 1; }
+.pturn__w { font-size: 13.5px; font-weight: 650; color: var(--ink-3); margin-bottom: 6px; }
+.pturn__x { font: 18px/1.65 var(--serif); color: var(--ink); max-width: 58ch; }
+.pturn--me { padding-left: var(--s-4); border-left: 2px solid var(--accent-line); }
+.pturn--me .pturn__w { color: var(--accent); }
+.pturn__dots { display: flex; gap: 5px; padding: 6px 0; }
+.pturn__dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-5);
+                 animation: ptdot 1.4s infinite; }
+.pturn__dots i:nth-child(2) { animation-delay: .2s; }
+.pturn__dots i:nth-child(3) { animation-delay: .4s; }
+@keyframes ptdot { 0%,60%,100% { opacity: .3; } 30% { opacity: 1; } }
+
+.pmic {
+  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px;
+  border-radius: var(--r-pill); font-size: 14.5px; font-weight: 550; color: var(--accent);
+  background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.pmic.is-off { color: var(--ink-3); background: var(--recessed); box-shadow: inset 0 0 0 1px var(--line-2); }
+
+/* --- Document request, follow-up ---------------------------------------- */
+.pt__drop {
+  text-align: center; padding: var(--s-8) var(--s-6); border-radius: var(--r-4);
+  background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line-2);
+}
+.pt__drop > span { color: var(--ink-4); display: inline-flex; }
+.pt__drop p { font-size: 16px; color: var(--ink-2); margin: var(--s-3) 0 var(--s-5); }
+.pt__drop .pt__note { margin-inline: auto; }
+.pt__ok { display: flex; align-items: center; gap: var(--s-4); padding: var(--s-5) var(--s-6);
+          border-radius: var(--r-4); background: var(--ok-soft);
+          box-shadow: inset 0 0 0 1px var(--ok-line); }
+.pt__ok > span { color: var(--ok); flex: none; }
+.pt__ok b { display: block; font-size: 16.5px; font-weight: 600; }
+.pt__ok div span { font-size: 14.5px; color: var(--ink-2); }
+
+.pq__q { font-size: 28px; line-height: 1.3; }
+.pq__in { font: 17px/1.65 var(--sans); min-height: 150px; }
+.pq__was { background: var(--surface); border-radius: var(--r-3); padding: var(--s-5);
+           box-shadow: inset 0 0 0 1px var(--line); }
+.pq__was > span { font-size: 14.5px; color: var(--ink-4); }
+.pq__was p { font: 17px/1.6 var(--serif); color: var(--ink); margin-top: 8px; }
+
+/* --- The questionnaire, now a portal screen ------------------------------ */
+.cq__head { margin-bottom: var(--s-7); }
+.cq__count { font-size: 30px; font-weight: 600; letter-spacing: -.02em; margin-bottom: var(--s-4); }
+.cq__count span { font-size: 17px; font-weight: 400; color: var(--ink-3); letter-spacing: 0; }
+
+/* --- Phone. The client may well be on one. ------------------------------- */
+@media (max-width: 700px) {
+  /* Two rows: the brand and the way out first, then which audit this is. */
+  .pt__bar { height: auto; padding: 10px var(--s-4); gap: var(--s-3); row-gap: 8px; flex-wrap: wrap; }
+  .pt__ctx { order: 5; flex: 1 1 100%; padding-left: 0; border-left: 0; font-size: 13px; }
+  .pt__help { display: none; }
+  /* The header back button is the client's main way out on a phone, so it
+     gets a real tap target rather than the auditor side's compact one. */
+  .pt__bar .btn--sm { height: 38px; padding-inline: 14px; }
+  .pt__dev { padding: 6px var(--s-4); }
+  .pt__wrap, .pt__wrap--narrow, .pt__wrap--wide { width: calc(100% - 32px); padding: var(--s-6) 0 var(--s-8); }
+  .pt__head h1 { font-size: 27px; }
+  .pt__lede { font-size: 16.5px; }
+  .ptask { padding: var(--s-5); }
+  .ptask__t h2 { font-size: 19px; }
+  .ptask__go .btn, .pt__acts .btn { flex: 1 1 auto; justify-content: center; }
+  .plive__bar, .plive__foot, .plive__topic { padding-inline: var(--s-4); }
+  .plive__bar { height: auto; padding-block: 10px; }
+  .plive__t { min-width: 0; }
+  .plive__t b, .plive__t span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .plive__clock { font-size: 13.5px; }
+  .plive__topic b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Two rows on a phone: the microphone, then the actions. Nothing clipped. */
+  .plive__foot { flex-wrap: wrap; gap: 10px; }
+  .plive__foot .sp { display: none; }
+  .pmic { flex: 1 1 100%; justify-content: center; white-space: nowrap; }
+  .plive__foot .btn { flex: 1 1 0; justify-content: center; min-width: 0; height: 40px; }
+  .plive__body { padding: var(--s-5) var(--s-4) var(--s-7); }
+  .pturn__x { font-size: 17px; }
+  .pq__q, .cq__q { font-size: 23px; }
+  .cq__count { font-size: 26px; }
 }
 
 /* Live cockpit — conversation leads, everything else is quiet */

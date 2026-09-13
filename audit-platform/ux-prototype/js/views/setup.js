@@ -208,7 +208,12 @@ export function clientView() {
             title: `<span class="b">${esc(p.name)}</span>`,
             detail: `${esc(p.role)}${p.email ? ` · ${esc(p.email)}` : ""}${p.department ? ` · ${esc(p.department)}` : ""}`,
             side: `${tag("client contact", "quiet")}
-              ${btn("Edit", "edit-open", { variant: "ghost", size: "sm", data: { id: `contact:${p.id}` } })}`,
+              ${btn("Edit", "edit-open", { variant: "ghost", size: "sm", data: { id: `contact:${p.id}` } })}
+              ${st.S.clientTasks.some((t) => t.contactId === p.id && t.engagementId === st.S.engId)
+                ? btn("View as", "portal-preview", { variant: "ghost", size: "sm",
+                    title: "Prototype: open the client portal as this person sees it",
+                    data: { id: p.id } })
+                : ""}`,
           })).join(""))
       : empty("No contacts yet", "Add the people you expect to speak to.", "people")}
     </section>

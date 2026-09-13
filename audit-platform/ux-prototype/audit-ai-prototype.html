@@ -1131,7 +1131,8 @@ select.field { cursor: pointer; }
   border-bottom: 1px solid var(--line); background: var(--ground);
   position: sticky; top: 0; z-index: 10;
 }
-.cq__body { max-width: 640px; margin: 0 auto; padding: var(--s-8) var(--s-5) var(--s-9); }
+/* The portal wrapper owns the width now; the body just flows inside it. */
+.cq__body { max-width: 100%; }
 .cq__q { font-size: 27px; font-weight: 600; line-height: 1.32; letter-spacing: -.018em; }
 .cq__prog { height: 4px; border-radius: var(--r-pill); background: var(--sunk); overflow: hidden; }
 .cq__prog i { display: block; height: 100%; background: var(--accent-mid); transition: width var(--t-slow) var(--ease); }
@@ -1140,9 +1141,270 @@ select.field { cursor: pointer; }
 .cq__done .aa { font: 16px/1.6 var(--serif); color: var(--ink-2); margin-top: 6px; }
 @media (max-width: 620px) {
   .cq__bar { padding: var(--s-3) var(--s-4); flex-wrap: wrap; }
-  .cq__body { padding: var(--s-6) var(--s-4) var(--s-8); }
   .cq__q { font-size: 23px; }
   .cq .btn { flex: 1 1 auto; }
+}
+
+/* ==========================================================================
+   THE CLIENT PORTAL
+
+   The other half of the product. Same identity — warm ground, mineral-green
+   ink, the same type and the same buttons — and a deliberately different
+   feel: larger body text, far more air, fewer things per screen, no small
+   grey labels. A client should never feel they are operating audit software.
+   ========================================================================== */
+
+.pt { min-height: 100vh; background: var(--ground); display: flex; flex-direction: column; }
+.pt--live { height: 100vh; overflow: hidden; }
+
+.pt__bar {
+  flex: none; display: flex; align-items: center; gap: var(--s-4);
+  padding: 0 var(--s-6); height: 62px; background: var(--ground);
+  border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10;
+}
+.pt__bar .sp { flex: 1; }
+.pt__mark { display: inline-flex; align-items: center; gap: 9px; color: var(--accent); flex: none; }
+.pt__mark span { font-size: 15px; font-weight: 650; letter-spacing: -.015em; color: var(--ink); }
+.pt__ctx { display: flex; align-items: baseline; gap: 8px; font-size: 14px; color: var(--ink-3);
+           padding-left: var(--s-4); border-left: 1px solid var(--line); }
+.pt__ctx b { color: var(--ink); font-weight: 600; }
+.pt__help { font-size: 14px; color: var(--ink-3); padding: 6px 10px; border-radius: var(--r-1); }
+.pt__help:hover { color: var(--ink); background: var(--surface); }
+.pt__me {
+  flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--accent);
+  color: #fff; font-size: 12px; font-weight: 650; letter-spacing: .02em;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* The prototype view switch. Marked as one, and styled so it can never be
+   mistaken for a production control. */
+.pt__dev {
+  flex: none; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 7px var(--s-6); background: var(--recessed);
+  border-bottom: 1px solid var(--line); font-size: 12px;
+}
+.pt__dev-k { color: var(--ink-4); text-transform: uppercase; letter-spacing: .09em;
+             font-weight: 650; font-size: 10.5px; margin-right: 4px; }
+.pt__dev-b {
+  font-size: 12px; color: var(--ink-3); padding: 3px 9px; border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.pt__dev-b:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink-5); }
+.pt__dev-b.is-on { background: var(--paper); color: var(--ink); font-weight: 600; }
+.pt__dev-s { flex: 1; }
+
+.pt__canvas { flex: 1; overflow-y: auto; }
+.pt__wrap { width: min(100% - 48px, 980px); margin-inline: auto; padding: var(--s-8) 0 var(--s-9); }
+.pt__wrap--narrow { width: min(100% - 48px, 720px); }
+.pt__wrap--wide { width: min(100% - 48px, 1080px); }
+
+/* --- Type. One step up from the auditor side everywhere. ----------------- */
+.pt__head { margin-bottom: var(--s-7); }
+.pt__head--centre { text-align: center; }
+.pt__head h1 { font-size: 34px; font-weight: 600; letter-spacing: -.022em; line-height: 1.18; }
+.pt__eyebrow {
+  font-size: 12px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--ink-4); margin-bottom: 10px;
+}
+.pt__lede { font-size: 18px; line-height: 1.6; color: var(--ink-2); margin-top: 12px; max-width: 56ch; }
+.pt__head--centre .pt__lede { margin-inline: auto; }
+.pt__head--centre ~ .pt__sec .pt__acts,
+.pt__head--centre ~ .pt__sec .pt__note { justify-content: center; margin-inline: auto; text-align: center; }
+.pt__sh { font-size: 17px; font-weight: 600; letter-spacing: -.01em; margin-bottom: var(--s-4); }
+.pt__sec { margin-top: var(--s-7); }
+.pt__note { font-size: 14px; color: var(--ink-4); line-height: 1.6; margin-top: var(--s-4); max-width: 58ch; }
+.pt__acts { display: flex; gap: var(--s-3); flex-wrap: wrap; margin-top: var(--s-6); }
+.pt__acts--centre { justify-content: center; }
+.pt__trust { font-size: 14px; color: var(--ink-4); line-height: 1.65; margin-top: var(--s-9);
+             padding-top: var(--s-5); border-top: 1px solid var(--line); max-width: 62ch; }
+
+/* --- A task. The only object on the portal home. ------------------------- */
+.ptask {
+  background: var(--paper); border-radius: var(--r-4); padding: var(--s-6);
+  box-shadow: inset 0 0 0 1px var(--line), var(--sh-1);
+}
+.ptask + .ptask { margin-top: var(--s-4); }
+.ptask--done { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.ptask__hd { display: flex; align-items: flex-start; gap: var(--s-4); }
+.ptask__ic { color: var(--accent-mid); flex: none; margin-top: 2px; }
+.ptask__t { flex: 1; min-width: 0; display: flex; align-items: baseline;
+            gap: var(--s-3); flex-wrap: wrap; }
+.ptask__t h2 { font-size: 21px; font-weight: 600; letter-spacing: -.013em; line-height: 1.3; }
+.ptask__w { font-size: 16px; line-height: 1.6; color: var(--ink-2); margin-top: 12px; max-width: 60ch; }
+.ptask__m { font-size: 14.5px; color: var(--ink-3); margin-top: 8px; }
+.ptask__go { margin-top: var(--s-5); }
+
+.ptag {
+  font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: var(--r-pill);
+  background: var(--recessed); color: var(--ink-3); white-space: nowrap;
+}
+.ptag--accent { background: var(--accent-soft); color: var(--accent); }
+.ptag--ok { background: var(--ok-soft); color: var(--ok); }
+
+.pdone { display: flex; align-items: flex-start; gap: var(--s-3); padding: 14px 0;
+         border-bottom: 1px solid var(--line); color: var(--ink-3); }
+.pdone:last-child { border-bottom: 0; }
+.pdone > span { color: var(--ok); flex: none; margin-top: 1px; }
+.pdone b { display: block; font-size: 15.5px; font-weight: 600; color: var(--ink-2); }
+.pdone div span { font-size: 14px; color: var(--ink-4); }
+
+.pt__empty { text-align: center; padding: var(--s-8) 0; }
+.pt__empty > span { color: var(--ok); display: inline-flex; }
+.pt__empty h2 { font-size: 21px; font-weight: 600; margin-top: var(--s-3); }
+.pt__empty p { font-size: 16px; color: var(--ink-3); margin-top: 8px; max-width: 46ch;
+               margin-inline: auto; line-height: 1.6; }
+.pt__tick { color: var(--ok); display: inline-flex; margin-bottom: var(--s-3); }
+
+/* --- Interview task, waiting room ---------------------------------------- */
+.pfacts { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-5);
+          background: var(--paper); border-radius: var(--r-4); padding: var(--s-6);
+          box-shadow: inset 0 0 0 1px var(--line), var(--sh-1); }
+.pfacts > div { display: flex; flex-direction: column; gap: 4px; }
+.pfacts span { font-size: 13px; color: var(--ink-4); text-transform: uppercase;
+               letter-spacing: .08em; font-weight: 650; }
+.pfacts b { font-size: 16.5px; font-weight: 600; line-height: 1.4; }
+.pfacts i { font-style: normal; font-size: 14px; color: var(--ink-3); }
+@media (max-width: 720px) { .pfacts { grid-template-columns: 1fr; gap: var(--s-4); } }
+
+.ptopics { display: grid; gap: 12px; }
+.ptopics li { display: flex; align-items: flex-start; gap: 10px; font-size: 16.5px;
+              color: var(--ink-2); line-height: 1.5; }
+.ptopics li svg { color: var(--ok); flex: none; margin-top: 3px; }
+
+.pwho { display: flex; align-items: center; gap: var(--s-3); padding: 12px 0; }
+.pwho > span { flex: none; width: 34px; height: 34px; border-radius: 50%;
+               background: var(--recessed); color: var(--ink-2); font-size: 12.5px;
+               font-weight: 650; display: inline-flex; align-items: center; justify-content: center; }
+.pwho b { display: block; font-size: 16px; font-weight: 600; }
+.pwho div span { font-size: 14px; color: var(--ink-3); }
+
+.pready { background: var(--paper); border-radius: var(--r-4);
+          box-shadow: inset 0 0 0 1px var(--line), var(--sh-1); overflow: hidden; }
+.pready__r { display: flex; align-items: flex-start; gap: var(--s-4); padding: var(--s-5) var(--s-6); }
+.pready__r + .pready__r { border-top: 1px solid var(--line); }
+.pready__i { color: var(--accent-mid); flex: none; margin-top: 2px; }
+.pready__r > div { flex: 1; }
+.pready__r b { display: block; font-size: 16px; font-weight: 600; }
+.pready__r div span { display: block; font-size: 14.5px; color: var(--ink-3);
+                      line-height: 1.6; margin-top: 4px; max-width: 52ch; }
+
+.pdot { width: 8px; height: 8px; border-radius: 50%; flex: none; margin-top: 8px; }
+.pdot--ok { background: var(--ok); }
+.pdot--rec { background: var(--danger); margin-top: 0; animation: ptpulse 2.4s infinite; }
+@keyframes ptpulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+.pconsent {
+  display: flex; align-items: flex-start; gap: 12px; margin-top: var(--s-5);
+  padding: var(--s-4) var(--s-5); border-radius: var(--r-3); cursor: pointer;
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 15.5px; line-height: 1.55; color: var(--ink-2);
+}
+.pconsent:hover { box-shadow: inset 0 0 0 1px var(--line-2); }
+.pconsent.is-on { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-line); }
+.pconsent input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
+
+/* --- Live: the conversation, and nothing that belongs to the auditor ----- */
+.plive__bar {
+  flex: none; display: flex; align-items: center; gap: var(--s-3);
+  padding: 0 var(--s-6); height: 62px; border-bottom: 1px solid var(--line); background: var(--ground);
+}
+.plive__bar .sp { flex: 1; }
+.plive__t b { display: block; font-size: 15.5px; font-weight: 600; }
+.plive__t span { display: block; font-size: 13.5px; color: var(--ink-3); }
+.plive__clock { font: 15px var(--mono); color: var(--ink-3); letter-spacing: -.02em; }
+.plive__topic {
+  flex: none; display: flex; align-items: baseline; gap: 10px;
+  padding: 10px var(--s-6); background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.plive__topic span { font-size: 11px; font-weight: 650; letter-spacing: .09em;
+                     text-transform: uppercase; color: var(--ink-4); }
+.plive__topic b { font-size: 14.5px; font-weight: 600; color: var(--ink-2); }
+.plive__body { flex: 1; overflow-y: auto; padding: var(--s-7) var(--s-6) var(--s-8); }
+.plive__in { width: min(100%, 720px); margin-inline: auto; }
+.plive__foot {
+  flex: none; display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-4) var(--s-6); border-top: 1px solid var(--line); background: var(--surface);
+}
+.plive__foot .sp { flex: 1; }
+
+.pturn { margin-bottom: var(--s-6); opacity: .74; transition: opacity var(--t-slow) var(--ease); }
+.pturn.is-new { opacity: 1; }
+.pturn__w { font-size: 13.5px; font-weight: 650; color: var(--ink-3); margin-bottom: 6px; }
+.pturn__x { font: 18px/1.65 var(--serif); color: var(--ink); max-width: 58ch; }
+.pturn--me { padding-left: var(--s-4); border-left: 2px solid var(--accent-line); }
+.pturn--me .pturn__w { color: var(--accent); }
+.pturn__dots { display: flex; gap: 5px; padding: 6px 0; }
+.pturn__dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-5);
+                 animation: ptdot 1.4s infinite; }
+.pturn__dots i:nth-child(2) { animation-delay: .2s; }
+.pturn__dots i:nth-child(3) { animation-delay: .4s; }
+@keyframes ptdot { 0%,60%,100% { opacity: .3; } 30% { opacity: 1; } }
+
+.pmic {
+  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px;
+  border-radius: var(--r-pill); font-size: 14.5px; font-weight: 550; color: var(--accent);
+  background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.pmic.is-off { color: var(--ink-3); background: var(--recessed); box-shadow: inset 0 0 0 1px var(--line-2); }
+
+/* --- Document request, follow-up ---------------------------------------- */
+.pt__drop {
+  text-align: center; padding: var(--s-8) var(--s-6); border-radius: var(--r-4);
+  background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line-2);
+}
+.pt__drop > span { color: var(--ink-4); display: inline-flex; }
+.pt__drop p { font-size: 16px; color: var(--ink-2); margin: var(--s-3) 0 var(--s-5); }
+.pt__drop .pt__note { margin-inline: auto; }
+.pt__ok { display: flex; align-items: center; gap: var(--s-4); padding: var(--s-5) var(--s-6);
+          border-radius: var(--r-4); background: var(--ok-soft);
+          box-shadow: inset 0 0 0 1px var(--ok-line); }
+.pt__ok > span { color: var(--ok); flex: none; }
+.pt__ok b { display: block; font-size: 16.5px; font-weight: 600; }
+.pt__ok div span { font-size: 14.5px; color: var(--ink-2); }
+
+.pq__q { font-size: 28px; line-height: 1.3; }
+.pq__in { font: 17px/1.65 var(--sans); min-height: 150px; }
+.pq__was { background: var(--surface); border-radius: var(--r-3); padding: var(--s-5);
+           box-shadow: inset 0 0 0 1px var(--line); }
+.pq__was > span { font-size: 14.5px; color: var(--ink-4); }
+.pq__was p { font: 17px/1.6 var(--serif); color: var(--ink); margin-top: 8px; }
+
+/* --- The questionnaire, now a portal screen ------------------------------ */
+.cq__head { margin-bottom: var(--s-7); }
+.cq__count { font-size: 30px; font-weight: 600; letter-spacing: -.02em; margin-bottom: var(--s-4); }
+.cq__count span { font-size: 17px; font-weight: 400; color: var(--ink-3); letter-spacing: 0; }
+
+/* --- Phone. The client may well be on one. ------------------------------- */
+@media (max-width: 700px) {
+  /* Two rows: the brand and the way out first, then which audit this is. */
+  .pt__bar { height: auto; padding: 10px var(--s-4); gap: var(--s-3); row-gap: 8px; flex-wrap: wrap; }
+  .pt__ctx { order: 5; flex: 1 1 100%; padding-left: 0; border-left: 0; font-size: 13px; }
+  .pt__help { display: none; }
+  /* The header back button is the client's main way out on a phone, so it
+     gets a real tap target rather than the auditor side's compact one. */
+  .pt__bar .btn--sm { height: 38px; padding-inline: 14px; }
+  .pt__dev { padding: 6px var(--s-4); }
+  .pt__wrap, .pt__wrap--narrow, .pt__wrap--wide { width: calc(100% - 32px); padding: var(--s-6) 0 var(--s-8); }
+  .pt__head h1 { font-size: 27px; }
+  .pt__lede { font-size: 16.5px; }
+  .ptask { padding: var(--s-5); }
+  .ptask__t h2 { font-size: 19px; }
+  .ptask__go .btn, .pt__acts .btn { flex: 1 1 auto; justify-content: center; }
+  .plive__bar, .plive__foot, .plive__topic { padding-inline: var(--s-4); }
+  .plive__bar { height: auto; padding-block: 10px; }
+  .plive__t { min-width: 0; }
+  .plive__t b, .plive__t span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .plive__clock { font-size: 13.5px; }
+  .plive__topic b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Two rows on a phone: the microphone, then the actions. Nothing clipped. */
+  .plive__foot { flex-wrap: wrap; gap: 10px; }
+  .plive__foot .sp { display: none; }
+  .pmic { flex: 1 1 100%; justify-content: center; white-space: nowrap; }
+  .plive__foot .btn { flex: 1 1 0; justify-content: center; min-width: 0; height: 40px; }
+  .plive__body { padding: var(--s-5) var(--s-4) var(--s-7); }
+  .pturn__x { font-size: 17px; }
+  .pq__q, .cq__q { font-size: 23px; }
+  .cq__count { font-size: 26px; }
 }
 
 /* Live cockpit — conversation leads, everything else is quiet */
@@ -2819,6 +3081,167 @@ const nextId = (prefix, existing) =>
 __exp(exports, { AUDIT_ROLES: () => AUDIT_ROLES, ACCESS_LEVELS: () => ACCESS_LEVELS, ENGAGEMENT_TYPES: () => ENGAGEMENT_TYPES, FRAMEWORKS: () => FRAMEWORKS, COUNTRIES: () => COUNTRIES, PARTICIPANT_ROLES: () => PARTICIPANT_ROLES, firmUsers: () => firmUsers, processCatalogue: () => processCatalogue, PHASES: () => PHASES, clients: () => clients, engagements: () => engagements, processParticipants: () => processParticipants, processSystems: () => processSystems, questionnaireAssignments: () => questionnaireAssignments, fyFromPeriodEnd: () => fyFromPeriodEnd, roleRank: () => roleRank, nextId: () => nextId });
 
 };
+__defs['js/data-client.js'] = function (exports, __req, __exp) {
+/* ============================================================================
+   data-client.js — the client-facing layer.
+
+   The auditor product is complicated because auditing is. The client side
+   answers four questions and nothing else:
+
+       What do you need from me?
+       Why are you asking?
+       What should I do next?
+       Am I done?
+
+   So this file holds a task inbox, not a workflow engine. A ClientTask is a
+   request from the audit team to one named person at the client, with a state
+   and a place to go. There is no methodology here, no coverage, no control and
+   no assertion — by design, and the client-secrecy test enforces it.
+
+   Everything is seed data, copied into session state at boot.
+   ========================================================================== */
+
+/* --- Task types -------------------------------------------------------------
+   Four, and only four. Each maps to a surface that already exists or is one
+   screen long.
+   -------------------------------------------------------------------------- */
+const TASK_TYPES = ["questionnaire", "live_interview", "follow_up", "document_request"];
+
+/* Plain-language states. No open item, no coverage gap, no contradiction. */
+const TASK_STATES = {
+  not_started: { label: "Not started", tone: "" },
+  in_progress: { label: "In progress", tone: "accent" },
+  scheduled:   { label: "Scheduled", tone: "" },
+  ready:       { label: "Ready to join", tone: "accent" },
+  waiting:     { label: "With your auditor", tone: "" },
+  completed:   { label: "Completed", tone: "ok" },
+};
+
+/* --- The tasks --------------------------------------------------------------
+   Assigned per contact, because a questionnaire sent to the commercial
+   director is not the financial controller's to answer. The portal shows one
+   person their own tasks and nobody else's.
+   -------------------------------------------------------------------------- */
+const clientTasks = [
+  {
+    id: "CT-01", engagementId: "ENG-2026-0142", processId: "revenue", contactId: "CC-02",
+    type: "questionnaire",
+    title: "Revenue questionnaire",
+    why: "A few questions about how sales get recorded, so we understand the process before we ask you to explain it.",
+    due: "Friday 18 September",
+    href: "#/portal/questionnaire",
+    cta: "Continue",
+  },
+  {
+    id: "CT-02", engagementId: "ENG-2026-0142", processId: "revenue", contactId: "CC-01",
+    type: "live_interview",
+    title: "Revenue process interview",
+    why: "We will ask you to explain how the revenue process works in practice. You do not need to prepare a presentation.",
+    when: "Thursday 17 September · 10:00 – 10:30",
+    minutes: 30,
+    withUserId: "FU-03",
+    href: "#/portal/interview",
+    cta: "View interview",
+    topics: [
+      "how orders are received",
+      "how credit is checked",
+      "how goods are delivered",
+      "how invoices and revenue are recorded",
+    ],
+  },
+  {
+    id: "CT-03", engagementId: "ENG-2026-0142", processId: "revenue", contactId: "CC-02",
+    type: "document_request",
+    title: "Price override report",
+    why: "Please share one recent example of the price override report from Business Central.",
+    due: "Friday 18 September",
+    href: "#/portal/document",
+    cta: "Upload",
+  },
+  {
+    /* Created by the interview: the controller's answer about credit limits
+       does not match what the commercial director told us, so we go back to
+       the commercial director. It only appears once the interview has run. */
+    id: "CT-04", engagementId: "ENG-2026-0142", processId: "revenue", contactId: "CC-02",
+    type: "follow_up",
+    title: "One more question about credit limits",
+    why: "Something came up in the interview with your colleague and we would like your side of it.",
+    afterInterview: true,
+    href: "#/portal/follow-up",
+    cta: "Answer",
+  },
+  {
+    id: "CT-00", engagementId: "ENG-2026-0142", processId: "revenue", contactId: "CC-02",
+    type: "questionnaire",
+    title: "Prior-year follow-up",
+    why: "Two points carried over from last year's audit.",
+    done: "Completed 3 September",
+    state: "completed",
+    href: null,
+  },
+];
+
+/* --- The one follow-up question --------------------------------------------
+   Reuses the questionnaire's question surface, not its data — the auditor's
+   questionnaire keeps its own state and this does not touch it.
+   -------------------------------------------------------------------------- */
+const followUpQuestion = {
+  id: "FQ-01",
+  q: "When an order is blocked on credit, can you release it yourself?",
+  why: "Your colleague described the limits differently, and we would rather ask than assume.",
+};
+
+/* --- The live interview ----------------------------------------------------
+   ONE interview, read by two very different screens. The auditor cockpit and
+   the client participant view both read `S.interview` — advancing a turn on
+   either side advances it on the other, because there is only one of them.
+
+   PROTOTYPE ONLY. There is no WebRTC, no microphone, no camera, no recording
+   and no transcription. `mic` and `recording` below are UX states with nothing
+   behind them, and the transcript is the scripted one in data-sources.js.
+   -------------------------------------------------------------------------- */
+const interviewSeed = {
+  id: "IV-01",
+  engagementId: "ENG-2026-0142",
+  processId: "revenue",
+  status: "scheduled",     // scheduled | waiting | live | complete
+  turn: 6,                 // index into the scripted transcript, shared
+  consent: false,          // the client's transcription acknowledgement
+  mic: "ready",            // mocked: ready | muted
+  elapsed: "00:11:24",     // mocked clock
+  clientContactId: "CC-01",
+  auditorUserId: "FU-03",
+  observerUserIds: ["FU-02"],
+};
+
+/** Plain-language topic per stretch of the conversation. The client sees where
+ *  the conversation has got to — never a coverage area, a methodology id or a
+ *  percentage. `from` is the first transcript turn the topic covers. */
+const interviewTopics = [
+  { from: 0,  label: "What you sell" },
+  { from: 3,  label: "How orders arrive" },
+  { from: 5,  label: "Opening a customer account" },
+  { from: 8,  label: "Pricing and discounts" },
+  { from: 13, label: "Invoicing" },
+  { from: 15, label: "Credit management" },
+  { from: 19, label: "Delivery and despatch" },
+  { from: 23, label: "Service contracts" },
+  { from: 26, label: "Credit notes and rebates" },
+  { from: 30, label: "Cash receipt" },
+  { from: 32, label: "Cut-off and journals" },
+  { from: 36, label: "Targets and access" },
+];
+
+/** Who is in the room. Firm users and client contacts stay separate here too. */
+const interviewParticipants = {
+  firm: ["FU-03", "FU-02"],
+  client: ["CC-01"],
+};
+
+
+__exp(exports, { TASK_TYPES: () => TASK_TYPES, TASK_STATES: () => TASK_STATES, clientTasks: () => clientTasks, followUpQuestion: () => followUpQuestion, interviewSeed: () => interviewSeed, interviewTopics: () => interviewTopics, interviewParticipants: () => interviewParticipants });
+
+};
 __defs['js/data-process.js'] = function (exports, __req, __exp) {
 /* ============================================================================
    data-process.js — the process-level interim audit model.
@@ -3208,8 +3631,9 @@ __defs['js/state.js'] = function (exports, __req, __exp) {
    ========================================================================== */
 
 const { subProcesses, narrative, risks, controls, gaps, openItems } = __req('js/data-model.js');
-const { questionnaire, recordAnswerEvidence, clearSessionEvidence, sessionEvidence } = __req('js/data-sources.js');
+const { questionnaire, recordAnswerEvidence, clearSessionEvidence, sessionEvidence, transcript } = __req('js/data-sources.js');
 const { firmUsers: firmUsersSeed, clients: clientsSeed, engagements: engagementsSeed, processParticipants: participantsSeed, processSystems: processSystemsSeed, questionnaireAssignments: questionnaireSeed, processCatalogue, PHASES, fyFromPeriodEnd } = __req('js/data-firm.js');
+const { clientTasks: clientTasksSeed, interviewSeed, interviewParticipants, interviewTopics, TASK_STATES, followUpQuestion } = __req('js/data-client.js');
 const { journey, processSteps, processFindings, traceFindings, transactions, txnById, variants, stepsForVariant, lineWalkRequirements, controlTest: controlTestPack, reviewPointLibrary, methodologyConfig } = __req('js/data-process.js');
 /* The decision state that undo restores. Everything else is view state. */
 const DECISIONS = ["blocks", "sections", "coverage", "factOverrides", "controlDecisions",
@@ -3217,7 +3641,8 @@ const DECISIONS = ["blocks", "sections", "coverage", "factOverrides", "controlDe
                    "traceDecisions", "traceTxn", "traceStarted", "traceConcluded", "lwRequirements",
                    "testScope", "controlTests", "answers", "signOff", "reviewPoints",
                    "prepared", "firmUsers", "clients", "engagements", "participants",
-                   "procSystems", "questionnaireTo"];
+                   "procSystems", "questionnaireTo",
+                   /* the client side */ "clientTasks", "interview", "followUp", "uploads"];
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -3238,6 +3663,17 @@ const initial = () => ({
      Vandersteen FY2026 engagement, so the prototype opens usable. */
   engId: "ENG-2026-0142",
   clientId: "CL-0142",
+
+  /* --- The client side ---------------------------------------------------
+     A task inbox, one shared interview, and who the portal is being viewed
+     as. Nothing here is an account: `portalAs` is a prototype switch, not a
+     session. */
+  clientTasks: clone(clientTasksSeed),
+  interview: clone(interviewSeed),
+  portalAs: "CC-02",       // the client contact whose inbox is open
+  followUp: null,          // { kind, text } — the one follow-up answer
+  uploads: {},             // taskId -> true, mocked document receipt
+
   draft: {},               // in-flight new-client / new-engagement form
   menu: false,             // the avatar menu
   clientQuery: "",
@@ -3298,10 +3734,10 @@ const initial = () => ({
   editing: null,           // claim id being edited inline
   mode: "transcript",
   qIndex: 12,
-  cockpitTurn: 6,
   cockpitPlaying: false,
   demo: false,
   demoStep: 0,
+  demoTrack: "auditor",    // "auditor" | "client" — two tours, two audiences
 });
 
 const S = initial();
@@ -3450,6 +3886,99 @@ const reviewerName = () =>
   engTeam().find((t) => t.role === "Manager")?.user.name || "the manager";
 const partnerName = () =>
   engTeam().find((t) => t.role === "Partner")?.user.name || "the engagement partner";
+
+/* ============================================================================
+   THE CLIENT SIDE — a task inbox, and one interview seen from two sides
+   ==========================================================================
+   The auditor sees the complexity. The client sees the next thing they need
+   to do. Nothing below exposes a control, a risk, a coverage figure, an
+   assertion, a finding classification or a review point — the client-secrecy
+   test asserts that, and these derivations are where it would leak from.
+   ========================================================================== */
+
+/** The client contact whose inbox is open. A prototype identity, not a login. */
+const portalContact = () => contactById(S.portalAs) || activeClient()?.contacts?.[0] || null;
+
+/** Questionnaire progress, in the only terms a client cares about. */
+const questionnaireProgress = () => {
+  const total = questionnaire.length;
+  const done = questionnaire.filter((q) => questionState(q) === "answer").length;
+  return { done, total, left: total - done, pct: Math.round((done / total) * 100) };
+};
+
+/** A task's state, derived where the real work already knows the answer. */
+function taskState(t) {
+  if (t.state) return t.state;
+  if (t.type === "questionnaire") {
+    const p = questionnaireProgress();
+    return p.left === 0 ? "completed" : p.done ? "in_progress" : "not_started";
+  }
+  if (t.type === "live_interview") {
+    if (S.interview.status === "complete") return "completed";
+    if (S.interview.status === "live" || S.interview.status === "waiting") return "ready";
+    return "scheduled";
+  }
+  if (t.type === "follow_up") return S.followUp ? "waiting" : "not_started";
+  if (t.type === "document_request") return S.uploads[t.id] ? "completed" : "not_started";
+  return "not_started";
+}
+const taskStateLabel = (t) => TASK_STATES[taskState(t)] || TASK_STATES.not_started;
+
+/** One line of plain-language progress, or nothing. Never a percentage of an
+ *  audit — only of the thing the client is actually doing. */
+function taskProgress(t) {
+  if (t.type === "questionnaire" && !t.state) {
+    const p = questionnaireProgress();
+    return p.left === 0 ? "All answered"
+      : `${p.done} of ${p.total} answered · about ${Math.max(1, Math.round(p.left * 2))} minutes left`;
+  }
+  if (t.type === "live_interview") return t.when || "";
+  if (t.type === "document_request") return S.uploads[t.id] ? "Received" : "";
+  return t.done || "";
+}
+
+/** Tasks belonging to ONE contact on the ACTIVE engagement. Both filters
+ *  matter: a contact must not see a colleague's task, and no task may cross
+ *  from one engagement into another. */
+function portalTasks(contactId = S.portalAs) {
+  return S.clientTasks.filter((t) =>
+    t.contactId === contactId &&
+    t.engagementId === S.engId &&
+    (!t.afterInterview || S.interview.status === "complete"));
+}
+const portalOpenTasks = (c) => portalTasks(c).filter((t) => taskState(t) !== "completed");
+const portalDoneTasks = (c) => portalTasks(c).filter((t) => taskState(t) === "completed");
+const taskById = (id) => S.clientTasks.find((t) => t.id === id) || null;
+const interviewTask = () => S.clientTasks.find((t) => t.type === "live_interview") || null;
+const followUpTask = () => S.clientTasks.find((t) => t.type === "follow_up") || null;
+const theFollowUpQuestion = () => followUpQuestion;
+
+/** The interview, read identically by the auditor cockpit and the client
+ *  participant view. One object: advancing a turn on either side advances it
+ *  on the other, because there is only one of it. */
+const interview = () => S.interview;
+const interviewOver = () => S.interview.turn >= transcript.length;
+function interviewRoom() {
+  return {
+    firm: interviewParticipants.firm.map((id) => firmUser(id)).filter(Boolean),
+    client: interviewParticipants.client.map((id) => contactById(id)).filter(Boolean),
+  };
+}
+/** Where the conversation has got to, in the client's words. Not a coverage
+ *  area and not a percentage — just the subject. */
+const interviewTopic = () =>
+  [...interviewTopics].reverse().find((t) => S.interview.turn > t.from)?.label || interviewTopics[0].label;
+
+/** What the client sees of the conversation so far: who said it and what they
+ *  said. No cue, no coverage, no suggestion — those live on the auditor side. */
+function interviewTurns() {
+  const me = portalContact();
+  return transcript.slice(0, S.interview.turn).map((seg) => ({
+    id: seg.id, t: seg.t, text: seg.text,
+    mine: !!me && seg.who.split(" ").pop() === me.name.split(" ").pop(),
+    who: seg.who, role: seg.role,
+  }));
+}
 
 const questionnaireTo = (proc = "revenue") => {
   const a = S.questionnaireTo[pkey(proc)];
@@ -4802,13 +5331,57 @@ const act = {
       commit("Follow-up call requested — nothing established, raised for the auditor", true);
     }
   },
-  cockpitAdvance() { S.cockpitTurn = Math.min(S.cockpitTurn + 1, 14); commit(); },
+  /* --- The live interview -------------------------------------------------
+     One object, two screens. Every action below is written by whichever side
+     the user is on and read by both.
+     PROTOTYPE: no microphone, no recording, no transcription. These are UX
+     states over a scripted transcript.
+     --------------------------------------------------------------------- */
+  interviewEnter() { S.interview.status = "waiting"; commit(); },
+  interviewConsent() { S.interview.consent = !S.interview.consent; commit(); },
+  interviewJoin() {
+    if (!S.interview.consent) return;
+    S.interview.status = "live";
+    commit();
+  },
+  interviewNext() {
+    S.interview.turn = Math.min(S.interview.turn + 1, transcript.length);
+    if (S.interview.status === "scheduled") S.interview.status = "live";
+    commit();
+  },
+  interviewMic() { S.interview.mic = S.interview.mic === "ready" ? "muted" : "ready"; commit(); },
+  interviewEnd() {
+    checkpoint("interview ended");
+    S.interview.status = "complete";
+    S.cockpitPlaying = false;
+    commit();
+  },
+  interviewReopen() { S.interview.status = "live"; commit(); },
+
+  /* --- The client portal ------------------------------------------------- */
+  /** Prototype-only: look at the inbox as a different client contact. This is
+   *  a demo switch, not a session — nothing is authenticated. */
+  portalAs(contactId) { S.portalAs = contactId; commit(); },
+  answerFollowUp(kind, text) {
+    checkpoint("follow-up answered");
+    S.followUp = { kind, text: text || null, at: "13 September 2026" };
+    commit(kind === "answer" ? "Sent to your audit team" : "Your auditor will pick this up", true);
+    location.hash = "#/portal";
+  },
+  uploadDocument(taskId) {
+    checkpoint("document uploaded");
+    S.uploads[taskId] = { name: "price-override-report-august.xlsx", at: "13 September 2026" };
+    commit("Received — mocked in this prototype, nothing was stored", true);
+  },
+
+  /* The cockpit drives the same turn the client sees. */
+  cockpitAdvance() { act.interviewNext(); },
   cockpitToggle() {
     S.cockpitPlaying = !S.cockpitPlaying; commit();
     const tick = () => {
       if (!S.cockpitPlaying) return;
-      if (S.cockpitTurn >= 14) { S.cockpitPlaying = false; commit(); return; }
-      S.cockpitTurn++; commit(); setTimeout(tick, 2400);
+      if (S.interview.turn >= transcript.length) { S.cockpitPlaying = false; commit(); return; }
+      S.interview.turn++; commit(); setTimeout(tick, 2400);
     };
     if (S.cockpitPlaying) setTimeout(tick, 900);
   },
@@ -4831,7 +5404,7 @@ function focusLength() {
 }
 
 
-__exp(exports, { S: () => S, canUndo: () => canUndo, onChange: () => onChange, firmUsers: () => firmUsers, firmUser: () => firmUser, me: () => me, allClients: () => allClients, clientById: () => clientById, allEngagements: () => allEngagements, engagementById: () => engagementById, engagementsFor: () => engagementsFor, activeEngagement: () => activeEngagement, activeClient: () => activeClient, shownClient: () => shownClient, isCanonical: () => isCanonical, processWorkspaceAvailable: () => processWorkspaceAvailable, WORKSPACE_PROCESS: () => WORKSPACE_PROCESS, engProcesses: () => engProcesses, engTeam: () => engTeam, engagementRole: () => engagementRole, phaseStates: () => phaseStates, contactById: () => contactById, systemById: () => systemById, reviewerName: () => reviewerName, partnerName: () => partnerName, questionnaireTo: () => questionnaireTo, claimText: () => claimText, claimBlocking: () => claimBlocking, sectionDecision: () => sectionDecision, sectionBlockers: () => sectionBlockers, sectionEdited: () => sectionEdited, sectionApprovable: () => sectionApprovable, covFacts: () => covFacts, factSettled: () => factSettled, factContradictory: () => factContradictory, covReason: () => covReason, stepsForVariantCount: () => stepsForVariantCount, allItems: () => allItems, coverageSettled: () => coverageSettled, sectionOf: () => sectionOf, claimById: () => claimById, controlDecision: () => controlDecision, CONCLUDED_CONTROL: () => CONCLUDED_CONTROL, controlOpen: () => controlOpen, findingDecision: () => findingDecision, findingOutcome: () => findingOutcome, findingOpen: () => findingOpen, lwRequirement: () => lwRequirement, lwProposal: () => lwProposal, traceVerdict: () => traceVerdict, traceConcluded: () => traceConcluded, txnForVariant: () => txnForVariant, traceStepFor: () => traceStepFor, testScopeFor: () => testScopeFor, controlTest: () => controlTest, hasWorkpaper: () => hasWorkpaper, signOff: () => signOff, reviewRequired: () => reviewRequired, partnerRequired: () => partnerRequired, openReviewPoints: () => openReviewPoints, reviewPointById: () => reviewPointById, canResubmit: () => canResubmit, itemState: () => itemState, allOpenItems: () => allOpenItems, QUESTION_FACTS: () => QUESTION_FACTS, questionState: () => questionState, questionAnswer: () => questionAnswer, itemCarry: () => itemCarry, journeyStep: () => journeyStep, readyToSign: () => readyToSign, act: () => act, undo: () => undo, commit: () => commit, procParticipants: () => procParticipants, procSystemsFor: () => procSystemsFor, claimState: () => claimState, sectionState: () => sectionState, covState: () => covState, coverageCounts: () => coverageCounts, coverageSummary: () => coverageSummary, coverageGaps: () => coverageGaps, narrativeSummary: () => narrativeSummary, claimQueue: () => claimQueue, riskSummary: () => riskSummary, controlSummary: () => controlSummary, allFindings: () => allFindings, findingSummary: () => findingSummary, traceProgress: () => traceProgress, variantWalkthroughs: () => variantWalkthroughs, traceSummary: () => traceSummary, testingScope: () => testingScope, testSummary: () => testSummary, testingSatisfied: () => testingSatisfied, reviewPoints: () => reviewPoints, workComplete: () => workComplete, processState: () => processState, openItemSummary: () => openItemSummary, rcmRows: () => rcmRows, sessionFacts: () => sessionFacts, questionnaireItems: () => questionnaireItems, itemEvidence: () => itemEvidence, journeyStates: () => journeyStates, interviewComplete: () => interviewComplete, processProgress: () => processProgress, gateStates: () => gateStates, nextAction: () => nextAction, focusLength: () => focusLength });
+__exp(exports, { S: () => S, canUndo: () => canUndo, onChange: () => onChange, firmUsers: () => firmUsers, firmUser: () => firmUser, me: () => me, allClients: () => allClients, clientById: () => clientById, allEngagements: () => allEngagements, engagementById: () => engagementById, engagementsFor: () => engagementsFor, activeEngagement: () => activeEngagement, activeClient: () => activeClient, shownClient: () => shownClient, isCanonical: () => isCanonical, processWorkspaceAvailable: () => processWorkspaceAvailable, WORKSPACE_PROCESS: () => WORKSPACE_PROCESS, engProcesses: () => engProcesses, engTeam: () => engTeam, engagementRole: () => engagementRole, phaseStates: () => phaseStates, contactById: () => contactById, systemById: () => systemById, reviewerName: () => reviewerName, partnerName: () => partnerName, portalContact: () => portalContact, questionnaireProgress: () => questionnaireProgress, taskStateLabel: () => taskStateLabel, portalOpenTasks: () => portalOpenTasks, portalDoneTasks: () => portalDoneTasks, taskById: () => taskById, interviewTask: () => interviewTask, followUpTask: () => followUpTask, theFollowUpQuestion: () => theFollowUpQuestion, interview: () => interview, interviewOver: () => interviewOver, interviewTopic: () => interviewTopic, questionnaireTo: () => questionnaireTo, claimText: () => claimText, claimBlocking: () => claimBlocking, sectionDecision: () => sectionDecision, sectionBlockers: () => sectionBlockers, sectionEdited: () => sectionEdited, sectionApprovable: () => sectionApprovable, covFacts: () => covFacts, factSettled: () => factSettled, factContradictory: () => factContradictory, covReason: () => covReason, stepsForVariantCount: () => stepsForVariantCount, allItems: () => allItems, coverageSettled: () => coverageSettled, sectionOf: () => sectionOf, claimById: () => claimById, controlDecision: () => controlDecision, CONCLUDED_CONTROL: () => CONCLUDED_CONTROL, controlOpen: () => controlOpen, findingDecision: () => findingDecision, findingOutcome: () => findingOutcome, findingOpen: () => findingOpen, lwRequirement: () => lwRequirement, lwProposal: () => lwProposal, traceVerdict: () => traceVerdict, traceConcluded: () => traceConcluded, txnForVariant: () => txnForVariant, traceStepFor: () => traceStepFor, testScopeFor: () => testScopeFor, controlTest: () => controlTest, hasWorkpaper: () => hasWorkpaper, signOff: () => signOff, reviewRequired: () => reviewRequired, partnerRequired: () => partnerRequired, openReviewPoints: () => openReviewPoints, reviewPointById: () => reviewPointById, canResubmit: () => canResubmit, itemState: () => itemState, allOpenItems: () => allOpenItems, QUESTION_FACTS: () => QUESTION_FACTS, questionState: () => questionState, questionAnswer: () => questionAnswer, itemCarry: () => itemCarry, journeyStep: () => journeyStep, readyToSign: () => readyToSign, act: () => act, undo: () => undo, commit: () => commit, procParticipants: () => procParticipants, procSystemsFor: () => procSystemsFor, taskState: () => taskState, taskProgress: () => taskProgress, portalTasks: () => portalTasks, interviewRoom: () => interviewRoom, interviewTurns: () => interviewTurns, claimState: () => claimState, sectionState: () => sectionState, covState: () => covState, coverageCounts: () => coverageCounts, coverageSummary: () => coverageSummary, coverageGaps: () => coverageGaps, narrativeSummary: () => narrativeSummary, claimQueue: () => claimQueue, riskSummary: () => riskSummary, controlSummary: () => controlSummary, allFindings: () => allFindings, findingSummary: () => findingSummary, traceProgress: () => traceProgress, variantWalkthroughs: () => variantWalkthroughs, traceSummary: () => traceSummary, testingScope: () => testingScope, testSummary: () => testSummary, testingSatisfied: () => testingSatisfied, reviewPoints: () => reviewPoints, workComplete: () => workComplete, processState: () => processState, openItemSummary: () => openItemSummary, rcmRows: () => rcmRows, sessionFacts: () => sessionFacts, questionnaireItems: () => questionnaireItems, itemEvidence: () => itemEvidence, journeyStates: () => journeyStates, interviewComplete: () => interviewComplete, processProgress: () => processProgress, gateStates: () => gateStates, nextAction: () => nextAction, focusLength: () => focusLength });
 
 };
 __defs['js/palette.js'] = function (exports, __req, __exp) {
@@ -4866,6 +5439,9 @@ function index() {
   add("Do", "New client", "create a client profile", () => { location.hash = "#/client/new"; }, "plus");
   add("Do", "New engagement", "a financial year for a client", () => { location.hash = "#/engagement/new"; }, "plus");
   add("Do", "Guided demo", "the five-minute walkthrough", () => window.__demoStart());
+  add("Do", "Client experience demo", "the portal and the interview, from their side",
+    () => window.__demoStartClient());
+  add("Go to", "Client portal", "what the client sees", () => { location.hash = "#/portal"; }, "people");
   add("Do", "Keyboard shortcuts", "?", () => st.act.sheet("keys"));
   add("Do", "Reset the prototype", "back to the beginning", () => st.act.reset());
 
@@ -5135,15 +5711,69 @@ const STEPS = [
                    S.disclosed.footer = true; } },
 ];
 
+/* ── The client-side demo ─────────────────────────────────────────────────
+   A separate, shorter track: two or three minutes answering the question
+   "what does the client actually experience?". It is kept apart from the
+   auditor tour because it is a different product for a different person.
+   ──────────────────────────────────────────────────────────────────────── */
+
+const CLIENT_STEPS = [
+  { route: "#/interview", title: "The auditor asks",
+    say: "The questionnaire is assigned to one named client contact. That is a task-scoped grant, not an account — Bas Kuipers can open this questionnaire and nothing else in the product.",
+    setup: () => { S.prepared = true; act.assignQuestionnaire("CC-02"); S.toast = null; } },
+
+  { route: "#/portal", title: "What the client sees",
+    say: "A task inbox, and nothing else. No process journey, no coverage, no controls, no findings, no methodology. Four questions only: what do you need, why, what next, am I done. Bas sees his two tasks and not his colleague's interview.",
+    setup: () => { act.portalAs("CC-02"); } },
+
+  { route: "#/portal/questionnaire", title: "One question at a time",
+    say: "The same questionnaire the auditor assigned, in the portal's chrome. Answer in your own words — or say you don't know, or ask for a call. All three go somewhere; none of them is guessed.",
+    setup: () => { act.portalAs("CC-02"); } },
+
+  { route: "#/portal", title: "Back to the inbox",
+    say: "Progress updates on the task. The auditor's process interview screen shows the same number, because there is one questionnaire and not two.",
+    setup: () => { act.portalAs("CC-02"); } },
+
+  { route: "#/portal/interview", title: "An interview is a task too",
+    say: "Now as Ruud Timmermans, the financial controller. When, how long, with whom, what will be discussed, and what he needs to prepare — nothing.",
+    setup: () => { act.portalAs("CC-01"); S.interview.status = "scheduled"; S.interview.turn = 6; } },
+
+  { route: "#/portal/interview/waiting", title: "The waiting room",
+    say: "Not a video-conferencing product. What this is, who is in it, and one plain sentence about transcription that the client has to acknowledge before joining.",
+    setup: () => { act.portalAs("CC-01"); S.interview.status = "waiting"; S.interview.consent = false; } },
+
+  { route: "#/portal/interview/live", title: "The conversation is the product",
+    say: "The client sees who said what, and the subject. No coverage bar, no suggested question, no contradiction flag, no evidence request, no AI thinking out loud. All of that belongs to the auditor.",
+    setup: () => { act.portalAs("CC-01"); S.interview.consent = true; S.interview.status = "live";
+                   S.interview.turn = Math.max(S.interview.turn, 9); } },
+
+  { route: "#/cockpit", title: "The same interview, the other side",
+    say: "One interview, two radically different interfaces. Same turn, same words — plus the coverage filling in live, the contradiction with the commercial director's questionnaire answer, and the next question worth asking. Advance a turn here and the client's screen moves with it.",
+    setup: () => { S.interview.status = "live"; } },
+
+  { route: "#/portal/interview/done", title: "Thank you, and nothing more",
+    say: "No coverage percentage, no contradictions found, no controls identified. The client is told the thing that concerns them: it is finished, and somebody may follow up.",
+    setup: () => { act.portalAs("CC-01"); act.interviewEnd(); S.toast = null; } },
+
+  { route: "#/portal", title: "The interview created a follow-up",
+    say: "Back as Bas. The controller described the credit limits differently to the way Bas did in the questionnaire, so one question goes back to Bas — in his words, not the auditor's. No engine, no new surface: the same question screen.",
+    setup: () => { act.portalAs("CC-02"); S.interview.status = "complete"; } },
+
+  { route: "#/interview", title: "And the auditor sees where everything is",
+    say: "Contextually, where the auditor already is — not in a new dashboard. Who was asked for what, and how far it has got. The complexity stays on this side.",
+    setup: () => { S.prepared = true; } },
+];
+
 function demoBar() {
   if (!S.demo) return "";
-  const i = S.demoStep, s = STEPS[i];
+  const track = S.demoTrack === "client" ? CLIENT_STEPS : STEPS;
+  const i = Math.min(S.demoStep, track.length - 1), s = track[i];
   return `<div class="demo">
-    <span class="demo__n">${i + 1}/${STEPS.length}</span>
+    <span class="demo__n">${i + 1}/${track.length}</span>
     <div class="demo__t"><b>${esc(s.title)}</b> — ${esc(s.say)}</div>
     <div class="acts">
       ${btn("Back", "demo-prev", { variant: "ghost", size: "sm", disabled: i === 0 })}
-      ${i === STEPS.length - 1
+      ${i === track.length - 1
         ? btn("Finish", "demo-exit", { variant: "primary", size: "sm" })
         : btn("Next", "demo-next", { variant: "primary", size: "sm", key: "→" })}
       ${btn("Exit", "demo-exit", { variant: "ghost", size: "sm" })}
@@ -5156,6 +5786,14 @@ const UNDERSTANDING_BEAT = 5;
 const ANALYSIS_BEAT = 8;
 
 function demoGo(step) {
+  /* The client track is linear: no pipeline to run, nothing to pre-resolve. */
+  if (S.demoTrack === "client") {
+    S.demoStep = Math.max(0, Math.min(CLIENT_STEPS.length - 1, step));
+    const c = CLIENT_STEPS[S.demoStep];
+    c.setup();
+    if (location.hash !== c.route) location.hash = c.route; else commit();
+    return;
+  }
   S.demoStep = Math.max(0, Math.min(STEPS.length - 1, step));
   const s = STEPS[S.demoStep];
   if (S.demoStep === UNDERSTANDING_BEAT && !S.generated && !S.generating) {
@@ -5190,13 +5828,22 @@ function demoGo(step) {
  *  there explicitly — the demo bar names the engagement it is showing. */
 function demoStart() {
   S.demo = true;
+  S.demoTrack = "auditor";
+  act.selectEngagement("ENG-2026-0142");
+  demoGo(0);
+}
+
+/** The client-experience tour. Separate track, separate question. */
+function demoStartClient() {
+  S.demo = true;
+  S.demoTrack = "client";
   act.selectEngagement("ENG-2026-0142");
   demoGo(0);
 }
 function demoExit() { S.demo = false; commit(); }
 
 
-__exp(exports, { STEPS: () => STEPS, demoBar: () => demoBar, demoGo: () => demoGo, demoStart: () => demoStart, demoExit: () => demoExit });
+__exp(exports, { STEPS: () => STEPS, CLIENT_STEPS: () => CLIENT_STEPS, demoBar: () => demoBar, demoGo: () => demoGo, demoStart: () => demoStart, demoStartClient: () => demoStartClient, demoExit: () => demoExit });
 
 };
 __defs['js/views/shell.js'] = function (exports, __req, __exp) {
@@ -5458,7 +6105,9 @@ function work() {
         network request. Press <span class="mono">⌘K</span> to search or jump anywhere,
         <span class="mono">?</span> for the shortcuts, and
         <button class="lnk" data-act="demo-start">start the guided demo</button>
-        for the full walkthrough.`)}
+        for the full walkthrough — or
+        <button class="lnk" data-act="demo-client">see the client's experience</button>
+        in three minutes.`)}
     </section>
   `;
 
@@ -6186,6 +6835,427 @@ const SRC_IC = { transcript: "transcript", client_answer: "questionnaire", prior
 __exp(exports, { engagementView: () => engagementView, processUnavailable: () => processUnavailable, processHome: () => processHome, prepare: () => prepare });
 
 };
+__defs['js/views/portal.js'] = function (exports, __req, __exp) {
+/* ============================================================================
+   The client portal — the other half of the product.
+
+   The auditor sees the complexity. The client sees the next thing they need
+   to do. This file therefore shares Audit AI's identity — the warm ground, the
+   mineral-green ink, the type, the buttons — and almost nothing else. No
+   process journey, no attention queue, no decision workspace, no methodology,
+   no controls, no findings, no risk signals, no coverage, no reviewer, no
+   completion gates. A Financial Controller should be able to use this without
+   anyone explaining it.
+
+   Density is deliberately low and type is deliberately larger than the auditor
+   side. This is a professional service portal, not audit software.
+
+   PROTOTYPE: there is no authentication here. `portalAs` is a demo switch.
+   The interview has no microphone, no recording and no transcription behind
+   it — see data-client.js.
+   ========================================================================== */
+
+const { esc, cx, act: btn, icon } = __req('js/ui.js');
+const { firm } = __req('js/data-sources.js');
+const st = __req('js/state.js');
+/* --- The client shell -------------------------------------------------------
+   One row. Who you are, whose audit this is, and the way out. Nothing else.
+   -------------------------------------------------------------------------- */
+
+const initials = (n) => n.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+
+const mark = () => `
+  <button class="pt__mark" data-act="nav" data-href="#/portal">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="1.6" y="1.6" width="16.8" height="16.8" rx="5" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M5.6 10.4l2.8 2.8 6-6.4" stroke="currentColor" stroke-width="1.7"
+        stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>Audit AI</span>
+  </button>`;
+
+/** The prototype view switch. Deliberately quiet, deliberately labelled: it is
+ *  a demo affordance and must never read as a production control. */
+function devbar() {
+  const c = st.activeClient();
+  const me = st.portalContact();
+  const others = (c?.contacts || []).filter((x) =>
+    st.S.clientTasks.some((t) => t.contactId === x.id && t.engagementId === st.S.engId));
+  return `<div class="pt__dev">
+    <span class="pt__dev-k">Prototype view</span>
+    ${others.map((x) => `<button class="${cx("pt__dev-b", x.id === st.S.portalAs && "is-on")}"
+      data-act="portal-as" data-id="${esc(x.id)}">${esc(x.name)}</button>`).join("")}
+    <span class="pt__dev-s"></span>
+    <button class="pt__dev-b" data-act="nav" data-href="#/interview">Auditor side</button>
+  </div>`;
+}
+
+function portalShell(body, o = {}) {
+  const c = st.activeClient();
+  const e = st.activeEngagement();
+  const me = st.portalContact();
+  return `<div class="pt">
+    <header class="pt__bar">
+      ${mark()}
+      <span class="pt__ctx">
+        <b>${esc(c ? c.short : "")}</b>
+        <span>${esc(e ? e.fy : "")}</span>
+      </span>
+      <span class="sp"></span>
+      ${o.back ? btn(o.back.label, "nav", { size: "sm", variant: "ghost", ic: "back",
+        data: { href: o.back.href } }) : ""}
+      <button class="pt__help" data-act="mock">Help</button>
+      <span class="pt__me" title="${esc(me ? me.name : "")}">${esc(me ? initials(me.name) : "")}</span>
+    </header>
+    ${devbar()}
+    <div class="pt__canvas"><div class="${cx("pt__wrap", o.wide && "pt__wrap--wide",
+      o.narrow && "pt__wrap--narrow")}">${body}</div></div>
+  </div>`;
+}
+
+/* ══ Portal home — the task inbox ════════════════════════════════════════ */
+
+const TASK_IC = { questionnaire: "questionnaire", live_interview: "people",
+                  follow_up: "question", document_request: "document" };
+
+function taskCard(t) {
+  const state = st.taskState(t);
+  const label = st.taskStateLabel(t);
+  const prog = st.taskProgress(t);
+  const done = state === "completed";
+  const withUser = t.withUserId ? st.firmUser(t.withUserId) : null;
+
+  return `<article class="${cx("ptask", done && "ptask--done")}">
+    <div class="ptask__hd">
+      <span class="ptask__ic">${icon(TASK_IC[t.type] || "document", 20)}</span>
+      <div class="ptask__t">
+        <h2>${esc(t.title)}</h2>
+        <span class="${cx("ptag", label.tone && "ptag--" + label.tone)}">${esc(label.label)}</span>
+      </div>
+    </div>
+    <p class="ptask__w">${esc(t.why)}</p>
+    ${withUser ? `<p class="ptask__m">With ${esc(withUser.name)}, ${esc(withUser.role.toLowerCase())} at ${esc(firm.name)}</p>` : ""}
+    ${prog ? `<p class="ptask__m">${esc(prog)}</p>` : ""}
+    ${t.due && !done ? `<p class="ptask__m">Needed by ${esc(t.due)}</p>` : ""}
+    ${t.href && !done ? `<div class="ptask__go">
+      ${btn(t.cta || "Open", "nav", { variant: "primary", size: "lg", data: { href: t.href } })}
+    </div>` : ""}
+  </article>`;
+}
+
+function portalHome() {
+  const me = st.portalContact();
+  const open = st.portalOpenTasks();
+  const done = st.portalDoneTasks();
+  const first = me ? me.name.split(" ")[0] : "there";
+
+  const body = `
+    <header class="pt__head">
+      <p class="pt__eyebrow">${esc(firm.name)} · ${esc(st.activeEngagement().fy)} audit</p>
+      <h1>Good afternoon, ${esc(first)}</h1>
+      <p class="pt__lede">${open.length
+        ? open.length === 1 ? "There is one thing we need from you."
+          : `There are ${open.length} things we need from you.`
+        : "Nothing is waiting on you at the moment."}</p>
+    </header>
+
+    ${open.length ? `<section class="pt__sec">
+      ${open.map(taskCard).join("")}
+    </section>` : `<section class="pt__sec">
+      <div class="pt__empty">
+        <span>${icon("check", 28)}</span>
+        <h2>${done.length ? "You're all caught up" : "Nothing has been sent to you yet"}</h2>
+        <p>${done.length
+          ? "We'll let you know here if we need anything else."
+          : "This is the prototype's worked example; only the Vandersteen FY2026 audit has client tasks in it."}</p>
+      </div>
+    </section>`}
+
+    ${done.length ? `<section class="pt__sec">
+      <h2 class="pt__sh">Done</h2>
+      ${done.map((t) => `<div class="pdone">
+        <span>${icon("check", 17)}</span>
+        <div><b>${esc(t.title)}</b>
+        <span>${esc(st.taskProgress(t) || t.done || "Completed")}</span></div>
+      </div>`).join("")}
+    </section>` : ""}
+
+    <p class="pt__trust">
+      Your answers go to the ${esc(firm.name)} team working on this audit. This is a prototype —
+      nothing you enter is sent or stored anywhere.
+    </p>
+  `;
+  return portalShell(body);
+}
+
+/* ══ Document request — one screen, deliberately shallow ═════════════════ */
+
+function portalDocument() {
+  const t = st.taskById("CT-03");
+  if (!t) return portalHome();
+  const up = st.S.uploads[t.id];
+
+  const body = `
+    <header class="pt__head">
+      <p class="pt__eyebrow">Document request</p>
+      <h1>${esc(t.title)}</h1>
+      <p class="pt__lede">${esc(t.why)}</p>
+    </header>
+
+    <section class="pt__sec">
+      ${up ? `<div class="pt__ok">
+        <span>${icon("check", 22)}</span>
+        <div>
+          <b>${esc(up.name)}</b>
+          <span>Received ${esc(up.at)}. Nothing else is needed.</span>
+        </div>
+      </div>
+      <div class="pt__acts">
+        ${btn("Back to your tasks", "nav", { variant: "primary", size: "lg", data: { href: "#/portal" } })}
+      </div>`
+      : `<div class="pt__drop">
+        <span>${icon("document", 26)}</span>
+        <p>Any format is fine — a spreadsheet, a PDF or a screenshot.</p>
+        ${btn("Choose a file", "upload-doc", { variant: "primary", size: "lg", data: { id: t.id } })}
+        <span class="pt__note">Mocked in this prototype. No file is read, uploaded or stored.</span>
+      </div>`}
+    </section>
+  `;
+  return portalShell(body, { back: { label: "Your tasks", href: "#/portal" }, narrow: true });
+}
+
+/* ══ Follow-up — one question, the questionnaire surface ═════════════════ */
+
+function portalFollowUp() {
+  const q = st.theFollowUpQuestion();
+  const a = st.S.followUp;
+
+  const body = a ? `
+    <header class="pt__head">
+      <h1>Thank you</h1>
+      <p class="pt__lede">${a.kind === "answer"
+        ? "Your answer has gone to the audit team."
+        : a.kind === "unknown"
+        ? "Recorded. Your auditor will find another route — you do not need to do anything."
+        : "A call has been requested. Your auditor will get in touch."}</p>
+    </header>
+    <section class="pt__sec">
+      <div class="pq__was">
+        <span>${esc(q.q)}</span>
+        <p>${esc(a.text || (a.kind === "unknown" ? "I don't know" : "I'd rather have a call"))}</p>
+      </div>
+      <div class="pt__acts">
+        ${btn("Back to your tasks", "nav", { variant: "primary", size: "lg", data: { href: "#/portal" } })}
+      </div>
+    </section>`
+  : `
+    <header class="pt__head">
+      <p class="pt__eyebrow">One more question</p>
+      <h1 class="pq__q">${esc(q.q)}</h1>
+      <p class="pt__lede">${esc(q.why)}</p>
+    </header>
+    <section class="pt__sec">
+      <textarea class="field pq__in" id="fu" rows="5" placeholder="Type your answer…"></textarea>
+      <div class="pt__acts">
+        ${btn("Send", "follow-send", { variant: "primary", size: "lg" })}
+        ${btn("I don't know", "follow-unknown", { size: "lg" })}
+        ${btn("Rather have a call", "follow-call", { variant: "ghost", size: "lg" })}
+      </div>
+      <p class="pt__note">
+        The three do different things. An answer settles the point. The other two go back to your
+        auditor as something for them to pick up — nothing is lost and nothing is guessed.</p>
+    </section>`;
+
+  return portalShell(body, { back: { label: "Your tasks", href: "#/portal" }, narrow: true });
+}
+
+/* ══ The live interview, from the client's side ══════════════════════════
+   The same interview the auditor cockpit shows, read from `S.interview`. What
+   differs is everything the client does not need: no coverage bar, no
+   suggested question, no contradiction flag, no evidence request, no risk
+   signal, no "AI is analysing". The conversation is the product here.
+
+   PROTOTYPE: no WebRTC, no microphone, no camera, no recording, no
+   transcription. Mic state and the clock are mocked; the transcript is
+   scripted.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* --- The task detail: what this is, when, and with whom ------------------- */
+
+function portalInterview() {
+  const t = st.interviewTask();
+  if (!t) return portalHome();
+  const iv = st.interview();
+  const room = st.interviewRoom();
+  const lead = st.firmUser(t.withUserId);
+  const over = iv.status === "complete";
+
+  const body = `
+    <header class="pt__head">
+      <p class="pt__eyebrow">Process interview</p>
+      <h1>${esc(t.title)}</h1>
+      <p class="pt__lede">${esc(t.why)}</p>
+    </header>
+
+    <section class="pt__sec">
+      <div class="pfacts">
+        <div><span>When</span><b>${esc(t.when || "To be scheduled")}</b></div>
+        <div><span>How long</span><b>About ${t.minutes} minutes</b></div>
+        <div><span>With</span><b>${esc(lead ? lead.name : "your audit team")}</b>
+          ${lead ? `<i>${esc(lead.role)} · ${esc(firm.name)}</i>` : ""}</div>
+      </div>
+    </section>
+
+    <section class="pt__sec">
+      <h2 class="pt__sh">What we'll talk about</h2>
+      <ul class="ptopics">
+        ${(t.topics || []).map((x) => `<li>${icon("check", 15)}${esc(x)}</li>`).join("")}
+      </ul>
+      <p class="pt__note">You don't need to prepare anything. Just explain the process the way you
+      normally would.</p>
+    </section>
+
+    <section class="pt__sec">
+      <h2 class="pt__sh">Who'll be there</h2>
+      ${[...room.firm.map((u) => ({ n: u.name, r: `${u.role} · ${firm.name}` })),
+         ...room.client.map((c) => ({ n: c.name, r: c.role }))]
+        .map((p) => `<div class="pwho"><span>${esc(initials(p.n))}</span>
+          <div><b>${esc(p.n)}</b><span>${esc(p.r)}</span></div></div>`).join("")}
+    </section>
+
+    <div class="pt__acts">
+      ${over
+        ? `${btn("Back to your tasks", "nav", { variant: "primary", size: "lg", data: { href: "#/portal" } })}`
+        : btn("Join interview", "iv-enter", { variant: "primary", size: "lg" })}
+    </div>
+    ${over ? `<p class="pt__note">This interview has finished.</p>` : ""}
+  `;
+  return portalShell(body, { back: { label: "Your tasks", href: "#/portal" }, narrow: true });
+}
+
+/* --- The waiting room ---------------------------------------------------- */
+
+function portalWaiting() {
+  const t = st.interviewTask();
+  const iv = st.interview();
+  const lead = st.firmUser(t?.withUserId);
+
+  const body = `
+    <header class="pt__head pt__head--centre">
+      <p class="pt__eyebrow">Revenue process interview</p>
+      <h1>You're meeting ${esc(lead ? lead.name.split(" ")[0] : "your auditor")}</h1>
+      <p class="pt__lede">${esc(t?.when || "")} · about ${t?.minutes || 30} minutes</p>
+    </header>
+
+    <section class="pt__sec">
+      <div class="pready">
+        <div class="pready__r">
+          <span class="pready__i">${icon("people", 18)}</span>
+          <div><b>Microphone</b><span>Ready</span></div>
+          <span class="pdot pdot--ok"></span>
+        </div>
+        <div class="pready__r">
+          <span class="pready__i">${icon("transcript", 18)}</span>
+          <div><b>Transcript</b>
+            <span>Audit AI can write down what is said, so the audit team does not have to take
+            notes while you talk. They stay responsible for what goes in the file.</span></div>
+        </div>
+      </div>
+
+      <label class="pconsent${iv.consent ? " is-on" : ""}" for="iv-consent">
+        <input type="checkbox" id="iv-consent" ${iv.consent ? "checked" : ""}>
+        <span>I understand that this conversation may be transcribed for audit documentation.</span>
+      </label>
+
+      <div class="pt__acts">
+        ${btn("Join interview", "iv-join", { variant: "primary", size: "lg", disabled: !iv.consent })}
+        ${btn("Not now", "nav", { variant: "ghost", size: "lg", data: { href: "#/portal" } })}
+      </div>
+      ${!iv.consent ? `<p class="pt__note">Tick the box above to join.</p>` : ""}
+      <p class="pt__note">
+        Prototype: no microphone, camera or recording is used. The conversation that follows is a
+        worked example.</p>
+    </section>
+  `;
+  return portalShell(body, { back: { label: "Your tasks", href: "#/portal" }, narrow: true });
+}
+
+/* --- Live: the conversation, and almost nothing else --------------------- */
+
+function portalLive() {
+  const iv = st.interview();
+  if (iv.status === "complete") return portalDone();
+  const t = st.interviewTask();
+  const lead = st.firmUser(t?.withUserId);
+  const turns = st.interviewTurns();
+  const last = turns[turns.length - 1];
+
+  return `<div class="pt pt--live">
+    <header class="plive__bar">
+      <span class="pdot pdot--rec"></span>
+      <div class="plive__t">
+        <b>Revenue process interview</b>
+        <span>${esc(lead ? lead.name : "")} · ${esc(firm.name)}</span>
+      </div>
+      <span class="sp"></span>
+      <span class="plive__clock">${esc(iv.elapsed)}</span>
+    </header>
+
+    <div class="plive__topic">
+      <span>Now talking about</span><b>${esc(st.interviewTopic())}</b>
+    </div>
+
+    <div class="plive__body" id="plive-body">
+      <div class="plive__in">
+        ${turns.length ? turns.map((x, i) => `
+          <div class="${cx("pturn", x.mine && "pturn--me", i === turns.length - 1 && "is-new")}">
+            <div class="pturn__w">${esc(x.mine ? "You" : x.who)}</div>
+            <div class="pturn__x">${esc(x.text)}</div>
+          </div>`).join("")
+        : `<p class="pt__note">The conversation will appear here as it happens.</p>`}
+        ${st.interviewOver() ? "" : `<div class="pturn__dots"><i></i><i></i><i></i></div>`}
+      </div>
+    </div>
+
+    <footer class="plive__foot">
+      <button class="${cx("pmic", iv.mic === "muted" && "is-off")}" data-act="iv-mic">
+        ${icon("people", 17)}${iv.mic === "muted" ? "Microphone off" : "Microphone on"}
+      </button>
+      <span class="sp"></span>
+      ${st.interviewOver()
+        ? ""
+        : btn("Continue the conversation", "iv-next", { size: "sm", variant: "ghost",
+            title: "Prototype: steps through the scripted conversation" })}
+      ${btn("Leave interview", "iv-end", { size: "sm" })}
+    </footer>
+  </div>`;
+}
+
+/* --- Done ---------------------------------------------------------------- */
+
+function portalDone() {
+  const me = st.portalContact();
+  const fu = st.followUpTask();
+  const first = me ? me.name.split(" ")[0] : "";
+
+  const body = `
+    <header class="pt__head pt__head--centre">
+      <span class="pt__tick">${icon("check", 30)}</span>
+      <h1>Interview complete</h1>
+      <p class="pt__lede">Thank you${first ? `, ${esc(first)}` : ""}. Your auditor may follow up if
+      anything needs clarification.</p>
+    </header>
+    <div class="pt__acts pt__acts--centre">
+      ${btn("Return to your tasks", "nav", { variant: "primary", size: "lg", data: { href: "#/portal" } })}
+    </div>
+  `;
+  return portalShell(body, { narrow: true });
+}
+
+
+__exp(exports, { portalShell: () => portalShell, portalHome: () => portalHome, portalDocument: () => portalDocument, portalFollowUp: () => portalFollowUp, portalInterview: () => portalInterview, portalWaiting: () => portalWaiting, portalLive: () => portalLive, portalDone: () => portalDone });
+
+};
 __defs['js/views/complete.js'] = function (exports, __req, __exp) {
 /* Step 7 — COMPLETE. The gates, the sign-off, and what leaves the building.
    Also holds the matrix (a view, not a destination) and the questionnaire.
@@ -6205,6 +7275,7 @@ const { methodologyConfig, variants } = __req('js/data-process.js');
 const { client, engagement, user, firm, questionnaire, sources } = __req('js/data-sources.js');
 const st = __req('js/state.js');
 const { screen, idline } = __req('js/views/shell.js');
+const { portalShell } = __req('js/views/portal.js');
 const S = st.S;
 
 /* ── Sign-off ────────────────────────────────────────────────────────────── */
@@ -6618,7 +7689,8 @@ function questionnaireRecipient() {
       lead: icon("questionnaire", 17),
       title: `<span class="b">${esc(to.contact.name)}</span>`,
       detail: `${esc(to.contact.role)}${to.contact.email ? ` · ${esc(to.contact.email)}` : ""} · assigned ${esc(to.assignedOn)}`,
-      side: `${tag("questionnaire access", "accent")}
+      side: `${tag(`${st.questionnaireProgress().done} of ${st.questionnaireProgress().total} answered`,
+          st.questionnaireProgress().left ? "accent" : "ok")}
         ${btn("Remove", "clear-questionnaire", { variant: "ghost", size: "sm" })}`,
     })) : `<div class="callout callout--warn">
       <b>Nobody assigned.</b> The questionnaire cannot be opened by a client until a contact is
@@ -6637,6 +7709,48 @@ function questionnaireRecipient() {
         ${btn("Cancel", "cancel-edit", { variant: "ghost", size: "sm" })}
       </div>
     </div>` : ""}
+
+    ${to && to.contact ? `<div class="acts sec__note">
+      ${btn("Preview the client portal", "portal-preview", { size: "sm", variant: "ghost", ic: "people",
+        title: "Prototype: open the task inbox as this contact sees it",
+        data: { id: to.contactId } })}
+    </div>` : ""}
+  </section>`;
+}
+
+/* --- What the client owes us, in the client's terms ------------------------
+   Auditor-side status for the client tasks, surfaced where the auditor already
+   is rather than in a new dashboard. No new object: it reads the same task
+   inbox the portal reads.
+   -------------------------------------------------------------------------- */
+function clientTaskStatus() {
+  const tasks = st.S.clientTasks.filter((t) =>
+    t.engagementId === st.S.engId && !t.state && (!t.afterInterview || st.interview().status === "complete"));
+  if (!tasks.length) return "";
+  const IC = { questionnaire: "questionnaire", live_interview: "people",
+               follow_up: "question", document_request: "document" };
+
+  return `<section class="sec--loose">
+    <div class="sec__h">
+      <h2 class="t-h">With the client</h2>
+      <span class="sp"></span>
+      ${btn("Preview the client portal", "portal-preview", { variant: "ghost", size: "sm", ic: "people" })}
+    </div>
+    <p class="t-sub sec__h measure">
+      What each contact has been asked for, and where it has got to. They see the task and nothing
+      else — no methodology, no controls, no findings.</p>
+    ${rows(tasks.map((t) => {
+      const c = st.contactById(t.contactId);
+      const s = st.taskStateLabel(t);
+      return row({
+        lead: icon(IC[t.type] || "document", 17),
+        title: `<span class="b">${esc(t.title)}</span>`,
+        detail: `${esc(c ? c.name : t.contactId)}${c ? ` · ${esc(c.role)}` : ""}${
+          st.taskProgress(t) ? ` · ${esc(st.taskProgress(t))}` : ""}`,
+        side: tag(s.label, s.tone === "ok" ? "ok" : s.tone === "accent" ? "accent" : "quiet"),
+        action: "portal-preview", data: { id: t.contactId },
+      });
+    }).join(""))}
   </section>`;
 }
 
@@ -6659,28 +7773,18 @@ function clientSurface() {
       : "A call has been requested. Your auditor will get in touch."}</div>`;
   };
 
-  return `<div class="cq">
-    <header class="cq__bar">
-      <span class="mark__g">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <rect x="1.6" y="1.6" width="16.8" height="16.8" rx="5" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M5.6 10.4l2.8 2.8 6-6.4" stroke="currentColor" stroke-width="1.7"
-            stroke-linecap="round" stroke-linejoin="round"/>
-        </svg></span>
-      <div>
-        <div class="b">Revenue — a few questions</div>
-        <div class="t-meta">for ${esc(firm.name)} · ${esc(st.activeClient().name)}</div>
-      </div>
-      <span class="sp"></span>
-      ${recipient ? `<span class="t-meta nowrap">${esc(recipient.name)}</span>` : ""}
-      <span class="t-meta nowrap">${answeredNow.length} of ${questionnaire.length}</span>
-      ${btn("Auditor view", "nav", { size: "sm", variant: "ghost", data: { href: "#/interview" } })}
-    </header>
+  /* The questionnaire is a portal screen: same chrome, same identity, and the
+     prototype's "auditor view" switch lives in the dev bar rather than in the
+     client's header. Its behaviour below is unchanged. */
+  const body = `
+    <div class="cq__head">
+      <p class="pt__eyebrow">Revenue questionnaire</p>
+      <div class="cq__count">${answeredNow.length} <span>of ${questionnaire.length} answered</span></div>
+      <div class="cq__prog"><i style="width:${pct}%"></i></div>
+    </div>
 
     <div class="cq__body">
-      <div class="cq__prog" style="margin-bottom:36px"><i style="width:${pct}%"></i></div>
-
-      <p class="t-lede" style="margin-bottom:44px">
+      <p class="t-lede" style="margin-bottom:38px">
         ${esc(recipient ? recipient.name.split(" ")[0] : "Hello")} — these are about how sales get
         recorded. Answer in your own words; there are no wrong answers, and you can stop and come back.
       </p>
@@ -6731,12 +7835,18 @@ function clientSurface() {
         These questions are about process, not about any customer or personal data.
         Only ${esc(firm.name)} can see your answers.
       </p>
-    </div>
-  </div>`;
+
+      <div class="pt__acts" style="margin-top:32px">
+        ${btn("Back to your tasks", "nav", { variant: outstanding.length ? "ghost" : "primary",
+          size: "lg", ic: outstanding.length ? "back" : "", data: { href: "#/portal" } })}
+      </div>
+    </div>`;
+
+  return portalShell(body, { back: { label: "Your tasks", href: "#/portal" }, narrow: true });
 }
 
 
-__exp(exports, { complete: () => complete, matrix: () => matrix, questionnaireRecipient: () => questionnaireRecipient, clientSurface: () => clientSurface });
+__exp(exports, { complete: () => complete, matrix: () => matrix, questionnaireRecipient: () => questionnaireRecipient, clientTaskStatus: () => clientTaskStatus, clientSurface: () => clientSurface });
 
 };
 __defs['js/views/interview.js'] = function (exports, __req, __exp) {
@@ -6757,7 +7867,7 @@ const SRC_IC = { transcript: "transcript", client_answer: "questionnaire", prior
                  access_log: "system", assurance_report: "document", auditor_note: "note" };
 const st = __req('js/state.js');
 const { screen } = __req('js/views/shell.js');
-const { questionnaireRecipient } = __req('js/views/complete.js');
+const { questionnaireRecipient, clientTaskStatus } = __req('js/views/complete.js');
 const S = st.S;
 
 /* --- one gap, in the auditor's language, with its actions inline ---------- */
@@ -6940,6 +8050,8 @@ function interview() {
     </section>
 
     ${questionnaireRecipient()}
+
+    ${clientTaskStatus()}
 
     <hr class="rule">
     <section class="sec">
@@ -8946,9 +10058,13 @@ const CUES = [
 ];
 
 function cockpit() {
-  const turn = S.cockpitTurn;
+  /* The SAME interview the client participant view reads. One turn counter:
+     advancing here advances what the client sees, and vice versa. */
+  const iv = st.interview();
+  const turn = iv.turn;
   const shown = transcript.slice(0, turn);
   const cues = CUES.filter((c) => c.after <= turn).reverse();
+  const over = iv.status === "complete";
 
   return `${header()}
   <div class="callout callout--future" style="border-radius:0;margin:0;padding:12px 24px;box-shadow:none;border-bottom:1px solid var(--line)">
@@ -8958,13 +10074,20 @@ function cockpit() {
   </div>
 
   <div class="hdr" style="height:52px">
-    <span class="state state--alert"><i class="dot dot--alert"></i>Recording · 11:24</span>
-    <span class="t-meta">R. Timmermans, financial controller</span>
+    ${over
+      ? `<span class="state state--ok">${icon("check", 15)}Interview complete</span>`
+      : `<span class="state state--alert"><i class="dot dot--alert"></i>Recording · ${esc(iv.elapsed)}</span>`}
+    <span class="t-meta">${esc(st.interviewRoom().client.map((c) =>
+      `${c.name}, ${c.role.toLowerCase()}`).join(" · "))}</span>
     <span class="sp"></span>
-    ${btn(S.cockpitPlaying ? "Pause" : "Play", "cockpit-play",
+    ${over ? "" : btn(S.cockpitPlaying ? "Pause" : "Play", "cockpit-play",
       { size: "sm", variant: S.cockpitPlaying ? "" : "primary" })}
-    ${btn("Next turn", "cockpit-next", { size: "sm" })}
-    ${btn("End", "nav", { size: "sm", variant: "ghost", data: { href: "#/interview" } })}
+    ${over ? "" : btn("Next turn", "cockpit-next", { size: "sm" })}
+    ${over ? "" : btn("End interview", "iv-end", { size: "sm" })}
+    ${btn("See the client's side", "nav", { size: "sm", variant: "ghost", ic: "people",
+      title: "Prototype: the same interview as the participant sees it",
+      data: { href: over ? "#/portal/interview" : "#/portal/interview/live" } })}
+    ${btn("Back", "nav", { size: "sm", variant: "ghost", data: { href: "#/interview" } })}
   </div>
 
   <div class="ck">
@@ -8974,7 +10097,8 @@ function cockpit() {
           <div class="turn__w"><b>${esc(s.who)}</b> · ${esc(s.t)}</div>
           <div class="turn__x">${esc(s.text)}</div>
         </div>`).join("")}
-        ${turn < 14 ? `<div class="turn__x ink5">…</div>` : ""}
+        ${over ? `<p class="t-meta" style="margin-top:20px">The interview ended here.</p>`
+          : turn < transcript.length ? `<div class="turn__x ink5">…</div>` : ""}
       </div></div>
     </div>
 
@@ -9226,7 +10350,12 @@ function clientView() {
             title: `<span class="b">${esc(p.name)}</span>`,
             detail: `${esc(p.role)}${p.email ? ` · ${esc(p.email)}` : ""}${p.department ? ` · ${esc(p.department)}` : ""}`,
             side: `${tag("client contact", "quiet")}
-              ${btn("Edit", "edit-open", { variant: "ghost", size: "sm", data: { id: `contact:${p.id}` } })}`,
+              ${btn("Edit", "edit-open", { variant: "ghost", size: "sm", data: { id: `contact:${p.id}` } })}
+              ${st.S.clientTasks.some((t) => t.contactId === p.id && t.engagementId === st.S.engId)
+                ? btn("View as", "portal-preview", { variant: "ghost", size: "sm",
+                    title: "Prototype: open the client portal as this person sees it",
+                    data: { id: p.id } })
+                : ""}`,
           })).join(""))
       : empty("No contacts yet", "Add the people you expect to speak to.", "people")}
     </section>
@@ -9583,7 +10712,7 @@ const { ref: srcRef } = __req('js/data-sources.js');
 const st = __req('js/state.js');
 const { S, act, undo, canUndo } = __req('js/state.js');
 const { palette, runPalette, matches } = __req('js/palette.js');
-const { demoBar, demoGo, demoStart, demoExit, STEPS } = __req('js/demo.js');
+const { demoBar, demoGo, demoStart, demoStartClient, demoExit, STEPS, CLIENT_STEPS } = __req('js/demo.js');
 const { work } = __req('js/views/work.js');
 const { engagementView, processHome, prepare, processUnavailable } = __req('js/views/process.js');
 const { interview } = __req('js/views/interview.js');
@@ -9595,8 +10724,11 @@ const { resolve } = __req('js/views/resolve.js');
 const { complete, matrix, clientSurface } = __req('js/views/complete.js');
 const { cockpit } = __req('js/views/cockpit.js');
 const { clientsView, clientView, newClientView, newEngagementView, peopleView } = __req('js/views/setup.js');
+const { portalHome, portalInterview, portalWaiting, portalLive, portalDone, portalFollowUp, portalDocument } = __req('js/views/portal.js');
 window.__demoStart = demoStart;
 window.__demoSteps = STEPS.length;
+window.__demoStartClient = demoStartClient;
+window.__demoClientSteps = CLIENT_STEPS.length;
 /* Test hooks. Read-only in practice; the smoke, route-integrity and
    state-integrity tests drive the app through them rather than through the DOM. */
 window.__S = S;
@@ -9628,7 +10760,22 @@ const ROUTES = {
   "#/client/new": newClientView,
   "#/engagement/new": newEngagementView,
   "#/people": peopleView,
+
+  /* The client portal — a different product for a different person. It shares
+     the identity and none of the audit machinery. */
+  "#/portal": portalHome,
+  "#/portal/questionnaire": clientSurface,
+  "#/portal/interview": portalInterview,
+  "#/portal/interview/waiting": portalWaiting,
+  "#/portal/interview/live": portalLive,
+  "#/portal/interview/done": portalDone,
+  "#/portal/follow-up": portalFollowUp,
+  "#/portal/document": portalDocument,
 };
+
+/* Everything the client sees. No process journey, no breadcrumb, no auditor
+   chrome — and the questionnaire renders its portal header on these. */
+const PORTAL_ROUTES = Object.keys(ROUTES).filter((r) => r.startsWith("#/portal"));
 
 /* Screens that host a focus queue; leaving one drops out of it. */
 const FOCUS_ROUTES = ["#/understanding", "#/controls", "#/trace"];
@@ -9742,6 +10889,10 @@ function render() {
   const ed = document.getElementById("claim-edit") || document.getElementById("ans");
   if (ed && document.activeElement !== ed) { ed.focus(); ed.setSelectionRange(ed.value.length, ed.value.length); }
 
+  // The live conversation reads bottom-up: the newest turn is the one you want.
+  const live = document.getElementById("plive-body");
+  if (live) live.scrollTop = live.scrollHeight;
+
   if (S.scrollTo) {
     document.getElementById("sec-" + S.scrollTo)?.scrollIntoView({ block: "start", behavior: "smooth" });
     S.scrollTo = null;
@@ -9820,6 +10971,29 @@ document.addEventListener("click", (e) => {
     case "save-colleague": act.inviteColleague({
       name: val("i-name"), email: val("i-email"), role: sel("i-role"), access: sel("i-access"),
     }); break;
+
+    /* --- the client portal --------------------------------------------- */
+    case "portal-as": act.portalAs(d.id); break;
+    /* Prototype only: look at the product as the client does. */
+    case "portal-preview":
+      if (d.id) act.portalAs(d.id);
+      location.hash = "#/portal";
+      break;
+    case "iv-enter": act.interviewEnter(); location.hash = "#/portal/interview/waiting"; break;
+    case "iv-join":
+      act.interviewJoin();
+      if (S.interview.status === "live") location.hash = "#/portal/interview/live";
+      break;
+    case "iv-next": act.interviewNext(); break;
+    case "iv-mic": act.interviewMic(); break;
+    case "iv-end":
+      act.interviewEnd();
+      if (S.route.startsWith("#/portal")) location.hash = "#/portal/interview/done";
+      break;
+    case "follow-send": act.answerFollowUp("answer", val("fu")); break;
+    case "follow-unknown": act.answerFollowUp("unknown"); break;
+    case "follow-call": act.answerFollowUp("call"); break;
+    case "upload-doc": act.uploadDocument(d.id); break;
 
     /* --- what a process uses of the client's people and systems -------- */
     case "toggle-participant": act.toggleParticipant(d.id); break;
@@ -9947,6 +11121,7 @@ document.addEventListener("click", (e) => {
 
     /* demo */
     case "demo-start": demoStart(); break;
+    case "demo-client": demoStartClient(); break;
     case "demo-next": demoGo(S.demoStep + 1); break;
     case "demo-prev": demoGo(S.demoStep - 1); break;
     case "demo-exit": demoExit(); break;
@@ -9956,6 +11131,7 @@ document.addEventListener("click", (e) => {
 /* --- Palette typing --------------------------------------------------------- */
 
 document.addEventListener("change", (e) => {
+  if (e.target.id === "iv-consent") { act.interviewConsent(); return; }
   const rf = e.target.dataset?.roleFor;
   if (rf) { act.setParticipantRole(rf, e.target.value); return; }
   // The engagement role for one draft team member. Never the firm role.

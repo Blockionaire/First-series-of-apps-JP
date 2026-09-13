@@ -265,6 +265,52 @@ its label sat below the left-hand one whenever only one of the two carried a hin
 
 ---
 
+## The client experience
+
+The product now has two interfaces. `CLIENT-EXPERIENCE-V1.md` has the model; this is what the
+design does.
+
+**It is a different surface, not a theme.** Same identity — the warm ground, the mineral-green ink,
+the type, the buttons, the elevation rule — and a deliberately different feel. One header row
+instead of header plus breadcrumb plus journey. 980px instead of seven width modes. 16.5–18px body
+instead of 15.5. Two or three objects per screen instead of twelve. No small grey labels anywhere:
+the client side has no metadata tier, because a client has nothing to scan for.
+
+**The task is the only object.** The portal home has one component and one repeat of it. A task
+states what it is, why it is being asked, how far it has got, when it is wanted, and one button. No
+tiles, no charts, no audit progress, no phases, no timeline — that was the temptation and it is the
+thing that would have made it feel like audit software.
+
+**The live interview is the strongest screen in the product.** It is the conversation and almost
+nothing else: who said what, at 18px serif, with the latest turn brightest and everything else
+stepped back. One subtle strip says what is being talked about in the client's own words. The
+auditor's version of the same moment carries coverage bars, suggested questions, a contradiction
+flag and evidence requests down the right-hand side. Putting the two screenshots side by side is the
+clearest statement of the product's thesis that exists.
+
+**Three bugs this pass fixed.** The transcription consent checkbox carried both a `data-act` and a
+wrapping `<label>`, so a click toggled it twice and it could never be ticked. The live transcript
+rendered from the top, so the newest turn — the one you are in — was off-screen. And the portal
+header did not fit a phone: the brand, the engagement, the back button, Help and the avatar in one
+56px row overflowed at 390px.
+
+### What is weak about it
+
+1. **The prototype view switch is a compromise.** It has to exist for demos and it has to not read
+   as production UI, so it sits in a recessed bar labelled *Prototype view*. It is honest and it is
+   the least beautiful thing on the client side.
+2. **"Continue the conversation" is a prototype control in a production-looking place.** It sits in
+   the live footer next to *Leave interview*, which is real. Nothing marks it as the scripted
+   stepper it is.
+3. **The interview task and the waiting room overlap.** Both say when, how long and with whom. On a
+   phone that is two screens saying nearly the same thing before anything happens.
+4. **The portal has one width and one column at every size.** Correct for three tasks. A client with
+   fifteen open requests would want grouping, and there is no design for that.
+5. **The document request is the thinnest screen in the product.** It exists to make the inbox feel
+   credible and it shows: one mocked button, and nothing behind it.
+
+---
+
 ## What is still not good enough
 
 Honest list. None of these are blocking, all of them are real.

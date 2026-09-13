@@ -10,7 +10,7 @@ import { ref as srcRef } from "./data-sources.js";
 import * as st from "./state.js";
 import { S, act, undo, canUndo } from "./state.js";
 import { palette, runPalette, matches } from "./palette.js";
-import { demoBar, demoGo, demoStart, demoExit, STEPS } from "./demo.js";
+import { demoBar, demoGo, demoStart, demoStartClient, demoExit, STEPS, CLIENT_STEPS } from "./demo.js";
 
 import { work } from "./views/work.js";
 import { engagementView, processHome, prepare, processUnavailable } from "./views/process.js";
@@ -23,9 +23,13 @@ import { resolve } from "./views/resolve.js";
 import { complete, matrix, clientSurface } from "./views/complete.js";
 import { cockpit } from "./views/cockpit.js";
 import { clientsView, clientView, newClientView, newEngagementView, peopleView } from "./views/setup.js";
+import { portalHome, portalInterview, portalWaiting, portalLive, portalDone,
+         portalFollowUp, portalDocument } from "./views/portal.js";
 
 window.__demoStart = demoStart;
 window.__demoSteps = STEPS.length;
+window.__demoStartClient = demoStartClient;
+window.__demoClientSteps = CLIENT_STEPS.length;
 /* Test hooks. Read-only in practice; the smoke, route-integrity and
    state-integrity tests drive the app through them rather than through the DOM. */
 window.__S = S;
@@ -57,7 +61,22 @@ const ROUTES = {
   "#/client/new": newClientView,
   "#/engagement/new": newEngagementView,
   "#/people": peopleView,
+
+  /* The client portal — a different product for a different person. It shares
+     the identity and none of the audit machinery. */
+  "#/portal": portalHome,
+  "#/portal/questionnaire": clientSurface,
+  "#/portal/interview": portalInterview,
+  "#/portal/interview/waiting": portalWaiting,
+  "#/portal/interview/live": portalLive,
+  "#/portal/interview/done": portalDone,
+  "#/portal/follow-up": portalFollowUp,
+  "#/portal/document": portalDocument,
 };
+
+/* Everything the client sees. No process journey, no breadcrumb, no auditor
+   chrome — and the questionnaire renders its portal header on these. */
+const PORTAL_ROUTES = Object.keys(ROUTES).filter((r) => r.startsWith("#/portal"));
 
 /* Screens that host a focus queue; leaving one drops out of it. */
 const FOCUS_ROUTES = ["#/understanding", "#/controls", "#/trace"];
@@ -171,6 +190,10 @@ function render() {
   const ed = document.getElementById("claim-edit") || document.getElementById("ans");
   if (ed && document.activeElement !== ed) { ed.focus(); ed.setSelectionRange(ed.value.length, ed.value.length); }
 
+  // The live conversation reads bottom-up: the newest turn is the one you want.
+  const live = document.getElementById("plive-body");
+  if (live) live.scrollTop = live.scrollHeight;
+
   if (S.scrollTo) {
     document.getElementById("sec-" + S.scrollTo)?.scrollIntoView({ block: "start", behavior: "smooth" });
     S.scrollTo = null;
@@ -249,6 +272,29 @@ document.addEventListener("click", (e) => {
     case "save-colleague": act.inviteColleague({
       name: val("i-name"), email: val("i-email"), role: sel("i-role"), access: sel("i-access"),
     }); break;
+
+    /* --- the client portal --------------------------------------------- */
+    case "portal-as": act.portalAs(d.id); break;
+    /* Prototype only: look at the product as the client does. */
+    case "portal-preview":
+      if (d.id) act.portalAs(d.id);
+      location.hash = "#/portal";
+      break;
+    case "iv-enter": act.interviewEnter(); location.hash = "#/portal/interview/waiting"; break;
+    case "iv-join":
+      act.interviewJoin();
+      if (S.interview.status === "live") location.hash = "#/portal/interview/live";
+      break;
+    case "iv-next": act.interviewNext(); break;
+    case "iv-mic": act.interviewMic(); break;
+    case "iv-end":
+      act.interviewEnd();
+      if (S.route.startsWith("#/portal")) location.hash = "#/portal/interview/done";
+      break;
+    case "follow-send": act.answerFollowUp("answer", val("fu")); break;
+    case "follow-unknown": act.answerFollowUp("unknown"); break;
+    case "follow-call": act.answerFollowUp("call"); break;
+    case "upload-doc": act.uploadDocument(d.id); break;
 
     /* --- what a process uses of the client's people and systems -------- */
     case "toggle-participant": act.toggleParticipant(d.id); break;
@@ -376,6 +422,7 @@ document.addEventListener("click", (e) => {
 
     /* demo */
     case "demo-start": demoStart(); break;
+    case "demo-client": demoStartClient(); break;
     case "demo-next": demoGo(S.demoStep + 1); break;
     case "demo-prev": demoGo(S.demoStep - 1); break;
     case "demo-exit": demoExit(); break;
@@ -385,6 +432,7 @@ document.addEventListener("click", (e) => {
 /* --- Palette typing --------------------------------------------------------- */
 
 document.addEventListener("change", (e) => {
+  if (e.target.id === "iv-consent") { act.interviewConsent(); return; }
   const rf = e.target.dataset?.roleFor;
   if (rf) { act.setParticipantRole(rf, e.target.value); return; }
   // The engagement role for one draft team member. Never the firm role.

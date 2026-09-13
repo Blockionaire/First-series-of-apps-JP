@@ -60,6 +60,7 @@ browser against mock data: no model is called, no request leaves the page, nothi
 |---|---|
 | **`PRE-DESIGN-FUNCTIONAL-FREEZE.md`** | **The canonical functional model the V3 design must preserve. Read this first.** |
 | `SETUP-LAYER-V1.md` | Clients, engagements and the three kinds of people above the workflow |
+| `CLIENT-EXPERIENCE-V1.md` | The client portal, the questionnaire and the live interview from the participant's side |
 | `V3-PRODUCT-SCOPE.md` | How the product scope was settled (superseded as canon by the freeze document) |
 | `V3-DESIGN-DIRECTION.md` | The V3 visual and interaction design system |
 | `V3-DESIGN-REVIEW.md` | Screen-by-screen: the V2 problem, the V3 answer, and what still needs work |
@@ -73,12 +74,13 @@ browser against mock data: no model is called, no request leaves the page, nothi
 | `index.html` · `app.css` | Shell and the design system (tokens, primitives, components) |
 | `js/data-sources.js` | The evidence base: interview transcript, client questionnaire, three documents, auditor notes |
 | `js/data-firm.js` | Firm people, clients, engagements — the setup-layer seed |
+| `js/data-client.js` | Client tasks and the shared interview — the client-layer seed |
 | `js/data-model.js` | Coverage (45 items), narrative (14 sections), 11 risk signals, 14 controls, 5 gaps, 10 open items, and the two generation pipelines |
 | `js/data-process.js` | The three Revenue variants, the process map as a branching graph (11 steps), two traced transactions, the control-testing concept |
 | `js/state.js` | State, derivations, the exception model and the undo stack. Every headline number is computed here |
 | `js/palette.js` | ⌘K — the navigation |
 | `js/views/` | One module per stage |
-| `tests/` | Seven Playwright suites — route integrity, state model, UI walkthrough, undo and reset, the setup layer, engagement boundaries, standalone bundle |
+| `tests/` | Eight Playwright suites — route integrity, state model, UI walkthrough, undo and reset, the setup layer, engagement boundaries, the client experience, standalone bundle |
 
 ## The workflow
 

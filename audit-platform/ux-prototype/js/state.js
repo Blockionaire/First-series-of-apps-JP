@@ -11,12 +11,14 @@
 
 import { subProcesses, narrative, risks, controls, gaps, openItems } from "./data-model.js";
 import { questionnaire, recordAnswerEvidence, clearSessionEvidence,
-         sessionEvidence } from "./data-sources.js";
+         sessionEvidence, transcript } from "./data-sources.js";
 import { firmUsers as firmUsersSeed, clients as clientsSeed,
          engagements as engagementsSeed, processParticipants as participantsSeed,
          processSystems as processSystemsSeed,
          questionnaireAssignments as questionnaireSeed,
          processCatalogue, PHASES, fyFromPeriodEnd } from "./data-firm.js";
+import { clientTasks as clientTasksSeed, interviewSeed, interviewParticipants,
+         interviewTopics, TASK_STATES, followUpQuestion } from "./data-client.js";
 import { journey, processSteps, processFindings, traceFindings, transactions, txnById,
          variants, stepsForVariant, lineWalkRequirements,
          controlTest as controlTestPack, reviewPointLibrary,
@@ -28,7 +30,8 @@ const DECISIONS = ["blocks", "sections", "coverage", "factOverrides", "controlDe
                    "traceDecisions", "traceTxn", "traceStarted", "traceConcluded", "lwRequirements",
                    "testScope", "controlTests", "answers", "signOff", "reviewPoints",
                    "prepared", "firmUsers", "clients", "engagements", "participants",
-                   "procSystems", "questionnaireTo"];
+                   "procSystems", "questionnaireTo",
+                   /* the client side */ "clientTasks", "interview", "followUp", "uploads"];
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -49,6 +52,17 @@ const initial = () => ({
      Vandersteen FY2026 engagement, so the prototype opens usable. */
   engId: "ENG-2026-0142",
   clientId: "CL-0142",
+
+  /* --- The client side ---------------------------------------------------
+     A task inbox, one shared interview, and who the portal is being viewed
+     as. Nothing here is an account: `portalAs` is a prototype switch, not a
+     session. */
+  clientTasks: clone(clientTasksSeed),
+  interview: clone(interviewSeed),
+  portalAs: "CC-02",       // the client contact whose inbox is open
+  followUp: null,          // { kind, text } — the one follow-up answer
+  uploads: {},             // taskId -> true, mocked document receipt
+
   draft: {},               // in-flight new-client / new-engagement form
   menu: false,             // the avatar menu
   clientQuery: "",
@@ -109,10 +123,10 @@ const initial = () => ({
   editing: null,           // claim id being edited inline
   mode: "transcript",
   qIndex: 12,
-  cockpitTurn: 6,
   cockpitPlaying: false,
   demo: false,
   demoStep: 0,
+  demoTrack: "auditor",    // "auditor" | "client" — two tours, two audiences
 });
 
 export const S = initial();
@@ -261,6 +275,99 @@ export const reviewerName = () =>
   engTeam().find((t) => t.role === "Manager")?.user.name || "the manager";
 export const partnerName = () =>
   engTeam().find((t) => t.role === "Partner")?.user.name || "the engagement partner";
+
+/* ============================================================================
+   THE CLIENT SIDE — a task inbox, and one interview seen from two sides
+   ==========================================================================
+   The auditor sees the complexity. The client sees the next thing they need
+   to do. Nothing below exposes a control, a risk, a coverage figure, an
+   assertion, a finding classification or a review point — the client-secrecy
+   test asserts that, and these derivations are where it would leak from.
+   ========================================================================== */
+
+/** The client contact whose inbox is open. A prototype identity, not a login. */
+export const portalContact = () => contactById(S.portalAs) || activeClient()?.contacts?.[0] || null;
+
+/** Questionnaire progress, in the only terms a client cares about. */
+export const questionnaireProgress = () => {
+  const total = questionnaire.length;
+  const done = questionnaire.filter((q) => questionState(q) === "answer").length;
+  return { done, total, left: total - done, pct: Math.round((done / total) * 100) };
+};
+
+/** A task's state, derived where the real work already knows the answer. */
+export function taskState(t) {
+  if (t.state) return t.state;
+  if (t.type === "questionnaire") {
+    const p = questionnaireProgress();
+    return p.left === 0 ? "completed" : p.done ? "in_progress" : "not_started";
+  }
+  if (t.type === "live_interview") {
+    if (S.interview.status === "complete") return "completed";
+    if (S.interview.status === "live" || S.interview.status === "waiting") return "ready";
+    return "scheduled";
+  }
+  if (t.type === "follow_up") return S.followUp ? "waiting" : "not_started";
+  if (t.type === "document_request") return S.uploads[t.id] ? "completed" : "not_started";
+  return "not_started";
+}
+export const taskStateLabel = (t) => TASK_STATES[taskState(t)] || TASK_STATES.not_started;
+
+/** One line of plain-language progress, or nothing. Never a percentage of an
+ *  audit — only of the thing the client is actually doing. */
+export function taskProgress(t) {
+  if (t.type === "questionnaire" && !t.state) {
+    const p = questionnaireProgress();
+    return p.left === 0 ? "All answered"
+      : `${p.done} of ${p.total} answered · about ${Math.max(1, Math.round(p.left * 2))} minutes left`;
+  }
+  if (t.type === "live_interview") return t.when || "";
+  if (t.type === "document_request") return S.uploads[t.id] ? "Received" : "";
+  return t.done || "";
+}
+
+/** Tasks belonging to ONE contact on the ACTIVE engagement. Both filters
+ *  matter: a contact must not see a colleague's task, and no task may cross
+ *  from one engagement into another. */
+export function portalTasks(contactId = S.portalAs) {
+  return S.clientTasks.filter((t) =>
+    t.contactId === contactId &&
+    t.engagementId === S.engId &&
+    (!t.afterInterview || S.interview.status === "complete"));
+}
+export const portalOpenTasks = (c) => portalTasks(c).filter((t) => taskState(t) !== "completed");
+export const portalDoneTasks = (c) => portalTasks(c).filter((t) => taskState(t) === "completed");
+export const taskById = (id) => S.clientTasks.find((t) => t.id === id) || null;
+export const interviewTask = () => S.clientTasks.find((t) => t.type === "live_interview") || null;
+export const followUpTask = () => S.clientTasks.find((t) => t.type === "follow_up") || null;
+export const theFollowUpQuestion = () => followUpQuestion;
+
+/** The interview, read identically by the auditor cockpit and the client
+ *  participant view. One object: advancing a turn on either side advances it
+ *  on the other, because there is only one of it. */
+export const interview = () => S.interview;
+export const interviewOver = () => S.interview.turn >= transcript.length;
+export function interviewRoom() {
+  return {
+    firm: interviewParticipants.firm.map((id) => firmUser(id)).filter(Boolean),
+    client: interviewParticipants.client.map((id) => contactById(id)).filter(Boolean),
+  };
+}
+/** Where the conversation has got to, in the client's words. Not a coverage
+ *  area and not a percentage — just the subject. */
+export const interviewTopic = () =>
+  [...interviewTopics].reverse().find((t) => S.interview.turn > t.from)?.label || interviewTopics[0].label;
+
+/** What the client sees of the conversation so far: who said it and what they
+ *  said. No cue, no coverage, no suggestion — those live on the auditor side. */
+export function interviewTurns() {
+  const me = portalContact();
+  return transcript.slice(0, S.interview.turn).map((seg) => ({
+    id: seg.id, t: seg.t, text: seg.text,
+    mine: !!me && seg.who.split(" ").pop() === me.name.split(" ").pop(),
+    who: seg.who, role: seg.role,
+  }));
+}
 
 export const questionnaireTo = (proc = "revenue") => {
   const a = S.questionnaireTo[pkey(proc)];
@@ -1613,13 +1720,57 @@ export const act = {
       commit("Follow-up call requested — nothing established, raised for the auditor", true);
     }
   },
-  cockpitAdvance() { S.cockpitTurn = Math.min(S.cockpitTurn + 1, 14); commit(); },
+  /* --- The live interview -------------------------------------------------
+     One object, two screens. Every action below is written by whichever side
+     the user is on and read by both.
+     PROTOTYPE: no microphone, no recording, no transcription. These are UX
+     states over a scripted transcript.
+     --------------------------------------------------------------------- */
+  interviewEnter() { S.interview.status = "waiting"; commit(); },
+  interviewConsent() { S.interview.consent = !S.interview.consent; commit(); },
+  interviewJoin() {
+    if (!S.interview.consent) return;
+    S.interview.status = "live";
+    commit();
+  },
+  interviewNext() {
+    S.interview.turn = Math.min(S.interview.turn + 1, transcript.length);
+    if (S.interview.status === "scheduled") S.interview.status = "live";
+    commit();
+  },
+  interviewMic() { S.interview.mic = S.interview.mic === "ready" ? "muted" : "ready"; commit(); },
+  interviewEnd() {
+    checkpoint("interview ended");
+    S.interview.status = "complete";
+    S.cockpitPlaying = false;
+    commit();
+  },
+  interviewReopen() { S.interview.status = "live"; commit(); },
+
+  /* --- The client portal ------------------------------------------------- */
+  /** Prototype-only: look at the inbox as a different client contact. This is
+   *  a demo switch, not a session — nothing is authenticated. */
+  portalAs(contactId) { S.portalAs = contactId; commit(); },
+  answerFollowUp(kind, text) {
+    checkpoint("follow-up answered");
+    S.followUp = { kind, text: text || null, at: "13 September 2026" };
+    commit(kind === "answer" ? "Sent to your audit team" : "Your auditor will pick this up", true);
+    location.hash = "#/portal";
+  },
+  uploadDocument(taskId) {
+    checkpoint("document uploaded");
+    S.uploads[taskId] = { name: "price-override-report-august.xlsx", at: "13 September 2026" };
+    commit("Received — mocked in this prototype, nothing was stored", true);
+  },
+
+  /* The cockpit drives the same turn the client sees. */
+  cockpitAdvance() { act.interviewNext(); },
   cockpitToggle() {
     S.cockpitPlaying = !S.cockpitPlaying; commit();
     const tick = () => {
       if (!S.cockpitPlaying) return;
-      if (S.cockpitTurn >= 14) { S.cockpitPlaying = false; commit(); return; }
-      S.cockpitTurn++; commit(); setTimeout(tick, 2400);
+      if (S.interview.turn >= transcript.length) { S.cockpitPlaying = false; commit(); return; }
+      S.interview.turn++; commit(); setTimeout(tick, 2400);
     };
     if (S.cockpitPlaying) setTimeout(tick, 900);
   },

@@ -16,6 +16,7 @@ import { methodologyConfig, variants } from "../data-process.js";
 import { client, engagement, user, firm, questionnaire, sources } from "../data-sources.js";
 import * as st from "../state.js";
 import { screen, idline } from "./shell.js";
+import { portalShell } from "./portal.js";
 
 const S = st.S;
 
@@ -430,7 +431,8 @@ export function questionnaireRecipient() {
       lead: icon("questionnaire", 17),
       title: `<span class="b">${esc(to.contact.name)}</span>`,
       detail: `${esc(to.contact.role)}${to.contact.email ? ` · ${esc(to.contact.email)}` : ""} · assigned ${esc(to.assignedOn)}`,
-      side: `${tag("questionnaire access", "accent")}
+      side: `${tag(`${st.questionnaireProgress().done} of ${st.questionnaireProgress().total} answered`,
+          st.questionnaireProgress().left ? "accent" : "ok")}
         ${btn("Remove", "clear-questionnaire", { variant: "ghost", size: "sm" })}`,
     })) : `<div class="callout callout--warn">
       <b>Nobody assigned.</b> The questionnaire cannot be opened by a client until a contact is
@@ -449,6 +451,48 @@ export function questionnaireRecipient() {
         ${btn("Cancel", "cancel-edit", { variant: "ghost", size: "sm" })}
       </div>
     </div>` : ""}
+
+    ${to && to.contact ? `<div class="acts sec__note">
+      ${btn("Preview the client portal", "portal-preview", { size: "sm", variant: "ghost", ic: "people",
+        title: "Prototype: open the task inbox as this contact sees it",
+        data: { id: to.contactId } })}
+    </div>` : ""}
+  </section>`;
+}
+
+/* --- What the client owes us, in the client's terms ------------------------
+   Auditor-side status for the client tasks, surfaced where the auditor already
+   is rather than in a new dashboard. No new object: it reads the same task
+   inbox the portal reads.
+   -------------------------------------------------------------------------- */
+export function clientTaskStatus() {
+  const tasks = st.S.clientTasks.filter((t) =>
+    t.engagementId === st.S.engId && !t.state && (!t.afterInterview || st.interview().status === "complete"));
+  if (!tasks.length) return "";
+  const IC = { questionnaire: "questionnaire", live_interview: "people",
+               follow_up: "question", document_request: "document" };
+
+  return `<section class="sec--loose">
+    <div class="sec__h">
+      <h2 class="t-h">With the client</h2>
+      <span class="sp"></span>
+      ${btn("Preview the client portal", "portal-preview", { variant: "ghost", size: "sm", ic: "people" })}
+    </div>
+    <p class="t-sub sec__h measure">
+      What each contact has been asked for, and where it has got to. They see the task and nothing
+      else — no methodology, no controls, no findings.</p>
+    ${rows(tasks.map((t) => {
+      const c = st.contactById(t.contactId);
+      const s = st.taskStateLabel(t);
+      return row({
+        lead: icon(IC[t.type] || "document", 17),
+        title: `<span class="b">${esc(t.title)}</span>`,
+        detail: `${esc(c ? c.name : t.contactId)}${c ? ` · ${esc(c.role)}` : ""}${
+          st.taskProgress(t) ? ` · ${esc(st.taskProgress(t))}` : ""}`,
+        side: tag(s.label, s.tone === "ok" ? "ok" : s.tone === "accent" ? "accent" : "quiet"),
+        action: "portal-preview", data: { id: t.contactId },
+      });
+    }).join(""))}
   </section>`;
 }
 
@@ -471,28 +515,18 @@ export function clientSurface() {
       : "A call has been requested. Your auditor will get in touch."}</div>`;
   };
 
-  return `<div class="cq">
-    <header class="cq__bar">
-      <span class="mark__g">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <rect x="1.6" y="1.6" width="16.8" height="16.8" rx="5" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M5.6 10.4l2.8 2.8 6-6.4" stroke="currentColor" stroke-width="1.7"
-            stroke-linecap="round" stroke-linejoin="round"/>
-        </svg></span>
-      <div>
-        <div class="b">Revenue — a few questions</div>
-        <div class="t-meta">for ${esc(firm.name)} · ${esc(st.activeClient().name)}</div>
-      </div>
-      <span class="sp"></span>
-      ${recipient ? `<span class="t-meta nowrap">${esc(recipient.name)}</span>` : ""}
-      <span class="t-meta nowrap">${answeredNow.length} of ${questionnaire.length}</span>
-      ${btn("Auditor view", "nav", { size: "sm", variant: "ghost", data: { href: "#/interview" } })}
-    </header>
+  /* The questionnaire is a portal screen: same chrome, same identity, and the
+     prototype's "auditor view" switch lives in the dev bar rather than in the
+     client's header. Its behaviour below is unchanged. */
+  const body = `
+    <div class="cq__head">
+      <p class="pt__eyebrow">Revenue questionnaire</p>
+      <div class="cq__count">${answeredNow.length} <span>of ${questionnaire.length} answered</span></div>
+      <div class="cq__prog"><i style="width:${pct}%"></i></div>
+    </div>
 
     <div class="cq__body">
-      <div class="cq__prog" style="margin-bottom:36px"><i style="width:${pct}%"></i></div>
-
-      <p class="t-lede" style="margin-bottom:44px">
+      <p class="t-lede" style="margin-bottom:38px">
         ${esc(recipient ? recipient.name.split(" ")[0] : "Hello")} — these are about how sales get
         recorded. Answer in your own words; there are no wrong answers, and you can stop and come back.
       </p>
@@ -543,6 +577,12 @@ export function clientSurface() {
         These questions are about process, not about any customer or personal data.
         Only ${esc(firm.name)} can see your answers.
       </p>
-    </div>
-  </div>`;
+
+      <div class="pt__acts" style="margin-top:32px">
+        ${btn("Back to your tasks", "nav", { variant: outstanding.length ? "ghost" : "primary",
+          size: "lg", ic: outstanding.length ? "back" : "", data: { href: "#/portal" } })}
+      </div>
+    </div>`;
+
+  return portalShell(body, { back: { label: "Your tasks", href: "#/portal" }, narrow: true });
 }

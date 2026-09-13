@@ -27,9 +27,13 @@ const CUES = [
 ];
 
 export function cockpit() {
-  const turn = S.cockpitTurn;
+  /* The SAME interview the client participant view reads. One turn counter:
+     advancing here advances what the client sees, and vice versa. */
+  const iv = st.interview();
+  const turn = iv.turn;
   const shown = transcript.slice(0, turn);
   const cues = CUES.filter((c) => c.after <= turn).reverse();
+  const over = iv.status === "complete";
 
   return `${header()}
   <div class="callout callout--future" style="border-radius:0;margin:0;padding:12px 24px;box-shadow:none;border-bottom:1px solid var(--line)">
@@ -39,13 +43,20 @@ export function cockpit() {
   </div>
 
   <div class="hdr" style="height:52px">
-    <span class="state state--alert"><i class="dot dot--alert"></i>Recording · 11:24</span>
-    <span class="t-meta">R. Timmermans, financial controller</span>
+    ${over
+      ? `<span class="state state--ok">${icon("check", 15)}Interview complete</span>`
+      : `<span class="state state--alert"><i class="dot dot--alert"></i>Recording · ${esc(iv.elapsed)}</span>`}
+    <span class="t-meta">${esc(st.interviewRoom().client.map((c) =>
+      `${c.name}, ${c.role.toLowerCase()}`).join(" · "))}</span>
     <span class="sp"></span>
-    ${btn(S.cockpitPlaying ? "Pause" : "Play", "cockpit-play",
+    ${over ? "" : btn(S.cockpitPlaying ? "Pause" : "Play", "cockpit-play",
       { size: "sm", variant: S.cockpitPlaying ? "" : "primary" })}
-    ${btn("Next turn", "cockpit-next", { size: "sm" })}
-    ${btn("End", "nav", { size: "sm", variant: "ghost", data: { href: "#/interview" } })}
+    ${over ? "" : btn("Next turn", "cockpit-next", { size: "sm" })}
+    ${over ? "" : btn("End interview", "iv-end", { size: "sm" })}
+    ${btn("See the client's side", "nav", { size: "sm", variant: "ghost", ic: "people",
+      title: "Prototype: the same interview as the participant sees it",
+      data: { href: over ? "#/portal/interview" : "#/portal/interview/live" } })}
+    ${btn("Back", "nav", { size: "sm", variant: "ghost", data: { href: "#/interview" } })}
   </div>
 
   <div class="ck">
@@ -55,7 +66,8 @@ export function cockpit() {
           <div class="turn__w"><b>${esc(s.who)}</b> · ${esc(s.t)}</div>
           <div class="turn__x">${esc(s.text)}</div>
         </div>`).join("")}
-        ${turn < 14 ? `<div class="turn__x ink5">…</div>` : ""}
+        ${over ? `<p class="t-meta" style="margin-top:20px">The interview ended here.</p>`
+          : turn < transcript.length ? `<div class="turn__x ink5">…</div>` : ""}
       </div></div>
     </div>
 

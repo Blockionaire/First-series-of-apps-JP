@@ -130,7 +130,9 @@ export function work() {
         network request. Press <span class="mono">⌘K</span> to search or jump anywhere,
         <span class="mono">?</span> for the shortcuts, and
         <button class="lnk" data-act="demo-start">start the guided demo</button>
-        for the full walkthrough.`)}
+        for the full walkthrough — or
+        <button class="lnk" data-act="demo-client">see the client's experience</button>
+        in three minutes.`)}
     </section>
   `;
 
