@@ -26,8 +26,8 @@ function bars(slug: string): number[] {
   return out;
 }
 
-export default function PodcastPage() {
-  const episodes = allPodcasts();
+export default async function PodcastPage() {
+  const episodes = await allPodcasts();
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">

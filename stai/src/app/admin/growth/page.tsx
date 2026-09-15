@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { pageMeta } from "@/lib/seo";
 import { currentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { sql, count } from "@/lib/sql";
 import { summary, topPaths, topContent, type Window } from "@/lib/analytics";
 import { EARLY_ACCESS_INTERESTS, interestLabel } from "@/lib/earlyaccess";
 
@@ -32,16 +32,12 @@ export default async function GrowthPage({
 
   const { w } = await searchParams;
   const win: Window = w === "1" || w === "30" ? w : "7";
-  const s = summary(win);
-  const paths = topPaths(win);
-  const articles = topContent(win, "article_view");
-  const prompts = topContent(win, "prompt_view");
+  const s = await summary(win);
+  const paths = await topPaths(win);
+  const articles = await topContent(win, "article_view");
+  const prompts = await topContent(win, "prompt_view");
 
-  const signups = db()
-    .prepare(
-      "SELECT id, email, name, firm, role, interests, note, created_at FROM early_access ORDER BY id DESC LIMIT 100"
-    )
-    .all() as {
+  const signups = await sql().all<{
     id: number;
     email: string;
     name: string;
@@ -50,10 +46,12 @@ export default async function GrowthPage({
     interests: string;
     note: string;
     created_at: string;
-  }[];
-  const totalEarly = (db().prepare("SELECT COUNT(*) AS n FROM early_access").get() as { n: number }).n;
-  const totalBrief = (db().prepare("SELECT COUNT(*) AS n FROM newsletter").get() as { n: number }).n;
-  const totalAccounts = (db().prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number }).n;
+  }>(
+    "SELECT id, email, name, firm, role, interests, note, created_at FROM early_access ORDER BY id DESC LIMIT 100"
+  );
+  const totalEarly = await count("SELECT COUNT(*) AS n FROM early_access");
+  const totalBrief = await count("SELECT COUNT(*) AS n FROM newsletter");
+  const totalAccounts = await count("SELECT COUNT(*) AS n FROM users");
 
   // Which promised capability people actually want — the reason the form exists.
   const allInterests = signups.flatMap((r) => {

@@ -8,7 +8,7 @@ export const alt = "STAI briefing";
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const a = articleBySlug(slug);
+  const a = await articleBySlug(slug);
 
   if (!a) {
     return ogCard({ eyebrow: "The Briefing", title: "STAI", meta: "stai.ai" });

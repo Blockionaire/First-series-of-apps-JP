@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { articleBySlug, relatedArticles } from "@/lib/content";
 import { renderMarkdown, markdownPreview } from "@/lib/markdown";
 import { currentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import { fmtDate } from "@/lib/format";
 import ReadingProgress from "@/components/briefing/ReadingProgress";
 import BookmarkButton from "@/components/BookmarkButton";
@@ -22,7 +22,7 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const a = articleBySlug(slug);
+  const a = await articleBySlug(slug);
   if (!a) return {};
   return pageMeta({
     title: a.title,
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ArticlePage({ params }: Props) {
   const { slug } = await params;
-  const article = articleBySlug(slug);
+  const article = await articleBySlug(slug);
   if (!article) notFound();
 
   const user = await currentUser();
@@ -46,14 +46,15 @@ export default async function ArticlePage({ params }: Props) {
   // Locked pieces are cut server-side — the full text never reaches the client.
   const source = locked ? markdownPreview(article.body_md, 3) : article.body_md;
   const { html, toc } = renderMarkdown(source);
-  track("article_view", { path: `/briefing/${article.slug}`, label: article.title });
+  await track("article_view", { path: `/briefing/${article.slug}`, label: article.title });
 
-  const related = relatedArticles(article, 4);
+  const related = await relatedArticles(article, 4);
   const [readNext, ...alsoOnDesk] = related;
   const bookmarked = user
-    ? !!db()
-        .prepare("SELECT 1 FROM bookmarks WHERE user_id=? AND kind='article' AND ref_id=?")
-        .get(user.id, article.id)
+    ? !!(await sql().first("SELECT 1 AS ok FROM bookmarks WHERE user_id=? AND kind='article' AND ref_id=?", [
+        user.id,
+        article.id,
+      ]))
     : false;
 
   // Paywalled pieces declare the gate explicitly. Serving truncated HTML

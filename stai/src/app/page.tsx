@@ -15,15 +15,16 @@ import { PlusBadge } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
-export default function Home() {
-  const featured = featuredArticles();
+export default async function Home() {
+  const featured = await featuredArticles();
   const lead = featured[0];
   const secondary = featured.slice(1, 4);
-  const latest = allArticles().slice(0, 6);
-  const teaserPrompts = allPrompts()
+  const latest = (await allArticles()).slice(0, 6);
+  const prompts = await allPrompts();
+  const teaserPrompts = prompts
     .filter((p) => !p.premium)
     .slice(0, 2)
-    .concat(allPrompts().filter((p) => p.premium).slice(0, 1));
+    .concat(prompts.filter((p) => p.premium).slice(0, 1));
   const earlyBirdDays = daysUntil(EARLY_BIRD_END_ISO);
 
   return (

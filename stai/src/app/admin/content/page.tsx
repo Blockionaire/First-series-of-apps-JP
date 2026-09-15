@@ -3,7 +3,7 @@ import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import { fmtDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -19,9 +19,18 @@ export default async function AdminContentPage() {
   const user = await currentUser();
   if (!user || user.role !== "admin") redirect("/login?next=/admin/content");
 
-  const articles = db()
-    .prepare("SELECT id, slug, title, category, published_at, status, featured, premium FROM articles ORDER BY published_at DESC")
-    .all() as { id: number; slug: string; title: string; category: string; published_at: string; status: string; featured: number; premium: number }[];
+  const articles = await sql().all<{
+    id: number;
+    slug: string;
+    title: string;
+    category: string;
+    published_at: string;
+    status: string;
+    featured: number;
+    premium: number;
+  }>(
+    "SELECT id, slug, title, category, published_at, status, featured, premium FROM articles ORDER BY published_at DESC"
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">

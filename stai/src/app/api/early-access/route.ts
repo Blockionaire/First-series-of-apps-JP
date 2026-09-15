@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import { guard, WINDOW } from "@/lib/ratelimit";
 import { isInterest } from "@/lib/earlyaccess";
 import { track } from "@/lib/analytics";
@@ -31,29 +31,21 @@ export async function POST(req: NextRequest) {
 
   // Re-registering updates the answers rather than erroring: someone returning
   // to add what they'd pay for should not be told they already exist.
-  const existing = db().prepare("SELECT id FROM early_access WHERE email=?").get(email) as
-    | { id: number }
-    | undefined;
+  const existing = await sql().first<{ id: number }>("SELECT id FROM early_access WHERE email=?", [
+    email,
+  ]);
 
-  db()
-    .prepare(
-      `INSERT INTO early_access (email, name, firm, role, interests, note, source)
-       VALUES (@email, @name, @firm, @role, @interests, @note, @source)
-       ON CONFLICT(email) DO UPDATE SET
-         name=excluded.name, firm=excluded.firm, role=excluded.role,
-         interests=excluded.interests, note=excluded.note`
-    )
-    .run({
-      email,
-      name,
-      firm,
-      role,
-      interests: JSON.stringify(interests),
-      note,
-      source: String(b.source ?? "plus").slice(0, 40),
-    });
+  // Positional parameters, not named: D1 accepts only `?`.
+  await sql().run(
+    `INSERT INTO early_access (email, name, firm, role, interests, note, source)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(email) DO UPDATE SET
+       name=excluded.name, firm=excluded.firm, role=excluded.role,
+       interests=excluded.interests, note=excluded.note`,
+    [email, name, firm, role, JSON.stringify(interests), note, String(b.source ?? "plus").slice(0, 40)]
+  );
 
-  if (!existing) track("early_access", { path: "/plus", label: role || "unspecified" });
+  if (!existing) await track("early_access", { path: "/plus", label: role || "unspecified" });
 
   return NextResponse.json({ ok: true, updated: !!existing });
 }

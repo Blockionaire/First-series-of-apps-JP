@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import { sendMail } from "@/lib/mail";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
@@ -19,10 +19,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Name, firm and a valid email are required" }, { status: 400 });
   }
 
-  const info = db()
-    .prepare("INSERT INTO enquiries (name, email, firm, programme, seats, message) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(name, email, firm, programme, seats, message);
-  const ref = `STAI-TRN-${String(info.lastInsertRowid).padStart(4, "0")}`;
+  const info = await sql().run(
+    "INSERT INTO enquiries (name, email, firm, programme, seats, message) VALUES (?, ?, ?, ?, ?, ?)",
+    [name, email, firm, programme, seats, message]
+  );
+  const ref = `STAI-TRN-${String(info.lastRowId).padStart(4, "0")}`;
 
   // Two mails through the outbox: one to the desk, one confirmation. Neither can be lost.
   await sendMail(

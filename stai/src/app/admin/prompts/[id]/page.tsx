@@ -26,7 +26,7 @@ export default async function EditPromptPage({ params }: { params: Promise<{ id:
   const numeric = Number(id);
   if (!Number.isInteger(numeric) || numeric <= 0) notFound();
 
-  const row = adminPromptById(numeric);
+  const row = await adminPromptById(numeric);
   if (!row) notFound();
 
   let variables: string[] = [];
@@ -62,7 +62,7 @@ export default async function EditPromptPage({ params }: { params: Promise<{ id:
         {row.uses} adaptations run
         {row.updated_at ? ` · last edited ${row.updated_at.slice(0, 16)}` : " · never edited here"}
       </p>
-      <PromptEditor initial={initial} categories={promptCategories()} />
+      <PromptEditor initial={initial} categories={await promptCategories()} />
     </div>
   );
 }

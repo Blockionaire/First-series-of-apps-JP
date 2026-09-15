@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { currentUser, endSession } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import { activeSubscription, stripeClient } from "@/lib/billing";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
@@ -22,16 +22,17 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
 
   const { password } = await req.json().catch(() => ({}));
-  const row = db().prepare("SELECT password_hash FROM users WHERE id=?").get(user.id) as
-    | { password_hash: string }
-    | undefined;
+  const row = await sql().first<{ password_hash: string }>(
+    "SELECT password_hash FROM users WHERE id=?",
+    [user.id]
+  );
   if (!row || typeof password !== "string" || !(await bcrypt.compare(password, row.password_hash))) {
     return NextResponse.json({ error: "Password didn't match" }, { status: 403 });
   }
 
   // Stop billing before the record disappears, or the customer keeps paying
   // for an account that no longer exists.
-  const sub = activeSubscription(user.id);
+  const sub = await activeSubscription(user.id);
   const stripe = stripeClient();
   if (stripe && sub?.stripe_subscription) {
     try {
@@ -42,13 +43,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const d = db();
-  d.transaction(() => {
-    d.prepare("DELETE FROM newsletter WHERE email=?").run(user.email);
-    d.prepare("DELETE FROM usage_counters WHERE actor=?").run(`user:${user.id}`);
+  // All-or-nothing: a partial erasure that leaves the users row but drops the
+  // newsletter record (or the reverse) is the one outcome Art. 17 cannot
+  // tolerate. batch() is atomic on both engines — no statement here reads a
+  // value the next one depends on, so it needs no interactive transaction.
+  await sql().batch([
+    { sql: "DELETE FROM newsletter WHERE email=?", params: [user.email] },
+    { sql: "DELETE FROM usage_counters WHERE actor=?", params: [`user:${user.id}`] },
     // bookmarks, saved_answers, sessions and subscriptions cascade
-    d.prepare("DELETE FROM users WHERE id=?").run(user.id);
-  })();
+    { sql: "DELETE FROM users WHERE id=?", params: [user.id] },
+  ]);
 
   await endSession();
   return NextResponse.json({ ok: true });

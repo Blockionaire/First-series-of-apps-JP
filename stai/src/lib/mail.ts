@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { sql } from "./sql";
 
 /**
  * Outbox pattern: every outbound message is durably recorded first, then
@@ -6,9 +6,11 @@ import { db } from "./db";
  * silently lost — the admin outbox shows exactly what left (or didn't).
  */
 export async function sendMail(to: string, subject: string, body: string) {
-  const info = db()
-    .prepare("INSERT INTO outbox (to_email, subject, body) VALUES (?, ?, ?)")
-    .run(to, subject, body);
+  const info = await sql().run("INSERT INTO outbox (to_email, subject, body) VALUES (?, ?, ?)", [
+    to,
+    subject,
+    body,
+  ]);
 
   const key = process.env.RESEND_API_KEY;
   const from = process.env.MAIL_FROM ?? "STAI <brief@stai.ai>";
@@ -21,7 +23,7 @@ export async function sendMail(to: string, subject: string, body: string) {
       body: JSON.stringify({ from, to: [to], subject, text: body }),
     });
     if (res.ok) {
-      db().prepare("UPDATE outbox SET sent_at=datetime('now') WHERE id=?").run(info.lastInsertRowid);
+      await sql().run("UPDATE outbox SET sent_at=datetime('now') WHERE id=?", [info.lastRowId]);
       return { queued: true, sent: true };
     }
   } catch {

@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { sql } from "./sql";
 
 /**
  * First-party, aggregate-only analytics.
@@ -28,12 +28,24 @@ export type EventKind = (typeof EVENT_KINDS)[number];
 const KINDS = new Set<string>(EVENT_KINDS);
 export const isEventKind = (k: string): k is EventKind => KINDS.has(k);
 
-/** Records one event. Never throws — analytics must not be able to break a page. */
-export function track(kind: EventKind, opts: { path?: string; label?: string; visitor?: string } = {}) {
+/**
+ * Records one event. Never throws — analytics must not be able to break a page.
+ *
+ * Await it. It used to be fire-and-forget, which was harmless when the write
+ * was synchronous; with an async database an un-awaited promise can outlive the
+ * response, and on Workers an isolate may be torn down before it settles.
+ */
+export async function track(
+  kind: EventKind,
+  opts: { path?: string; label?: string; visitor?: string } = {}
+): Promise<void> {
   try {
-    db()
-      .prepare("INSERT INTO events (kind, path, label, visitor) VALUES (?, ?, ?, ?)")
-      .run(kind, (opts.path ?? "").slice(0, 300), (opts.label ?? "").slice(0, 200), (opts.visitor ?? "").slice(0, 64));
+    await sql().run("INSERT INTO events (kind, path, label, visitor) VALUES (?, ?, ?, ?)", [
+      kind,
+      (opts.path ?? "").slice(0, 300),
+      (opts.label ?? "").slice(0, 200),
+      (opts.visitor ?? "").slice(0, 64),
+    ]);
   } catch {
     // A failed counter is never worth a failed request.
   }
@@ -58,58 +70,58 @@ export type Summary = {
   briefWaitlist: number;
 };
 
-export function summary(w: Window): Summary {
-  const d = db();
-  const count = (kind: string) =>
+export async function summary(w: Window): Promise<Summary> {
+  const s = sql();
+  const count = async (kind: string) =>
     (
-      d
-        .prepare("SELECT COUNT(*) AS n FROM events WHERE kind=? AND created_at >= datetime('now', ?)")
-        .get(kind, since(w)) as { n: number }
+      (await s.first<{ n: number }>(
+        "SELECT COUNT(*) AS n FROM events WHERE kind=? AND created_at >= datetime('now', ?)",
+        [kind, since(w)]
+      )) ?? { n: 0 }
     ).n;
-  const visitors = (
-    d
-      .prepare(
-        "SELECT COUNT(DISTINCT visitor) AS n FROM events WHERE visitor <> '' AND created_at >= datetime('now', ?)"
-      )
-      .get(since(w)) as { n: number }
-  ).n;
+  const visitorRow = await s.first<{ n: number }>(
+    "SELECT COUNT(DISTINCT visitor) AS n FROM events WHERE visitor <> '' AND created_at >= datetime('now', ?)",
+    [since(w)]
+  );
   return {
     window: w,
-    pageViews: count("page_view"),
-    visitors,
-    articleViews: count("article_view"),
-    promptViews: count("prompt_view"),
-    askQuestions: count("ask_question"),
-    signups: count("signup"),
-    earlyAccess: count("early_access"),
-    briefWaitlist: count("brief_waitlist"),
+    pageViews: await count("page_view"),
+    visitors: visitorRow?.n ?? 0,
+    articleViews: await count("article_view"),
+    promptViews: await count("prompt_view"),
+    askQuestions: await count("ask_question"),
+    signups: await count("signup"),
+    earlyAccess: await count("early_access"),
+    briefWaitlist: await count("brief_waitlist"),
   };
 }
 
-export function topPaths(w: Window, limit = 10): { path: string; n: number }[] {
-  return db()
-    .prepare(
-      `SELECT path, COUNT(*) AS n FROM events
-       WHERE kind='page_view' AND path <> '' AND created_at >= datetime('now', ?)
-       GROUP BY path ORDER BY n DESC LIMIT ?`
-    )
-    .all(since(w), limit) as { path: string; n: number }[];
+export async function topPaths(w: Window, limit = 10): Promise<{ path: string; n: number }[]> {
+  return sql().all<{ path: string; n: number }>(
+    `SELECT path, COUNT(*) AS n FROM events
+     WHERE kind='page_view' AND path <> '' AND created_at >= datetime('now', ?)
+     GROUP BY path ORDER BY n DESC LIMIT ?`,
+    [since(w), limit]
+  );
 }
 
-export function topContent(w: Window, kind: "article_view" | "prompt_view", limit = 8) {
-  return db()
-    .prepare(
-      `SELECT label, COUNT(*) AS n FROM events
-       WHERE kind=? AND label <> '' AND created_at >= datetime('now', ?)
-       GROUP BY label ORDER BY n DESC LIMIT ?`
-    )
-    .all(kind, since(w), limit) as { label: string; n: number }[];
+export async function topContent(
+  w: Window,
+  kind: "article_view" | "prompt_view",
+  limit = 8
+): Promise<{ label: string; n: number }[]> {
+  return sql().all<{ label: string; n: number }>(
+    `SELECT label, COUNT(*) AS n FROM events
+     WHERE kind=? AND label <> '' AND created_at >= datetime('now', ?)
+     GROUP BY label ORDER BY n DESC LIMIT ?`,
+    [kind, since(w), limit]
+  );
 }
 
 /** Retention: aggregate counts are kept for 12 months, as the privacy notice states. */
-export function pruneOldEvents() {
+export async function pruneOldEvents(): Promise<void> {
   try {
-    db().prepare("DELETE FROM events WHERE created_at < datetime('now', '-12 months')").run();
+    await sql().run("DELETE FROM events WHERE created_at < datetime('now', '-12 months')");
   } catch {
     /* best effort */
   }

@@ -16,8 +16,8 @@ export const metadata: Metadata = pageMeta({
   path: "/ai-act",
 });
 
-export default function AiActPage() {
-  const related = allArticles()
+export default async function AiActPage() {
+  const related = (await allArticles())
     .filter((a) => a.tags.some((t) => /AI Act|supervision|ISQM|deployer/i.test(t)) || a.category === "Regulation")
     .slice(0, 4);
 

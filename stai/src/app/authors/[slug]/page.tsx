@@ -32,7 +32,7 @@ export default async function AuthorPage({ params }: Props) {
   const author = authorBySlug(slug);
   if (!author) notFound();
 
-  const pieces = allArticles().filter((a) => a.author === author.name);
+  const pieces = (await allArticles()).filter((a) => a.author === author.name);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { count } from "@/lib/sql";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +10,9 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   try {
-    const row = db().prepare("SELECT COUNT(*) AS n FROM articles").get() as { n: number };
+    const articles = await count("SELECT COUNT(*) AS n FROM articles");
     return NextResponse.json(
-      { status: "ok", db: "ok", articles: row.n },
+      { status: "ok", db: "ok", articles },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch {

@@ -78,8 +78,8 @@ type Index = {
 
 let _index: Index | null = null;
 
-function buildIndex(): Index {
-  const articles = allArticles();
+async function buildIndex(): Promise<Index> {
+  const articles = await allArticles();
   const chunks = articles.flatMap(chunkArticle);
   const df = new Map<string, number>();
   const tf: Map<string, number>[] = [];
@@ -96,8 +96,8 @@ function buildIndex(): Index {
   return { chunks, df, tf, len, avgLen, builtFor: articles.length };
 }
 
-export function searchChunks(query: string, k = 6): Hit[] {
-  if (!_index) _index = buildIndex();
+export async function searchChunks(query: string, k = 6): Promise<Hit[]> {
+  if (!_index) _index = await buildIndex();
   const idx = _index;
   const qTokens = [...new Set(tokenize(query))];
   if (qTokens.length === 0) return [];

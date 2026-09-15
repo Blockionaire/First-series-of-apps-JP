@@ -153,10 +153,13 @@ describe("prompt library — schema and seeded corpus", { skip }, () => {
 
   test("public prompt reads filter drafts at the data layer", () => {
     const src = fs.readFileSync(path.join(ROOT, "src/lib/content.ts"), "utf8");
-    const all = src.match(/export function allPrompts[\s\S]*?\n}/)[0];
-    const one = src.match(/export function promptBySlug[\s\S]*?\n}/)[0];
-    assert.match(all, /status\s*=\s*'published'/, "allPrompts must exclude drafts");
-    assert.match(one, /status\s*=\s*'published'/, "promptBySlug must exclude drafts");
+    const body = (name) => {
+      const m = src.match(new RegExp(`export (?:async )?function ${name}[\\s\\S]*?\\n}`));
+      assert.ok(m, `${name} not found in src/lib/content.ts — has it been renamed?`);
+      return m[0];
+    };
+    assert.match(body("allPrompts"), /status\s*=\s*'published'/, "allPrompts must exclude drafts");
+    assert.match(body("promptBySlug"), /status\s*=\s*'published'/, "promptBySlug must exclude drafts");
   });
 });
 

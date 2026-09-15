@@ -6,8 +6,8 @@ import { abs } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const articles = allArticles();
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const articles = await allArticles();
   const newest = articles[0]?.published_at ?? new Date().toISOString().slice(0, 10);
 
   const staticRoutes: { path: string; priority: number; freq: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [
@@ -50,7 +50,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       // Act-critical pieces are the ones worth crawling first.
       priority: a.featured === 1 ? 0.9 : a.urgency >= 3 ? 0.8 : 0.7,
     })),
-    ...allPrompts().map((p) => ({
+    ...(await allPrompts()).map((p) => ({
       url: abs(`/prompts/${p.slug}`),
       changeFrequency: "monthly" as const,
       priority: p.premium ? 0.5 : 0.7,

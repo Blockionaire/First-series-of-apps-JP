@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const prompt = promptBySlug(String(body.slug ?? ""));
+  const prompt = await promptBySlug(String(body.slug ?? ""));
   if (!prompt) return NextResponse.json({ error: "Unknown prompt" }, { status: 404 });
 
   const ctx = {
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Give the panel at least one context field to work with" }, { status: 400 });
   }
 
-  bumpPromptUses(prompt.id);
+  await bumpPromptUses(prompt.id);
 
   const client = anthropicClient();
   if (!client) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import { sendMail } from "@/lib/mail";
 import { guard, WINDOW } from "@/lib/ratelimit";
 import { FIRM_INTERESTS, interestLabel } from "@/lib/firms";
@@ -27,13 +27,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Name, firm and a valid work email are required" }, { status: 400 });
   }
 
-  const info = db()
-    .prepare(
-      `INSERT INTO firm_enquiries (name, email, firm, role, firm_size, jurisdiction, interests, seats, message)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(name, email, firm, role, firmSize, jurisdiction, JSON.stringify(interests), seats, message);
-  const ref = `STAI-FRM-${String(info.lastInsertRowid).padStart(4, "0")}`;
+  const info = await sql().run(
+    `INSERT INTO firm_enquiries (name, email, firm, role, firm_size, jurisdiction, interests, seats, message)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [name, email, firm, role, firmSize, jurisdiction, JSON.stringify(interests), seats, message]
+  );
+  const ref = `STAI-FRM-${String(info.lastRowId).padStart(4, "0")}`;
 
   const wanted = interests.map(interestLabel).join(", ") || "(none selected)";
 

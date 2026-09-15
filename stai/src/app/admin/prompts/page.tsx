@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { pageMeta } from "@/lib/seo";
 import { currentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { sql, type SqlParam } from "@/lib/sql";
 import { promptCategories, type AdminPromptRow } from "@/lib/admin/prompts";
 
 export const dynamic = "force-dynamic";
@@ -31,39 +31,38 @@ export default async function AdminPromptsPage({
   // Admin reads go straight to the table: this is the one surface that is
   // supposed to see drafts. Public reads go through lib/content.ts, which
   // filters them out.
+  // Positional parameters, so the same statement works on D1. The search term
+  // is repeated once per LIKE rather than named and reused.
   const where: string[] = [];
-  const args: Record<string, string> = {};
+  const args: SqlParam[] = [];
   if (q.trim()) {
-    where.push("(title LIKE @q OR slug LIKE @q OR description LIKE @q OR body LIKE @q)");
-    args.q = `%${q.trim()}%`;
+    where.push("(title LIKE ? OR slug LIKE ? OR description LIKE ? OR body LIKE ?)");
+    const like = `%${q.trim()}%`;
+    args.push(like, like, like, like);
   }
   if (cat) {
-    where.push("category = @cat");
-    args.cat = cat;
+    where.push("category = ?");
+    args.push(cat);
   }
   if (status) {
-    where.push("status = @st");
-    args.st = status;
+    where.push("status = ?");
+    args.push(status);
   }
 
-  const stmt = db().prepare(
+  const rows = await sql().all<AdminPromptRow>(
     `SELECT id, slug, title, category, premium, status, uses, updated_at FROM prompts
      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-     ORDER BY category ASC, title ASC`
+     ORDER BY category ASC, title ASC`,
+    args
   );
-  // better-sqlite3 rejects a bound object on a statement that takes no
-  // parameters, so the unfiltered case has to call through with nothing.
-  const rows = (where.length ? stmt.all(args) : stmt.all()) as AdminPromptRow[];
 
-  const categories = promptCategories();
-  const totals = db()
-    .prepare(
-      `SELECT COUNT(*) AS all_n,
-              COALESCE(SUM(status='published'), 0) AS live_n,
-              COALESCE(SUM(status='published' AND premium=0), 0) AS free_n
-       FROM prompts`
-    )
-    .get() as { all_n: number; live_n: number; free_n: number };
+  const categories = await promptCategories();
+  const totals = (await sql().first<{ all_n: number; live_n: number; free_n: number }>(
+    `SELECT COUNT(*) AS all_n,
+            COALESCE(SUM(status='published'), 0) AS live_n,
+            COALESCE(SUM(status='published' AND premium=0), 0) AS free_n
+     FROM prompts`
+  )) ?? { all_n: 0, live_n: 0, free_n: 0 };
 
   const filtered = !!(q.trim() || cat || status);
 

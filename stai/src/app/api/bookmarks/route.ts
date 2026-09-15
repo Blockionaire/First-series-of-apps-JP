@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
@@ -13,14 +13,16 @@ export async function POST(req: NextRequest) {
   if (!["article", "prompt"].includes(kind) || !Number.isInteger(refId)) {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
   }
-  const d = db();
-  const existing = d
-    .prepare("SELECT 1 FROM bookmarks WHERE user_id=? AND kind=? AND ref_id=?")
-    .get(user.id, kind, refId);
+  const s = sql();
+  const existing = await s.first("SELECT 1 AS ok FROM bookmarks WHERE user_id=? AND kind=? AND ref_id=?", [
+    user.id,
+    kind,
+    refId,
+  ]);
   if (existing) {
-    d.prepare("DELETE FROM bookmarks WHERE user_id=? AND kind=? AND ref_id=?").run(user.id, kind, refId);
+    await s.run("DELETE FROM bookmarks WHERE user_id=? AND kind=? AND ref_id=?", [user.id, kind, refId]);
     return NextResponse.json({ saved: false });
   }
-  d.prepare("INSERT INTO bookmarks (user_id, kind, ref_id) VALUES (?, ?, ?)").run(user.id, kind, refId);
+  await s.run("INSERT INTO bookmarks (user_id, kind, ref_id) VALUES (?, ?, ?)", [user.id, kind, refId]);
   return NextResponse.json({ saved: true });
 }

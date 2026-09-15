@@ -1,5 +1,6 @@
 import Stripe from "stripe";
-import { db, getSetting, setSetting } from "./db";
+import { db, getSetting } from "./db";
+import { sql } from "./sql";
 import { checkoutAvailable } from "./config";
 
 /**
@@ -72,23 +73,58 @@ export function stripeClient(): Stripe | null {
 
 export { checkoutAvailable };
 
-export function foundingAvailable(): boolean {
-  const total = parseInt(getSetting("founding_total") ?? "200", 10);
-  const claimed = parseInt(getSetting("founding_claimed") ?? "0", 10);
+export async function foundingAvailable(): Promise<boolean> {
+  const total = parseInt((await getSetting("founding_total")) ?? "200", 10);
+  const claimed = parseInt((await getSetting("founding_claimed")) ?? "0", 10);
   return claimed < total;
 }
 
 /** Does this user currently hold STAI+? The single authority for that question. */
-export function hasEntitlement(userId: number): boolean {
-  const row = db()
+export async function hasEntitlement(userId: number): Promise<boolean> {
+  const row = await sql().first(
+    `SELECT 1 AS ok FROM subscriptions WHERE user_id=? AND ${ENTITLEMENT_SQL} LIMIT 1`,
+    [userId]
+  );
+  return !!row;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * PHASE 2 BOUNDARY — the last synchronous database code in the application.
+ *
+ * upsertSubscription() and confirmFirstPayment() below still run inside
+ * better-sqlite3 transactions, because both read a value and then decide what
+ * to write based on it. D1 has no interactive transaction that can express
+ * that; it has to become a compare-and-swap, which is a behavioural change to
+ * money-handling code and therefore gets its own phase with its own review.
+ *
+ * Until then these use sync helpers rather than the async seam. Everything
+ * else in this file is already on the seam. Nothing new may be added here.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+function getSettingSync(key: string): string | null {
+  const row = db().prepare("SELECT value FROM settings WHERE key=?").get(key) as
+    | { value: string }
+    | undefined;
+  return row?.value ?? null;
+}
+
+function setSettingSync(key: string, value: string) {
+  db()
+    .prepare(
+      "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+    )
+    .run(key, value);
+}
+
+function hasEntitlementSync(userId: number): boolean {
+  return !!db()
     .prepare(`SELECT 1 FROM subscriptions WHERE user_id=? AND ${ENTITLEMENT_SQL} LIMIT 1`)
     .get(userId);
-  return !!row;
 }
 
 /** Keep users.plan in step for reporting. Entitlement decisions never read it. */
 function refreshUserPlan(userId: number) {
-  const entitled = hasEntitlement(userId);
+  const entitled = hasEntitlementSync(userId);
   const founding = db()
     .prepare(`SELECT 1 FROM subscriptions WHERE user_id=? AND plan='founding' AND ${ENTITLEMENT_SQL} LIMIT 1`)
     .get(userId);
@@ -125,13 +161,13 @@ export type SubscriptionRecord = {
  */
 function claimFoundingSeat(plan: PlanId): { plan: PlanId; seatTaken: boolean } {
   if (plan !== "founding") return { plan, seatTaken: false };
-  const total = parseInt(getSetting("founding_total") ?? "200", 10);
-  const claimed = parseInt(getSetting("founding_claimed") ?? "0", 10);
+  const total = parseInt(getSettingSync("founding_total") ?? "200", 10);
+  const claimed = parseInt(getSettingSync("founding_claimed") ?? "0", 10);
   if (claimed >= total) {
     // Window closed mid-flight; support reconciles the rate.
     return { plan: "monthly", seatTaken: false };
   }
-  setSetting("founding_claimed", String(claimed + 1));
+  setSettingSync("founding_claimed", String(claimed + 1));
   return { plan: "founding", seatTaken: true };
 }
 
@@ -203,7 +239,7 @@ export function upsertSubscription(rec: SubscriptionRecord): { entitled: boolean
     }
 
     refreshUserPlan(rec.userId);
-    return { entitled: hasEntitlement(rec.userId), seatTaken };
+    return { entitled: hasEntitlementSync(rec.userId), seatTaken };
   });
 
   return tx();
@@ -291,22 +327,23 @@ export async function syncFromStripe(subscriptionId: string): Promise<boolean> {
  * or when the paid period has actually elapsed.
  */
 export async function requestCancellation(userId: number): Promise<{ ok: boolean; endsAt: number | null }> {
-  const sub = activeSubscription(userId);
+  const sub = await activeSubscription(userId);
   if (!sub) return { ok: false, endsAt: null };
 
   const stripe = stripeClient();
   if (sub.provider === "stripe" && sub.stripe_subscription && stripe) {
     await stripe.subscriptions.update(sub.stripe_subscription, { cancel_at_period_end: true });
     await syncFromStripe(sub.stripe_subscription);
-    const after = activeSubscription(userId);
+    const after = await activeSubscription(userId);
     return { ok: true, endsAt: after?.current_period_end ?? null };
   }
 
   // Sandbox (development only): mark pending locally; the shared entitlement
   // rule expires it when the period ends.
-  db()
-    .prepare("UPDATE subscriptions SET cancel_at_period_end=1, updated_at=datetime('now') WHERE id=?")
-    .run(sub.id);
+  await sql().run(
+    "UPDATE subscriptions SET cancel_at_period_end=1, updated_at=datetime('now') WHERE id=?",
+    [sub.id]
+  );
   refreshUserPlan(userId);
   return { ok: true, endsAt: sub.current_period_end ?? null };
 }
@@ -325,15 +362,17 @@ export type StoredSubscription = {
 };
 
 /** The subscription that currently grants access, if any. */
-export function activeSubscription(userId: number): StoredSubscription | undefined {
-  return db()
-    .prepare(`SELECT * FROM subscriptions WHERE user_id=? AND ${ENTITLEMENT_SQL} ORDER BY id DESC LIMIT 1`)
-    .get(userId) as StoredSubscription | undefined;
+export async function activeSubscription(userId: number): Promise<StoredSubscription | null> {
+  return sql().first<StoredSubscription>(
+    `SELECT * FROM subscriptions WHERE user_id=? AND ${ENTITLEMENT_SQL} ORDER BY id DESC LIMIT 1`,
+    [userId]
+  );
 }
 
 /** The most recent subscription regardless of state — for account display. */
-export function latestSubscription(userId: number): StoredSubscription | undefined {
-  return db()
-    .prepare("SELECT * FROM subscriptions WHERE user_id=? ORDER BY id DESC LIMIT 1")
-    .get(userId) as StoredSubscription | undefined;
+export async function latestSubscription(userId: number): Promise<StoredSubscription | null> {
+  return sql().first<StoredSubscription>(
+    "SELECT * FROM subscriptions WHERE user_id=? ORDER BY id DESC LIMIT 1",
+    [userId]
+  );
 }

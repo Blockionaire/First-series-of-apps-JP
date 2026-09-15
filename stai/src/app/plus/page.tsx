@@ -35,8 +35,8 @@ const features = (freeCount: number, total: number): { label: string; free: stri
 ];
 
 export default async function PlusPage() {
-  const founding = foundingStatus();
-  const prompts = allPrompts();
+  const founding = await foundingStatus();
+  const prompts = await allPrompts();
   const FEATURES = features(prompts.filter((p) => !p.premium).length, prompts.length);
   const user = await currentUser();
   const isPlus = user?.plan === "plus";

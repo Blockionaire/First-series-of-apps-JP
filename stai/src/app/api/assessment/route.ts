@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import { sendMail } from "@/lib/mail";
 import { bandFor } from "@/lib/assessment";
 import { guard, WINDOW } from "@/lib/ratelimit";
@@ -27,21 +27,23 @@ export async function POST(req: NextRequest) {
 
   let id = existingId;
   if (id) {
-    db()
-      .prepare(
-        "UPDATE assessments SET email=?, firm=?, firm_size=?, jurisdiction=?, role=? WHERE id=?"
-      )
-      .run(email, firm, firmSize, jurisdiction, role, id);
+    await sql().run("UPDATE assessments SET email=?, firm=?, firm_size=?, jurisdiction=?, role=? WHERE id=?", [
+      email,
+      firm,
+      firmSize,
+      jurisdiction,
+      role,
+      id,
+    ]);
   } else {
-    const info = db()
-      .prepare(
-        "INSERT INTO assessments (email, firm, answers, score, band, firm_size, jurisdiction, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-      )
-      .run(email, firm, JSON.stringify(answers), score, band, firmSize, jurisdiction, role);
-    id = Number(info.lastInsertRowid);
+    const info = await sql().run(
+      "INSERT INTO assessments (email, firm, answers, score, band, firm_size, jurisdiction, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [email, firm, JSON.stringify(answers), score, band, firmSize, jurisdiction, role]
+    );
+    id = info.lastRowId;
   }
 
-  const benchmark = computeBenchmark(score, firmSize);
+  const benchmark = await computeBenchmark(score, firmSize);
 
   if (email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     const fullBand = bandFor(score);

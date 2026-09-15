@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const id = await createUser(email, password, name, firm);
-    track("signup", { path: "/signup" });
+    await track("signup", { path: "/signup" });
     await startSession(id);
     await sendMail(
       email,

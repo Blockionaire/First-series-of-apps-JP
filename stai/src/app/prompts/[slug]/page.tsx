@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { promptBySlug, allPrompts } from "@/lib/content";
 import { currentUser } from "@/lib/auth";
 import { track } from "@/lib/analytics";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import CopyButton from "@/components/CopyButton";
 import BookmarkButton from "@/components/BookmarkButton";
 import AdaptPanel from "@/components/prompts/AdaptPanel";
@@ -16,30 +16,31 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const p = promptBySlug(slug);
+  const p = await promptBySlug(slug);
   if (!p) return {};
   return { title: `${p.title} — Prompt Library`, description: p.description };
 }
 
 export default async function PromptPage({ params }: Props) {
   const { slug } = await params;
-  const prompt = promptBySlug(slug);
+  const prompt = await promptBySlug(slug);
   if (!prompt) notFound();
 
   const user = await currentUser();
   const isPlus = user?.plan === "plus";
-  track("prompt_view", { path: `/prompts/${prompt.slug}`, label: prompt.title });
+  await track("prompt_view", { path: `/prompts/${prompt.slug}`, label: prompt.title });
   const lockedBody = prompt.premium && !isPlus;
   // Server-side cut: locked prompt bodies never reach the client.
   const visibleBody = lockedBody ? prompt.body.slice(0, 260) + "\n\n[…]" : prompt.body;
 
   const bookmarked = user
-    ? !!db()
-        .prepare("SELECT 1 FROM bookmarks WHERE user_id=? AND kind='prompt' AND ref_id=?")
-        .get(user.id, prompt.id)
+    ? !!(await sql().first("SELECT 1 AS ok FROM bookmarks WHERE user_id=? AND kind='prompt' AND ref_id=?", [
+        user.id,
+        prompt.id,
+      ]))
     : false;
 
-  const siblings = allPrompts()
+  const siblings = (await allPrompts())
     .filter((p) => p.category === prompt.category && p.id !== prompt.id)
     .slice(0, 3);
 

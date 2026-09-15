@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
 /**
@@ -51,40 +51,41 @@ export async function POST(req: NextRequest) {
     .map((v: string) => v.trim().replace(/^\{\{|\}\}$/g, "").trim())
     .filter(Boolean);
 
-  const row = {
+  // Positional, in this exact order, for both statements below. D1 accepts
+  // only `?` parameters, so the named form these used to carry is not
+  // expressible — the order is now load-bearing.
+  const values = [
     slug,
     title,
     category,
     description,
     body,
-    variables: JSON.stringify(variables),
-    model_note: String(b.model_note ?? "").trim(),
-    premium: b.premium ? 1 : 0,
-    status: b.status === "draft" ? "draft" : "published",
-  };
+    JSON.stringify(variables),
+    String(b.model_note ?? "").trim(),
+    b.premium ? 1 : 0,
+    b.status === "draft" ? "draft" : "published",
+  ];
+  const status = String(values[8]);
 
-  const d = db();
   let id = Number(b.id) || null;
   try {
     if (id) {
-      const info = d
-        .prepare(
-          `UPDATE prompts SET slug=@slug, title=@title, category=@category, description=@description,
-           body=@body, variables=@variables, model_note=@model_note, premium=@premium, status=@status,
-           updated_at=datetime('now') WHERE id=@id`
-        )
-        .run({ ...row, id });
+      const info = await sql().run(
+        `UPDATE prompts SET slug=?, title=?, category=?, description=?,
+         body=?, variables=?, model_note=?, premium=?, status=?,
+         updated_at=datetime('now') WHERE id=?`,
+        [...values, id]
+      );
       if (info.changes === 0) {
         return NextResponse.json({ error: "That prompt no longer exists" }, { status: 404 });
       }
     } else {
-      const info = d
-        .prepare(
-          `INSERT INTO prompts (slug, title, category, description, body, variables, model_note, premium, status, uses, updated_at)
-           VALUES (@slug, @title, @category, @description, @body, @variables, @model_note, @premium, @status, 0, datetime('now'))`
-        )
-        .run(row);
-      id = Number(info.lastInsertRowid);
+      const info = await sql().run(
+        `INSERT INTO prompts (slug, title, category, description, body, variables, model_note, premium, status, uses, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))`,
+        values
+      );
+      id = info.lastRowId;
     }
   } catch (e) {
     if (e instanceof Error && /UNIQUE/.test(e.message)) {
@@ -99,5 +100,5 @@ export async function POST(req: NextRequest) {
   // force-dynamic and reads the database per request, so a save is live
   // immediately. If prompts are ever added to buildIndex(), this endpoint has
   // to invalidate — tests/prompt-cms.test.mjs fails loudly if that happens.
-  return NextResponse.json({ ok: true, id, status: row.status });
+  return NextResponse.json({ ok: true, id, status });
 }

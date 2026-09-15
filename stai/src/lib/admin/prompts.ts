@@ -1,4 +1,4 @@
-import { db } from "../db";
+import { sql } from "../sql";
 
 /**
  * Admin-side prompt reads.
@@ -31,17 +31,15 @@ export type AdminPromptFull = AdminPromptRow & {
  * Categories currently in use, taken from the data rather than a hard-coded
  * list: the library's shelves are an editorial decision, not a constant.
  */
-export function promptCategories(): string[] {
-  return (
-    db().prepare("SELECT DISTINCT category FROM prompts ORDER BY category ASC").all() as {
-      category: string;
-    }[]
-  ).map((r) => r.category);
+export async function promptCategories(): Promise<string[]> {
+  const rows = await sql().all<{ category: string }>(
+    "SELECT DISTINCT category FROM prompts ORDER BY category ASC"
+  );
+  return rows.map((r) => r.category);
 }
 
-export function adminPromptById(id: number): AdminPromptFull | null {
-  const r = db().prepare("SELECT * FROM prompts WHERE id=?").get(id);
-  return (r as AdminPromptFull | undefined) ?? null;
+export async function adminPromptById(id: number): Promise<AdminPromptFull | null> {
+  return sql().first<AdminPromptFull>("SELECT * FROM prompts WHERE id=?", [id]);
 }
 
 /**

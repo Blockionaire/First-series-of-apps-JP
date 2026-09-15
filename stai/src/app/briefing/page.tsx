@@ -12,8 +12,8 @@ export const metadata: Metadata = pageMeta({
   path: "/briefing",
 });
 
-export default function BriefingPage() {
-  const items = allArticles().map((a) => ({
+export default async function BriefingPage() {
+  const items = (await allArticles()).map((a) => ({
     slug: a.slug,
     title: a.title,
     category: a.category,

@@ -16,7 +16,7 @@ export const metadata: Metadata = pageMeta({
 export default async function PromptsPage() {
   const user = await currentUser();
   const isPlus = user?.plan === "plus";
-  const prompts = allPrompts();
+  const prompts = await allPrompts();
   const freeCount = prompts.filter((p) => !p.premium).length;
 
   const cards = prompts.map((p) => ({

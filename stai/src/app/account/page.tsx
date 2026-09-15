@@ -4,7 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { activeSubscription, PLANS } from "@/lib/billing";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import { fmtDate } from "@/lib/format";
 import { PlusBadge } from "@/components/Logo";
 import LogoutButton from "@/components/account/LogoutButton";
@@ -29,22 +29,36 @@ export default async function AccountPage({
   if (!user) redirect("/login?next=/account");
   const { welcome } = await searchParams;
 
-  const sub = activeSubscription(user.id);
-  const savedArticles = db()
-    .prepare(
-      `SELECT a.slug, a.title, a.category, a.published_at FROM bookmarks b
-       JOIN articles a ON a.id = b.ref_id WHERE b.user_id=? AND b.kind='article' ORDER BY b.created_at DESC`
-    )
-    .all(user.id) as { slug: string; title: string; category: string; published_at: string }[];
-  const savedPrompts = db()
-    .prepare(
-      `SELECT p.slug, p.title, p.category, p.premium FROM bookmarks b
-       JOIN prompts p ON p.id = b.ref_id WHERE b.user_id=? AND b.kind='prompt' ORDER BY b.created_at DESC`
-    )
-    .all(user.id) as { slug: string; title: string; category: string; premium: number }[];
-  const savedAnswers = db()
-    .prepare("SELECT id, question, answer, created_at FROM saved_answers WHERE user_id=? ORDER BY id DESC LIMIT 20")
-    .all(user.id) as { id: number; question: string; answer: string; created_at: string }[];
+  const sub = await activeSubscription(user.id);
+  const savedArticles = await sql().all<{
+    slug: string;
+    title: string;
+    category: string;
+    published_at: string;
+  }>(
+    `SELECT a.slug, a.title, a.category, a.published_at FROM bookmarks b
+     JOIN articles a ON a.id = b.ref_id WHERE b.user_id=? AND b.kind='article' ORDER BY b.created_at DESC`,
+    [user.id]
+  );
+  const savedPrompts = await sql().all<{
+    slug: string;
+    title: string;
+    category: string;
+    premium: number;
+  }>(
+    `SELECT p.slug, p.title, p.category, p.premium FROM bookmarks b
+     JOIN prompts p ON p.id = b.ref_id WHERE b.user_id=? AND b.kind='prompt' ORDER BY b.created_at DESC`,
+    [user.id]
+  );
+  const savedAnswers = await sql().all<{
+    id: number;
+    question: string;
+    answer: string;
+    created_at: string;
+  }>(
+    "SELECT id, question, answer, created_at FROM saved_answers WHERE user_id=? ORDER BY id DESC LIMIT 20",
+    [user.id]
+  );
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">

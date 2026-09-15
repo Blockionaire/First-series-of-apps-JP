@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { sql } from "./sql";
 
 /**
  * The peer benchmark.
@@ -25,21 +25,20 @@ export type Benchmark = {
 
 type Row = { score: number; answers: string; firm_size: string };
 
-export function computeBenchmark(score: number, firmSize: string): Benchmark {
-  const d = db();
-
+export async function computeBenchmark(score: number, firmSize: string): Promise<Benchmark> {
   // Prefer a same-size cohort; fall back to all firms if it's too thin.
   let rows: Row[] = [];
   let cohort = "";
 
   if (firmSize) {
-    rows = d
-      .prepare("SELECT score, answers, firm_size FROM assessments WHERE firm_size = ?")
-      .all(firmSize) as Row[];
+    rows = await sql().all<Row>(
+      "SELECT score, answers, firm_size FROM assessments WHERE firm_size = ?",
+      [firmSize]
+    );
     cohort = `${firmSize.toLowerCase()} firms`;
   }
   if (rows.length < MIN_SAMPLE) {
-    rows = d.prepare("SELECT score, answers, firm_size FROM assessments").all() as Row[];
+    rows = await sql().all<Row>("SELECT score, answers, firm_size FROM assessments");
     cohort = "all European firms assessed";
   }
 

@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   const { plan } = (await req.json().catch(() => ({}))) as { plan?: PlanId };
   if (!plan || !PLANS[plan]) return NextResponse.json({ error: "Unknown plan" }, { status: 400 });
-  if (plan === "founding" && !foundingAvailable()) {
+  if (plan === "founding" && !await foundingAvailable()) {
     return NextResponse.json({ error: "Founding seats are gone" }, { status: 409 });
   }
 

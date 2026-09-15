@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { db } from "./db";
+import { sql } from "./sql";
 import { ENTITLEMENT_SQL } from "./billing";
 
 export type User = {
@@ -19,16 +19,18 @@ const SESSION_DAYS = 30;
 
 export async function createUser(email: string, password: string, name: string, firm: string) {
   const hash = await bcrypt.hash(password, 10);
-  const info = db()
-    .prepare("INSERT INTO users (email, password_hash, name, firm) VALUES (?, ?, ?, ?)")
-    .run(email.toLowerCase().trim(), hash, name.trim(), firm.trim());
-  return Number(info.lastInsertRowid);
+  const info = await sql().run(
+    "INSERT INTO users (email, password_hash, name, firm) VALUES (?, ?, ?, ?)",
+    [email.toLowerCase().trim(), hash, name.trim(), firm.trim()]
+  );
+  return info.lastRowId;
 }
 
 export async function verifyUser(email: string, password: string): Promise<number | null> {
-  const row = db()
-    .prepare("SELECT id, password_hash FROM users WHERE email=?")
-    .get(email.toLowerCase().trim()) as { id: number; password_hash: string } | undefined;
+  const row = await sql().first<{ id: number; password_hash: string }>(
+    "SELECT id, password_hash FROM users WHERE email=?",
+    [email.toLowerCase().trim()]
+  );
   if (!row) return null;
   const ok = await bcrypt.compare(password, row.password_hash);
   return ok ? row.id : null;
@@ -37,11 +39,15 @@ export async function verifyUser(email: string, password: string): Promise<numbe
 export async function startSession(userId: number) {
   const token = crypto.randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + SESSION_DAYS * 864e5);
-  // Opportunistic purge: expired rows would otherwise accumulate forever.
-  db().prepare("DELETE FROM sessions WHERE expires_at <= datetime('now')").run();
-  db()
-    .prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)")
-    .run(token, userId, expires.toISOString());
+  // Opportunistic purge alongside the insert: expired rows would otherwise
+  // accumulate forever. Batched so the two writes are one round trip.
+  await sql().batch([
+    { sql: "DELETE FROM sessions WHERE expires_at <= datetime('now')" },
+    {
+      sql: "INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)",
+      params: [token, userId, expires.toISOString()],
+    },
+  ]);
   const jar = await cookies();
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -55,7 +61,7 @@ export async function startSession(userId: number) {
 export async function endSession() {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
-  if (token) db().prepare("DELETE FROM sessions WHERE token=?").run(token);
+  if (token) await sql().run("DELETE FROM sessions WHERE token=?", [token]);
   jar.delete(SESSION_COOKIE);
 }
 
@@ -67,9 +73,10 @@ export async function currentUser(): Promise<User | null> {
   // row. A stored "plus" flag has no expiry, so a lapsed or cancelled member
   // would otherwise keep access indefinitely. One rule (ENTITLEMENT_SQL),
   // evaluated here, governs every gate on the platform.
-  const row = db()
-    .prepare(
-      `SELECT u.id, u.email, u.name, u.firm, u.role,
+  const row = await sql().first<
+    Omit<User, "plan" | "founding"> & { entitled: number; founding: number }
+  >(
+    `SELECT u.id, u.email, u.name, u.firm, u.role,
               EXISTS (
                 SELECT 1 FROM subscriptions sub
                 WHERE sub.user_id = u.id AND ${ENTITLEMENT_SQL}
@@ -79,11 +86,9 @@ export async function currentUser(): Promise<User | null> {
                 WHERE sub.user_id = u.id AND sub.plan = 'founding' AND ${ENTITLEMENT_SQL}
               ) AS founding
        FROM sessions s JOIN users u ON u.id = s.user_id
-       WHERE s.token=? AND s.expires_at > datetime('now')`
-    )
-    .get(token) as
-    | (Omit<User, "plan" | "founding"> & { entitled: number; founding: number })
-    | undefined;
+       WHERE s.token=? AND s.expires_at > datetime('now')`,
+    [token]
+  );
   if (!row) return null;
   const { entitled, ...rest } = row;
   return { ...rest, plan: entitled ? "plus" : "free", founding: !!row.founding };
@@ -113,24 +118,25 @@ export async function anonId(): Promise<string> {
 }
 
 /** Monthly usage metering, e.g. Ask STAI free-tier quota. Returns count AFTER increment. */
-export function bumpUsage(actor: string, feature: string): number {
+export async function bumpUsage(actor: string, feature: string): Promise<number> {
   const period = new Date().toISOString().slice(0, 7); // YYYY-MM
-  db()
-    .prepare(
-      `INSERT INTO usage_counters (actor, feature, period, count) VALUES (?, ?, ?, 1)
-       ON CONFLICT(actor, feature, period) DO UPDATE SET count = count + 1`
-    )
-    .run(actor, feature, period);
-  const row = db()
-    .prepare("SELECT count FROM usage_counters WHERE actor=? AND feature=? AND period=?")
-    .get(actor, feature, period) as { count: number };
-  return row.count;
+  await sql().run(
+    `INSERT INTO usage_counters (actor, feature, period, count) VALUES (?, ?, ?, 1)
+     ON CONFLICT(actor, feature, period) DO UPDATE SET count = count + 1`,
+    [actor, feature, period]
+  );
+  const row = await sql().first<{ count: number }>(
+    "SELECT count FROM usage_counters WHERE actor=? AND feature=? AND period=?",
+    [actor, feature, period]
+  );
+  return row?.count ?? 0;
 }
 
-export function getUsage(actor: string, feature: string): number {
+export async function getUsage(actor: string, feature: string): Promise<number> {
   const period = new Date().toISOString().slice(0, 7);
-  const row = db()
-    .prepare("SELECT count FROM usage_counters WHERE actor=? AND feature=? AND period=?")
-    .get(actor, feature, period) as { count: number } | undefined;
+  const row = await sql().first<{ count: number }>(
+    "SELECT count FROM usage_counters WHERE actor=? AND feature=? AND period=?",
+    [actor, feature, period]
+  );
   return row?.count ?? 0;
 }

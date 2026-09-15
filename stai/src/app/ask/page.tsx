@@ -26,11 +26,11 @@ export default async function AskPage() {
       limit = -1;
     } else {
       limit = FREE_QUOTA;
-      used = getUsage(`user:${user.id}`, "ask");
+      used = await getUsage(`user:${user.id}`, "ask");
     }
   } else {
     const anon = await peekAnonId();
-    used = anon ? getUsage(`anon:${anon}`, "ask") : 0;
+    used = anon ? await getUsage(`anon:${anon}`, "ask") : 0;
   }
 
   return (

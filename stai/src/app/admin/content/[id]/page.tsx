@@ -3,7 +3,7 @@ import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import ArticleEditor, { type EditorArticle } from "@/components/admin/ArticleEditor";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +42,7 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
     };
   } else {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const row = db().prepare("SELECT * FROM articles WHERE id=?").get(Number(id)) as any;
+    const row = (await sql().first("SELECT * FROM articles WHERE id=?", [Number(id)])) as any;
     if (!row) notFound();
     initial = {
       ...row,

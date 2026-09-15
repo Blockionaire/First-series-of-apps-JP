@@ -8,8 +8,8 @@ const KIND_TAG: Record<string, string> = {
   stai: "STAI",
 };
 
-export default function Ticker() {
-  const signals = allSignals();
+export default async function Ticker() {
+  const signals = await allSignals();
   const items = signals.map((s) => ({
     tag: KIND_TAG[s.kind] ?? "SIG",
     label: s.label,

@@ -37,10 +37,10 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  track(kind, { path, label: String(body.label ?? "").slice(0, 200), visitor });
+  await track(kind, { path, label: String(body.label ?? "").slice(0, 200), visitor });
 
   // Cheap opportunistic retention sweep, roughly once per thousand events.
-  if (Math.random() < 0.001) pruneOldEvents();
+  if (Math.random() < 0.001) await pruneOldEvents();
 
   return NextResponse.json({ ok: true });
 }

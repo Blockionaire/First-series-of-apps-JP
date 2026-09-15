@@ -11,8 +11,8 @@ export const metadata: Metadata = pageMeta({
   path: "/research",
 });
 
-export default function ResearchPage() {
-  const papers = allResearch();
+export default async function ResearchPage() {
+  const papers = await allResearch();
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">

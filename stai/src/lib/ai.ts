@@ -16,7 +16,7 @@ export function anthropicClient(): Anthropic | null {
   return new Anthropic({ apiKey: key });
 }
 
-export function retrieve(question: string, k = 6): Hit[] {
+export async function retrieve(question: string, k = 6): Promise<Hit[]> {
   return searchChunks(question, k);
 }
 

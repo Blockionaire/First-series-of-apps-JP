@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { sql } from "@/lib/sql";
 import { interestLabel } from "@/lib/earlyaccess";
 
 export const dynamic = "force-dynamic";
@@ -18,11 +18,9 @@ export async function GET() {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
-  const rows = db()
-    .prepare(
-      "SELECT created_at, email, name, firm, role, interests, note FROM early_access ORDER BY id DESC"
-    )
-    .all() as {
+  const rows = (await sql().all(
+    "SELECT created_at, email, name, firm, role, interests, note FROM early_access ORDER BY id DESC"
+  )) as {
     created_at: string;
     email: string;
     name: string;

@@ -3,7 +3,7 @@ import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { sql, count } from "@/lib/sql";
 import { foundingStatus } from "@/lib/content";
 import { FIRM_INTERESTS } from "@/lib/firms";
 
@@ -20,28 +20,35 @@ export default async function AdminPage() {
   const user = await currentUser();
   if (!user || user.role !== "admin") redirect("/login?next=/admin");
 
-  const d = db();
-  const count = (sql: string) => (d.prepare(sql).get() as { n: number }).n;
-  const stats = [
-    { label: "Members (STAI+)", n: count("SELECT COUNT(*) n FROM users WHERE plan='plus'") },
-    { label: "Free accounts", n: count("SELECT COUNT(*) n FROM users WHERE plan='free'") },
-    { label: "Brief subscribers", n: count("SELECT COUNT(*) n FROM newsletter") },
-    { label: "Training enquiries", n: count("SELECT COUNT(*) n FROM enquiries") },
-    { label: "Assessments run", n: count("SELECT COUNT(*) n FROM assessments") },
-    { label: "Published articles", n: count("SELECT COUNT(*) n FROM articles WHERE status='published'") },
-    { label: "Published prompts", n: count("SELECT COUNT(*) n FROM prompts WHERE status='published'") },
+  const s = sql();
+  const statSpecs: [string, string][] = [
+    ["Members (STAI+)", "SELECT COUNT(*) n FROM users WHERE plan='plus'"],
+    ["Free accounts", "SELECT COUNT(*) n FROM users WHERE plan='free'"],
+    ["Brief subscribers", "SELECT COUNT(*) n FROM newsletter"],
+    ["Training enquiries", "SELECT COUNT(*) n FROM enquiries"],
+    ["Assessments run", "SELECT COUNT(*) n FROM assessments"],
+    ["Published articles", "SELECT COUNT(*) n FROM articles WHERE status='published'"],
+    ["Published prompts", "SELECT COUNT(*) n FROM prompts WHERE status='published'"],
   ];
-  const founding = foundingStatus();
+  const stats = await Promise.all(
+    statSpecs.map(async ([label, query]) => ({ label, n: await count(query) }))
+  );
+  const founding = await foundingStatus();
 
-  const enquiries = d
-    .prepare("SELECT id, name, email, firm, programme, seats, status, created_at FROM enquiries ORDER BY id DESC LIMIT 12")
-    .all() as { id: number; name: string; email: string; firm: string; programme: string; seats: string; status: string; created_at: string }[];
+  const enquiries = await s.all<{
+    id: number;
+    name: string;
+    email: string;
+    firm: string;
+    programme: string;
+    seats: string;
+    status: string;
+    created_at: string;
+  }>(
+    "SELECT id, name, email, firm, programme, seats, status, created_at FROM enquiries ORDER BY id DESC LIMIT 12"
+  );
 
-  const firmEnquiries = d
-    .prepare(
-      "SELECT id, name, email, firm, role, firm_size, jurisdiction, interests, seats, created_at FROM firm_enquiries ORDER BY id DESC LIMIT 12"
-    )
-    .all() as {
+  const firmEnquiries = await s.all<{
     id: number;
     name: string;
     email: string;
@@ -52,11 +59,13 @@ export default async function AdminPage() {
     interests: string;
     seats: string;
     created_at: string;
-  }[];
+  }>(
+    "SELECT id, name, email, firm, role, firm_size, jurisdiction, interests, seats, created_at FROM firm_enquiries ORDER BY id DESC LIMIT 12"
+  );
 
   // The demand signal: what firms actually ask for decides build order.
   const allInterests = (
-    d.prepare("SELECT interests FROM firm_enquiries").all() as { interests: string }[]
+    await s.all<{ interests: string }>("SELECT interests FROM firm_enquiries")
   ).flatMap((r) => {
     try {
       return JSON.parse(r.interests) as string[];
@@ -71,9 +80,13 @@ export default async function AdminPage() {
   })).sort((a, b) => b.count - a.count);
   const demandTotal = allInterests.length;
 
-  const outbox = d
-    .prepare("SELECT id, to_email, subject, created_at, sent_at FROM outbox ORDER BY id DESC LIMIT 12")
-    .all() as { id: number; to_email: string; subject: string; created_at: string; sent_at: string | null }[];
+  const outbox = await s.all<{
+    id: number;
+    to_email: string;
+    subject: string;
+    created_at: string;
+    sent_at: string | null;
+  }>("SELECT id, to_email, subject, created_at, sent_at FROM outbox ORDER BY id DESC LIMIT 12");
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">

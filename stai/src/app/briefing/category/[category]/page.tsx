@@ -33,7 +33,7 @@ export default async function CategoryPage({ params }: Props) {
   const cat = categoryFromSlug(category);
   if (!cat) notFound();
 
-  const items = allArticles().filter((a) => a.category === cat);
+  const items = (await allArticles()).filter((a) => a.category === cat);
   const copy = CATEGORY_COPY[cat];
 
   return (

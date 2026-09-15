@@ -1,4 +1,5 @@
-import { db, getSetting } from "./db";
+import { getSetting } from "./db";
+import { sql } from "./sql";
 
 export type Article = {
   id: number;
@@ -72,33 +73,30 @@ function rowToPrompt(r: any): Prompt {
   return { ...r, variables: JSON.parse(r.variables), premium: !!r.premium };
 }
 
-export function allArticles(): Article[] {
-  return (
-    db()
-      .prepare("SELECT * FROM articles WHERE status='published' ORDER BY published_at DESC, id DESC")
-      .all() as unknown[]
-  ).map(rowToArticle);
+export async function allArticles(): Promise<Article[]> {
+  const rows = await sql().all(
+    "SELECT * FROM articles WHERE status='published' ORDER BY published_at DESC, id DESC"
+  );
+  return rows.map(rowToArticle);
 }
 
-export function articleBySlug(slug: string): Article | null {
-  const r = db().prepare("SELECT * FROM articles WHERE slug=? AND status='published'").get(slug);
+export async function articleBySlug(slug: string): Promise<Article | null> {
+  const r = await sql().first("SELECT * FROM articles WHERE slug=? AND status='published'", [slug]);
   return r ? rowToArticle(r) : null;
 }
 
-export function featuredArticles(): Article[] {
-  return (
-    db()
-      .prepare("SELECT * FROM articles WHERE featured > 0 AND status='published' ORDER BY featured ASC")
-      .all() as unknown[]
-  ).map(rowToArticle);
+export async function featuredArticles(): Promise<Article[]> {
+  const rows = await sql().all(
+    "SELECT * FROM articles WHERE featured > 0 AND status='published' ORDER BY featured ASC"
+  );
+  return rows.map(rowToArticle);
 }
 
-export function relatedArticles(article: Article, limit = 3): Article[] {
-  const rows = db()
-    .prepare(
-      "SELECT * FROM articles WHERE id != ? AND status='published' ORDER BY (category = ?) DESC, published_at DESC LIMIT ?"
-    )
-    .all(article.id, article.category, limit) as unknown[];
+export async function relatedArticles(article: Article, limit = 3): Promise<Article[]> {
+  const rows = await sql().all(
+    "SELECT * FROM articles WHERE id != ? AND status='published' ORDER BY (category = ?) DESC, published_at DESC LIMIT ?",
+    [article.id, article.category, limit]
+  );
   return rows.map(rowToArticle);
 }
 
@@ -110,33 +108,32 @@ export function relatedArticles(article: Article, limit = 3): Article[] {
  * instead of a convention six pages have to remember. Admin reads query the
  * table directly and deliberately see drafts.
  */
-export function allPrompts(): Prompt[] {
-  return (
-    db()
-      .prepare("SELECT * FROM prompts WHERE status='published' ORDER BY premium ASC, uses DESC")
-      .all() as unknown[]
-  ).map(rowToPrompt);
+export async function allPrompts(): Promise<Prompt[]> {
+  const rows = await sql().all(
+    "SELECT * FROM prompts WHERE status='published' ORDER BY premium ASC, uses DESC"
+  );
+  return rows.map(rowToPrompt);
 }
 
-export function promptBySlug(slug: string): Prompt | null {
-  const r = db().prepare("SELECT * FROM prompts WHERE slug=? AND status='published'").get(slug);
+export async function promptBySlug(slug: string): Promise<Prompt | null> {
+  const r = await sql().first("SELECT * FROM prompts WHERE slug=? AND status='published'", [slug]);
   return r ? rowToPrompt(r) : null;
 }
 
-export function bumpPromptUses(id: number) {
-  db().prepare("UPDATE prompts SET uses = uses + 1 WHERE id=?").run(id);
+export async function bumpPromptUses(id: number): Promise<void> {
+  await sql().run("UPDATE prompts SET uses = uses + 1 WHERE id=?", [id]);
 }
 
-export function allPodcasts(): Podcast[] {
-  return db().prepare("SELECT * FROM podcasts ORDER BY episode_no DESC").all() as Podcast[];
+export async function allPodcasts(): Promise<Podcast[]> {
+  return sql().all<Podcast>("SELECT * FROM podcasts ORDER BY episode_no DESC");
 }
 
-export function allResearch(): ResearchPaper[] {
-  return db().prepare("SELECT * FROM research ORDER BY year DESC, id DESC").all() as ResearchPaper[];
+export async function allResearch(): Promise<ResearchPaper[]> {
+  return sql().all<ResearchPaper>("SELECT * FROM research ORDER BY year DESC, id DESC");
 }
 
-export function allSignals(): Signal[] {
-  return db().prepare("SELECT * FROM signals ORDER BY published_at DESC").all() as Signal[];
+export async function allSignals(): Promise<Signal[]> {
+  return sql().all<Signal>("SELECT * FROM signals ORDER BY published_at DESC");
 }
 
 /**
@@ -150,14 +147,14 @@ export function allSignals(): Signal[] {
  */
 export const FOUNDING_PROGRESS_THRESHOLD = 10;
 
-export function foundingStatus(): {
+export async function foundingStatus(): Promise<{
   total: number;
   claimed: number;
   remaining: number;
   showProgress: boolean;
-} {
-  const total = parseInt(getSetting("founding_total") ?? "200", 10);
-  const claimed = parseInt(getSetting("founding_claimed") ?? "0", 10);
+}> {
+  const total = parseInt((await getSetting("founding_total")) ?? "200", 10);
+  const claimed = parseInt((await getSetting("founding_claimed")) ?? "0", 10);
   return {
     total,
     claimed,

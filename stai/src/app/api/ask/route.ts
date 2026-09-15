@@ -39,36 +39,36 @@ export async function POST(req: NextRequest) {
   let quota = { used: 0, limit: -1 }; // -1 = unlimited
   if (!user) {
     const anon = await anonId();
-    const used = getUsage(`anon:${anon}`, "ask");
+    const used = await getUsage(`anon:${anon}`, "ask");
     if (used >= ANON_QUOTA) {
       return Response.json(
         { error: "quota", detail: "Free taste used up — create a free account for more, or go STAI+ for unlimited." },
         { status: 402 }
       );
     }
-    quota = { used: bumpUsage(`anon:${anon}`, "ask"), limit: ANON_QUOTA };
+    quota = { used: await bumpUsage(`anon:${anon}`, "ask"), limit: ANON_QUOTA };
   } else if (user.plan !== "plus") {
-    const used = getUsage(`user:${user.id}`, "ask");
+    const used = await getUsage(`user:${user.id}`, "ask");
     if (used >= FREE_QUOTA) {
       return Response.json(
         { error: "quota", detail: "Your free questions for this month are used. STAI+ is unlimited." },
         { status: 402 }
       );
     }
-    quota = { used: bumpUsage(`user:${user.id}`, "ask"), limit: FREE_QUOTA };
+    quota = { used: await bumpUsage(`user:${user.id}`, "ask"), limit: FREE_QUOTA };
   }
 
   // Counts a question. The question text itself is never stored.
-  track("ask_question", { path: "/ask" });
+  await track("ask_question", { path: "/ask" });
 
-  const { numbered: hits, sources } = numberHits(retrieve(question, 6));
+  const { numbered: hits, sources } = numberHits(await retrieve(question, 6));
 
   const envelope = JSON.stringify({ sources, quota }) + "\x1e";
   const encoder = new TextEncoder();
 
   // Cost stop: once the platform-wide monthly ceiling is reached we stop
   // calling the model entirely and serve cited passages instead.
-  const globalCalls = getUsage("global", "ask-model");
+  const globalCalls = await getUsage("global", "ask-model");
   const withinBudget = globalCalls < GLOBAL_MONTHLY_CALLS;
   const client = withinBudget ? anthropicClient() : null;
 
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       controller.enqueue(encoder.encode(envelope));
-      bumpUsage("global", "ask-model");
+      await bumpUsage("global", "ask-model");
       try {
         const msgStream = client.messages.stream({
           model: MODEL,
