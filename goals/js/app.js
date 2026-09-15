@@ -88,7 +88,20 @@ let pending = false;
 function render() {
   if (pending) return;
   pending = true;
-  requestAnimationFrame(() => { pending = false; draw(); });
+  requestAnimationFrame(() => {
+    pending = false;
+
+    /* Where the browser supports it, let it animate the swap itself —
+       it captures both screens and cross-fades properly. Everywhere
+       else the CSS on .page does a plainer version of the same. */
+    const changing = parseRoute().name !== current.name;
+    if (changing && document.startViewTransition &&
+        !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.startViewTransition(() => draw());
+      return;
+    }
+    draw();
+  });
 }
 
 function draw() {

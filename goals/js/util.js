@@ -5,6 +5,8 @@
    and the small inline charts. Nothing in here knows what a goal is.
    ===================================================================== */
 
+import { dragToDismiss } from "./gestures.js";
+
 /* ---------------------------------------------------------------
    DOM
    --------------------------------------------------------------- */
@@ -283,6 +285,7 @@ export function sheet({ title, subtitle = "", body, footer = "", wide = false, o
   dialog.className = "sheet-backdrop";
   dialog.innerHTML = `
     <div class="sheet ${wide ? "sheet--wide" : ""}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+      <div class="sheet__grip" aria-hidden="true"></div>
       <header class="sheet__head">
         <div>
           <h2 class="sheet__title">${esc(title)}</h2>
@@ -321,6 +324,9 @@ export function sheet({ title, subtitle = "", body, footer = "", wide = false, o
   });
 
   if (onMount) cleanup = onMount(dialog, close) || null;
+
+  /* On a phone the sheet can also just be thrown away. */
+  dragToDismiss($(".sheet", dialog), close);
 
   /* Focus the first field so a phone keyboard opens right away. */
   const first = $("input, textarea, select, button:not([data-close])", dialog);

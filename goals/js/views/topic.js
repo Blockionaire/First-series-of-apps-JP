@@ -8,9 +8,10 @@
 
 import { state, byId, modulesOf, resourcesOf, notesOf, save, entriesFor } from "../store.js";
 import { topicProgress } from "../progress.js";
+import { ring } from "../charts.js";
 import { editTopic, editModule, editNote, editResource } from "../forms.js";
 import { openLog, entryList, hookEntryList } from "../log.js";
-import { esc, escLines, on, progressBar, formatDuration, formatDate, monthName,
+import { esc, escLines, on, formatDuration, formatDate, monthName,
          todayISO, toast } from "../util.js";
 import { icon } from "../icons.js";
 
@@ -50,10 +51,13 @@ export function html([id]) {
         </div>
         <h1 class="title" style="margin-top:10px">${esc(topic.title)}</h1>
         ${topic.outcome ? `<p class="lead" style="margin-top:14px">${esc(topic.outcome)}</p>` : ""}
-        <p class="meta num" style="margin-top:16px">
-          ${t.done} / ${t.total} modules${t.minutes ? ` · ${formatDuration(t.minutes)} spent` : ""}
-        </p>
-        <div style="margin-top:10px;max-width:380px">${progressBar(t.fraction)}</div>
+        <div class="week-head" style="margin-top:18px">
+          ${ring(t.fraction, { size: 76, center: `${t.done}/${t.total}`, caption: "modules", tone: "accent" })}
+          <div class="week-head__text">
+            ${t.next ? `<p class="week-head__line"><span class="faint">Next</span> <b>${esc(t.next.title)}</b></p>` : `<p class="week-head__line">Every module done.</p>`}
+            ${t.minutes ? `<p class="meta num" style="margin-top:6px">${formatDuration(t.minutes)} spent</p>` : ""}
+          </div>
+        </div>
         <div class="row row--wrap" style="margin-top:20px">
           <button class="button" data-do="log-learning">${icon("plus", { size: 16 })} Log a session</button>
           ${topic.status !== "current"
@@ -68,7 +72,7 @@ export function html([id]) {
       <section>
         <div class="section-head">
           <h2 class="subtitle">Modules</h2>
-          <button class="link" data-do="new-module">Add module</button>
+          <button class="button button--small" data-do="new-module">${icon("plus", { size: 14 })} Module</button>
         </div>
         ${modules.length ? modules.map((module, index) => `
           <div class="module ${module.done ? "is-done" : ""}">
@@ -85,7 +89,7 @@ export function html([id]) {
       <section>
         <div class="section-head">
           <h2 class="subtitle">Resources</h2>
-          <button class="link" data-do="new-resource">Save a link</button>
+          <button class="button button--small" data-do="new-resource">${icon("plus", { size: 14 })} Link</button>
         </div>
         ${resources.length ? `<div class="list">${resources.map(resource => resourceRow(resource)).join("")}</div>`
         : `<div class="empty"><p class="empty__title">Nothing saved yet.</p>
@@ -95,7 +99,7 @@ export function html([id]) {
       <section>
         <div class="section-head">
           <h2 class="subtitle">Notes</h2>
-          <button class="link" data-do="new-note">Add note</button>
+          <button class="button button--small" data-do="new-note">${icon("plus", { size: 14 })} Note</button>
         </div>
         ${notes.length ? notes.map(note => `
           <article class="note" data-note="${note.id}">

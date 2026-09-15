@@ -8,12 +8,15 @@
 
 import { byId, metricsOf, standardsOf, milestonesOf, entriesFor,
          notesOf, save } from "../store.js";
-import { metricValue, goalProgress, durationMinutes } from "../progress.js";
+import { metricValue, goalProgress, durationMinutes, weeksIn } from "../progress.js";
+import { chartSlot, paintCharts, ring } from "../charts.js";
+import { swipeArea, swipeRows } from "../gestures.js";
 import { standardRow } from "../cards.js";
 import { editGoal, editMilestone, editMetric, editStandard, editNote, monthsBetween } from "../forms.js";
 import { openLog, entryList, hookEntryList } from "../log.js";
 import { esc, escLines, on, formatValue, formatDate, formatDuration, monthName,
-         progressBar, sparkline, todayISO, daysBetween, toast } from "../util.js";
+         progressBar, todayISO, daysBetween, toast, weekStart, weekEnd,
+         addDays, fromISO } from "../util.js";
 import { icon } from "../icons.js";
 
 const TABS = [
@@ -50,6 +53,7 @@ export function html([id, tab = "overview"]) {
       <nav class="tabs">
         ${TABS.map(item => `
           <a class="tab ${tab === item.id ? "is-active" : ""}" href="#/goal/${goal.id}/${item.id}">${item.label}</a>`).join("")}
+        <span class="tabs__marker" aria-hidden="true"></span>
       </nav>
 
       <div id="tab">${tabHtml(goal, tab)}</div>
@@ -84,18 +88,19 @@ function overviewTab(goal) {
       <section>
         <div class="section-head">
           <h2 class="subtitle">Key metrics</h2>
-          <button class="link" data-do="new-metric">Add metric</button>
+          <button class="button button--small" data-do="new-metric">${icon("plus", { size: 14 })} Metric</button>
         </div>
         ${metrics.length ? `
           <div class="metric-grid">
             ${metrics.map(metric => metricBlock(metric)).join("")}
-          </div>` : emptyBlock("Nothing is being measured yet.", "A metric turns your logs into one number you can watch.")}
+          </div>
+          ${headlineChart(goal)}` : emptyBlock("Nothing is being measured yet.", "A metric turns your logs into one number you can watch.")}
       </section>
 
       <section>
         <div class="section-head">
           <h2 class="subtitle">Standards</h2>
-          <button class="link" data-do="new-standard">Add standard</button>
+          <button class="button button--small" data-do="new-standard">${icon("plus", { size: 14 })} Standard</button>
         </div>
         ${standards.length ? `
           <div class="standards">${standards.map(standard => standardRow(standard)).join("")}</div>
@@ -109,22 +114,26 @@ function overviewTab(goal) {
           <a class="link" href="#/goal/${goal.id}/milestones">All ${p.total || ""}</a>
         </div>
         ${p.total ? `
-          <p class="meta num" style="margin-bottom:14px">${p.done} of ${p.total} reached</p>
-          ${progressBar(p.total ? p.done / p.total : 0, { label: `${p.done} of ${p.total} milestones` })}
-          ${p.next ? `
-            <div class="milestone" style="margin-top:18px;border-bottom:0">
-              <span class="milestone__text">
-                <b>Next</b> — ${esc(p.next.title)}
-                ${p.next.month ? `<span class="faint"> · ${monthName(p.next.month)}</span>` : ""}
-              </span>
-            </div>` : ""}`
+          <div class="week-head">
+            ${ring(p.done / p.total, {
+              size: 74,
+              center: `${p.done}/${p.total}`,
+              caption: "reached",
+            })}
+            <div class="week-head__text">
+              ${p.next ? `
+                <p class="week-head__line"><span class="faint">Next</span> <b>${esc(p.next.title)}</b></p>
+                ${p.next.month ? `<p class="meta" style="margin-top:6px">${monthName(p.next.month)}</p>` : ""}`
+              : `<p class="week-head__line">Every milestone on this goal is reached.</p>`}
+            </div>
+          </div>`
         : emptyBlock("No milestones yet.", "Outcomes to reach, usually one or two a month.")}
       </section>
 
       <section>
         <div class="section-head">
           <h2 class="subtitle">Recent activity</h2>
-          <button class="link" data-do="log">Log something</button>
+          <button class="button button--small" data-do="log">${icon("plus", { size: 14 })} Log</button>
         </div>
         ${entryList(recent, { empty: "Nothing logged for this goal yet." })}
         ${recent.length ? `<p style="margin-top:14px"><a class="link" href="#/goal/${goal.id}/activity">All activity</a></p>` : ""}
@@ -135,9 +144,6 @@ function overviewTab(goal) {
 function metricBlock(metric) {
   const v = metricValue(metric);
   const decimals = metric.decimals ?? null;
-  const line = v.series.length > 2
-    ? sparkline(v.series.map(point => point.value), { target: metric.target })
-    : "";
 
   return `
     <div class="metric" data-metric="${metric.id}">
@@ -153,8 +159,82 @@ function metricBlock(metric) {
         </p>
         <div style="margin-top:10px">${progressBar(v.fraction, { label: `${metric.name}: ${Math.round((v.fraction || 0) * 100)}%` })}</div>`
         : `<p class="metric__target">${metricNote(metric, v)}</p>`}
-      ${line ? `<div style="margin-top:14px">${line}</div>` : ""}
     </div>`;
+}
+
+/* The goal's main reading, drawn properly: the line, its target as a
+   threshold, and the last value labelled. Anything with fewer than two
+   readings has no shape to show yet. */
+function headlineChart(goal) {
+  const metric = goalProgress(goal).metric;
+  if (!metric) return "";
+  const value = metricValue(metric);
+  if (value.series.length < 2) return "";
+
+  return `
+    <figure class="figure">
+      <figcaption class="figure__caption">${esc(metric.name)} over this period</figcaption>
+      ${chartSlot("line", value.series, {
+        unit: metric.unit,
+        decimals: metric.decimals ?? "",
+        target: metric.target === null ? "" : metric.target,
+        height: 200,
+        label: `${metric.name} over time`,
+      })}
+    </figure>`;
+}
+
+/* How much happened, week by week. The week you are in is picked out;
+   the rest stay quiet. */
+function weekBars(goal, period) {
+  if (!period) return "";
+  const today = todayISO();
+  const weeks = weeksIn(period.start, period.end).filter(week => week <= today);
+  if (weeks.length < 2) return "";
+
+  const thisWeek = weekStart(today);
+  const data = weeks.map(week => ({
+    label: formatDate(week, "short"),
+    value: entriesFor({ goalId: goal.id, from: week, to: weekEnd(week) }).length,
+    current: week === thisWeek,
+  }));
+
+  if (!data.some(week => week.value)) return "";
+
+  return `
+    <figure class="figure">
+      <figcaption class="figure__caption">Logs per week</figcaption>
+      ${chartSlot("bars", data, { unit: "count", height: 150, label: "Logs per week" })}
+    </figure>`;
+}
+
+/* Which days you actually showed up. */
+function calendar(goal, period) {
+  if (!period) return "";
+  const today = todayISO();
+  const from = weekStart(period.start);
+  const to = period.end < today ? period.end : today;
+  if (from >= to) return "";
+
+  const counts = new Map();
+  for (const entry of entriesFor({ goalId: goal.id, from, to })) {
+    counts.set(entry.date, (counts.get(entry.date) || 0) + 1);
+  }
+  if (!counts.size) return "";
+
+  const days = [];
+  let cursor = from, column = 1;
+  while (cursor <= to) {
+    days.push({ date: cursor, count: counts.get(cursor) || 0, column });
+    if (fromISO(cursor).getDay() === 0) column += 1;   // Sunday closes the column
+    cursor = addDays(cursor, 1);
+  }
+
+  return `
+    <figure class="figure">
+      <figcaption class="figure__caption">Days logged</figcaption>
+      ${chartSlot("calendar", days, { label: "Days logged" })}
+    </figure>`;
 }
 
 /* What to say under a figure that has no target: how it was arrived at,
@@ -216,16 +296,26 @@ function milestonesTab(goal) {
 function activityTab(goal) {
   const entries = entriesFor({ goalId: goal.id });
   const minutes = entries.reduce((sum, entry) => sum + durationMinutes(entry), 0);
+  const period = byId("periods", goal.periodId);
 
   return `
-    <section>
-      <div class="section-head">
-        <h2 class="subtitle">${entries.length} ${entries.length === 1 ? "log" : "logs"}</h2>
-        <button class="link" data-do="log">Log something</button>
-      </div>
-      ${minutes ? `<p class="meta num" style="margin-bottom:16px">${formatDuration(minutes)} recorded in total</p>` : ""}
-      ${entryList(entries, { empty: "Nothing logged for this goal yet." })}
-    </section>`;
+    <div class="stack-xl">
+      ${entries.length ? `
+        <section>
+          ${weekBars(goal, period)}
+          ${calendar(goal, period)}
+        </section>` : ""}
+
+      <section>
+        <div class="section-head">
+          <h2 class="subtitle">${entries.length} ${entries.length === 1 ? "log" : "logs"}</h2>
+          <button class="button button--small" data-do="log">${icon("plus", { size: 14 })} Log</button>
+        </div>
+        ${minutes ? `<p class="meta num" style="margin-bottom:16px">${formatDuration(minutes)} recorded in total</p>` : ""}
+        ${entryList(entries, { empty: "Nothing logged for this goal yet.", swipe: true })}
+        ${entries.length ? `<p class="meta" style="margin-top:14px">Swipe a log to delete it, or tap to change it.</p>` : ""}
+      </section>
+    </div>`;
 }
 
 /* ---------------------------------------------------------------
@@ -290,11 +380,21 @@ function emptyBlock(title, line) {
 /* ---------------------------------------------------------------
    Behaviour
    --------------------------------------------------------------- */
-export function mount(root, [id]) {
+export function mount(root, [id, tab = "overview"]) {
   const goal = byId("goals", id);
   if (!goal) return;
 
+  const stopCharts = paintCharts(root);
   hookEntryList(root);
+  swipeRows(root);
+  slideMarker(root);
+
+  /* The four tabs are also a swipe apart. */
+  const index = TABS.findIndex(item => item.id === tab);
+  const stopSwipe = swipeArea(root, {
+    onLeft:  () => { if (index < TABS.length - 1) location.hash = `#/goal/${goal.id}/${TABS[index + 1].id}`; },
+    onRight: () => { if (index > 0) location.hash = `#/goal/${goal.id}/${TABS[index - 1].id}`; },
+  });
 
   on(root, "[data-do]", "click", (event, button) => {
     const action = button.dataset.do;
@@ -323,5 +423,21 @@ export function mount(root, [id]) {
       doneAt: box.checked ? todayISO() : null,
     });
     if (box.checked) toast("Milestone reached.");
+  });
+
+  return () => {
+    if (stopCharts) stopCharts();
+    if (stopSwipe) stopSwipe();
+  };
+}
+
+/* The underline travels to the tab you picked rather than jumping. */
+function slideMarker(root) {
+  const marker = root.querySelector(".tabs__marker");
+  const active = root.querySelector(".tab.is-active");
+  if (!marker || !active) return;
+  requestAnimationFrame(() => {
+    marker.style.width = `${active.offsetWidth}px`;
+    marker.style.transform = `translateX(${active.offsetLeft}px)`;
   });
 }

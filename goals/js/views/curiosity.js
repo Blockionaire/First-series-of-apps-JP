@@ -8,9 +8,10 @@
 
 import { state, entriesFor } from "../store.js";
 import { topicProgress } from "../progress.js";
+import { ring } from "../charts.js";
 import { editTopic, editBacklog, promoteBacklog } from "../forms.js";
 import { openLog } from "../log.js";
-import { esc, on, progressBar, formatDuration, monthName, confirmSheet } from "../util.js";
+import { esc, on, formatDuration, monthName, confirmSheet } from "../util.js";
 import { durationMinutes } from "../progress.js";
 import { icon } from "../icons.js";
 
@@ -38,7 +39,7 @@ export function html() {
         <section>
           <div class="section-head">
             <h2 class="subtitle">Coming up</h2>
-            <button class="link" data-do="new-topic">Add topic</button>
+            <button class="button button--small" data-do="new-topic">${icon("plus", { size: 14 })} Topic</button>
           </div>
           <div class="topic-grid">${upcoming.map(topic => topicCard(topic)).join("")}</div>
         </section>` : `
@@ -101,10 +102,13 @@ function currentBlock(topic) {
           ${topic.month ? `<p class="eyebrow">${esc(monthName(topic.month))}</p>` : ""}
           <h3 class="learning__title">${esc(topic.title)}</h3>
           ${topic.outcome ? `<p class="prose" style="margin-top:10px">${esc(topic.outcome)}</p>` : ""}
-          <p class="meta num" style="margin-top:14px">${t.done} / ${t.total} modules${
-            t.minutes ? ` · ${formatDuration(t.minutes)}` : ""}</p>
-          <div style="margin-top:10px;max-width:280px">${progressBar(t.fraction)}</div>
-          ${t.next ? `<p class="learning__next"><span class="faint">Next</span> ${esc(t.next.title)}</p>` : ""}
+          <div class="learning__row">
+            ${ring(t.fraction, { size: 66, center: `${t.done}/${t.total}`, tone: "accent" })}
+            <div>
+              <p class="meta num">${t.total} modules${t.minutes ? ` · ${formatDuration(t.minutes)} spent` : ""}</p>
+              ${t.next ? `<p class="learning__next"><span class="faint">Next</span> ${esc(t.next.title)}</p>` : ""}
+            </div>
+          </div>
           <span class="button button--small" style="margin-top:16px">Continue</span>
         </div>
       </a>
@@ -121,9 +125,13 @@ function topicCard(topic) {
           ? `<img src="${esc(topic.cover)}" alt="">`
           : `<span class="topic__letter">${esc(topic.title.slice(0, 1))}</span>`}
       </div>
-      <h3 class="topic__title">${esc(topic.title)}</h3>
-      <p class="topic__meta num">${topic.month ? `${monthName(topic.month)} · ` : ""}${t.done} / ${t.total} modules</p>
-      <div class="topic__bar">${progressBar(t.fraction)}</div>
+      <div class="topic__foot">
+        <div>
+          <h3 class="topic__title">${esc(topic.title)}</h3>
+          <p class="topic__meta num">${topic.month ? `${monthName(topic.month)} · ` : ""}${t.done} / ${t.total} modules</p>
+        </div>
+        ${ring(t.fraction, { size: 42, stroke: 4, tone: "accent" })}
+      </div>
     </a>`;
 }
 

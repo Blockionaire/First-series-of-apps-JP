@@ -79,8 +79,16 @@ let you at documents under your own user id.
 
 - One folder of plain files, **no build step and no npm**. Open it in a
   browser and it runs.
+- **Every gesture has a button.** Swipe between the tabs of a goal, between
+  weeks in a review, a log row aside to delete it, a sheet down to dismiss it —
+  and every one of those also has a tab, an arrow, a row or a close button that
+  does the same thing. Nothing is only reachable by knowing a trick.
 - **ES modules**, no frameworks and no libraries. The charts are inline SVG
-  and the icons are inline paths.
+  drawn at real pixel sizes after mount (a stretched SVG turns its own labels
+  to mush), and the icons are inline paths.
+- **Motion is one vocabulary**: a quick ease for state, a soft spring for
+  anything that travels, and the whole lot switched off under
+  `prefers-reduced-motion`.
 - **IndexedDB** for storage, not localStorage: covers and years of logs add
   up, and localStorage stops around 5 MB.
 - **Firestore** is a copy on top of local storage, not a replacement. Last
@@ -108,6 +116,8 @@ js/util.js              formatting, dates, the sheet, small charts
 js/forms.js             every add and edit, in one place
 js/log.js               the logging sheet and the activity list
 js/cards.js             the goal card and the standard row
+js/charts.js            rings, lines, bars and the day calendar
+js/gestures.js          swiping: tabs, rows, sheets
 js/icons.js             the line icons
 js/data/types.js        what can be logged
 js/data/seed.js         the starting period, goals and topics

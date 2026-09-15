@@ -8,11 +8,13 @@
 
 import { state, activePeriod, goalsOf, standardsOf, currentTopic,
          entriesFor, loggableTypes } from "../store.js";
-import { periodProgress, topicProgress } from "../progress.js";
+import { periodProgress, topicProgress, standardWeek } from "../progress.js";
+import { ring, paintCharts } from "../charts.js";
 import { goalCard, standardRow, periodLine } from "../cards.js";
 import { openLog } from "../log.js";
 import { editPeriod } from "../forms.js";
-import { esc, on, todayISO, formatDate, formatSpan, weekStart, weekEnd, progressBar } from "../util.js";
+import { esc, on, todayISO, formatDate, formatSpan, weekStart, weekEnd,
+         daysBetween, formatDuration } from "../util.js";
 import { activityType } from "../data/types.js";
 import { icon } from "../icons.js";
 
@@ -128,17 +130,31 @@ function weekBlock(goals) {
   if (!withStandards.length) return "";
 
   const logged = entriesFor({ from: week, to: weekEnd(week) }).length;
+  const all = withStandards.flatMap(row => row.standards.map(standard => standardWeek(standard, week)));
+  const met = all.filter(standard => standard.met).length;
+
+  /* Monday is day 1, Sunday day 7 — how far into the week you are. */
+  const dayOfWeek = Math.min(7, Math.max(1, daysBetween(week, todayISO()) + 1));
 
   return `
     <section>
       <div class="section-head">
         <h2 class="subtitle">This week</h2>
-        <a class="link" href="#/review/week/${week}">Review</a>
+        <a class="button button--small" href="#/review/week/${week}">Review</a>
       </div>
 
-      <p class="meta num" style="margin-bottom:20px">
-        ${formatSpan(week, weekEnd(week))}${logged ? ` · ${logged} logged` : ""}
-      </p>
+      <div class="week-head">
+        ${ring(all.length ? met / all.length : 0, {
+          size: 78,
+          center: `${met}/${all.length}`,
+          caption: "standards met",
+          tone: met === all.length && all.length ? "good" : "",
+        })}
+        <div class="week-head__text">
+          <p class="week-head__line"><b>Day ${dayOfWeek} of 7</b> · ${esc(formatSpan(week, weekEnd(week)))}</p>
+          <p class="meta num" style="margin-top:6px">${logged ? `${logged} logged this week` : "nothing logged yet"}</p>
+        </div>
+      </div>
 
       <div class="week">
         ${withStandards.map(row => `
@@ -176,9 +192,13 @@ function curiosityBlock(topic) {
         <div class="learning__body">
           <p class="eyebrow">${esc(topic.month ? monthLabel(topic.month) : "Current")}</p>
           <h3 class="learning__title">${esc(topic.title)}</h3>
-          <p class="meta num" style="margin-top:8px">${t.done} / ${t.total} modules completed</p>
-          <div style="margin-top:10px;max-width:280px">${progressBar(t.fraction, { label: `${t.done} of ${t.total} modules` })}</div>
-          ${t.next ? `<p class="learning__next"><span class="faint">Next</span> ${esc(t.next.title)}</p>` : ""}
+          <div class="learning__row">
+            ${ring(t.fraction, { size: 62, center: `${t.done}/${t.total}`, caption: "modules", tone: "accent" })}
+            <div>
+              ${t.next ? `<p class="learning__next" style="margin-top:0"><span class="faint">Next</span> ${esc(t.next.title)}</p>` : ""}
+              ${t.minutes ? `<p class="meta num" style="margin-top:6px">${formatDuration(t.minutes)} spent</p>` : ""}
+            </div>
+          </div>
           <span class="button button--small" style="margin-top:16px">Continue</span>
         </div>
       </a>
@@ -212,6 +232,8 @@ function welcome() {
    Behaviour
    --------------------------------------------------------------- */
 export function mount(root) {
+  const stopCharts = paintCharts(root);
+
   on(root, "[data-log]", "click", (event, button) => {
     const type = button.dataset.log;
     openLog(type || null);
@@ -220,4 +242,6 @@ export function mount(root) {
   on(root, "[data-do]", "click", (event, button) => {
     if (button.dataset.do === "new-period") editPeriod(null);
   });
+
+  return () => { if (stopCharts) stopCharts(); };
 }

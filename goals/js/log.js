@@ -10,13 +10,14 @@
    for an amount.
    ===================================================================== */
 
-import { state, logEntry, remove, loggableTypes,
+import { state, logEntry, remove as removeEntry, loggableTypes,
          byId, currentTopic, modulesOf } from "./store.js";
 import { activityType } from "./data/types.js";
 import { $, $$, esc, sheet, confirmSheet, toast, todayISO, formatValue,
          formatDate, formatDuration, formatClock, formatPace, relativeDay,
          parseNumber, minutesFrom, splitMinutes } from "./util.js";
 import { durationMinutes } from "./progress.js";
+import { swipeRow } from "./gestures.js";
 
 /* ---------------------------------------------------------------
    Step one: what are you logging?
@@ -213,7 +214,7 @@ export function openForm(type, { entry = null, topicId = null, moduleId = null, 
             message: "It disappears from your totals as well.",
           });
           if (!sure) return;
-          await remove("entries", existing.id);
+          await removeEntry("entries", existing.id);
           close(true);
           toast("Deleted.");
         });
@@ -289,13 +290,13 @@ export function entryLine(entry) {
   return bits.join(" · ");
 }
 
-export function entryList(entries, { empty = "Nothing logged yet." } = {}) {
+export function entryList(entries, { empty = "Nothing logged yet.", swipe = false } = {}) {
   if (!entries.length) return `<div class="empty"><p class="empty__title">${esc(empty)}</p></div>`;
 
   return `<div class="list">${entries.map(entry => {
     const definition = activityType(entry.type);
     const detail = entryLine(entry);
-    return `
+    const row = `
       <button class="list__item" data-entry="${entry.id}">
         <span class="list__main">
           <span class="list__title">${esc(definition ? definition.label : entry.type)}${detail ? ` <span class="faint">${esc(detail)}</span>` : ""}</span>
@@ -304,12 +305,32 @@ export function entryList(entries, { empty = "Nothing logged yet." } = {}) {
         </span>
         <span class="list__side">${esc(relativeDay(entry.date))}</span>
       </button>`;
+
+    /* The swipe is a shortcut; the row itself still opens the editor,
+       which has the same delete in it. */
+    return swipe
+      ? swipeRow(row, `<button class="swipe__action swipe__action--delete" data-delete-entry="${entry.id}"
+                               aria-label="Delete this log">✕<span>Delete</span></button>`)
+      : row;
   }).join("")}</div>`;
 }
 
-/* Wire an activity list so tapping a row edits that log. */
+/* Wire an activity list so tapping a row edits that log, and a swiped
+   row can delete it outright. */
 export function hookEntryList(root) {
-  root.addEventListener("click", event => {
+  root.addEventListener("click", async event => {
+    const remove = event.target.closest("[data-delete-entry]");
+    if (remove) {
+      const entry = byId("entries", remove.dataset.deleteEntry);
+      if (!entry) return;
+      const sure = await confirmSheet({
+        title: "Delete this log?",
+        message: "It disappears from your totals as well.",
+      });
+      if (sure) { await removeEntry("entries", entry.id); toast("Deleted."); }
+      return;
+    }
+
     const button = event.target.closest("[data-entry]");
     if (!button) return;
     const entry = byId("entries", button.dataset.entry);

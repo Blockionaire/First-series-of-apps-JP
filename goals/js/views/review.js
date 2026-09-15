@@ -11,8 +11,10 @@
 
 import { state, save, activePeriod } from "../store.js";
 import { weekSummary, monthSummary } from "../progress.js";
+import { ring } from "../charts.js";
+import { swipeArea } from "../gestures.js";
 import { $$, esc, on, formatSpan, formatDate, formatDuration, formatValue,
-         monthName, weekStart, weekEnd, toast, todayISO, monthOf } from "../util.js";
+         monthName, weekStart, weekEnd, toast, todayISO, monthOf, addDays } from "../util.js";
 import { activityType } from "../data/types.js";
 import { entryList, hookEntryList } from "../log.js";
 import { icon } from "../icons.js";
@@ -52,10 +54,30 @@ function weekReview(week) {
       <header>
         <p class="eyebrow">${current ? "This week" : "Week of"}</p>
         <h1 class="title" style="margin-top:10px">${esc(formatSpan(start, weekEnd(start)))}</h1>
-        <p class="meta num" style="margin-top:12px">
-          ${summary.met} of ${summary.standards} standards met${
-            summary.learningMinutes ? ` · ${formatDuration(summary.learningMinutes)} learning` : ""}
-        </p>
+
+        <div class="week-head" style="margin-top:20px">
+          ${ring(summary.standards ? summary.met / summary.standards : 0, {
+            size: 78,
+            center: `${summary.met}/${summary.standards}`,
+            caption: "standards met",
+            tone: summary.standards && summary.met === summary.standards ? "good" : "",
+          })}
+          <div class="week-head__text">
+            <div class="tiles">
+              <div class="tile">
+                <p class="tile__label">Logged</p>
+                <p class="tile__value num">${summary.entries.length}</p>
+              </div>
+              <div class="tile">
+                <p class="tile__label">Learning</p>
+                <p class="tile__value num">${summary.learningMinutes ? esc(formatDuration(summary.learningMinutes)) : "0m"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        ${stepper(`#/review/week/${addDays(start, -7)}`, `#/review/week/${addDays(start, 7)}`,
+                  "Previous week", "Next week")}
       </header>
 
       <section class="stack-lg">
@@ -143,10 +165,30 @@ function monthReview(month) {
       <header>
         <p class="eyebrow">Monthly review</p>
         <h1 class="title" style="margin-top:10px">${esc(monthName(month))}</h1>
-        <p class="meta num" style="margin-top:12px">
-          ${hit} of ${milestones} milestones reached${
-            summary.learningMinutes ? ` · ${formatDuration(summary.learningMinutes)} learning` : ""}
-        </p>
+
+        <div class="week-head" style="margin-top:20px">
+          ${ring(milestones ? hit / milestones : 0, {
+            size: 78,
+            center: `${hit}/${milestones}`,
+            caption: "milestones",
+            tone: milestones && hit === milestones ? "good" : "",
+          })}
+          <div class="week-head__text">
+            <div class="tiles">
+              <div class="tile">
+                <p class="tile__label">Logged</p>
+                <p class="tile__value num">${summary.entries.length}</p>
+              </div>
+              <div class="tile">
+                <p class="tile__label">Learning</p>
+                <p class="tile__value num">${summary.learningMinutes ? esc(formatDuration(summary.learningMinutes)) : "0m"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        ${stepper(`#/review/month/${shiftMonth(month, -1)}`, `#/review/month/${shiftMonth(month, 1)}`,
+                  "Previous month", "Next month")}
       </header>
 
       <section class="stack-lg">
@@ -192,6 +234,22 @@ function monthReview(month) {
 
 const goalTitle = goal => goal.key ? goal.key[0].toUpperCase() + goal.key.slice(1) : goal.title;
 
+/* Buttons for the same move the swipe makes, because a gesture nobody
+   finds is not a feature. */
+function stepper(previous, next, previousLabel, nextLabel) {
+  return `
+    <nav class="stepper">
+      <a class="button button--small" href="${previous}" data-step="previous">${icon("back", { size: 15 })} ${esc(previousLabel)}</a>
+      <a class="button button--small" href="${next}" data-step="next">${esc(nextLabel)} ${icon("arrow", { size: 15 })}</a>
+    </nav>`;
+}
+
+function shiftMonth(month, by) {
+  const [year, index] = month.split("-").map(Number);
+  const date = new Date(year, index - 1 + by, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
 /* ---------------------------------------------------------------
    The questions
    --------------------------------------------------------------- */
@@ -221,6 +279,17 @@ function questionsForm(questions, saved) {
    --------------------------------------------------------------- */
 export function mount(root, [kind = "week", key = weekStart()]) {
   hookEntryList(root);
+
+  /* Swipe left for the next week or month, right for the previous —
+     the same two moves as the buttons above. */
+  const stopSwipe = swipeArea(root, {
+    onLeft: () => { location.hash = kind === "month"
+      ? `#/review/month/${shiftMonth(monthOf(key) || monthOf(todayISO()), 1)}`
+      : `#/review/week/${addDays(weekStart(key), 7)}`; },
+    onRight: () => { location.hash = kind === "month"
+      ? `#/review/month/${shiftMonth(monthOf(key) || monthOf(todayISO()), -1)}`
+      : `#/review/week/${addDays(weekStart(key), -7)}`; },
+  });
 
   on(root, "[data-save-review]", "click", async () => {
     const answers = {};
@@ -271,4 +340,6 @@ export function mount(root, [kind = "week", key = weekStart()]) {
 
     toast("Review saved.");
   });
+
+  return () => { if (stopSwipe) stopSwipe(); };
 }
