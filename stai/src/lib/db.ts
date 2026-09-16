@@ -2,7 +2,6 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 import { dataDir } from "./config";
-import { sql } from "./sql";
 
 /**
  * SQLite is the platform's content store and CMS backing.
@@ -490,16 +489,4 @@ function runDataMigrations(d: Database.Database) {
     });
     tx();
   }
-}
-
-export async function getSetting(key: string): Promise<string | null> {
-  const row = await sql().first<{ value: string }>("SELECT value FROM settings WHERE key=?", [key]);
-  return row?.value ?? null;
-}
-
-export async function setSetting(key: string, value: string): Promise<void> {
-  await sql().run(
-    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-    [key, value]
-  );
 }

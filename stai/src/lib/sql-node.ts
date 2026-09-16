@@ -1,5 +1,5 @@
 import { db } from "./db";
-import type { RunResult, Sql, SqlParam, Statement } from "./sql";
+import { registerSqlDriver, type RunResult, type Sql, type SqlParam, type Statement } from "./sql";
 
 /**
  * better-sqlite3 behind the async seam.
@@ -54,4 +54,16 @@ let _sql: NodeSql | null = null;
 export function nodeSql(): Sql {
   if (!_sql) _sql = new NodeSql();
   return _sql;
+}
+
+/**
+ * Install this driver.
+ *
+ * Called from src/instrumentation.ts, guarded on NEXT_RUNTIME === "nodejs".
+ * That guard is the whole Workers boundary: because nothing in sql.ts names
+ * this module, a bundler building for Workers has no edge to follow and
+ * better-sqlite3 is simply absent from the graph.
+ */
+export function registerNodeSql(): void {
+  registerSqlDriver(nodeSql);
 }

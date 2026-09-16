@@ -1,4 +1,4 @@
-import { getSetting } from "./db";
+import { getSetting } from "./settings";
 import { sql } from "./sql";
 
 export type Article = {

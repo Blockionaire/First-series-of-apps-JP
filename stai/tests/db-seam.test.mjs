@@ -77,22 +77,24 @@ describe("database seam", () => {
   });
 
   /**
-   * Code that is knowingly not migrated yet, and why. Everything outside this
-   * has to already satisfy D1's constraints.
+   * Code that is knowingly not migrated, and why. Everything outside this has
+   * to already satisfy D1's constraints.
    *
-   *   src/lib/seed/**  — Phase 3: becomes a deploy-time script, never runs on Workers
-   *   src/lib/db.ts    — Phase 3: schema and data migrations move to wrangler migrations
-   *   billing.ts, but only between the PHASE 2 BOUNDARY marker and syncFromStripe
+   *   src/lib/seed/**         — becomes a deploy-time script; never runs on Workers
+   *   src/lib/db.ts           — schema and migrations move to wrangler migrations
+   *   src/lib/billing-frozen  — payment mutation, deferred to the paid launch
+   *
+   * billing-frozen.ts is a whole-file exclusion rather than a marked region
+   * inside billing.ts, which is the point of having split it: the quarantine
+   * is now a file boundary a bundler can see, not a comment a human has to
+   * respect.
    */
+  const DEFERRED = ["src/lib/seed/", "src/lib/db.ts", "src/lib/billing-frozen.ts"];
+
   function migratedSource(file) {
     const r = rel(file);
-    if (r.startsWith("src/lib/seed/") || r === "src/lib/db.ts") return "";
-    const src = read(file);
-    if (r !== "src/lib/billing.ts") return src;
-    const start = src.indexOf("PHASE 2 BOUNDARY");
-    const end = src.indexOf("export async function syncFromStripe");
-    assert.ok(start !== -1 && end > start, "billing.ts must still declare its Phase 2 boundary");
-    return src.slice(0, start) + src.slice(end);
+    if (DEFERRED.some((d) => (d.endsWith("/") ? r.startsWith(d) : r === d))) return "";
+    return read(file);
   }
 
   test("no named SQL parameters reach the seam — D1 accepts only positional", () => {
@@ -132,21 +134,42 @@ describe("database seam", () => {
     assert.ok(named <= 6, `seed statements needing a Phase 3 rewrite grew to ${named}`);
   });
 
-  test("a driver can be installed, so a Workers build never reaches better-sqlite3", () => {
+  test("sql.ts names no driver at all", () => {
     const src = read(path.join(ROOT, "src/lib/sql.ts"));
     assert.match(src, /export function registerSqlDriver/, "a driver must be installable");
-    // The require() of ./sql-node has to sit behind the registration check.
-    // If it were a top-level import, bundling for Workers would pull the
-    // native addon into the graph no matter which driver is installed.
+    // This is the whole Workers boundary. A bundler follows any specifier it
+    // can resolve — an import, or a require() with a literal string, wherever
+    // it sits. So sql.ts must not mention the Node driver in any form. An
+    // earlier design kept a lazy `require("./sql-node")` fallback and claimed
+    // the registration check hid it; it did not, and every route still had a
+    // static path to a native addon.
     assert.ok(
-      !/^import .*from "\.\/sql-node"/m.test(src),
-      "sql-node must not be imported at module scope"
+      !/["']\.\/sql-node["']/.test(src.replace(/\/\*[\s\S]*?\*\//g, "")),
+      "sql.ts must not reference ./sql-node outside comments"
     );
-    const resolver = src.match(/export function sql\(\)[\s\S]*?\n}/)[0];
+    assert.match(src, /throw new Error\(/, "an unregistered driver must fail loudly, not silently");
+  });
+
+  test("the Node driver is installed by instrumentation, guarded on the runtime", () => {
+    const src = read(path.join(ROOT, "src/instrumentation.ts"));
+    assert.match(src, /NEXT_RUNTIME === "nodejs"/, "registration must be guarded on the runtime");
+    assert.match(src, /await import\("\.\/lib\/sql-node"\)/, "and use a dynamic import inside the guard");
+    // A static import here would be compiled for the edge runtime too, where
+    // fs and path do not resolve — which is what broke an earlier attempt.
     assert.ok(
-      resolver.indexOf("_driver") < resolver.indexOf("sql-node"),
-      "the installed driver must be consulted before falling back to better-sqlite3"
+      !/^import .*sql-node/m.test(src),
+      "sql-node must not be imported at module scope in instrumentation"
     );
+  });
+
+  test("the driver slot is global, not per-bundle", () => {
+    // Next does not guarantee one instance of a module across bundles. With a
+    // module-level `let`, instrumentation registered into its own copy and
+    // every route read null — the site booted and answered "db unavailable"
+    // on every request while registration looked successful.
+    const src = read(path.join(ROOT, "src/lib/sql.ts"));
+    assert.match(src, /Symbol\.for\(/, "the driver slot must be keyed on a global symbol");
+    assert.match(src, /globalThis/, "and stored on globalThis");
   });
 
   test("no module-level mutable state outside the files allowed to have it", () => {
@@ -156,7 +179,8 @@ describe("database seam", () => {
       ["src/lib/db.ts", "the better-sqlite3 handle and its shutdown hook — Node only, Phase 3"],
       ["src/lib/sql.ts", "the installed driver"],
       ["src/lib/sql-node.ts", "the better-sqlite3 singleton"],
-      ["src/lib/billing.ts", "the Stripe client"],
+      ["src/lib/stripe-client.ts", "the Stripe client, alone in a leaf module"],
+      ["src/lib/billing-frozen.ts", "frozen payment mutation, deferred to the paid launch"],
       ["src/lib/ai.ts", "the Anthropic client"],
       ["src/lib/ratelimit.ts", "the store slot, plus the in-memory fallback it documents"],
       ["src/lib/search.ts", "the retrieval index, which re-checks its fingerprint per query"],
@@ -215,8 +239,8 @@ describe("database seam", () => {
       .sort();
     assert.deepEqual(
       withTransactions,
-      ["src/lib/billing.ts", "src/lib/db.ts", "src/lib/seed/run.ts", "src/lib/sql-node.ts"],
-      "interactive transactions are a Phase 2/3 problem confined to these files — " +
+      ["src/lib/billing-frozen.ts", "src/lib/db.ts", "src/lib/seed/run.ts", "src/lib/sql-node.ts"],
+      "interactive transactions are confined to deferred files — " +
         "a new one anywhere else is a migration blocker that nobody planned for"
     );
   });

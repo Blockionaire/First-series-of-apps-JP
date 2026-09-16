@@ -12,12 +12,21 @@ import os from "os";
 import Database from "better-sqlite3";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-export const BILLING_SRC = fs.readFileSync(path.join(ROOT, "src/lib/billing.ts"), "utf8");
+/**
+ * Payment-mutation source, for the structural assertions.
+ *
+ * These moved out of billing.ts into billing-frozen.ts during the Workers
+ * migration — quarantined, not rewritten, because billing.ts was the last
+ * thing dragging a native addon into every page of the free site. The CODE is
+ * unchanged, so the assertions against it still hold; only the filename moved.
+ */
+export const BILLING_SRC = fs.readFileSync(path.join(ROOT, "src/lib/billing-frozen.ts"), "utf8");
 
-/** The production ENTITLEMENT_SQL, lifted verbatim from src/lib/billing.ts. */
+/** The production ENTITLEMENT_SQL, lifted verbatim from src/lib/entitlement.ts. */
 export function entitlementSql() {
-  const m = BILLING_SRC.match(/export const ENTITLEMENT_SQL = `([\s\S]*?)`;/);
-  if (!m) throw new Error("ENTITLEMENT_SQL not found in src/lib/billing.ts — has it been renamed?");
+  const src = fs.readFileSync(path.join(ROOT, "src/lib/entitlement.ts"), "utf8");
+  const m = src.match(/export const ENTITLEMENT_SQL = `([\s\S]*?)`;/);
+  if (!m) throw new Error("ENTITLEMENT_SQL not found in src/lib/entitlement.ts — has it been renamed?");
   return m[1];
 }
 

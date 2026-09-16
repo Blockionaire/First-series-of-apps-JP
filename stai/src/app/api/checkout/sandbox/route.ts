@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
-import { upsertSubscription, foundingAvailable, PLANS, type PlanId } from "@/lib/billing";
+import { foundingAvailable, PLANS, type PlanId } from "@/lib/billing";
+import { upsertSubscription } from "@/lib/billing-frozen";
 import { sandboxCheckoutAllowed, isProduction } from "@/lib/config";
 import { sendMail } from "@/lib/mail";
 import { guard, WINDOW } from "@/lib/ratelimit";

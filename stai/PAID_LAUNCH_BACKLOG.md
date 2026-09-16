@@ -21,6 +21,59 @@ the explicit guard.
 
 ---
 
+## 0. Payment mutation is quarantined for the Cloudflare migration
+
+Added during the Workers migration. **No payment behaviour was changed** — the
+code was moved, not rewritten, and the entitlement rule was verified
+byte-identical after the move.
+
+Everything that MUTATES subscription state now lives in one module,
+`src/lib/billing-frozen.ts`:
+
+| Moved there, verbatim | Was in |
+|---|---|
+| `upsertSubscription`, `confirmFirstPayment` | `billing.ts` |
+| `syncFromStripe`, `requestCancellation` | `billing.ts` |
+| `claimFoundingSeat`, `refreshUserPlan`, the sync settings/entitlement helpers | `billing.ts` |
+
+`billing.ts` keeps only read paths (`hasEntitlement`, `activeSubscription`,
+`latestSubscription`, `foundingAvailable`, `PLANS`) and runs on the async seam.
+`ENTITLEMENT_SQL` moved to `src/lib/entitlement.ts`, which imports nothing.
+`stripeClient()` moved to `src/lib/stripe-client.ts` so that GDPR erasure —
+a live free-launch route — does not depend on payment mutation code.
+
+**Why:** `billing-frozen.ts` is the only module besides the Node database
+driver that imports `./db`, and `./db` imports better-sqlite3, a native addon
+Cloudflare Workers cannot load. Before the split, `auth.ts` imported
+`ENTITLEMENT_SQL` from `billing.ts`, so **every page on the free site had a
+static import path to a native addon through payment code**.
+
+`tests/workers-boundary.test.mjs` enforces the quarantine: no free-launch route
+may reach better-sqlite3, and the set of routes that may is pinned to exactly
+the three payment routes.
+
+### Deferred to paid launch — do not start these
+
+- **Billing compare-and-swap rewrite.** `upsertSubscription` and
+  `confirmFirstPayment` each read a value and branch on it inside a
+  transaction. D1 has no interactive transaction; both must become
+  compare-and-swap. That changes the behaviour of money-handling code and
+  needs its own review — it is not migration housekeeping.
+- **Stripe subscription mutation** on Workers (webhook signature verification
+  with Web Crypto, and the Stripe SDK's Workers HTTP client).
+- **Founding-seat concurrency** — see §3 below; the safe ordering under
+  compare-and-swap happens to fix it, which is exactly why it should be done
+  deliberately rather than as a side effect.
+- **Stripe vs Whop vs Paddle decision.**
+- **Real payment integration testing** in Stripe Test Mode.
+- **VAT.**
+- **Password recovery**, which becomes mandatory once anyone is paying.
+
+Until then: `STRIPE_SECRET_KEY` stays unset, the three payment routes stay
+quarantined, and the frozen module is never reachable in production.
+
+---
+
 ## 1. Unsafe legacy payment-confirmation backfill — **blocker**
 
 `src/lib/db.ts`, migration `mig_first_payment_backfill`:

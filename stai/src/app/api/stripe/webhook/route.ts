@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripeClient, syncFromStripe, confirmFirstPayment } from "@/lib/billing";
+import { stripeClient, syncFromStripe, confirmFirstPayment } from "@/lib/billing-frozen";
 import type Stripe from "stripe";
 
 /**

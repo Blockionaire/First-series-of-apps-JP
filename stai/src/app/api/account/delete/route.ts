@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { currentUser, endSession } from "@/lib/auth";
 import { sql } from "@/lib/sql";
-import { activeSubscription, stripeClient } from "@/lib/billing";
+import { activeSubscription } from "@/lib/billing";
+import { stripeClient } from "@/lib/stripe-client";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
 /**

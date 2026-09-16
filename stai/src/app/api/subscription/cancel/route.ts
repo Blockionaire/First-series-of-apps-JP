@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
-import { requestCancellation } from "@/lib/billing";
+import { requestCancellation } from "@/lib/billing-frozen";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
 /**

@@ -53,7 +53,21 @@ export interface Sql {
   batch(statements: Statement[]): Promise<RunResult[]>;
 }
 
-let _driver: (() => Sql) | null = null;
+/**
+ * The driver slot lives on globalThis, not in a module-level `let`.
+ *
+ * Next.js does not guarantee one instance of a module across bundles: the
+ * instrumentation bundle and each route's bundle can each get their own copy
+ * of this file. A `let` here is therefore set in one copy and read as null in
+ * another, which presents as "no database" on every request while the
+ * registration appears to have succeeded.
+ *
+ * A single well-known key on globalThis is shared by every copy, in both
+ * runtimes.
+ */
+const DRIVER_KEY = Symbol.for("stai.sql.driver");
+
+type DriverHost = { [DRIVER_KEY]?: (() => Sql) | null };
 
 /**
  * Install the database driver for this runtime.
@@ -67,8 +81,9 @@ let _driver: (() => Sql) | null = null;
  * was installed, so the native addon is never in the Workers dependency graph.
  */
 export function registerSqlDriver(factory: () => Sql): void {
-  _driver = factory;
+  (globalThis as DriverHost)[DRIVER_KEY] = factory;
 }
+
 
 /**
  * The active implementation.
@@ -78,10 +93,15 @@ export function registerSqlDriver(factory: () => Sql): void {
  * module scope would be wrong — and on a cold isolate, absent.
  */
 export function sql(): Sql {
-  if (_driver) return _driver();
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { nodeSql } = require("./sql-node") as typeof import("./sql-node");
-  return nodeSql();
+  const _driver = (globalThis as DriverHost)[DRIVER_KEY];
+  if (!_driver) {
+    throw new Error(
+      "No database driver registered. src/instrumentation.ts installs the Node " +
+        "driver when NEXT_RUNTIME is nodejs; the Worker entry point installs the " +
+        "D1 driver. Reaching this means neither ran."
+    );
+  }
+  return _driver();
 }
 
 /** Convenience: a single scalar column from the first row. */

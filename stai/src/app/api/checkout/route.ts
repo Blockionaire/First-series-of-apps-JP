@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
-import { stripeClient, foundingAvailable, PLANS, type PlanId } from "@/lib/billing";
+import { foundingAvailable, PLANS, type PlanId } from "@/lib/billing";
+import { stripeClient } from "@/lib/stripe-client";
 import { requireAppUrl, isProduction, sandboxCheckoutAllowed } from "@/lib/config";
 import { guard, WINDOW } from "@/lib/ratelimit";
 

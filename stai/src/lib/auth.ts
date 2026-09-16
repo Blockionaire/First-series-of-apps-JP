@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { sql } from "./sql";
-import { ENTITLEMENT_SQL } from "./billing";
+import { ENTITLEMENT_SQL } from "./entitlement";
 
 export type User = {
   id: number;
