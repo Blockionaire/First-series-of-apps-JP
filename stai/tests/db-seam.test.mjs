@@ -114,6 +114,7 @@ describe("database seam", () => {
     const NODE_BOOTSTRAP = new Set([
       "src/lib/sql-node.ts", // the Node driver itself
       "src/instrumentation.ts", // opens the local file to apply migrations, behind NEXT_RUNTIME
+      "src/lib/db-unavailable.ts", // the Workers replacement FOR db.ts; its db() throws
     ]);
     const offenders = [];
     for (const f of sources("src")) {
@@ -243,6 +244,29 @@ describe("database seam", () => {
     // An un-awaited guard() is a Promise: truthy, so the route returns it as a
     // response body and every caller is refused. Loud, but only in production.
     assert.deepEqual(offenders, [], "guard() is async now");
+  });
+
+  test("the Workers build replaces the local database with a stub that throws", () => {
+    // src/lib/db.ts is the only module importing better-sqlite3. The Workers
+    // build swaps it for db-unavailable.ts via NormalModuleReplacementPlugin,
+    // which is what keeps a compiled .node binary out of the Worker. If this
+    // stub ever returned a fake database instead of throwing, a Workers
+    // regression would present as silent data loss rather than an error.
+    const stub = read(path.join(ROOT, "src/lib/db-unavailable.ts"));
+    for (const fn of ["dbPath", "db"]) {
+      const body = stub.match(new RegExp(`export function ${fn}[\\s\\S]*?\\n}`));
+      assert.ok(body, `${fn} must exist so the module shape matches db.ts`);
+      assert.match(body[0], /throw new Error/, `${fn} must throw, not fake a database`);
+    }
+
+    const config = read(path.join(ROOT, "next.config.ts"));
+    assert.match(config, /NormalModuleReplacementPlugin/, "the replacement must be wired up");
+    assert.match(
+      config,
+      /version: `stai-\$\{WORKERS_BUILD \? "workers" : "node"\}`/,
+      "the two targets must not share a webpack cache — a Node build that reused " +
+        "Workers chunks shipped a server with no database at all"
+    );
   });
 
   test("the last synchronous transactions are declared, not scattered", () => {

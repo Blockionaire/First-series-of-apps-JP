@@ -48,3 +48,8 @@ next-env.d.ts
 
 # Local development database (recreated from migrations/ and seeds/ on boot)
 .data/
+
+# Cloudflare Workers build artifacts and local runtime state
+.open-next/
+.next-workers/
+.wrangler/

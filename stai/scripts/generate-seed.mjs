@@ -23,7 +23,6 @@
  */
 import fs from "fs";
 import path from "path";
-import { createRequire } from "module";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const OUT = path.join(ROOT, "seeds", "0001_verified_corpus.sql");
@@ -50,7 +49,6 @@ const AUTHOR_ROLE = "Editorial desk";
 // ── Load the TypeScript corpus by stripping types. The seed modules are plain
 // data with `import type` lines and a single `export const`, so this is a
 // deliberate, narrow transform rather than a general TS compiler.
-const require_ = createRequire(import.meta.url);
 function loadCorpus(file, exportName) {
   const src = fs.readFileSync(path.join(ROOT, "src/lib/seed", file), "utf8");
   const stripped = src

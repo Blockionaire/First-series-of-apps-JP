@@ -17,9 +17,17 @@ import type { NextRequest } from "next/server";
  * hour" silently becomes "5 per hour per isolate" — effectively no limit at
  * all, with nothing in the logs to say so.
  *
- * So the store is now pluggable. Phase 4 registers a Durable Object store,
- * which is the only Cloudflare primitive that can count exactly across
- * isolates over windows as long as the hour-long ones used here.
+ * So the store is pluggable, and a Workers store has NOT been built yet. Under
+ * `wrangler dev` this still reports scope "process", which is honest and is
+ * why /api/health exposes it.
+ *
+ * The choice, when it is made: Cloudflare's native Rate Limiting binding only
+ * supports short fixed periods, so it cannot express the limits below without
+ * changing what they mean — "5 per hour" becoming "5 per 60 seconds" is a 60×
+ * weakening dressed up as a port. A Durable Object counts exactly over
+ * arbitrary windows and is the only primitive that preserves these as written.
+ * The security-sensitive buckets are the reason: login, signup, account-delete
+ * and ask. See the Phase 3 report.
  */
 
 export type RateLimitResult = { ok: boolean; remaining: number; retryAfter: number };

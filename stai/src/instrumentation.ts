@@ -10,13 +10,29 @@
  *
  * So src/lib/sql.ts names no driver. This file installs one.
  *
+ * ── Why NEXT_RUNTIME is not the discriminator ────────────────────────────
+ * OpenNext runs Next's *node* runtime on Workers, so NEXT_RUNTIME is "nodejs"
+ * in BOTH targets. Branching on it would make the Worker try to load
+ * better-sqlite3, and the failure would present as a database outage rather
+ * than as the misconfiguration it is. STAI_RUNTIME is set explicitly in
+ * wrangler.jsonc and is the only thing that distinguishes them.
+ *
  * An earlier attempt at instrumentation.ts was deleted because it imported the
  * database at module scope: Next compiles this file for the edge runtime too,
  * where `fs` and `path` do not resolve, and the build broke. The fix is the
- * shape below — a dynamic import INSIDE the NEXT_RUNTIME guard, so the edge
- * compile never sees the module at all.
+ * shape below — dynamic imports INSIDE the guards, so neither the edge compile
+ * nor the Workers bundle ever sees a module it cannot load.
  */
 export async function register() {
+  if (process.env.STAI_RUNTIME === "workers") {
+    const { registerWorkersSql } = await import("./lib/sql-workers");
+    registerWorkersSql();
+    // Deliberately no migration and no seeding here. A Worker boots on every
+    // cold isolate; writing schema or content as a side effect of that is the
+    // behaviour the seeding rules exist to prevent. Both are deploy steps.
+    return;
+  }
+
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { registerNodeSql } = await import("./lib/sql-node");
     registerNodeSql();
@@ -24,13 +40,14 @@ export async function register() {
     // Opening the local database applies migrations/*.sql and seeds/*.sql —
     // the same files Wrangler applies to D1 — so a fresh checkout boots into a
     // correct, seeded database with no manual step.
+    //
+    // This is LOCAL ONLY. On Workers, migrations are applied by
+    // `wrangler d1 migrations apply` and seeding is a deliberate deploy step;
+    // a Worker must never migrate or seed itself on boot.
     const { db } = await import("./lib/db");
     db();
 
     const { ensureAdminAccount } = await import("./lib/bootstrap");
     await ensureAdminAccount();
   }
-  // The Workers runtime registers its D1 driver from the Worker entry point
-  // instead; see the Cloudflare configuration added in the runtime phase.
-  // Migrations run there via `wrangler d1 migrations apply`, not at boot.
 }
