@@ -100,20 +100,35 @@ let _index: Index | null = null;
  * Cheap summary of the published corpus. Changes whenever an article is added,
  * removed, published, unpublished or edited.
  *
- * `updated_at` alone is not quite enough — it has second resolution, so two
- * saves inside the same second could collide — so the total body length rides
- * along and catches any edit that changed the text.
+ * METADATA ONLY — and that is a hard requirement, not a preference.
+ *
+ * The first version of this summed LENGTH(body_md), which meant every single
+ * Ask STAI question read every article body just to decide whether anything
+ * had changed. On a local SQLite file that is invisible; on D1 it is a billed
+ * row read per article per question, to answer a question the index already
+ * knows.
+ *
+ * COUNT and MAX(updated_at) over published articles are both columns of
+ * idx_articles_fingerprint, so the database answers from the index without
+ * touching a row. tests/d1-migrations.test.mjs asserts the query plan still
+ * says COVERING INDEX, so this cannot quietly regress.
+ *
+ * Why the pair is sufficient:
+ *   published    → COUNT rises
+ *   unpublished  → COUNT falls
+ *   edited       → MAX(updated_at) rises
+ *   created      → both
+ * The length term is not needed once updated_at carries milliseconds, which
+ * the schema guarantees: two saves inside the same second can no longer share
+ * a timestamp.
  */
 async function corpusFingerprint(): Promise<string> {
-  const row = await sql().first<{ n: number; edited: string; newest: string; len: number }>(
-    `SELECT COUNT(*) AS n,
-            COALESCE(MAX(updated_at), '') AS edited,
-            COALESCE(MAX(published_at), '') AS newest,
-            COALESCE(SUM(LENGTH(body_md)), 0) AS len
+  const row = await sql().first<{ n: number; edited: string }>(
+    `SELECT COUNT(*) AS n, COALESCE(MAX(updated_at), '') AS edited
      FROM articles WHERE status='published'`
   );
-  if (!row) return "0::0";
-  return `${row.n}:${row.edited}:${row.newest}:${row.len}`;
+  if (!row) return "0:";
+  return `${row.n}:${row.edited}`;
 }
 
 async function buildIndex(fingerprint: string): Promise<Index> {

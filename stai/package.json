@@ -9,7 +9,11 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "node --test --test-concurrency=1 \"tests/**/*.test.mjs\"",
-    "test:paywall": "node --test tests/production-paywall.test.mjs"
+    "test:paywall": "node --test tests/production-paywall.test.mjs",
+    "seed:generate": "node scripts/generate-seed.mjs && node scripts/sync-sql.mjs",
+    "db:reset": "rm -rf .data && echo \"local database removed; next boot re-applies migrations and seeds\"",
+    "sql:sync": "node scripts/sync-sql.mjs",
+    "prebuild": "node scripts/sync-sql.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

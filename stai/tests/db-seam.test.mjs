@@ -110,28 +110,41 @@ describe("database seam", () => {
   });
 
   test("the deferred regions are the only synchronous database code left", () => {
+    // Node-only by design, and guarded so a Workers bundle never reaches them.
+    const NODE_BOOTSTRAP = new Set([
+      "src/lib/sql-node.ts", // the Node driver itself
+      "src/instrumentation.ts", // opens the local file to apply migrations, behind NEXT_RUNTIME
+    ]);
     const offenders = [];
     for (const f of sources("src")) {
-      const src = migratedSource(f);
-      if (rel(f) === "src/lib/sql-node.ts") continue; // the Node implementation itself
-      if (/\bdb\(\)/.test(src)) offenders.push(rel(f));
+      if (NODE_BOOTSTRAP.has(rel(f))) continue;
+      if (/\bdb\(\)/.test(migratedSource(f))) offenders.push(rel(f));
     }
     assert.deepEqual(
       offenders,
       [],
-      "outside the declared Phase 2/3 regions, everything must go through sql()"
+      "outside the declared deferred regions and Node bootstrap, everything must go through sql()"
     );
+
+    // …and the bootstrap really is guarded.
+    const instr = read(path.join(ROOT, "src/instrumentation.ts"));
+    const guarded = instr.match(/if \(process\.env\.NEXT_RUNTIME === "nodejs"\) \{[\s\S]*?\n  \}/);
+    assert.ok(guarded, "instrumentation must guard on the runtime");
+    assert.ok(guarded[0].includes("./lib/db"), "the database import must be inside the guard");
   });
 
-  test("the seed's named parameters are the known Phase 3 remainder", () => {
-    // Not a failure — a ledger. The seed still uses @named parameters and a
-    // synchronous transaction because it is about to stop being request-path
-    // code entirely. This test fails if that work lands (delete it then) or if
-    // the seed grows new statements nobody costed.
-    const src = read(path.join(ROOT, "src/lib/seed/run.ts"));
-    const named = [...src.matchAll(/VALUES \([^)]*@[a-zA-Z_]/g)].length;
-    assert.ok(named > 0, "if the seed no longer uses named parameters, Phase 3 is done — drop this test");
-    assert.ok(named <= 6, `seed statements needing a Phase 3 rewrite grew to ${named}`);
+  test("the seed is generated SQL, not request-path code", () => {
+    // The seed used to be a TypeScript module with @named parameters and a
+    // synchronous transaction, which is why it needed an exemption here. It is
+    // now a generated .sql file applied by `wrangler d1 migrations`/the local
+    // runner, so it is not application code at all and the exemption is gone.
+    assert.ok(
+      !fs.existsSync(path.join(ROOT, "src/lib/seed/run.ts")),
+      "the runtime seed runner should be gone; seeding is a deploy step now"
+    );
+    const seed = fs.readFileSync(path.join(ROOT, "seeds/0001_verified_corpus.sql"), "utf8");
+    assert.ok(!/@[a-zA-Z_]\w*\s*[,)]/.test(seed), "generated seed must not use named parameters");
+    assert.match(seed, /seed_ledger/, "every seed statement must be ledger-guarded");
   });
 
   test("sql.ts names no driver at all", () => {
@@ -239,7 +252,7 @@ describe("database seam", () => {
       .sort();
     assert.deepEqual(
       withTransactions,
-      ["src/lib/billing-frozen.ts", "src/lib/db.ts", "src/lib/seed/run.ts", "src/lib/sql-node.ts"],
+      ["src/lib/billing-frozen.ts", "src/lib/migrate-node.ts", "src/lib/sql-node.ts"],
       "interactive transactions are confined to deferred files — " +
         "a new one anywhere else is a migration blocker that nobody planned for"
     );

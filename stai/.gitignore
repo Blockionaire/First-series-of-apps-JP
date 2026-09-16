@@ -45,3 +45,6 @@ next-env.d.ts
 /data/
 # playwright helper output
 *.png
+
+# Local development database (recreated from migrations/ and seeds/ on boot)
+.data/

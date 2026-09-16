@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { sql } from "@/lib/sql";
+import { NOW_MS } from "@/lib/now";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
 /**
@@ -14,7 +15,7 @@ import { guard, WINDOW } from "@/lib/ratelimit";
  *
  * The database is the source of truth for premium/free gating. Nothing here
  * consults src/lib/seed/gating.ts, and no seed run overwrites what this writes
- * (see the slug ledger in src/lib/seed/run.ts).
+ * (see the seed_ledger table and seeds/0001_verified_corpus.sql).
  */
 export async function POST(req: NextRequest) {
   const blocked = await guard(req, "admin-prompt", 60, WINDOW.hour);
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
       const info = await sql().run(
         `UPDATE prompts SET slug=?, title=?, category=?, description=?,
          body=?, variables=?, model_note=?, premium=?, status=?,
-         updated_at=datetime('now') WHERE id=?`,
+         updated_at=${NOW_MS} WHERE id=?`,
         [...values, id]
       );
       if (info.changes === 0) {
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
     } else {
       const info = await sql().run(
         `INSERT INTO prompts (slug, title, category, description, body, variables, model_note, premium, status, uses, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ${NOW_MS})`,
         values
       );
       id = info.lastRowId;

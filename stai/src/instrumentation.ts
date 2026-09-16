@@ -20,7 +20,17 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { registerNodeSql } = await import("./lib/sql-node");
     registerNodeSql();
+
+    // Opening the local database applies migrations/*.sql and seeds/*.sql —
+    // the same files Wrangler applies to D1 — so a fresh checkout boots into a
+    // correct, seeded database with no manual step.
+    const { db } = await import("./lib/db");
+    db();
+
+    const { ensureAdminAccount } = await import("./lib/bootstrap");
+    await ensureAdminAccount();
   }
   // The Workers runtime registers its D1 driver from the Worker entry point
   // instead; see the Cloudflare configuration added in the runtime phase.
+  // Migrations run there via `wrangler d1 migrations apply`, not at boot.
 }

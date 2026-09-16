@@ -3,8 +3,9 @@
  *
  * Boots the real production server against a throwaway data directory, drives
  * the real admin API with a real admin session, and then FORCES A RE-SEED by
- * resetting seed_version and restarting — which is the only honest way to
- * prove the claim that matters: a redeployment cannot undo an editor's work.
+ * clearing the d1_seeds tracking table and restarting — which is the only
+ * honest way to prove the claim that matters: a redeployment cannot undo an
+ * editor's work.
  *
  * Nothing here restates production SQL. The invariants are asserted against
  * the database the application actually wrote.
@@ -397,15 +398,15 @@ describe("prompt library — a redeployment cannot undo editorial work", { skip 
     const d = open();
     beforeReseed = {
       count: d.prepare("SELECT COUNT(*) AS n FROM prompts").get().n,
-      seedVersion: d.prepare("SELECT value FROM settings WHERE key='seed_version'").get().value,
+      seedsApplied: d.prepare("SELECT COUNT(*) AS n FROM d1_seeds").get().n,
     };
     d.close();
 
     // Force the seed to run again on the next boot — the strongest available
-    // stand-in for "someone bumped SEED_VERSION and redeployed".
+    // stand-in for a redeploy that re-applies seeds against a live database.
     await stopServer();
     const w = new Database(path.join(dataDir, "stai.db"));
-    w.prepare("UPDATE settings SET value='0' WHERE key='seed_version'").run();
+    w.prepare("DELETE FROM d1_seeds").run();
     w.close();
 
     server = startServer();
@@ -414,9 +415,10 @@ describe("prompt library — a redeployment cannot undo editorial work", { skip 
 
   test("the seed actually ran again", () => {
     const d = open();
-    const v = d.prepare("SELECT value FROM settings WHERE key='seed_version'").get().value;
+    const n = d.prepare("SELECT COUNT(*) AS n FROM d1_seeds").get().n;
     d.close();
-    assert.equal(v, beforeReseed.seedVersion, "seed_version is back to the shipped value");
+    assert.equal(n, beforeReseed.seedsApplied, "the seed file was re-applied and re-tracked");
+    assert.ok(n > 0, "there should be at least one seed file");
   });
 
   test("a re-seed does not overwrite admin edits", () => {

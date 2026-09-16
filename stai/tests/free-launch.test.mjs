@@ -62,13 +62,26 @@ describe("free launch", { skip: hasBuild ? false : "no standalone build" }, () =
     const podcasts = d.prepare("SELECT COUNT(*) AS n FROM podcasts").get().n;
     const research = d.prepare("SELECT COUNT(*) AS n FROM research").get().n;
     const uses = d.prepare("SELECT COALESCE(SUM(uses),0) AS n FROM prompts").get().n;
-    const drafts = d.prepare("SELECT COUNT(*) AS n FROM articles WHERE status='draft'").get().n;
+    // The six unverifiable articles used to be seeded and then unpublished by
+    // a corrective migration. On a clean D1 database they are never seeded at
+    // all, which is a stronger guarantee: absent beats draft, because a draft
+    // is one accidental click from being live.
+    const fabricated = d
+      .prepare(
+        `SELECT COUNT(*) AS n FROM articles WHERE slug IN (
+           'afm-thematic-review-ai-audit-firms','esma-cra-model-governance-fine',
+           'iaasb-signals-isa-500-refresh','copilot-audit-room-90-day-field-report',
+           'materiality-for-model-risk','big-four-ai-arms-race-audited')`
+      )
+      .get().n;
+    const published = d.prepare("SELECT COUNT(*) AS n FROM articles WHERE status='published'").get().n;
     d.close();
     assert.deepEqual(authors.map((a) => a.author), ["STAI Editorial"], "one transparent byline only");
     assert.equal(podcasts, 0, "no invented podcast episodes");
     assert.equal(research, 0, "no invented research citations");
     assert.equal(uses, 0, "no fabricated usage counters");
-    assert.ok(drafts >= 6, "fabricated articles must be unpublished");
+    assert.equal(fabricated, 0, "unverifiable articles must not exist in the database at all");
+    assert.equal(published, 11, "the verified corpus is exactly 11 articles");
   });
 
   test("no invented persona appears on any public page", async () => {

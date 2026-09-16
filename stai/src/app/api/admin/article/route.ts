@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { sql } from "@/lib/sql";
+import { NOW_MS } from "@/lib/now";
 import { invalidateSearchIndex } from "@/lib/search";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
@@ -57,13 +58,13 @@ export async function POST(req: NextRequest) {
       await sql().run(
         `UPDATE articles SET slug=?, title=?, dek=?, category=?, tags=?, author=?,
          author_role=?, published_at=?, reading_min=?, featured=?,
-         urgency=?, premium=?, status=?, body_md=?, updated_at=datetime('now') WHERE id=?`,
+         urgency=?, premium=?, status=?, body_md=?, updated_at=${NOW_MS} WHERE id=?`,
         [...values, id]
       );
     } else {
       const info = await sql().run(
         `INSERT INTO articles (slug, title, dek, category, tags, author, author_role, published_at, reading_min, featured, urgency, premium, status, body_md, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${NOW_MS})`,
         values
       );
       id = info.lastRowId;
