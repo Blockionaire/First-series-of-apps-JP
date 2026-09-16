@@ -7,7 +7,7 @@ import { guard, WINDOW } from "@/lib/ratelimit";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  const blocked = guard(req, "adapt", 30, WINDOW.hour);
+  const blocked = await guard(req, "adapt", 30, WINDOW.hour);
   if (blocked) return blocked;
 
   const user = await currentUser();

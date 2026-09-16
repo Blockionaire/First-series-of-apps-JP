@@ -7,7 +7,7 @@ import { FIRM_INTERESTS, interestLabel } from "@/lib/firms";
 const VALID_INTERESTS = new Set(FIRM_INTERESTS.map((i) => i.id));
 
 export async function POST(req: NextRequest) {
-  const blocked = guard(req, "firm-enquiry", 5, WINDOW.hour);
+  const blocked = await guard(req, "firm-enquiry", 5, WINDOW.hour);
   if (blocked) return blocked;
 
   const b = await req.json().catch(() => ({}));

@@ -4,7 +4,7 @@ import { sendMail } from "@/lib/mail";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
-  const blocked = guard(req, "enquiry", 5, WINDOW.hour);
+  const blocked = await guard(req, "enquiry", 5, WINDOW.hour);
   if (blocked) return blocked;
 
   const b = await req.json().catch(() => ({}));

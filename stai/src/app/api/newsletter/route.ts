@@ -4,7 +4,7 @@ import { guard, WINDOW } from "@/lib/ratelimit";
 import { track } from "@/lib/analytics";
 
 export async function POST(req: NextRequest) {
-  const blocked = guard(req, "newsletter", 5, WINDOW.hour);
+  const blocked = await guard(req, "newsletter", 5, WINDOW.hour);
   if (blocked) return blocked;
 
   const { email, source } = await req.json().catch(() => ({}));

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   // Burst protection only — NOT a per-IP entitlement. A whole audit firm can
   // share one egress IP, so this must sit well above honest human use while
   // still stopping a script from looping the endpoint.
-  const blocked = guard(req, "ask", 15, WINDOW.tenMinutes);
+  const blocked = await guard(req, "ask", 15, WINDOW.tenMinutes);
   if (blocked) return blocked;
 
   const body = await req.json().catch(() => ({}));

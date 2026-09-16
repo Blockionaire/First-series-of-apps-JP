@@ -12,7 +12,7 @@ import { track } from "@/lib/analytics";
  * none is promised. The UI says so explicitly.
  */
 export async function POST(req: NextRequest) {
-  const blocked = guard(req, "early-access", 10, WINDOW.hour);
+  const blocked = await guard(req, "early-access", 10, WINDOW.hour);
   if (blocked) return blocked;
 
   const b = await req.json().catch(() => ({}));

@@ -6,7 +6,7 @@ import { guard, WINDOW } from "@/lib/ratelimit";
 import { computeBenchmark } from "@/lib/benchmark";
 
 export async function POST(req: NextRequest) {
-  const blocked = guard(req, "assessment", 10, WINDOW.hour);
+  const blocked = await guard(req, "assessment", 10, WINDOW.hour);
   if (blocked) return blocked;
 
   const b = await req.json().catch(() => ({}));

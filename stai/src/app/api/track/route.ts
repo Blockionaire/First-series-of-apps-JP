@@ -14,7 +14,7 @@ import { guard, WINDOW } from "@/lib/ratelimit";
  */
 export async function POST(req: NextRequest) {
   // Generous: a real reader triggers one per page view.
-  const blocked = guard(req, "track", 120, WINDOW.tenMinutes);
+  const blocked = await guard(req, "track", 120, WINDOW.tenMinutes);
   if (blocked) return blocked;
 
   const body = await req.json().catch(() => ({}));

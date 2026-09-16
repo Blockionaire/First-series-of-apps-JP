@@ -15,7 +15,7 @@ import { guard, WINDOW } from "@/lib/ratelimit";
  * removed explicitly rather than left orphaned.
  */
 export async function POST(req: NextRequest) {
-  const blocked = guard(req, "account-delete", 5, WINDOW.hour);
+  const blocked = await guard(req, "account-delete", 5, WINDOW.hour);
   if (blocked) return blocked;
 
   const user = await currentUser();

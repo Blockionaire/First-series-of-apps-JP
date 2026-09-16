@@ -12,7 +12,7 @@ import { guard, WINDOW } from "@/lib/ratelimit";
  * effect of pressing the button.
  */
 export async function POST(req: NextRequest) {
-  const blocked = guard(req, "subscription-cancel", 10, WINDOW.hour);
+  const blocked = await guard(req, "subscription-cancel", 10, WINDOW.hour);
   if (blocked) return blocked;
 
   const user = await currentUser();

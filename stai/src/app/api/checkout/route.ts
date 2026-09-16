@@ -11,7 +11,7 @@ const PRICE_CENTS: Record<PlanId, { amount: number; interval: "month" | "year" }
 };
 
 export async function POST(req: NextRequest) {
-  const blocked = guard(req, "checkout", 20, WINDOW.hour);
+  const blocked = await guard(req, "checkout", 20, WINDOW.hour);
   if (blocked) return blocked;
 
   const user = await currentUser();

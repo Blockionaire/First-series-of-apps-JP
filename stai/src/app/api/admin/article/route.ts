@@ -5,7 +5,7 @@ import { invalidateSearchIndex } from "@/lib/search";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
-  const blocked = guard(req, "admin-article", 60, WINDOW.hour);
+  const blocked = await guard(req, "admin-article", 60, WINDOW.hour);
   if (blocked) return blocked;
 
   const user = await currentUser();
@@ -52,16 +52,18 @@ export async function POST(req: NextRequest) {
   let id = Number(b.id) || null;
   try {
     if (id) {
+      // updated_at is what moves the Ask STAI corpus fingerprint. Without it
+      // an edit is invisible to every isolate holding a cached index.
       await sql().run(
         `UPDATE articles SET slug=?, title=?, dek=?, category=?, tags=?, author=?,
          author_role=?, published_at=?, reading_min=?, featured=?,
-         urgency=?, premium=?, status=?, body_md=? WHERE id=?`,
+         urgency=?, premium=?, status=?, body_md=?, updated_at=datetime('now') WHERE id=?`,
         [...values, id]
       );
     } else {
       const info = await sql().run(
-        `INSERT INTO articles (slug, title, dek, category, tags, author, author_role, published_at, reading_min, featured, urgency, premium, status, body_md)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO articles (slug, title, dek, category, tags, author, author_role, published_at, reading_min, featured, urgency, premium, status, body_md, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
         values
       );
       id = info.lastRowId;
@@ -73,7 +75,9 @@ export async function POST(req: NextRequest) {
     throw e;
   }
 
-  // Ask STAI grounding and briefing search pick the change up immediately.
+  // Local fast path only. What actually guarantees Ask STAI picks this up is
+  // the updated_at stamp above: every retrieval re-checks the corpus
+  // fingerprint, so isolates this call can never reach still rebuild.
   invalidateSearchIndex();
   return NextResponse.json({ ok: true, id });
 }

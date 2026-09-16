@@ -4,7 +4,7 @@ import { sql } from "@/lib/sql";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
-  const blocked = guard(req, "answers", 60, WINDOW.hour);
+  const blocked = await guard(req, "answers", 60, WINDOW.hour);
   if (blocked) return blocked;
 
   const user = await currentUser();

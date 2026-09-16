@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const blocked = guard(req, "checkout-sandbox", 20, WINDOW.hour);
+  const blocked = await guard(req, "checkout-sandbox", 20, WINDOW.hour);
   if (blocked) return blocked;
 
   const user = await currentUser();

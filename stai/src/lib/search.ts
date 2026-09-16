@@ -1,4 +1,5 @@
 import { allArticles, type Article } from "./content";
+import { sql } from "./sql";
 
 /**
  * Local BM25 retrieval over article chunks — the grounding layer for Ask STAI.
@@ -73,12 +74,49 @@ type Index = {
   tf: Map<string, number>[]; // per chunk
   len: number[];
   avgLen: number;
-  builtFor: number; // article count fingerprint
+  /** The corpus fingerprint this index was built from. */
+  builtFor: string;
 };
 
+/**
+ * Cached per isolate, validated per query.
+ *
+ * This cache used to be invalidated by the article editor calling
+ * invalidateSearchIndex(). That works in one Node process and is a fiction on
+ * Workers: an editor's save runs in one isolate, and every other isolate —
+ * including every isolate in every other colo — keeps serving its own stale
+ * index with nothing to tell it otherwise. A reader could see an unpublished
+ * article cited for as long as that isolate lived.
+ *
+ * So the index now carries the fingerprint of the corpus it was built from and
+ * re-checks it on every query. The check is one indexed aggregate; the rebuild
+ * (which reads every article body) still only happens when the corpus actually
+ * changed. Correctness no longer depends on reaching other isolates, which is
+ * the property Workers cannot provide.
+ */
 let _index: Index | null = null;
 
-async function buildIndex(): Promise<Index> {
+/**
+ * Cheap summary of the published corpus. Changes whenever an article is added,
+ * removed, published, unpublished or edited.
+ *
+ * `updated_at` alone is not quite enough — it has second resolution, so two
+ * saves inside the same second could collide — so the total body length rides
+ * along and catches any edit that changed the text.
+ */
+async function corpusFingerprint(): Promise<string> {
+  const row = await sql().first<{ n: number; edited: string; newest: string; len: number }>(
+    `SELECT COUNT(*) AS n,
+            COALESCE(MAX(updated_at), '') AS edited,
+            COALESCE(MAX(published_at), '') AS newest,
+            COALESCE(SUM(LENGTH(body_md)), 0) AS len
+     FROM articles WHERE status='published'`
+  );
+  if (!row) return "0::0";
+  return `${row.n}:${row.edited}:${row.newest}:${row.len}`;
+}
+
+async function buildIndex(fingerprint: string): Promise<Index> {
   const articles = await allArticles();
   const chunks = articles.flatMap(chunkArticle);
   const df = new Map<string, number>();
@@ -93,11 +131,12 @@ async function buildIndex(): Promise<Index> {
     len.push(tokens.length);
   }
   const avgLen = len.reduce((a, b) => a + b, 0) / Math.max(1, len.length);
-  return { chunks, df, tf, len, avgLen, builtFor: articles.length };
+  return { chunks, df, tf, len, avgLen, builtFor: fingerprint };
 }
 
 export async function searchChunks(query: string, k = 6): Promise<Hit[]> {
-  if (!_index) _index = await buildIndex();
+  const fingerprint = await corpusFingerprint();
+  if (!_index || _index.builtFor !== fingerprint) _index = await buildIndex(fingerprint);
   const idx = _index;
   const qTokens = [...new Set(tokenize(query))];
   if (qTokens.length === 0) return [];
@@ -134,6 +173,15 @@ export async function searchChunks(query: string, k = 6): Promise<Hit[]> {
   return hits;
 }
 
+/**
+ * Drop the cached index in THIS isolate.
+ *
+ * Kept only as a local fast path — it saves one stale query in the process
+ * that made the edit. It is explicitly NOT how correctness is achieved:
+ * every query re-checks the corpus fingerprint, so an isolate that never
+ * receives this call still cannot serve a stale result. Do not reintroduce
+ * anything that relies on this reaching another isolate.
+ */
 export function invalidateSearchIndex() {
   _index = null;
 }

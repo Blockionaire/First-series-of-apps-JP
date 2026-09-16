@@ -53,14 +53,32 @@ export interface Sql {
   batch(statements: Statement[]): Promise<RunResult[]>;
 }
 
+let _driver: (() => Sql) | null = null;
+
+/**
+ * Install the database driver for this runtime.
+ *
+ * Called once at startup by the Workers entry point with a D1-backed driver.
+ * Until something calls this, `sql()` falls back to better-sqlite3 — which is
+ * what keeps `npm run dev`, `npm test` and the Node build working unchanged.
+ *
+ * The registration is what stops a Workers bundle from ever reaching
+ * ./sql-node: that module is behind a require() that only runs when no driver
+ * was installed, so the native addon is never in the Workers dependency graph.
+ */
+export function registerSqlDriver(factory: () => Sql): void {
+  _driver = factory;
+}
+
 /**
  * The active implementation.
  *
- * Resolved lazily and per call rather than captured in a module-level constant:
- * on Workers the binding lives on the per-request environment, so a value
- * frozen at module scope would be wrong (and on a cold isolate, absent).
+ * Resolved per call rather than captured in a module-level constant: on Workers
+ * the D1 binding lives on the per-request environment, so a driver frozen at
+ * module scope would be wrong — and on a cold isolate, absent.
  */
 export function sql(): Sql {
+  if (_driver) return _driver();
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { nodeSql } = require("./sql-node") as typeof import("./sql-node");
   return nodeSql();

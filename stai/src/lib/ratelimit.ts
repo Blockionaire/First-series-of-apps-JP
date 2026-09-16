@@ -1,18 +1,43 @@
 import type { NextRequest } from "next/server";
 
 /**
- * In-process sliding-window rate limiter.
- *
- * Deliberately in-memory: the platform runs as a single Node process next to
- * its SQLite file, so a Map is both sufficient and faster than a DB round-trip
- * on every request. If this ever runs multi-instance, swap the store for Redis
- * — the call sites don't change.
+ * Sliding-window rate limiting.
  *
  * NOTE ON CORPORATE NAT: our readers sit behind audit-firm gateways, so a
  * whole firm can share one egress IP. That is why IP limits here are *burst*
  * protection (stop a script looping), never a product quota. Product quotas
  * are metered per account/cookie in usage_counters, and cost is capped
  * globally. Never turn these into per-IP entitlements.
+ *
+ * ── Why this is behind an interface ──────────────────────────────────────
+ * This used to be a module-level `Map`, which is exactly right for one Node
+ * process next to one SQLite file. On Cloudflare Workers it is not right and,
+ * worse, not visibly wrong: each isolate gets its own empty Map, isolates are
+ * created and discarded constantly and exist per colo, so a limit of "5 per
+ * hour" silently becomes "5 per hour per isolate" — effectively no limit at
+ * all, with nothing in the logs to say so.
+ *
+ * So the store is now pluggable. Phase 4 registers a Durable Object store,
+ * which is the only Cloudflare primitive that can count exactly across
+ * isolates over windows as long as the hour-long ones used here.
+ */
+
+export type RateLimitResult = { ok: boolean; remaining: number; retryAfter: number };
+
+export interface RateLimitStore {
+  /**
+   * What this store can actually promise. `process` means "correct only if
+   * there is exactly one process", and is a deployment error on Workers.
+   */
+  readonly scope: "process" | "global";
+  /** Count one hit against `key`, and say whether the caller may proceed. */
+  hit(key: string, limit: number, windowMs: number): Promise<RateLimitResult>;
+}
+
+/* ── The in-process store ──────────────────────────────────────────────────
+ * Correct on a single Node process. Also the degraded fallback everywhere
+ * else: it needs no network and cannot fail, which is what makes it a safe
+ * floor when a remote store is unreachable.
  */
 
 type Hit = { count: number; resetAt: number };
@@ -25,9 +50,7 @@ function sweep(now: number) {
   for (const [k, v] of buckets) if (v.resetAt <= now) buckets.delete(k);
 }
 
-export type RateLimitResult = { ok: boolean; remaining: number; retryAfter: number };
-
-export function rateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
+function countInMemory(key: string, limit: number, windowMs: number): RateLimitResult {
   const now = Date.now();
   sweep(now);
   const hit = buckets.get(key);
@@ -42,6 +65,50 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
   return { ok: true, remaining: limit - hit.count, retryAfter: 0 };
 }
 
+export const memoryStore: RateLimitStore = {
+  scope: "process",
+  async hit(key, limit, windowMs) {
+    return countInMemory(key, limit, windowMs);
+  },
+};
+
+let _store: RateLimitStore = memoryStore;
+
+/** Install the store for this runtime. Workers registers a Durable Object store. */
+export function registerRateLimitStore(store: RateLimitStore): void {
+  _store = store;
+}
+
+export function rateLimitScope(): RateLimitStore["scope"] {
+  return _store.scope;
+}
+
+/** Degradations since boot, surfaced on /api/health rather than left silent. */
+let _degraded = 0;
+export function rateLimitDegradations(): number {
+  return _degraded;
+}
+
+export async function rateLimit(
+  key: string,
+  limit: number,
+  windowMs: number
+): Promise<RateLimitResult> {
+  try {
+    return await _store.hit(key, limit, windowMs);
+  } catch {
+    // Degrade to in-process counting rather than failing open entirely.
+    //
+    // The alternative designs are both worse. Failing OPEN on a store blip
+    // hands an attacker an unthrottled window against /api/auth/login.
+    // Failing CLOSED locks every reader out of the site because a counter is
+    // unavailable. In-process counting is weaker than global counting but
+    // strictly stronger than nothing, and it cannot itself fail.
+    _degraded++;
+    return countInMemory(key, limit, windowMs);
+  }
+}
+
 /** Client IP behind a reverse proxy. Trusts x-forwarded-for's first entry. */
 export function clientIp(req: NextRequest): string {
   const xff = req.headers.get("x-forwarded-for");
@@ -53,13 +120,13 @@ export function clientIp(req: NextRequest): string {
  * Guard a route. Returns a 429 Response when the caller should be stopped,
  * or null to proceed.
  */
-export function guard(
+export async function guard(
   req: NextRequest,
   bucket: string,
   limit: number,
   windowMs: number
-): Response | null {
-  const res = rateLimit(`${bucket}:${clientIp(req)}`, limit, windowMs);
+): Promise<Response | null> {
+  const res = await rateLimit(`${bucket}:${clientIp(req)}`, limit, windowMs);
   if (res.ok) return null;
   return Response.json(
     { error: "Too many requests — slow down and try again shortly." },

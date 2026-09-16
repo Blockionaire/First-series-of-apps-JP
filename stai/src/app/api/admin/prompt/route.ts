@@ -17,7 +17,7 @@ import { guard, WINDOW } from "@/lib/ratelimit";
  * (see the slug ledger in src/lib/seed/run.ts).
  */
 export async function POST(req: NextRequest) {
-  const blocked = guard(req, "admin-prompt", 60, WINDOW.hour);
+  const blocked = await guard(req, "admin-prompt", 60, WINDOW.hour);
   if (blocked) return blocked;
 
   const user = await currentUser();

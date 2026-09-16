@@ -132,6 +132,82 @@ describe("database seam", () => {
     assert.ok(named <= 6, `seed statements needing a Phase 3 rewrite grew to ${named}`);
   });
 
+  test("a driver can be installed, so a Workers build never reaches better-sqlite3", () => {
+    const src = read(path.join(ROOT, "src/lib/sql.ts"));
+    assert.match(src, /export function registerSqlDriver/, "a driver must be installable");
+    // The require() of ./sql-node has to sit behind the registration check.
+    // If it were a top-level import, bundling for Workers would pull the
+    // native addon into the graph no matter which driver is installed.
+    assert.ok(
+      !/^import .*from "\.\/sql-node"/m.test(src),
+      "sql-node must not be imported at module scope"
+    );
+    const resolver = src.match(/export function sql\(\)[\s\S]*?\n}/)[0];
+    assert.ok(
+      resolver.indexOf("_driver") < resolver.indexOf("sql-node"),
+      "the installed driver must be consulted before falling back to better-sqlite3"
+    );
+  });
+
+  test("no module-level mutable state outside the files allowed to have it", () => {
+    // `let x = ...` at module scope is per-isolate on Workers. That is fine for
+    // a cache that validates itself and fatal for anything that counts.
+    const allowed = new Map([
+      ["src/lib/db.ts", "the better-sqlite3 handle and its shutdown hook — Node only, Phase 3"],
+      ["src/lib/sql.ts", "the installed driver"],
+      ["src/lib/sql-node.ts", "the better-sqlite3 singleton"],
+      ["src/lib/billing.ts", "the Stripe client"],
+      ["src/lib/ai.ts", "the Anthropic client"],
+      ["src/lib/ratelimit.ts", "the store slot, plus the in-memory fallback it documents"],
+      ["src/lib/search.ts", "the retrieval index, which re-checks its fingerprint per query"],
+    ]);
+    const offenders = sources("src")
+      .filter((f) => /^let\s+\w+/m.test(read(f)))
+      .map(rel)
+      .filter((r) => !allowed.has(r));
+    assert.deepEqual(
+      offenders,
+      [],
+      "module-level `let` is per-isolate on Workers — justify it here or move it to the database"
+    );
+  });
+
+  test("the retrieval index validates itself instead of waiting to be told", () => {
+    const src = read(path.join(ROOT, "src/lib/search.ts"));
+    assert.match(src, /corpusFingerprint/, "the index must fingerprint the corpus");
+    const search = src.match(/export async function searchChunks[\s\S]*?\n}/)[0];
+    assert.match(
+      search,
+      /builtFor !== fingerprint/,
+      "every query must re-check the fingerprint; an isolate that never receives " +
+        "invalidateSearchIndex() would otherwise serve a stale corpus for its whole life"
+    );
+  });
+
+  test("the rate limiter declares what it can guarantee", () => {
+    const src = read(path.join(ROOT, "src/lib/ratelimit.ts"));
+    assert.match(src, /scope: "process" \| "global"/, "a store must declare its scope");
+    assert.match(src, /export function registerRateLimitStore/, "the store must be replaceable");
+    // guard() has to await the store — a forgotten await returns a Promise,
+    // which is truthy, and would 429 every single request.
+    const guardFn = src.match(/export async function guard[\s\S]*?\n}/)[0];
+    assert.match(guardFn, /await rateLimit\(/, "guard must await the store");
+  });
+
+  test("every guard() call site awaits it", () => {
+    const offenders = [];
+    for (const f of sources("src/app")) {
+      for (const line of read(f).split("\n")) {
+        if (/[^a-z]guard\(req/.test(line) && !/await guard\(req/.test(line)) {
+          offenders.push(`${rel(f)}: ${line.trim()}`);
+        }
+      }
+    }
+    // An un-awaited guard() is a Promise: truthy, so the route returns it as a
+    // response body and every caller is refused. Loud, but only in production.
+    assert.deepEqual(offenders, [], "guard() is async now");
+  });
+
   test("the last synchronous transactions are declared, not scattered", () => {
     const withTransactions = sources("src")
       .filter((f) => /\.transaction\(/.test(read(f)))

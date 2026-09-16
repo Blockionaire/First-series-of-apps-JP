@@ -89,7 +89,8 @@ function migrate(d: Database.Database) {
     urgency INTEGER NOT NULL DEFAULT 2,
     premium INTEGER NOT NULL DEFAULT 0,
     body_md TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'published'
+    status TEXT NOT NULL DEFAULT 'published',
+    updated_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS prompts (
@@ -289,6 +290,11 @@ function migrate(d: Database.Database) {
   // and nothing about its premium/free gating is touched.
   addColumn(d, "prompts", "status", "TEXT NOT NULL DEFAULT 'published'");
   addColumn(d, "prompts", "updated_at", "TEXT");
+
+  // Articles get the same edit timestamp, and it is load-bearing rather than
+  // decorative: the Ask STAI retrieval index is cached per isolate and decides
+  // whether to rebuild by fingerprinting this column (see lib/search.ts).
+  addColumn(d, "articles", "updated_at", "TEXT");
 
   addColumn(d, "assessments", "firm_size", "TEXT NOT NULL DEFAULT ''");
   addColumn(d, "assessments", "jurisdiction", "TEXT NOT NULL DEFAULT ''");
