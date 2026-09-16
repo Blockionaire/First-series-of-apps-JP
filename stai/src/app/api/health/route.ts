@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { count } from "@/lib/sql";
-import { rateLimitScope, rateLimitDegradations } from "@/lib/ratelimit";
+import { rateLimitScope, rateLimitDegradations, rateLimitHealthy } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +33,15 @@ export async function GET() {
         status: "ok",
         runtime,
         db: { driver, reachable: true, publishedArticles: articles },
-        limiter: { scope: rateLimitScope(), degradations: rateLimitDegradations() },
+        limiter: {
+          // `scope` is what the installed store promises: "global" once the
+          // Durable Object store is registered, "process" if it is not — which
+          // on Workers means per-isolate counting and is a deployment error.
+          // `healthy` is whether that promise is being kept right now.
+          scope: rateLimitScope(),
+          healthy: rateLimitHealthy(),
+          degradations: rateLimitDegradations(),
+        },
       },
       { headers: { "Cache-Control": "no-store" } }
     );

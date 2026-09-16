@@ -232,6 +232,54 @@ describe("database seam", () => {
     assert.match(guardFn, /await rateLimit\(/, "guard must await the store");
   });
 
+  test("the limiter's store slot lives on globalThis, not in a module-level let", () => {
+    const src = read(path.join(ROOT, "src/lib/ratelimit.ts"));
+    // The exact bug this prevents: Next does not guarantee one instance of a
+    // module across bundles, so a module-level `let _store` is registered by
+    // instrumentation into a copy no route handler reads. Every route then
+    // keeps the in-process default while /api/health — reading yet another
+    // copy — cheerfully reports "global". The SQL driver shipped that bug
+    // once; the limiter must not repeat it.
+    assert.match(src, /Symbol\.for\("stai\.ratelimit\.store"\)/, "the store slot must be global");
+    assert.doesNotMatch(
+      src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, ""),
+      /^let\s+_store/m,
+      "a module-level store slot is the bug, not the fix"
+    );
+  });
+
+  test("the limiter seam names no runtime-specific store", () => {
+    // Same rule as src/lib/sql.ts: the interface must not reach for the
+    // Durable Object implementation, or a Node build would pull
+    // @opennextjs/cloudflare in through the back door.
+    const src = read(path.join(ROOT, "src/lib/ratelimit.ts"))
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    assert.doesNotMatch(src, /ratelimit-workers/, "the seam must not import the Workers store");
+    assert.doesNotMatch(src, /@opennextjs\/cloudflare/, "nor the OpenNext runtime");
+  });
+
+  test("the Durable Object stores counters and nothing about the caller", () => {
+    const src = read(path.join(ROOT, "worker/rate-limiter-do.ts"));
+    const schema = src.match(/CREATE TABLE IF NOT EXISTS bucket[\s\S]*?\)\s*`/)[0];
+    // One object per key means the key IS the object, so no IP address, route
+    // name or account id ever has to be written to disk. Any new column here
+    // deserves to be argued for in review rather than added quietly.
+    // Matched as COLUMN DEFINITIONS — an identifier followed by a type — not
+    // as bare words. "key" as a bare word matches `PRIMARY KEY`, which is how
+    // the first version of this assertion failed against a table that was
+    // perfectly fine.
+    for (const forbidden of ["ip", "key", "email", "user", "agent", "body", "session"]) {
+      assert.doesNotMatch(
+        schema,
+        new RegExp(`\\b\\w*${forbidden}\\w*\\s+(TEXT|INTEGER|BLOB|REAL|NUMERIC)\\b`, "i"),
+        `the bucket table must not persist a "${forbidden}" column`
+      );
+    }
+    assert.match(schema, /count\s+INTEGER/, "a counter");
+    assert.match(schema, /reset_at\s+INTEGER/, "and an expiry — that is all it needs");
+  });
+
   test("every guard() call site awaits it", () => {
     const offenders = [];
     for (const f of sources("src/app")) {

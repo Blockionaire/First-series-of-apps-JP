@@ -22,7 +22,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-const ROOT = path.resolve(import.meta.dirname, "..");
+const ROOT = path.resolve(import.meta.dirname, "../..");
 const WORKER = path.join(ROOT, ".open-next/worker.js");
 const hasBuild = fs.existsSync(WORKER);
 const skip = hasBuild ? false : "no Workers build — run `npm run cf:build` first";

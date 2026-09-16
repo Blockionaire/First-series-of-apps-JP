@@ -17,17 +17,18 @@ import type { NextRequest } from "next/server";
  * hour" silently becomes "5 per hour per isolate" — effectively no limit at
  * all, with nothing in the logs to say so.
  *
- * So the store is pluggable, and a Workers store has NOT been built yet. Under
- * `wrangler dev` this still reports scope "process", which is honest and is
- * why /api/health exposes it.
+ * So the store is pluggable. On Workers, src/lib/ratelimit-workers.ts installs
+ * a Durable Object store (worker/rate-limiter-do.ts) and /api/health reports
+ * scope "global". The in-process store below remains the Node implementation
+ * and the degraded fallback everywhere.
  *
- * The choice, when it is made: Cloudflare's native Rate Limiting binding only
- * supports short fixed periods, so it cannot express the limits below without
- * changing what they mean — "5 per hour" becoming "5 per 60 seconds" is a 60×
- * weakening dressed up as a port. A Durable Object counts exactly over
- * arbitrary windows and is the only primitive that preserves these as written.
- * The security-sensitive buckets are the reason: login, signup, account-delete
- * and ask. See the Phase 3 report.
+ * Why a Durable Object and not Cloudflare's native Rate Limiting binding: the
+ * native binding only supports short fixed periods, so it cannot express the
+ * limits below without changing what they mean — "5 per hour" becoming "5 per
+ * 60 seconds" is a 60x weakening dressed up as a port. A Durable Object counts
+ * exactly over arbitrary windows and is the only primitive that preserves
+ * these as written. The security-sensitive buckets are the reason: login,
+ * signup, account-delete and ask.
  */
 
 export type RateLimitResult = { ok: boolean; remaining: number; retryAfter: number };
@@ -80,21 +81,67 @@ export const memoryStore: RateLimitStore = {
   },
 };
 
-let _store: RateLimitStore = memoryStore;
+/**
+ * The store slot and the degradation counters live on globalThis, not in
+ * module-level `let`s.
+ *
+ * Next.js does not guarantee one instance of a module across bundles: the
+ * instrumentation bundle and each route's bundle can each get their own copy.
+ * A module-level `let` therefore registers the Durable Object store into an
+ * instance no route handler ever reads, and every route silently keeps the
+ * in-process default — a limiter that reports `scope: "global"` on /api/health
+ * while counting per isolate. src/lib/sql.ts moved its driver slot here for
+ * exactly this reason, after exactly that bug.
+ */
+const STORE_KEY = Symbol.for("stai.ratelimit.store");
+const STATE_KEY = Symbol.for("stai.ratelimit.state");
+
+type LimiterState = { degradations: number; lastDegradedAt: number };
+type LimiterHost = {
+  [STORE_KEY]?: RateLimitStore;
+  [STATE_KEY]?: LimiterState;
+};
+
+function state(): LimiterState {
+  const host = globalThis as LimiterHost;
+  return (host[STATE_KEY] ??= { degradations: 0, lastDegradedAt: 0 });
+}
+
+function store(): RateLimitStore {
+  return (globalThis as LimiterHost)[STORE_KEY] ?? memoryStore;
+}
 
 /** Install the store for this runtime. Workers registers a Durable Object store. */
-export function registerRateLimitStore(store: RateLimitStore): void {
-  _store = store;
+export function registerRateLimitStore(s: RateLimitStore): void {
+  (globalThis as LimiterHost)[STORE_KEY] = s;
 }
 
 export function rateLimitScope(): RateLimitStore["scope"] {
-  return _store.scope;
+  return store().scope;
 }
 
 /** Degradations since boot, surfaced on /api/health rather than left silent. */
-let _degraded = 0;
 export function rateLimitDegradations(): number {
-  return _degraded;
+  return state().degradations;
+}
+
+/**
+ * Whether the limiter is currently delivering what `scope` claims.
+ *
+ * False means at least one call fell back to in-process counting in the last
+ * minute, so a `global` scope is not being honoured right now. Kept separate
+ * from `scope` because the two answer different questions: scope is the design,
+ * this is the present.
+ *
+ * CAVEAT, and it is a real one: these counters are per isolate. An isolate that
+ * degraded may not be the isolate that serves /api/health, so a `true` here is
+ * weaker evidence than a `false`. The authoritative signal is the warning
+ * logged on every degradation — observability is enabled in wrangler.jsonc so
+ * those reach the dashboard. This field is a cheap hint, not a monitor.
+ */
+export function rateLimitHealthy(): boolean {
+  const { lastDegradedAt } = state();
+  return lastDegradedAt === 0 || Date.now() - lastDegradedAt > 60_000;
 }
 
 export async function rateLimit(
@@ -103,8 +150,8 @@ export async function rateLimit(
   windowMs: number
 ): Promise<RateLimitResult> {
   try {
-    return await _store.hit(key, limit, windowMs);
-  } catch {
+    return await store().hit(key, limit, windowMs);
+  } catch (e) {
     // Degrade to in-process counting rather than failing open entirely.
     //
     // The alternative designs are both worse. Failing OPEN on a store blip
@@ -112,13 +159,42 @@ export async function rateLimit(
     // Failing CLOSED locks every reader out of the site because a counter is
     // unavailable. In-process counting is weaker than global counting but
     // strictly stronger than nothing, and it cannot itself fail.
-    _degraded++;
+    const s = state();
+    s.degradations++;
+    s.lastDegradedAt = Date.now();
+
+    // The operational signal. Deliberately logs the BUCKET only, never the
+    // full key: the key's second half is a client IP, and an error path is not
+    // a licence to start writing addresses into logs that outlive the request.
+    console.warn(
+      `[ratelimit] degraded to in-process counting for bucket "${key.split(":")[0]}": ` +
+        (e instanceof Error ? e.message : "unknown error")
+    );
     return countInMemory(key, limit, windowMs);
   }
 }
 
-/** Client IP behind a reverse proxy. Trusts x-forwarded-for's first entry. */
+/**
+ * Client IP behind a reverse proxy.
+ *
+ * `cf-connecting-ip` is consulted FIRST, and that ordering is the whole point.
+ * Cloudflare sets that header itself and overwrites any client-supplied copy,
+ * whereas it *appends* to `x-forwarded-for` — so on Workers the first entry of
+ * x-forwarded-for is whatever the caller put there. Reading it first would let
+ * an attacker mint a fresh rate-limit key per request with one header and walk
+ * straight through `login` and `signup`. A global counter keyed on a spoofable
+ * value is theatre, so the trustworthy header wins where it exists.
+ *
+ * x-forwarded-for and x-real-ip remain the fallback for the Node deployment,
+ * where a reverse proxy in front of the app is the one setting them.
+ *
+ * This reads a header the platform already provides. It does not derive,
+ * combine, hash or store anything else about the caller: no user agent, no TLS
+ * or device characteristics, no fingerprint.
+ */
 export function clientIp(req: NextRequest): string {
+  const cf = req.headers.get("cf-connecting-ip");
+  if (cf) return cf.trim();
   const xff = req.headers.get("x-forwarded-for");
   if (xff) return xff.split(",")[0]!.trim();
   return req.headers.get("x-real-ip") ?? "unknown";

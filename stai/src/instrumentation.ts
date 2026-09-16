@@ -27,6 +27,15 @@ export async function register() {
   if (process.env.STAI_RUNTIME === "workers") {
     const { registerWorkersSql } = await import("./lib/sql-workers");
     registerWorkersSql();
+
+    // The rate limiter's default store counts per isolate, which on Workers is
+    // no limit at all. Registering the Durable Object store here is what makes
+    // `login`, `signup` and `account-delete` real controls rather than
+    // decoration. Unlike the database there IS a fallback, by design — see
+    // rateLimit() — but it is a floor, not the intended state.
+    const { registerWorkersRateLimit } = await import("./lib/ratelimit-workers");
+    registerWorkersRateLimit();
+
     // Deliberately no migration and no seeding here. A Worker boots on every
     // cold isolate; writing schema or content as a side effect of that is the
     // behaviour the seeding rules exist to prevent. Both are deploy steps.
