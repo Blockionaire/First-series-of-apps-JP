@@ -71,9 +71,30 @@
     // than a misconfiguration.
     "STAI_RUNTIME": "workers",
 
+    // The public origin. Canonical URLs, OG image URLs and every sitemap entry
+    // are built from this by src/lib/seo.ts.
+    //
+    // The name matters. The application reads APP_URL (src/lib/config.ts); an
+    // earlier version of this file set NEXT_PUBLIC_APP_URL, which nothing
+    // reads. The effect was not an error but something quieter and worse:
+    // publicUrl() fell through to its "https://stai.ai" default, so a
+    // production deploy would have served correct pages advertising canonical
+    // URLs on a domain this deployment does not own.
+    //
+    // Set to the production domain rather than the workers.dev URL on purpose.
+    // The workers.dev hostname is a staging detail and must never appear in a
+    // canonical tag or a sitemap where a crawler can index it. During the
+    // workers.dev smoke test the pages therefore name stai-ahead.com in their
+    // metadata while being served from workers.dev — correct, and the reason
+    // the smoke script requests relative paths rather than following
+    // canonicals.
+    //
+    // Local `wrangler dev` overrides this in .dev.vars.
     // Payments are frozen for the free launch. STRIPE_SECRET_KEY is
     // deliberately absent, not empty-stringed, so nothing can mistake an
-    // unset key for a configured one.
-    "NEXT_PUBLIC_APP_URL": "http://localhost:8787"
+    // unset key for a configured one. NODE_ENV is left to Next, which sets it
+    // to "production" in a built Worker; overriding it here would change
+    // paywall and sandbox behaviour as a side effect.
+    "APP_URL": "https://stai-ahead.com"
   }
 }

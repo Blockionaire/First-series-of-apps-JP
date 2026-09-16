@@ -15,29 +15,37 @@ not layers.
 
 **Nothing in this file has been run against a real Cloudflare account.**
 Everything below was executed locally against `wrangler dev` and Wrangler's
-local D1. Deployment is a later, explicitly approved phase.
+local D1. The Phase 4 runbook at the end of this file is written but unrun:
+the agent environment cannot complete Wrangler's browser OAuth, because the
+callback is bound to `http://localhost:8976` inside its own container. Run it
+from a machine where you can log in.
 
 ## Two build targets, two outputs
 
 ```bash
 npm run build      # Node: .next/  (standalone server, better-sqlite3)
-npm run cf:build   # Workers: .next-workers/ + .open-next/  (D1, no native code)
+npm run cf:build   # Workers: .next/ → .open-next/  (D1, no native code)
 ```
-
-They must not share output or webpack cache, and they do not:
 
 | | Node | Workers |
 |---|---|---|
-| `distDir` | `.next` | `.next-workers` |
 | webpack cache version | `stai-node` | `stai-workers` |
 | `src/lib/db.ts` | the real local SQLite module | replaced with `db-unavailable.ts` |
 | database driver | better-sqlite3 | D1 |
 
-Both separations exist because of bugs that were found, not anticipated. A
-shared cache made a Node build silently reuse the Workers stub and ship a
-server with no database — it compiled cleanly and failed at runtime. A shared
-`distDir` made the Workers build overwrite the standalone server the Node test
-suite boots.
+**The two targets are separated in time, not by directory.** Both scripts start
+with `rm -rf .next`, and only one build's output exists at a time. An earlier
+version of this file claimed the Workers build used a separate `distDir`; it
+does not, because OpenNext reads `.next` unconditionally and ignores `distDir`.
+Relying on that produced a run where a "Workers" bundle was built from Node
+output with the native addon included.
+
+The cache split exists for a related reason: a shared webpack cache made a Node
+build silently reuse the Workers stub and ship a server with no database. It
+compiled cleanly and failed only at runtime.
+
+This is why `npm run cf:inspect` exists — never trust that the last build was
+the one you think it was.
 
 ## Which driver runs where
 
@@ -172,3 +180,275 @@ and deploys nothing. The accompanying "These will not work in local
 development" warning refers to `next dev`, where `STAI_RUNTIME` is not
 `workers`, the Durable Object store is never registered, and the in-process
 limiter is used deliberately.
+
+---
+
+# Phase 4 runbook — first real deployment
+
+Run these in order from a machine where you can complete a browser login.
+Every step has a check; do not continue past a failing one.
+
+Nothing here has been executed against a real account. Commands that create or
+change a Cloudflare resource are marked **[creates]**.
+
+## 0. Log in
+
+```bash
+npx wrangler login          # [creates] an OAuth token in ~/.config/.wrangler
+npx wrangler whoami
+```
+
+`whoami` prints the account name and account ID. Confirm it is the account you
+intend before anything else. If you have more than one account, set the right
+one for every later command:
+
+```bash
+export CLOUDFLARE_ACCOUNT_ID=<id from whoami>
+```
+
+Check nothing is already there under a name you care about:
+
+```bash
+npx wrangler d1 list
+npx wrangler deployments list --name stai   # errors if the Worker does not exist — that is fine
+```
+
+**Stop** if a Worker named `stai` or a D1 named `stai-production` already
+exists and you did not create it.
+
+## 1. Production D1
+
+```bash
+npx wrangler d1 create stai-production      # [creates]
+```
+
+Copy the printed `database_id` into `wrangler.jsonc`, replacing
+`local-development-placeholder`. Leave `database_name` as `stai` only if the
+create command used that name — if you named it `stai-production`, set
+`"database_name": "stai-production"` too, or every later `--remote` command
+will address the wrong database.
+
+The database id is not a secret; it is safe in git.
+
+## 2. Migrations
+
+```bash
+npx wrangler d1 migrations list stai-production --remote
+npx wrangler d1 migrations apply stai-production --remote     # [creates]
+```
+
+Verify — expect the tables from `migrations/0001_initial_schema.sql` plus
+`d1_migrations`:
+
+```bash
+npx wrangler d1 execute stai-production --remote --command \
+  "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+npx wrangler d1 execute stai-production --remote --command \
+  "SELECT name FROM d1_migrations ORDER BY id"
+```
+
+**Stop** if a migration fails or the table list differs from local. Do not
+patch the remote schema by hand — that desynchronises it from the migration
+system permanently.
+
+## 3. Seed, once
+
+```bash
+npx wrangler d1 execute stai-production --remote \
+  --file seeds/0001_verified_corpus.sql                       # [creates]
+```
+
+Verify:
+
+```bash
+npx wrangler d1 execute stai-production --remote --command \
+  "SELECT (SELECT COUNT(*) FROM articles WHERE status='published') AS articles,
+          (SELECT COUNT(*) FROM prompts  WHERE status='published') AS prompts,
+          (SELECT COUNT(*) FROM prompts  WHERE premium=1)          AS premium,
+          (SELECT COUNT(*) FROM seed_ledger)                       AS ledger"
+```
+
+Expect 11 articles, 31 prompts, 11 premium, and a non-empty ledger.
+
+Re-running the seed is safe and is worth proving once: every statement is
+guarded by `seed_ledger`, so a second apply changes nothing and cannot
+overwrite an editor's work.
+
+## 4. Admin account
+
+`scripts/admin-sql.mjs` hashes the password with bcrypt and prints SQL. The
+plaintext never reaches the database, a file, or this repository.
+
+```bash
+read -r -p  "admin email: " ADMIN_EMAIL
+read -r -s -p "admin password: " ADMIN_PASSWORD; echo      # -s: not echoed to the terminal
+node scripts/admin-sql.mjs "$ADMIN_EMAIL" "$ADMIN_PASSWORD" > /tmp/admin.sql
+unset ADMIN_PASSWORD
+
+npx wrangler d1 execute stai-production --remote --file /tmp/admin.sql   # [creates]
+rm -f /tmp/admin.sql
+```
+
+Verify the role, never the password:
+
+```bash
+npx wrangler d1 execute stai-production --remote --command \
+  "SELECT email, role FROM users WHERE role='admin'"
+```
+
+If your shell records history, clear the two `read` lines afterwards.
+
+## 5. Variables
+
+`wrangler.jsonc` already carries everything the free launch needs:
+`STAI_RUNTIME=workers`, `APP_URL=https://stai-ahead.com`, the `DB` binding and
+the `RATE_LIMITER` Durable Object.
+
+Set **no** secrets. `STRIPE_SECRET_KEY` must stay unset — that is what keeps
+checkout unavailable and the sandbox path unreachable. Ask STAI runs in
+retrieval-only mode without `ANTHROPIC_API_KEY`; leave it unset for this
+deployment.
+
+## 6. Deploy to workers.dev
+
+```bash
+npm run cf:build
+npm run cf:inspect            # native addons 0, DO exported, size within limits
+npx wrangler deploy           # [creates] the Worker
+```
+
+Wrangler prints the `*.workers.dev` URL. The custom domain is not attached yet.
+
+## 7. Smoke test the real deployment
+
+```bash
+node scripts/smoke-remote.mjs https://<printed-workers.dev-url>
+```
+
+39 read-only checks: health, `runtime: workers`, `driver: d1`, seeded article
+count, **`limiter.scope: "global"`**, every public page, every published
+briefing and prompt from the sitemap, canonical metadata, `/admin` refusing
+anonymous callers, and the payment freeze. Exits non-zero on any failure.
+
+Canonical URLs will name `stai-ahead.com` while you are still on workers.dev.
+That is deliberate — a workers.dev canonical is exactly what you do not want a
+crawler to index — so run it as:
+
+```bash
+EXPECT_ORIGIN=https://stai-ahead.com node scripts/smoke-remote.mjs https://<workers.dev-url>
+```
+
+The write paths are not in that script, because a script that cleans up after
+itself in production is a script that can delete the wrong row. Do these by
+hand, in the browser, with obviously-named test data:
+
+- sign up, log out, log back in, confirm the session persists across a reload;
+- confirm a non-admin account cannot reach `/admin`;
+- sign in as the admin: `/admin`, the article editor, the prompt editor, the
+  growth dashboard;
+- create a draft article `zz-deploy-test`, edit it, publish, confirm it appears
+  on `/briefing`, unpublish, confirm it disappears;
+- create a draft prompt `zz-deploy-test`, edit it, confirm persistence;
+- ask Ask STAI a question, confirm citations resolve to real briefings;
+- unpublish a briefing and confirm it drops out of retrieval;
+- submit an early-access signup and confirm the row appears.
+
+## 8. Persistence proof
+
+Workers are stateless; prove the data is in D1 and not in an isolate.
+
+```bash
+# with zz-deploy-test still present:
+npx wrangler deploy                                   # redeploy, D1 untouched
+npx wrangler d1 execute stai-production --remote --command \
+  "SELECT slug, status FROM articles WHERE slug='zz-deploy-test'"
+```
+
+The row must still be there. Then remove **only** the test content:
+
+```bash
+npx wrangler d1 execute stai-production --remote --command \
+  "DELETE FROM articles WHERE slug='zz-deploy-test'"
+npx wrangler d1 execute stai-production --remote --command \
+  "DELETE FROM prompts  WHERE slug='zz-deploy-test'"
+```
+
+Never `d1 delete` the database.
+
+## 9. Logs
+
+```bash
+npx wrangler tail --format pretty
+```
+
+Exercise the site in another window and watch for exceptions, D1 errors,
+Durable Object errors, `[ratelimit] degraded`, and missing-binding messages.
+`[ratelimit] degraded` means the Durable Object is unreachable and counting has
+fallen back to per-isolate — investigate before going further.
+
+## 10. DNS, then the custom domain
+
+Look before you touch anything:
+
+```bash
+npx wrangler dns record list stai-ahead.com 2>/dev/null || \
+  echo "use the dashboard: stai-ahead.com > DNS > Records"
+```
+
+Write down every **MX** record and every **TXT** record containing
+`cloudflare-email-routing` or `v=spf1`. Inbound email for `info@`, `support@`,
+`help@` and `partner@` depends on them.
+
+Attaching a Workers custom domain creates or replaces the proxied record for
+**that hostname only** (`stai-ahead.com`). It does not read or modify MX or
+TXT records, so email routing survives. **Stop and check** if an A, AAAA or
+CNAME record already exists at the apex — attaching will replace it, and
+whatever it pointed at will stop receiving traffic.
+
+Attach in the dashboard: **Workers & Pages → stai → Settings → Domains &
+Routes → Add → Custom domain → `stai-ahead.com`**.
+
+Then:
+
+```bash
+curl -sI https://stai-ahead.com/api/health | head -1
+curl -s  https://stai-ahead.com/api/health
+node scripts/smoke-remote.mjs https://stai-ahead.com
+```
+
+Confirm the certificate is Cloudflare-issued and valid:
+
+```bash
+echo | openssl s_client -connect stai-ahead.com:443 -servername stai-ahead.com 2>/dev/null \
+  | openssl x509 -noout -issuer -subject -dates
+```
+
+## 11. www → apex
+
+Use a redirect rule, not a second custom domain: two Workers custom domains
+would give you two live canonical origins, which is the thing to avoid.
+
+1. DNS → add a **proxied** `AAAA` record for `www` pointing at `100::`
+   (the documented discard address; the proxy answers, the origin is never
+   used). Leave MX and TXT untouched.
+2. Rules → **Redirect Rules** → Create:
+   - When: `http.host eq "www.stai-ahead.com"`
+   - Then: dynamic redirect, **301**, preserve query string,
+     expression: `concat("https://stai-ahead.com", http.request.uri.path)`
+
+Confirm:
+
+```bash
+curl -sI https://www.stai-ahead.com/briefing | head -3
+# expect: HTTP/2 301  +  location: https://stai-ahead.com/briefing
+```
+
+## 12. Final URL check
+
+`APP_URL` is already `https://stai-ahead.com`, so no redeploy should be needed.
+Confirm nothing stale is being served:
+
+```bash
+curl -s https://stai-ahead.com/ | grep -oE '<link rel="canonical"[^>]*>'
+curl -s https://stai-ahead.com/sitemap.xml | grep -c 'workers.dev\|localhost'   # expect 0
+```
