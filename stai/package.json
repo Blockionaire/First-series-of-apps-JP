@@ -16,6 +16,7 @@
     "prebuild": "node scripts/sync-sql.mjs",
     "cf:build": "rm -rf .next && STAI_BUILD_TARGET=workers opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare preview",
+    "cf:inspect": "node scripts/inspect-bundle.mjs",
     "cf:dev": "wrangler dev",
     "d1:migrate:local": "wrangler d1 migrations apply stai --local",
     "d1:seed:local": "wrangler d1 execute stai --local --file=seeds/0001_verified_corpus.sql",

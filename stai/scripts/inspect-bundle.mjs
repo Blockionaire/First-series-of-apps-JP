@@ -62,13 +62,35 @@ check(
   "the Workers build must swap src/lib/db.ts for the throwing stub"
 );
 
-// ── The Durable Object must actually be in the deployed script ───────────
-// wrangler bundles worker/entry.ts at `wrangler dev`/`deploy` time rather than
-// during the OpenNext build, so the class is checked at its source: if the
-// entry stops exporting it, the binding resolves to nothing at runtime.
-const entry = fs.readFileSync(path.join(ROOT, "worker/entry.ts"), "utf8");
-check("worker entry exports RateLimiterDO", /export\s*\{\s*RateLimiterDO\s*\}/.test(entry));
-check("worker entry re-exports the OpenNext default", /export\s*\{\s*default\s*\}/.test(entry));
+// ── The Durable Object must be in the script that would actually deploy ──
+//
+// Checked against a real `wrangler deploy --dry-run` bundle rather than a
+// regex over worker/entry.ts, because the question is what esbuild emits, not
+// what the source says. A dry run contacts no Cloudflare API, needs no
+// credentials and deploys nothing — it stops after bundling.
+//
+// This matters more than it looks. If the entry stops exporting the class the
+// binding resolves to nothing, every limiter call throws, and the application
+// quietly falls back to per-isolate counting: the site stays up, the tests
+// that do not restart the Worker still pass, and the control is gone.
+const outDir = fs.mkdtempSync(path.join(ROOT, ".wrangler", "inspect-"));
+try {
+  execFileSync("npx", ["wrangler", "deploy", "--dry-run", "--outdir", outDir], {
+    cwd: ROOT,
+    stdio: ["ignore", "pipe", "pipe"],
+    env: { ...process.env, CI: "1" },
+  });
+  const bundle = fs.readFileSync(path.join(outDir, "entry.js"), "utf8");
+  const exportBlock = bundle.match(/export\s*\{[^}]*\}/g)?.at(-1) ?? "";
+  check("deployable bundle exports RateLimiterDO", /\bRateLimiterDO\b/.test(exportBlock));
+  check("deployable bundle still exports the OpenNext default", /\bdefault\b/.test(exportBlock));
+  // OpenNext's own Durable Objects must survive the re-export wrapper too.
+  for (const cls of ["DOQueueHandler", "DOShardedTagCache", "BucketCachePurge"]) {
+    check(`deployable bundle still exports ${cls}`, new RegExp(`\\b${cls}\\b`).test(exportBlock));
+  }
+} finally {
+  fs.rmSync(outDir, { recursive: true, force: true });
+}
 
 // ── Size ─────────────────────────────────────────────────────────────────
 if (handlerSrc) {

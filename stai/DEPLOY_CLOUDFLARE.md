@@ -144,3 +144,31 @@ about it matter at deploy time:
 
 The first remote deploy applies the Durable Object migration automatically.
 No separate command, and nothing to seed — counters start empty by design.
+
+### A build-time warning that is expected
+
+Both `npm run build` and `npm run cf:build` print:
+
+```
+A DurableObjectNamespace in the config referenced the class "RateLimiterDO",
+but no such Durable Object class is exported from the worker.
+```
+
+This is not a problem with the deploy. `next.config.ts` calls
+`initOpenNextCloudflareForDev()`, which starts a miniflare instance to supply
+bindings during the Next build; that instance loads `wrangler.jsonc` but has no
+Worker script, so it cannot see the export. The script that actually ships is
+bundled later, by wrangler, from `worker/entry.ts`.
+
+To confirm the export is really there, without contacting Cloudflare:
+
+```bash
+node scripts/inspect-bundle.mjs
+# ok  deployable bundle exports RateLimiterDO
+```
+
+That check runs a real `wrangler deploy --dry-run`, which needs no credentials
+and deploys nothing. The accompanying "These will not work in local
+development" warning refers to `next dev`, where `STAI_RUNTIME` is not
+`workers`, the Durable Object store is never registered, and the in-process
+limiter is used deliberately.
