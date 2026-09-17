@@ -10,7 +10,7 @@
  * So on Cloudflare this is a deliberate, one-off operator action:
  *
  *   node scripts/admin-sql.mjs desk@example.com 'a-long-password' > /tmp/admin.sql
- *   npx wrangler d1 execute stai --local --file=/tmp/admin.sql
+ *   npx wrangler d1 execute stai-production --local --file=/tmp/admin.sql
  *
  * The password is hashed here, so the plaintext never reaches the database,
  * the SQL file, or Cloudflare. Write the file somewhere temporary and delete

@@ -27,12 +27,12 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "stai",
-      // PLACEHOLDER. No production database exists yet and no Cloudflare
-      // account has been contacted. `wrangler dev` ignores this id entirely and
-      // uses a local SQLite file under .wrangler/state; the real id is filled
-      // in at deploy time, which is a later phase.
-      "database_id": "local-development-placeholder",
+      "database_name": "stai-production",
+      // The production database, created in the Cloudflare dashboard.
+      // A database id is not a secret: it names a resource, it does not
+      // grant access to one. `wrangler dev --local` ignores it entirely and
+      // uses a SQLite file under .wrangler/state.
+      "database_id": "75654fb3-9c33-40fa-bb84-46f8cbcf076a",
       "migrations_dir": "migrations"
     }
   ],

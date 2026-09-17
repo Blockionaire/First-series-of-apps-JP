@@ -67,7 +67,7 @@ fallback on Workers and there must never be one.
 
 ```bash
 npm run cf:build
-npm run d1:migrate:local     # wrangler d1 migrations apply stai --local
+npm run d1:migrate:local     # wrangler d1 migrations apply stai-production --local
 npm run d1:seed:local        # wrangler d1 execute --file=seeds/0001_...
 npx wrangler dev             # http://localhost:8787
 ```
@@ -104,7 +104,7 @@ the behaviour the seeding rules exist to prevent.
 
 ```bash
 node scripts/admin-sql.mjs desk@example.com 'a-long-password' > /tmp/admin.sql
-npx wrangler d1 execute stai --local --file=/tmp/admin.sql
+npx wrangler d1 execute stai-production --local --file=/tmp/admin.sql
 rm /tmp/admin.sql
 ```
 
@@ -216,19 +216,20 @@ npx wrangler deployments list --name stai   # errors if the Worker does not exis
 **Stop** if a Worker named `stai` or a D1 named `stai-production` already
 exists and you did not create it.
 
-## 1. Production D1
+## 1. Production D1 — already done
 
-```bash
-npx wrangler d1 create stai-production      # [creates]
-```
+`stai-production` was created in the dashboard and `wrangler.jsonc` carries its
+real `database_id`. Nothing to run here.
 
-Copy the printed `database_id` into `wrangler.jsonc`, replacing
-`local-development-placeholder`. Leave `database_name` as `stai` only if the
-create command used that name — if you named it `stai-production`, set
-`"database_name": "stai-production"` too, or every later `--remote` command
-will address the wrong database.
+If you ever recreate it, the name in `wrangler.jsonc` must match the name in
+the dashboard. Wrangler addresses a database by name on the command line and by
+id in the binding, so a mismatch gives you a Worker that talks to the right
+database while every `d1 execute` you type edits a different one — or none.
+That is why the local npm scripts and the Workers test harness were renamed
+alongside it; `grep -rn "stai-production"` finds every place that has to agree.
 
-The database id is not a secret; it is safe in git.
+The database id is not a secret. It names a resource, it does not grant access
+to one, so it belongs in git.
 
 ## 2. Migrations
 

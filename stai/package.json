@@ -18,8 +18,8 @@
     "cf:preview": "opennextjs-cloudflare preview",
     "cf:inspect": "node scripts/inspect-bundle.mjs",
     "cf:dev": "wrangler dev",
-    "d1:migrate:local": "wrangler d1 migrations apply stai --local",
-    "d1:seed:local": "wrangler d1 execute stai --local --file=seeds/0001_verified_corpus.sql",
+    "d1:migrate:local": "wrangler d1 migrations apply stai-production --local",
+    "d1:seed:local": "wrangler d1 execute stai-production --local --file=seeds/0001_verified_corpus.sql",
     "test:workers": "node --test --test-concurrency=1 \"tests/workers/*.test.mjs\"",
     "verify": "npm run typecheck && npm run lint && npm run build && npm test && npm run cf:build && npm run test:workers"
   },

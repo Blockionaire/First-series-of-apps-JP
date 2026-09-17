@@ -178,8 +178,8 @@ before(async () => {
       stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, CI: "1" },
     });
-  d1("d1", "migrations", "apply", "stai");
-  d1("d1", "execute", "stai", "--file", "seeds/0001_verified_corpus.sql");
+  d1("d1", "migrations", "apply", "stai-production");
+  d1("d1", "execute", "stai-production", "--file", "seeds/0001_verified_corpus.sql");
 
   server = startServer();
   await waitForHealth();

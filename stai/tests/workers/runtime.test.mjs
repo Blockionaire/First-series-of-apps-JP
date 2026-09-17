@@ -46,7 +46,7 @@ function wrangler(args) {
 
 /** Query the local D1 directly, the way an operator would. */
 function d1(sql) {
-  const out = wrangler(["d1", "execute", "stai", "--command", sql, "--json"]);
+  const out = wrangler(["d1", "execute", "stai-production", "--command", sql, "--json"]);
   const json = JSON.parse(out.slice(out.indexOf("[")));
   return json[0].results;
 }
@@ -56,8 +56,8 @@ before(async () => {
   stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "stai-wstate-"));
 
   // A clean database, built from the same files production will use.
-  wrangler(["d1", "migrations", "apply", "stai"]);
-  wrangler(["d1", "execute", "stai", "--file", "seeds/0001_verified_corpus.sql"]);
+  wrangler(["d1", "migrations", "apply", "stai-production"]);
+  wrangler(["d1", "execute", "stai-production", "--file", "seeds/0001_verified_corpus.sql"]);
 
   // The admin account is an operator action on Workers, never a boot-time
   // write. scripts/admin-sql.mjs hashes the password so no plaintext lands in
@@ -70,7 +70,7 @@ before(async () => {
       encoding: "utf8",
     })
   );
-  wrangler(["d1", "execute", "stai", "--file", sqlFile]);
+  wrangler(["d1", "execute", "stai-production", "--file", sqlFile]);
   fs.rmSync(sqlFile);
 
   server = spawn("npx", ["wrangler", "dev", "--port", String(PORT), "--local", "--persist-to", stateDir], {
