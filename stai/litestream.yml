@@ -1,0 +1,38 @@
+# ─────────────────────────────────────────────────────────────
+# Litestream — continuous off-server replication of the SQLite
+# database. Prepared, not wired in: enabling it is a deliberate
+# operational step, not something that should start by accident.
+#
+# Litestream streams the WAL, so it needs the SAME file the app
+# writes (STAI_DATA_DIR=/data). It adds no service to the request
+# path and no dependency to the application.
+#
+# To enable on the VPS:
+#   1. install: https://litestream.io/install/
+#   2. put real credentials in /etc/litestream-env (root-owned, 0600)
+#   3. mount the same Docker volume at /data on the host, or run
+#      Litestream in a sidecar sharing the stai-data volume
+#   4. systemctl enable --now litestream
+#
+# Restore:
+#   litestream restore -o /data/stai.db s3://BUCKET/stai
+# ─────────────────────────────────────────────────────────────
+
+# Replication requires the database to be reachable from Litestream's
+# process. Keep it on the same host as the app container's volume.
+dbs:
+  - path: /data/stai.db
+    # Snapshots every 6h, WAL shipped continuously (RPO ≈ seconds).
+    replicas:
+      - type: s3
+        name: eu-primary
+        # Hetzner Object Storage / Scaleway / any S3-compatible EU endpoint.
+        endpoint: ${LITESTREAM_S3_ENDPOINT}
+        bucket: ${LITESTREAM_S3_BUCKET}
+        path: stai
+        region: ${LITESTREAM_S3_REGION}
+        access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
+        retention: 720h # 30 days
+        snapshot-interval: 6h
+        validation-interval: 12h

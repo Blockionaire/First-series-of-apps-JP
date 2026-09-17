@@ -1,0 +1,35 @@
+# Keep secrets, local state and build noise out of the image and the context.
+.env
+.env.*
+!.env.example
+
+data/
+backups/
+*.db
+*.db-wal
+*.db-shm
+
+node_modules
+.next
+out
+coverage
+
+.git
+.gitignore
+.github
+
+# Dev-only tooling and docs
+tests/
+scripts/tour-*.mjs
+playwright-report/
+test-results/
+README.md
+DEPLOY.md
+Dockerfile
+docker-compose.yml
+Caddyfile
+litestream.yml
+
+.DS_Store
+*.log
+npm-debug.log*
