@@ -26,12 +26,28 @@ export async function createUser(email: string, password: string, name: string, 
   return info.lastRowId;
 }
 
+/**
+ * A bcrypt hash of a random value nobody holds, at the same cost factor as a
+ * real one. Compared against when no account matches, so that "no such user"
+ * and "wrong password" take the same time.
+ *
+ * Without it the two answers are trivially distinguishable: a missing account
+ * returns as fast as one SELECT, a real one pays for a cost-10 bcrypt — tens
+ * of milliseconds, far above network noise when sampled. That turns the login
+ * endpoint into an oracle for "is this person a customer", which for an
+ * audit-sector product is commercially sensitive.
+ */
+const ABSENT_USER_HASH = "$2b$10$zaJ60hJp3tZPLAGKN4Y4MeG38HPfpZ0ux3VCWyAC9RXrScNzqwDCW";
+
 export async function verifyUser(email: string, password: string): Promise<number | null> {
   const row = await sql().first<{ id: number; password_hash: string }>(
     "SELECT id, password_hash FROM users WHERE email=?",
     [email.toLowerCase().trim()]
   );
-  if (!row) return null;
+  if (!row) {
+    await bcrypt.compare(password, ABSENT_USER_HASH);
+    return null;
+  }
   const ok = await bcrypt.compare(password, row.password_hash);
   return ok ? row.id : null;
 }
@@ -117,16 +133,23 @@ export async function anonId(): Promise<string> {
   return id;
 }
 
-/** Monthly usage metering, e.g. Ask STAI free-tier quota. Returns count AFTER increment. */
+/**
+ * Monthly usage metering, e.g. the Ask STAI free-tier quota. Returns the count
+ * AFTER the increment.
+ *
+ * One statement, via RETURNING, rather than an UPSERT followed by a SELECT.
+ * Two statements were both slower — two round trips to D1 on every metered
+ * request — and wrong under concurrency: D1 has no interactive transaction, so
+ * two requests could interleave between the write and the read and both see
+ * the same total, handing out more free questions than the quota allows.
+ * RETURNING reports the value this statement itself wrote.
+ */
 export async function bumpUsage(actor: string, feature: string): Promise<number> {
   const period = new Date().toISOString().slice(0, 7); // YYYY-MM
-  await sql().run(
-    `INSERT INTO usage_counters (actor, feature, period, count) VALUES (?, ?, ?, 1)
-     ON CONFLICT(actor, feature, period) DO UPDATE SET count = count + 1`,
-    [actor, feature, period]
-  );
   const row = await sql().first<{ count: number }>(
-    "SELECT count FROM usage_counters WHERE actor=? AND feature=? AND period=?",
+    `INSERT INTO usage_counters (actor, feature, period, count) VALUES (?, ?, ?, 1)
+     ON CONFLICT(actor, feature, period) DO UPDATE SET count = count + 1
+     RETURNING count`,
     [actor, feature, period]
   );
   return row?.count ?? 0;

@@ -307,6 +307,27 @@ describe("database seam", () => {
       assert.match(body[0], /throw new Error/, `${fn} must throw, not fake a database`);
     }
 
+    // Export parity, derived rather than hardcoded. A replacement module is
+    // only a replacement if it answers to every name the original exports;
+    // one missing export surfaces on Workers as "x is not a function", which
+    // says nothing about the real cause. Checked by comparing the two files so
+    // that adding an export to db.ts fails here until the stub follows.
+    const exportsOf = (src) =>
+      new Set(
+        [...src.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/export function (\w+)/g)].map(
+          (m) => m[1]
+        )
+      );
+    const real = exportsOf(read(path.join(ROOT, "src/lib/db.ts")));
+    const stubbed = exportsOf(stub);
+    const missing = [...real].filter((name) => !stubbed.has(name));
+    assert.deepEqual(
+      missing,
+      [],
+      `db-unavailable.ts is missing ${missing.join(", ")} — the Workers build ` +
+        "replaces db.ts wholesale, so every export must have a counterpart"
+    );
+
     const config = read(path.join(ROOT, "next.config.ts"));
     assert.match(config, /NormalModuleReplacementPlugin/, "the replacement must be wired up");
     assert.match(

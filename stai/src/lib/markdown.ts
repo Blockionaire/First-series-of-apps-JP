@@ -1,5 +1,32 @@
 import { Marked } from "marked";
 import sanitizeHtml from "sanitize-html";
+import { publicUrl } from "./config";
+
+/** Compare hosts ignoring `www.`, so the apex and the www alias are one site. */
+const bareHost = (h: string) => h.replace(/^www\./i, "").toLowerCase();
+
+/**
+ * Is this link leaving the site?
+ *
+ * Compares against the configured public origin rather than a hardcoded
+ * domain. The previous version tested `href.includes("stai.ai")`, which
+ * silently inverted when the site moved to stai-ahead.com: every internal
+ * absolute link started being treated as external, so it was given
+ * `rel="nofollow"` and opened in a new tab — the site telling crawlers not to
+ * follow its own pages.
+ *
+ * Relative links and mailto: are internal by definition. An absolute URL that
+ * will not parse is treated as external, which is the safe direction: it gets
+ * noopener rather than being trusted.
+ */
+function isExternalLink(href: string): boolean {
+  if (!/^https?:\/\//i.test(href)) return false;
+  try {
+    return bareHost(new URL(href).hostname) !== bareHost(new URL(publicUrl()).hostname);
+  } catch {
+    return true;
+  }
+}
 
 /**
  * Markdown is authored by admins, but "admin-authored" is not the same as
@@ -25,8 +52,7 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
   transformTags: {
     // External links never get to reach back into our window.
     a: (tagName, attribs) => {
-      const href = attribs.href ?? "";
-      const external = /^https?:\/\//i.test(href) && !href.includes("stai.ai");
+      const external = isExternalLink(attribs.href ?? "");
       return {
         tagName,
         attribs: external ? { ...attribs, rel: "noopener noreferrer nofollow", target: "_blank" } : attribs,

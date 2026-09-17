@@ -4,9 +4,21 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { sql } from "@/lib/sql";
+import { jsonArray } from "@/lib/content";
 import ArticleEditor, { type EditorArticle } from "@/components/admin/ArticleEditor";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * The row as the editor needs it: every EditorArticle field except the two the
+ * database stores differently — `tags` is JSON text rather than a joined
+ * string, and `premium` is 0/1 rather than a boolean.
+ */
+type AdminArticleRow = Omit<EditorArticle, "id" | "tags" | "premium"> & {
+  id: number;
+  tags: string;
+  premium: number;
+};
 
 export const metadata: Metadata = pageMeta({
   title: "Edit briefing — admin",
@@ -41,13 +53,18 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
       body_md: "",
     };
   } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const row = (await sql().first("SELECT * FROM articles WHERE id=?", [Number(id)])) as any;
+    // Admin reads query the table directly and deliberately see drafts, so
+    // this cannot go through content.ts — but it must share its tolerance for
+    // a malformed tags column. An unguarded JSON.parse here is the worst place
+    // for one: it would 500 the very editor you would open to repair the row.
+    const row = await sql().first<AdminArticleRow>("SELECT * FROM articles WHERE id=?", [
+      Number(id),
+    ]);
     if (!row) notFound();
     initial = {
       ...row,
       premium: !!row.premium,
-      tags: (JSON.parse(row.tags) as string[]).join(", "),
+      tags: jsonArray(row.tags, `articles.tags for "${row.slug}"`).join(", "),
     };
   }
 

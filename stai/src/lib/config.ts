@@ -1,5 +1,3 @@
-import path from "path";
-
 /**
  * Deployment configuration.
  *
@@ -8,16 +6,14 @@ import path from "path";
  * the database path was inferred from process.cwd() (data written outside the
  * volume), and redirect URLs were inferred from the request Origin header
  * (attacker-controlled).
+ *
+ * This module must stay runtime-agnostic. Every page reaches it through
+ * lib/seo.ts, so anything Node-specific here is pulled into the Workers bundle
+ * on every route. dataDir() used to live here and forced `import path` on all
+ * of them for a function only the local SQLite driver can ever call; it now
+ * sits in lib/db.ts, which is Node-only by definition and is replaced wholesale
+ * in the Workers build.
  */
-
-/**
- * Where ALL persistent application state lives: stai.db plus its -wal and
- * -shm sidecars. In Docker this is the mounted volume (/data); in development
- * it defaults to <project>/data.
- */
-export function dataDir(): string {
-  return process.env.STAI_DATA_DIR || path.join(process.cwd(), "data");
-}
 
 export function isProduction(): boolean {
   return process.env.NODE_ENV === "production";

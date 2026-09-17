@@ -64,36 +64,66 @@ export type Signal = {
   published_at: string;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function rowToArticle(r: any): Article {
-  return { ...r, tags: JSON.parse(r.tags), premium: !!r.premium };
+/** A row as SQLite returns it: JSON columns are text, booleans are 0/1. */
+type ArticleRow = Omit<Article, "tags" | "premium"> & { tags: string; premium: number };
+type PromptRow = Omit<Prompt, "variables" | "premium"> & { variables: string; premium: number };
+
+/**
+ * Parse a JSON text column without letting one bad row take down a page.
+ *
+ * `tags` and `variables` are TEXT holding JSON. A malformed or non-array value
+ * — a hand-edited row, a partial import, an older schema — used to throw
+ * straight out of JSON.parse, and because these mappers run inside
+ * allArticles(), a single corrupt row returned a 500 for the entire briefing
+ * index rather than one degraded article.
+ */
+export function jsonArray(raw: string, where: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map(String);
+    console.warn(`[content] ${where} is valid JSON but not an array; treating as empty`);
+  } catch {
+    console.warn(`[content] ${where} is not valid JSON; treating as empty`);
+  }
+  return [];
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function rowToPrompt(r: any): Prompt {
-  return { ...r, variables: JSON.parse(r.variables), premium: !!r.premium };
+
+function rowToArticle(r: ArticleRow): Article {
+  return { ...r, tags: jsonArray(r.tags, `articles.tags for "${r.slug}"`), premium: !!r.premium };
+}
+
+function rowToPrompt(r: PromptRow): Prompt {
+  return {
+    ...r,
+    variables: jsonArray(r.variables, `prompts.variables for "${r.slug}"`),
+    premium: !!r.premium,
+  };
 }
 
 export async function allArticles(): Promise<Article[]> {
-  const rows = await sql().all(
+  const rows = await sql().all<ArticleRow>(
     "SELECT * FROM articles WHERE status='published' ORDER BY published_at DESC, id DESC"
   );
   return rows.map(rowToArticle);
 }
 
 export async function articleBySlug(slug: string): Promise<Article | null> {
-  const r = await sql().first("SELECT * FROM articles WHERE slug=? AND status='published'", [slug]);
+  const r = await sql().first<ArticleRow>(
+    "SELECT * FROM articles WHERE slug=? AND status='published'",
+    [slug]
+  );
   return r ? rowToArticle(r) : null;
 }
 
 export async function featuredArticles(): Promise<Article[]> {
-  const rows = await sql().all(
+  const rows = await sql().all<ArticleRow>(
     "SELECT * FROM articles WHERE featured > 0 AND status='published' ORDER BY featured ASC"
   );
   return rows.map(rowToArticle);
 }
 
 export async function relatedArticles(article: Article, limit = 3): Promise<Article[]> {
-  const rows = await sql().all(
+  const rows = await sql().all<ArticleRow>(
     "SELECT * FROM articles WHERE id != ? AND status='published' ORDER BY (category = ?) DESC, published_at DESC LIMIT ?",
     [article.id, article.category, limit]
   );
@@ -109,14 +139,17 @@ export async function relatedArticles(article: Article, limit = 3): Promise<Arti
  * table directly and deliberately see drafts.
  */
 export async function allPrompts(): Promise<Prompt[]> {
-  const rows = await sql().all(
+  const rows = await sql().all<PromptRow>(
     "SELECT * FROM prompts WHERE status='published' ORDER BY premium ASC, uses DESC"
   );
   return rows.map(rowToPrompt);
 }
 
 export async function promptBySlug(slug: string): Promise<Prompt | null> {
-  const r = await sql().first("SELECT * FROM prompts WHERE slug=? AND status='published'", [slug]);
+  const r = await sql().first<PromptRow>(
+    "SELECT * FROM prompts WHERE slug=? AND status='published'",
+    [slug]
+  );
   return r ? rowToPrompt(r) : null;
 }
 

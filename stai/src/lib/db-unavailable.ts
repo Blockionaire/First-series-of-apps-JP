@@ -27,6 +27,16 @@ const MESSAGE =
   "is a native addon. The database here is D1, registered by src/instrumentation.ts " +
   "from STAI_RUNTIME. Reaching this means something bypassed the seam in src/lib/sql.ts.";
 
+/**
+ * Kept in step with db.ts deliberately. The whole module-replacement trick
+ * depends on the two files exporting the same surface: an export that exists
+ * there and not here fails at runtime as "not a function", which says nothing
+ * about the real cause, instead of with the message below.
+ */
+export function dataDir(): string {
+  throw new Error(MESSAGE);
+}
+
 export function dbPath(): string {
   throw new Error(MESSAGE);
 }

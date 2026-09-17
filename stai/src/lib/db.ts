@@ -1,7 +1,6 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
-import { dataDir } from "./config";
 import { applyMigrations, applySeeds } from "./migrate-node";
 
 /**
@@ -28,6 +27,21 @@ import { applyMigrations, applySeeds } from "./migrate-node";
  */
 
 let _db: Database.Database | null = null;
+
+/**
+ * Where ALL persistent local state lives: stai.db plus its -wal and -shm
+ * sidecars. In Docker this is the mounted volume (/data); in development it
+ * defaults to <project>/data.
+ *
+ * Lives here rather than in lib/config.ts because it is Node-only — it calls
+ * process.cwd() and joins a filesystem path, neither of which means anything
+ * on Workers. config.ts is imported by every page through lib/seo.ts, so
+ * keeping this there put a `path` import in the Workers bundle for a function
+ * that runtime can never reach.
+ */
+export function dataDir(): string {
+  return process.env.STAI_DATA_DIR || path.join(process.cwd(), "data");
+}
 
 /** Absolute path to the database file. Its -wal and -shm siblings sit beside it. */
 export function dbPath(): string {
