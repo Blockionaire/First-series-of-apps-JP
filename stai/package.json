@@ -20,6 +20,9 @@
     "cf:dev": "wrangler dev",
     "d1:migrate:local": "wrangler d1 migrations apply stai-production --local",
     "d1:seed:local": "wrangler d1 execute stai-production --local --file=seeds/0001_verified_corpus.sql",
+    "d1:migrate:remote": "wrangler d1 migrations apply stai-production --remote",
+    "d1:seed:remote": "wrangler d1 execute stai-production --remote --file=seeds/0001_verified_corpus.sql --yes",
+    "cf:deploy": "npm run d1:migrate:remote && npm run d1:seed:remote && wrangler deploy",
     "test:workers": "node --test --test-concurrency=1 \"tests/workers/*.test.mjs\"",
     "verify": "npm run typecheck && npm run lint && npm run build && npm test && npm run cf:build && npm run test:workers"
   },

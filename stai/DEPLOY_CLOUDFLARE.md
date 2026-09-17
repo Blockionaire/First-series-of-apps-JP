@@ -13,12 +13,19 @@ No Docker, no Caddy, no VPS, no volume, no Litestream. `DEPLOY.md` describes
 the single-machine path and is kept as the fallback; the two are alternatives,
 not layers.
 
-**Nothing in this file has been run against a real Cloudflare account.**
-Everything below was executed locally against `wrangler dev` and Wrangler's
-local D1. The Phase 4 runbook at the end of this file is written but unrun:
-the agent environment cannot complete Wrangler's browser OAuth, because the
-callback is bound to `http://localhost:8976` inside its own container. Run it
-from a machine where you can log in.
+**Status: deployed.** The Worker `stai` builds from `main` via Cloudflare
+Workers Builds (root directory `stai`) and is bound to the D1 database
+`stai-production` and the `RATE_LIMITER` Durable Object.
+
+What has NOT happened yet, at the time of writing: the production database has
+no schema, no content and no admin account, and `stai-ahead.com` is not
+attached. The deploy command now handles the first two on every push — see
+"Workers Builds: migrations and seed in the deploy command" at the end of this
+file. The admin account is still a manual, one-time step.
+
+The Phase 4 runbook below was written before Workers Builds was connected and
+describes the same operations driven from a local machine. It remains correct
+and is the fallback if the build token turns out to lack D1 permissions.
 
 ## Two build targets, two outputs
 
@@ -453,3 +460,72 @@ Confirm nothing stale is being served:
 curl -s https://stai-ahead.com/ | grep -oE '<link rel="canonical"[^>]*>'
 curl -s https://stai-ahead.com/sitemap.xml | grep -c 'workers.dev\|localhost'   # expect 0
 ```
+
+---
+
+# Workers Builds: migrations and seed in the deploy command
+
+The Cloudflare **Deploy command** is `npm run cf:deploy`, not `npx wrangler deploy`:
+
+```
+d1 migrations apply stai-production --remote
+  && d1 execute stai-production --remote --file=seeds/0001_verified_corpus.sql --yes
+  && wrangler deploy
+```
+
+Every push to `main` therefore runs migrations, then the seed, then the deploy,
+with no local CLI involved.
+
+**It lives in package.json on purpose.** The same three commands could be typed
+into the dashboard's deploy-command box, but that box is configuration nobody
+can review, diff or roll back. In `package.json` the deployment procedure is in
+git with everything else.
+
+### Why this is safe to run on every push
+
+Both steps are idempotent, and neither is idempotent by accident:
+
+- `d1 migrations apply` records what it has applied in `d1_migrations` and skips
+  those files next time.
+- Every statement in the seed is guarded by the `seed_ledger`. A slug the ledger
+  has already seen is never offered again, so re-seeding cannot resurrect an
+  article an editor deleted, revert an edit, republish a draft or reset gating.
+  That property was built in Phase 2 precisely so that seeding could be repeated
+  without fear; this is what it was for.
+
+### Two flags that matter
+
+`d1 execute` takes `-y/--yes` to skip its confirmation prompt. **`d1 migrations
+apply` does not** — passing `--yes` to it fails with an unknown-argument error
+and takes the whole deploy with it. It auto-confirms when it detects CI, which
+Workers Builds sets. If that ever changes, the fix is `CI=true` in the build
+environment, not a flag.
+
+### What this does NOT cover
+
+**The admin account.** It needs a password, and a password cannot live in the
+repository or in a build variable. Create it once from any machine with Node:
+
+```bash
+npx wrangler login
+read -r -p  "admin email: " E
+read -r -s -p "admin password: " P; echo
+node scripts/admin-sql.mjs "$E" "$P" > /tmp/admin.sql
+npx wrangler d1 execute stai-production --remote --file=/tmp/admin.sql
+rm /tmp/admin.sql; unset P
+```
+
+### If the deploy fails on permissions
+
+Workers Builds runs as a build token Cloudflare creates for the project. If that
+token carries Workers permissions but not **D1:Edit**, the migration step fails
+and the deploy never runs — the error names D1, not the build. Grant D1 to the
+token under the Worker's build settings, or run `npm run d1:migrate:remote` and
+`npm run d1:seed:remote` once from your own machine and set the deploy command
+back to `npx wrangler deploy`.
+
+### Preview builds do not touch production data
+
+The non-production branch command stays `npx wrangler versions upload`. A branch
+build uploads a version for inspection; it must never migrate or seed the
+production database as a side effect of someone pushing a branch.
