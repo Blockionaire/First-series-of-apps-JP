@@ -79,7 +79,7 @@ export default function Footer() {
 
         <div className="mt-12 flex flex-col gap-2 border-t pt-6 rule sm:flex-row sm:items-center sm:justify-between">
           <p className="f-mono text-[0.65rem] tracking-[0.12em] uppercase" style={{ color: "var(--ink-faint)" }}>
-            © {new Date().getFullYear()} STAI — stai.ai · Amsterdam
+            © {new Date().getFullYear()} STAI — stai-ahead.com · Amsterdam
           </p>
           <p className="f-mono text-[0.65rem] tracking-[0.12em] uppercase" style={{ color: "var(--ink-faint)" }}>
             No trackers, no third-party scripts, no advertising

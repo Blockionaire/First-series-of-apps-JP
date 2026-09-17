@@ -13,7 +13,7 @@ export async function sendMail(to: string, subject: string, body: string) {
   ]);
 
   const key = process.env.RESEND_API_KEY;
-  const from = process.env.MAIL_FROM ?? "STAI <brief@stai.ai>";
+  const from = process.env.MAIL_FROM ?? "STAI <brief@stai-ahead.com>";
   if (!key) return { queued: true, sent: false };
 
   try {

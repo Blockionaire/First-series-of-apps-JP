@@ -8,6 +8,6 @@ export default function Image() {
   return ogCard({
     eyebrow: "The intelligence platform for European audit",
     title: "AI is rewriting the audit. Stay the one who checks.",
-    meta: "stai.ai — briefings, prompts, Ask STAI",
+    meta: "stai-ahead.com — briefings, prompts, Ask STAI",
   });
 }

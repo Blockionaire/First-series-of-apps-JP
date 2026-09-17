@@ -4,6 +4,7 @@ import { sendMail } from "@/lib/mail";
 import { bandFor } from "@/lib/assessment";
 import { guard, WINDOW } from "@/lib/ratelimit";
 import { computeBenchmark } from "@/lib/benchmark";
+import { publicUrl } from "@/lib/config";
 
 export async function POST(req: NextRequest) {
   const blocked = await guard(req, "assessment", 10, WINDOW.hour);
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
       `Your STAI AI-readiness result: ${fullBand.name} (${score}/24)`,
       `Your firm's AI-readiness band: ${fullBand.name} — ${score}/24.\n\n${fullBand.verdict}\n${peerLine}\nYour next three moves:\n${fullBand.moves
         .map((m, i) => `${i + 1}. ${m}`)
-        .join("\n")}\n\nClose the gap before 2 August 2026 — programmes and firm-wide options: https://stai.ai/firms\n\n— STAI`
+        .join("\n")}\n\nClose the gap before 2 August 2026 — programmes and firm-wide options: ${publicUrl()}/firms\n\n— STAI`
     );
   }
 

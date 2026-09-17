@@ -11,7 +11,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const a = await articleBySlug(slug);
 
   if (!a) {
-    return ogCard({ eyebrow: "The Briefing", title: "STAI", meta: "stai.ai" });
+    return ogCard({ eyebrow: "The Briefing", title: "STAI", meta: "stai-ahead.com" });
   }
 
   return ogCard({

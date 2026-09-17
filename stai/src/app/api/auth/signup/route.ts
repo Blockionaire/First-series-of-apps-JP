@@ -3,6 +3,7 @@ import { createUser, startSession } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { guard, WINDOW } from "@/lib/ratelimit";
 import { track } from "@/lib/analytics";
+import { publicUrl } from "@/lib/config";
 
 export async function POST(req: NextRequest) {
   const blocked = await guard(req, "signup", 5, WINDOW.hour);
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
     await sendMail(
       email,
       "Welcome to STAI",
-      `Hi ${name.split(" ")[0]},\n\nYour STAI account is live: most briefings, the free slice of the prompt library, the AI-readiness assessment, and ${5} Ask STAI questions a month.\n\nThe full desk — every briefing, the complete prompt library with adapt-with-AI, unlimited Ask STAI — is STAI+: https://stai.ai/plus\n\n— STAI`
+      `Hi ${name.split(" ")[0]},\n\nYour STAI account is live: most briefings, the free slice of the prompt library, the AI-readiness assessment, and ${5} Ask STAI questions a month.\n\nThe full desk — every briefing, the complete prompt library with adapt-with-AI, unlimited Ask STAI — is STAI+: ${publicUrl()}/plus\n\n— STAI`
     );
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -54,8 +54,8 @@ Server-side integrations degrade honestly:
 | `ANTHROPIC_API_KEY` | Ask STAI → retrieval-only mode (cited passages, labelled as such); Adapt → deterministic context merge, labelled |
 | `STRIPE_SECRET_KEY` (+ `STRIPE_WEBHOOK_SECRET`) | Checkout → sandbox flow with identical activation path |
 | `RESEND_API_KEY` (+ `MAIL_FROM`) | Mail stays queued in the outbox, visible in admin |
-| `STAI_ADMIN_EMAIL` / `STAI_ADMIN_PASSWORD` | Dev admin seeded as `desk@stai.ai` / `stai-desk-2026` — **set these in production** |
-| `TRAINING_INBOX` | Enquiry notifications default to `training@stai.ai` |
+| `STAI_ADMIN_EMAIL` / `STAI_ADMIN_PASSWORD` | Dev admin seeded as `desk@stai-ahead.com` / `stai-desk-2026` — **set these in production** |
+| `TRAINING_INBOX` | Enquiry notifications default to `training@stai-ahead.com` |
 
 ## Commercial design decisions worth knowing
 

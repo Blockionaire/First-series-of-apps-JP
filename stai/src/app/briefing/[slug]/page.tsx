@@ -250,7 +250,7 @@ export default async function ArticlePage({ params }: Props) {
                 </p>
                 <p className="f-mono text-[0.65rem] leading-relaxed tracking-[0.06em]" style={{ color: "var(--ink-faint)" }}>
                   CITE THIS BRIEFING — {article.author}, “{article.title}”, STAI, {fmtDate(article.published_at)},
-                  stai.ai/briefing/{article.slug}
+                  stai-ahead.com/briefing/{article.slug}
                 </p>
               </footer>
             )}

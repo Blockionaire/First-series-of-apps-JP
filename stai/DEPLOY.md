@@ -50,7 +50,7 @@ reachable only from the Caddy container, by service name.
 
 ## 2. DNS
 
-Point `stai.ai` (and `www`) A records at the server IP. Caddy provisions TLS on
+Point `stai-ahead.com` (and `www`) A records at the server IP. Caddy provisions TLS on
 first request — nothing else to do.
 
 ## 3. Configure
@@ -69,7 +69,7 @@ Compose **refuses to start** if `APP_URL`, `SITE_DOMAIN`, `ACME_EMAIL`,
 ```bash
 docker compose up -d --build
 docker compose ps            # app must report (healthy)
-curl -fsS https://stai.ai/api/health
+curl -fsS https://stai-ahead.com/api/health
 ```
 
 ## 5. Verify persistence — the eleven-step proof
@@ -81,16 +81,16 @@ real UI survives a container replacement, a stack restart, and a reboot.
 ```bash
 # ── 1-2. Application starts and reports healthy ───────────────────────────
 docker compose ps                 # app must show (healthy)
-curl -fsS https://stai.ai/api/health
+curl -fsS https://stai-ahead.com/api/health
 # expect: {"status":"ok","db":"ok","articles":11}
 
 # ── 3. Admin creates a test content item (through the real API) ───────────
 #     Sign in first; this stores the session cookie in /tmp/stai-admin.txt
-curl -fsS -c /tmp/stai-admin.txt -X POST https://stai.ai/api/auth/login \
+curl -fsS -c /tmp/stai-admin.txt -X POST https://stai-ahead.com/api/auth/login \
   -H 'Content-Type: application/json' \
   -d "{\"email\":\"$STAI_ADMIN_EMAIL\",\"password\":\"$STAI_ADMIN_PASSWORD\"}"
 
-curl -fsS -b /tmp/stai-admin.txt -X POST https://stai.ai/api/admin/article \
+curl -fsS -b /tmp/stai-admin.txt -X POST https://stai-ahead.com/api/admin/article \
   -H 'Content-Type: application/json' \
   -d '{"slug":"persistence-probe","title":"Persistence probe","dek":"Delete me after launch checks.",
        "category":"News","tags":"probe","author":"STAI Editorial","author_role":"Editorial desk",
@@ -99,7 +99,7 @@ curl -fsS -b /tmp/stai-admin.txt -X POST https://stai.ai/api/admin/article \
 # expect: {"ok":true,"id":<n>}
 
 # ── 4. A test account is created ─────────────────────────────────────────
-curl -fsS -X POST https://stai.ai/api/auth/signup \
+curl -fsS -X POST https://stai-ahead.com/api/auth/signup \
   -H 'Content-Type: application/json' \
   -d '{"email":"persistence-probe@example.com","password":"probe-password-123",
        "name":"Persistence Probe","firm":"Probe"}'
@@ -139,7 +139,7 @@ probe                             # MUST print: article: true | account: true
 sudo reboot
 # wait ~60s, reconnect, then WITHOUT starting anything manually:
 docker compose ps                 # must already be Up (healthy) via restart: unless-stopped
-curl -fsS https://stai.ai/api/health
+curl -fsS https://stai-ahead.com/api/health
 probe                             # MUST print: article: true | account: true
 ```
 
@@ -152,7 +152,7 @@ service.
 Clean up afterwards:
 
 ```bash
-curl -fsS -b /tmp/stai-admin.txt -X POST https://stai.ai/api/admin/article \
+curl -fsS -b /tmp/stai-admin.txt -X POST https://stai-ahead.com/api/admin/article \
   -H 'Content-Type: application/json' -d '{"id":<n>,"slug":"persistence-probe","title":"Persistence probe",
   "dek":"x","category":"News","tags":"probe","author":"STAI Editorial","author_role":"Editorial desk",
   "published_at":"2026-01-01","reading_min":1,"featured":0,"urgency":1,"premium":false,
@@ -232,7 +232,7 @@ Record the date of the rehearsal. Repeat it whenever the schema changes.
 docker compose down
 sudo rm -f <mountpoint>/stai.db*
 sudo litestream restore -o <mountpoint>/stai.db s3://<bucket>/stai
-docker compose up -d && curl -fsS https://stai.ai/api/health
+docker compose up -d && curl -fsS https://stai-ahead.com/api/health
 ```
 
 Do not also run `scripts/backup.mjs` on a schedule. One backup system, off the

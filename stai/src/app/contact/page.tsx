@@ -20,9 +20,9 @@ export default function ContactPage() {
         reply within one working day.
       </p>
       <div className="f-mono mt-6 space-y-1 text-[0.78rem] text-cream-400">
-        <p>Editorial — desk@stai.ai</p>
-        <p>Training — training@stai.ai</p>
-        <p>Membership — members@stai.ai</p>
+        <p>Editorial — desk@stai-ahead.com</p>
+        <p>Training — training@stai-ahead.com</p>
+        <p>Membership — members@stai-ahead.com</p>
       </div>
       <div className="mt-10 border-t pt-8 rule">
         <h2 className="f-label mb-6" style={{ color: "var(--ink-faint)" }}>

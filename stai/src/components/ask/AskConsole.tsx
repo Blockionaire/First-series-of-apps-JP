@@ -193,7 +193,7 @@ export default function AskConsole({
       sources: (t.sources ?? []).map((s) => ({
         n: s.n,
         label: `${s.title} — ${s.author}, STAI, ${s.publishedAt}`,
-        href: `stai.ai/briefing/${s.slug}`,
+        href: `stai-ahead.com/briefing/${s.slug}`,
       })),
     });
   }

@@ -51,7 +51,7 @@ export const COMPANY: CompanyDetails = {
   vatNumber: "", // add when VAT-registered
   addressLines: [], // REQUIRED — e.g. ["Straatnaam 1", "1234 AB Amsterdam"]
   country: "Netherlands",
-  email: "", // REQUIRED — e.g. "desk@stai.ai"
+  email: "", // REQUIRED — e.g. "desk@stai-ahead.com"
 };
 
 /** The fields that must be published before the site goes live. */

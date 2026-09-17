@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   const wanted = interests.map(interestLabel).join(", ") || "(none selected)";
 
   await sendMail(
-    process.env.FIRMS_INBOX ?? process.env.TRAINING_INBOX ?? "firms@stai.ai",
+    process.env.FIRMS_INBOX ?? process.env.TRAINING_INBOX ?? "firms@stai-ahead.com",
     `[${ref}] Firm enquiry — ${firm}${firmSize ? ` (${firmSize})` : ""}`,
     `Firm: ${firm}\nSize: ${firmSize || "—"}\nJurisdiction: ${jurisdiction || "—"}\n\nContact: ${name} (${role || "role not given"})\nEmail: ${email}\nSeats: ${seats || "—"}\n\nInterested in: ${wanted}\n\n${message || "(no message)"}`
   );

@@ -20,7 +20,7 @@ export function isProduction(): boolean {
 }
 
 /**
- * Absolute public origin, e.g. https://stai.ai — no trailing slash.
+ * Absolute public origin, e.g. https://stai-ahead.com — no trailing slash.
  *
  * Mandatory in production. Throws rather than guessing: a wrong value here
  * sends users somewhere unexpected after payment, so failing loudly at the
@@ -34,7 +34,7 @@ export function requireAppUrl(): string {
   const raw = process.env.APP_URL?.trim();
   if (!raw) {
     if (isProduction()) {
-      throw new Error("APP_URL is required in production (e.g. https://stai.ai)");
+      throw new Error("APP_URL is required in production (e.g. https://stai-ahead.com)");
     }
     return "http://localhost:3000";
   }
@@ -46,7 +46,7 @@ export function requireAppUrl(): string {
  * boundary and must not be able to fail a build.
  */
 export function publicUrl(): string {
-  return (process.env.APP_URL?.trim() || "https://stai.ai").replace(/\/+$/, "");
+  return (process.env.APP_URL?.trim() || "https://stai-ahead.com").replace(/\/+$/, "");
 }
 
 /**
