@@ -501,19 +501,39 @@ and takes the whole deploy with it. It auto-confirms when it detects CI, which
 Workers Builds sets. If that ever changes, the fix is `CI=true` in the build
 environment, not a flag.
 
-### What this does NOT cover
+### The admin account — Build Secrets, once
 
-**The admin account.** It needs a password, and a password cannot live in the
-repository or in a build variable. Create it once from any machine with Node:
+`npm run cf:deploy` runs `scripts/bootstrap-admin.mjs` between the seed and the
+deploy. It reads two **Build Secrets** (encrypted, not plain build variables):
 
-```bash
-npx wrangler login
-read -r -p  "admin email: " E
-read -r -s -p "admin password: " P; echo
-node scripts/admin-sql.mjs "$E" "$P" > /tmp/admin.sql
-npx wrangler d1 execute stai-production --remote --file=/tmp/admin.sql
-rm /tmp/admin.sql; unset P
 ```
+STAI_ADMIN_EMAIL
+STAI_ADMIN_PASSWORD
+```
+
+Set them, push, delete them. Four properties make that safe:
+
+1. **Absent secrets are a normal skip, not an error.** After you delete them,
+   every later deploy prints `no bootstrap secrets set` and exits 0. A pipeline
+   that breaks when you remove a one-time credential is one nobody dares clean
+   up, so this is tested rather than assumed.
+2. **An existing account is never reset.** The email is checked first, and the
+   insert carries `ON CONFLICT DO NOTHING` as a second guard. Re-running with a
+   *different* password leaves the original working — there is a test that
+   asserts exactly that, because it is the failure that would matter most.
+3. **Nothing sensitive reaches the log.** No password, no bcrypt hash, no SQL.
+   wrangler's output is captured rather than inherited, because the insert
+   statement passes through it. The email is printed deliberately: it is not a
+   secret, and it is what tells you which account exists.
+4. **The hash never persists.** It goes to a `0600` temp file because
+   `d1 execute` takes a file, and that file is removed in a `finally`.
+
+Setting only one of the two is a hard failure rather than a skip. Half-configured
+means somebody intended to bootstrap and got it half right, and a green build
+with no account is worse than a red one.
+
+The password is hashed with the same bcrypt cost as the application's own signup
+path, so the stored row is indistinguishable from an account created normally.
 
 ### If the deploy fails on permissions
 
