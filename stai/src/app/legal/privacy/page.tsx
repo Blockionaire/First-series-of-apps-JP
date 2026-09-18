@@ -102,7 +102,7 @@ export default function PrivacyPage() {
 
         <h2>Contact</h2>
         <p>
-          Privacy questions, access requests and deletions: <strong>desk@stai-ahead.com</strong>.
+          Privacy questions, access requests and deletions: <strong>support@stai-ahead.com</strong>.
         </p>
       </div>
     </div>

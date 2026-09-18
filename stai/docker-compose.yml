@@ -27,8 +27,8 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ASK_MONTHLY_CALL_CEILING: ${ASK_MONTHLY_CALL_CEILING:-5000}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
-      MAIL_FROM: ${MAIL_FROM:-STAI <brief@stai-ahead.com>}
-      TRAINING_INBOX: ${TRAINING_INBOX:-training@stai-ahead.com}
+      MAIL_FROM: ${MAIL_FROM:-STAI <info@stai-ahead.com>}
+      TRAINING_INBOX: ${TRAINING_INBOX:-partner@stai-ahead.com}
       FIRMS_INBOX: ${FIRMS_INBOX:-}
       STAI_FOUNDING_TOTAL: ${STAI_FOUNDING_TOTAL:-200}
     volumes:
