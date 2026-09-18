@@ -1,81 +1,76 @@
-/**
- * The STAI marks, from the supplied artwork in public/brand/.
- *
- * ── Why these are CSS masks and not <img> ────────────────────────────────
- * The artwork arrived as flat raster tiles: the S and the S+ on a navy field,
- * the wordmark on a cream one. Dropping those in directly would have put a
- * visible rectangle in the header, because the artwork's navy (#0a2540) is not
- * the site's navy (#0e1726) — and it would have frozen the marks to one theme,
- * so the cream S would vanish on the light theme and the navy wordmark on the
- * dark one.
- *
- * So the ink was extracted to an alpha mask (scripts/extract-brand.py) and is
- * painted here with `currentColor`. The shapes are exactly the supplied ones;
- * the colour follows the theme, which is what the hand-drawn placeholders these
- * replace were doing with `stroke="currentColor"`.
- *
- * STAI+ is two-tone, and a single mask carries one colour, so it is two masks
- * stacked in one box: the S in currentColor, the plus in gold. They are cropped
- * to a shared bounding box so they stay in register at any size.
- */
-
-/** Aspect ratios of the extracted masks — keep in step with public/brand/. */
-const RATIO = {
-  s: 433 / 322,
-  sPlus: 249 / 185,
-  wordmark: 171 / 86,
-} as const;
-
-type MaskProps = { src: string; ratio: number; height: number; color?: string; className?: string };
+import { S_MARK, S_PLUS_INK, S_PLUS_GOLD, WORDMARK, type BrandPath } from "./brand-paths";
 
 /**
- * One masked shape. `currentColor` unless a colour is forced, so the mark
- * inherits whatever ink its container already uses.
+ * The STAI marks, from the supplied brand artwork.
  *
- * -webkit-mask-image is still required for Safari; without it the element
- * renders as a solid block of currentColor, which is a very loud failure.
+ * The artwork arrived as raster tiles with baked-in backgrounds — the S and the
+ * S+ on navy, the wordmark on cream. Used as supplied each would have put a
+ * visible rectangle on the page, because the artwork's navy (#0a2540) is not
+ * the site's (#0e1726), and each would have been locked to one theme: the cream
+ * S invisible on the light theme, the navy wordmark on the dark one.
+ *
+ * So scripts/extract-brand.py lifts the ink off its background and traces it to
+ * outlines, which are drawn here in `currentColor`. The shapes are exactly the
+ * supplied ones; only the colour follows the theme.
+ *
+ * ── Why inline SVG and not a CSS mask ────────────────────────────────────
+ * The first version of this used `mask-image: url(/brand/s-mark.png)`. It is a
+ * neat trick and it has one intolerable failure mode: when the image does not
+ * load — a 404, a slow deploy, an asset that never uploaded — the mask is empty
+ * and the element renders as *nothing*. The logo does not degrade, it silently
+ * disappears, and the header looks broken with no error anywhere to explain it.
+ *
+ * An inline path cannot fail that way. It is part of the document, it needs no
+ * second request, and it stays crisp at any size on any display.
  */
-function Mask({ src, ratio, height, color = "currentColor", className }: MaskProps) {
+
+function Glyph({ path, height, color, title }: { path: BrandPath; height: number; color?: string; title?: string }) {
   return (
-    <span
-      aria-hidden="true"
-      className={className}
-      style={{
-        display: "inline-block",
-        // Rounded: the raw ratio puts 15 decimal places of width into the DOM.
-        width: Math.round(height * ratio * 100) / 100,
-        height,
-        backgroundColor: color,
-        WebkitMaskImage: `url(${src})`,
-        maskImage: `url(${src})`,
-        WebkitMaskRepeat: "no-repeat",
-        maskRepeat: "no-repeat",
-        WebkitMaskSize: "contain",
-        maskSize: "contain",
-        WebkitMaskPosition: "center",
-        maskPosition: "center",
-      }}
-    />
+    <svg
+      height={height}
+      width={(height * path.w) / path.h}
+      viewBox={`0 0 ${path.w} ${path.h}`}
+      role={title ? "img" : undefined}
+      aria-label={title}
+      aria-hidden={title ? undefined : true}
+      focusable="false"
+    >
+      {/* evenodd: the S has a counter and the wordmark has bowls. Without it
+          the holes fill in and the marks turn into solid blobs. */}
+      <path d={path.d} fill={color ?? "currentColor"} fillRule="evenodd" />
+    </svg>
   );
 }
 
 /** The S mark. Cream on the dark theme, navy on the light one. */
 export function SMark({ size = 28 }: { size?: number }) {
-  return <Mask src="/brand/s-mark.png" ratio={RATIO.s} height={size} className="text-cream-100" />;
+  return (
+    <span className="inline-block text-cream-100">
+      <Glyph path={S_MARK} height={size} />
+    </span>
+  );
 }
 
-/** The S+ mark. The only logo variant allowed to carry gold. */
+/**
+ * The S+ mark — the only logo variant allowed to carry gold.
+ *
+ * Two paths in one viewBox rather than two stacked elements: they were traced
+ * from a single shared bounding box, so drawing them in the same coordinate
+ * space keeps the plus in register with the S at every size, for free.
+ */
 export function SPlusMark({ size = 28 }: { size?: number }) {
   return (
-    <span
-      className="relative inline-block text-cream-100"
-      style={{ width: size * RATIO.sPlus, height: size }}
-      aria-hidden="true"
-    >
-      <Mask src="/brand/s-plus-s.png" ratio={RATIO.sPlus} height={size} />
-      <span className="absolute inset-0">
-        <Mask src="/brand/s-plus-gold.png" ratio={RATIO.sPlus} height={size} color="#C9A84C" />
-      </span>
+    <span className="inline-block text-cream-100">
+      <svg
+        height={size}
+        width={(size * S_PLUS_INK.w) / S_PLUS_INK.h}
+        viewBox={`0 0 ${S_PLUS_INK.w} ${S_PLUS_INK.h}`}
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path d={S_PLUS_INK.d} fill="currentColor" fillRule="evenodd" />
+        <path d={S_PLUS_GOLD.d} fill="#C9A84C" fillRule="evenodd" />
+      </svg>
     </span>
   );
 }
@@ -83,14 +78,14 @@ export function SPlusMark({ size = 28 }: { size?: number }) {
 /**
  * The "STAI." wordmark.
  *
- * Carries the accessible name, because it replaces text: the header used to
- * render the letters in the display face, and swapping that for a mask would
- * otherwise leave a link with no name for a screen reader.
+ * Carries an accessible name because it replaces text: the header used to set
+ * the letters in the display face, and swapping that for a drawing would
+ * otherwise leave the home link with nothing for a screen reader to announce.
  */
 export function Wordmark({ height = 24, className }: { height?: number; className?: string }) {
   return (
-    <span className={className} role="img" aria-label="STAI">
-      <Mask src="/brand/wordmark.png" ratio={RATIO.wordmark} height={height} />
+    <span className={className ?? "inline-block text-cream-100"}>
+      <Glyph path={WORDMARK} height={height} title="STAI" />
     </span>
   );
 }
