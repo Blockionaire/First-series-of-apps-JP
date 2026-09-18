@@ -225,7 +225,10 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
   .top{padding:8px 14px;gap:8px;flex-wrap:nowrap}
   .top button{padding:8px 12px}
   .top .long{display:none}
-  .brand{white-space:nowrap}
+  /* De knoppen houden hun maat; de titel krimpt en krijgt beletselteken.
+     Anders duwt een lange titel Settings van het scherm af. */
+  .top>button:not(.brand){flex:none}
+  .brand{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
   .toast{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:45;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:10px 14px;box-shadow:0 6px 20px rgba(0,0,0,.25);font-size:.9rem}
   .toast:empty{display:none}
   .toast.err{background:var(--warn);color:#fff}
@@ -758,7 +761,13 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     closeForm();
     renderLib();
   }
-  $('newRoot').addEventListener('click', () => { formMode = {type:'new', parentId:null, inTree:true}; renderTree(); });
+  $('newRoot').addEventListener('click', () => {
+    // Het invoerveld komt in #treeBody te staan, en dat is op smalle schermen
+    // dichtgeklapt. Zonder de lade open gebeurt er zichtbaar niets.
+    if (narrow.matches) setTreeOpen(true);
+    formMode = {type:'new', parentId:null, inTree:true};
+    renderTree();
+  });
 
   function openForm(mode){
     formMode = mode;
@@ -794,7 +803,8 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
       }
       closeForm();
       renderLib();
-    } catch(e) { toast(e && e.code === 'quota_exceeded' ? 'Your storage is full.' : 'The folder could not be saved.', true); }
+    } catch(e) { toast(e && e.code === 'quota_exceeded' ? 'Your storage is full.'
+      : 'The folder could not be saved: ' + ((e && e.message) || 'unknown error'), true); }
   }
 
   function resetDel(){ const b = $('fDel'); b.dataset.armed = ''; b.textContent = 'Delete folder'; }
@@ -1467,8 +1477,10 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
       : c === 'quota_or_state' ? 'Image storage is full. Delete older articles with images.'
       : c === 'rate_limited' ? 'Too many uploads at once. Try again in a moment.'
       : c === 'upstream_auth' ? 'Your session expired. Reload the page and try again.'
+      : c === 'no_bucket' ? 'Your Supabase project has no article-images bucket yet. Create it under Storage, then run supabase-setup.sql.'
+      : c === 'denied' ? 'Supabase refused the upload. Check the storage policies in supabase-setup.sql.'
       : c === 'not_granted' || c === 'capability_disabled' || c === 'capability_removed' ? 'Uploading images is not available in this view.'
-      : 'Uploading the image failed. Please try again.';
+      : 'Uploading the image failed: ' + ((e && e.message) || 'unknown error');
   }
   async function uploadImage(im){
     let tries = 0;
@@ -1581,7 +1593,9 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
       toast(c === 'quota_exceeded' || c === 'quota_or_state' ? 'Your storage is full. Delete older articles and try again.'
         : c === 'too_large' ? 'One of the images is too large to save.'
         : c === 'invalid_argument' ? 'This article is too long to save in one go.'
-        : 'Saving failed. Please try again.', true);
+        // De echte melding erbij: anders valt niet na te gaan of het aan de tabellen,
+        // de policies of de verbinding ligt.
+        : 'Saving failed: ' + ((e && e.message) || 'unknown error'), true);
     }
   });
 
@@ -1809,8 +1823,9 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
       const {error} = await sb.storage.from(BUCKET).upload(path, blob, {contentType: (opts && opts.type) || 'image/jpeg', upsert: false});
       if (error) {
         const e = new Error(error.message);
-        e.code = /exceeded|maximum|large/i.test(error.message || '') ? 'too_large'
-          : /bucket|not found/i.test(error.message || '') ? 'quota_or_state'
+        e.code = /exceeded|maximum|too large|payload/i.test(error.message || '') ? 'too_large'
+          : /bucket/i.test(error.message || '') ? 'no_bucket'
+          : /row-level security|violates|policy|denied|unauthorized|not authorized/i.test(error.message || '') ? 'denied'
           : /jwt|auth/i.test(error.message || '') ? 'upstream_auth' : 'upstream_error';
         throw e;
       }
