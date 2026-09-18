@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   // Two mails through the outbox: one to the desk, one confirmation. Neither can be lost.
   await sendMail(
-    process.env.TRAINING_INBOX ?? "training@stai-ahead.com",
+    process.env.TRAINING_INBOX ?? "partner@stai-ahead.com",
     `[${ref}] Training enquiry — ${firm} — ${programme}`,
     `Name: ${name}\nEmail: ${email}\nFirm: ${firm}\nProgramme: ${programme}\nParticipants: ${seats || "—"}\n\n${message || "(no message)"}`
   );
