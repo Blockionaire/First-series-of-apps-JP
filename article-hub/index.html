@@ -280,6 +280,10 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
 .gaterow{display:flex;gap:8px;margin-top:10px}
 .gaterow button{flex:1}
 .gateerr{margin:12px 0 0;color:var(--warn);font-size:.88rem;line-height:1.5}
+.gatenote{margin:12px 0 0;color:var(--muted);font-size:.88rem;line-height:1.5}
+.linkish{border:none;background:none;padding:0;color:var(--muted);font-size:.8rem;text-decoration:underline;text-underline-offset:2px}
+.linkish:hover{color:var(--ink)}
+.gateforgot{margin:10px 0 0;text-align:center}
 
 /* dark theme */
 [data-theme="dark"]{
@@ -481,8 +485,18 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
         <button type="button" id="authSwap">Create account</button>
         <button type="button" id="cfgEdit">Other database</button>
       </div>
+      <p class="gateforgot"><button type="button" class="linkish" id="authForgot">Forgot your password?</button></p>
+    </form>
+    <form id="recoverForm" hidden autocomplete="on">
+      <p class="lead">Choose a new password for <span id="recoverWho">your account</span>.</p>
+      <label for="recoverPass">New password</label>
+      <input id="recoverPass" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="recoverPass2">Repeat new password</label>
+      <input id="recoverPass2" type="password" autocomplete="new-password" minlength="8" required>
+      <button class="primary" type="submit" id="recoverGo">Save new password</button>
     </form>
     <p class="gateerr" id="gateErr" hidden role="alert"></p>
+    <p class="gatenote" id="gateNote" hidden role="status"></p>
     <p class="hint" id="gateBusy" hidden>Working…</p>
   </div>
 </div>
@@ -1911,9 +1925,14 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
   });
 
   // ---------- setup and sign-in ----------
-  const gateErr = m => { $('gateErr').hidden = !m; $('gateErr').textContent = m || ''; };
+  const gateErr = m => { $('gateErr').hidden = !m; $('gateErr').textContent = m || ''; if (m) gateNote(''); };
+  const gateNote = m => { $('gateNote').hidden = !m; $('gateNote').textContent = m || ''; };
   const gateBusy = b => { $('gateBusy').hidden = !b; };
   let signUpMode = false;
+  // Where Supabase should send a password link back to. Must also be listed under
+  // Authentication -> URL Configuration -> Redirect URLs in your project.
+  const appUrl = () => location.origin + location.pathname;
+  function clearUrl(){ try { history.replaceState(null, '', appUrl()); } catch(e) {} }
   function readCfg(){
     if (BUILT_IN.url && BUILT_IN.key) return {...BUILT_IN};
     try { return JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); } catch(e) { return null; }
@@ -1922,8 +1941,16 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     $('gate').hidden = false;
     $('cfgForm').hidden = which !== 'cfg';
     $('authForm').hidden = which !== 'auth';
-    gateErr(''); gateBusy(false);
-    setTimeout(() => { const f = which === 'cfg' ? $('cfgUrl') : $('authMail'); if (f && !f.value) f.focus(); }, 50);
+    $('recoverForm').hidden = which !== 'recover';
+    gateErr(''); gateNote(''); gateBusy(false);
+    setTimeout(() => {
+      const f = which === 'cfg' ? $('cfgUrl') : which === 'recover' ? $('recoverPass') : $('authMail');
+      if (f && !f.value) f.focus();
+    }, 50);
+  }
+  function showRecover(u){
+    showGate('recover');
+    $('recoverWho').textContent = (u && u.email) || 'your account';
   }
   $('cfgForm').addEventListener('submit', async e => {
     e.preventDefault();
@@ -1944,7 +1971,47 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     $('authSwap').textContent = signUpMode ? 'I already have an account' : 'Create account';
     $('authLead').textContent = signUpMode ? 'Create an account once, inside your own Supabase project.' : 'Sign in to your library.';
     $('authPass').setAttribute('autocomplete', signUpMode ? 'new-password' : 'current-password');
-    gateErr('');
+    $('authForgot').closest('.gateforgot').hidden = signUpMode;
+    gateErr(''); gateNote('');
+  });
+
+  $('authForgot').addEventListener('click', async () => {
+    const email = $('authMail').value.trim();
+    if (!email) { $('authMail').focus(); return gateErr('Fill in your email address first, then tap this again.'); }
+    gateErr(''); gateNote(''); gateBusy(true); $('authForgot').disabled = true;
+    try {
+      const {error} = await sb.auth.resetPasswordForEmail(email, {redirectTo: appUrl()});
+      if (error) throw error;
+      gateNote('Check your email. That link brings you back here to choose a new password.');
+    } catch(err) {
+      gateErr(/rate|too many|seconds/i.test(err.message || '') ? 'Just asked for one. Wait a minute before trying again.'
+        : err.message || 'Sending the email failed.');
+    }
+    gateBusy(false); $('authForgot').disabled = false;
+  });
+
+  $('recoverForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const a = $('recoverPass').value, b = $('recoverPass2').value;
+    if (a.length < 8) return gateErr('Use at least 8 characters.');
+    if (a !== b) return gateErr('The two passwords do not match.');
+    gateErr(''); gateNote(''); gateBusy(true); $('recoverGo').disabled = true;
+    try {
+      const {data, error} = await sb.auth.updateUser({password: a});
+      if (error) throw error;
+      recovering = false; clearUrl();
+      $('recoverPass').value = ''; $('recoverPass2').value = '';
+      gateBusy(false); $('recoverGo').disabled = false;
+      let u = data && data.user;
+      if (!u) { try { u = (await sb.auth.getUser()).data.user; } catch(err2) { u = null; } }
+      if (u) { toast('Password updated.'); await start(u); }
+      else { showGate('auth'); gateNote('Password updated. Sign in with your new password.'); }
+    } catch(err) {
+      gateBusy(false); $('recoverGo').disabled = false;
+      gateErr(/should be different|same as the old/i.test(err.message || '') ? 'That is already your current password. Pick a different one.'
+        : /expired|invalid|session|jwt/i.test(err.message || '') ? 'This password link has expired. Ask for a new one from the sign-in screen.'
+        : err.message || 'Updating the password failed.');
+    }
   });
   $('authForm').addEventListener('submit', async e => {
     e.preventDefault();
@@ -2003,13 +2070,34 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
 
   // ---------- boot ----------
   renderLib();
+  // A password link lands here with its token in the URL. Read that now: supabase-js
+  // swallows and clears the URL while it starts up. Supabase uses the hash for the
+  // implicit flow and the query string for PKCE, so check both.
+  const linkBits = new URLSearchParams((location.hash || '').replace(/^#/, '') + '&' + (location.search || '').replace(/^\?/, ''));
+  let recovering = linkBits.get('type') === 'recovery';
+  const linkError = linkBits.get('error_description') || linkBits.get('error');
+
   (async () => {
     if (!window.supabase) { showGate('cfg'); gateErr('The Supabase library could not be loaded. Check your internet connection.'); return; }
     cfg = readCfg();
-    if (!cfg) return showGate('cfg');
+    if (!cfg) {
+      showGate('cfg');
+      // Reloading after Connect keeps the hash, so the link survives this detour.
+      if (recovering) gateNote('Connect to your Supabase project first. Your password link keeps working.');
+      return;
+    }
     try { sb = window.supabase.createClient(cfg.url, cfg.key, {auth: {persistSession: true, autoRefreshToken: true}}); }
     catch(e) { showGate('cfg'); return gateErr('That project URL or key does not work.'); }
+    try { sb.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY') recovering = true; }); } catch(e) {}
+    if (linkError) {
+      clearUrl();
+      showGate('auth');
+      return gateErr(/expired|invalid/i.test(linkError)
+        ? 'That link has expired or was already used. Ask for a new one below.'
+        : String(linkError).replace(/\+/g, ' '));
+    }
     const {data} = await sb.auth.getSession();
+    if (data && data.session && recovering) return showRecover(data.session.user);
     if (data && data.session) await start(data.session.user);
     else showGate('auth');
   })();

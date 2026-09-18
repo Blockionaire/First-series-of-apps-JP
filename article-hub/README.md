@@ -35,7 +35,8 @@ Disconnect this browser*.
 **1. Inloggen** — *Authentication → Providers → Email* aan. Zet *Confirm email* uit als je
 direct wilt kunnen inloggen na het aanmaken van een account.
 
-**2. De tabellen.** Plak dit in de SQL Editor en draai het:
+**2. De tabellen.** Alles staat klaar in [`supabase-setup.sql`](supabase-setup.sql) — plak
+de inhoud daarvan in de SQL Editor en draai het in één keer. Dit is wat erin zit:
 
 ```sql
 create table folders (
@@ -101,7 +102,18 @@ create policy "eigen markeringen" on annotations for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 ```
 
-**4. Afbeeldingen.** Maak onder *Storage* een bucket met de naam **`article-images`** en zet
+**4. Waar de mails naartoe wijzen.** Ga naar *Authentication → URL Configuration*:
+
+| Veld | Waarde |
+|---|---|
+| **Site URL** | `https://blockionaire.github.io/First-series-of-apps-JP/article-hub/` |
+| **Redirect URLs** | `https://blockionaire.github.io/First-series-of-apps-JP/article-hub/**` |
+
+Sla je dit over, dan staat de Site URL nog op de standaard `http://localhost:3000` en
+komt elke herstelmail uit op een adres waar niets draait — *deze pagina is niet
+bereikbaar*. Draai je de app ergens anders, zet dat adres er dan bij.
+
+**5. Afbeeldingen.** Maak onder *Storage* een bucket met de naam **`article-images`** en zet
 hem op **public** — de app laadt plaatjes via een publieke URL. Uploaden mag alleen jij:
 
 ```sql
@@ -111,7 +123,7 @@ create policy "eigen verwijderen" on storage.objects for delete to authenticated
   using (bucket_id = 'article-images' and (storage.foldername(name))[1] = auth.uid()::text);
 ```
 
-**5. Live meekijken (optioneel).** Zet onder *Database → Replication* de drie tabellen aan
+**6. Live meekijken (optioneel).** Zet onder *Database → Replication* de drie tabellen aan
 in de `supabase_realtime` publicatie. Dan ziet een tweede geopend tabblad wijzigingen direct.
 Zonder dit werkt alles gewoon, maar ververst de app pas als je terugkeert naar het tabblad.
 
@@ -139,6 +151,10 @@ Zonder dit werkt alles gewoon, maar ververst de app pas als je terugkeert naar h
 - **Download PDF** van een artikel, inclusief afbeeldingen.
 - **Licht, donker of systeem** als thema.
 - **Wachtwoord wijzigen** en uitloggen via *Meer → Account*.
+- **Wachtwoord vergeten?** Op het inlogscherm vul je je mailadres in en tik je op
+  *Forgot your password?*. Je krijgt een mail; die link brengt je terug in de app op een
+  scherm waar je meteen een nieuw wachtwoord kiest. Werkt de link niet meer, dan zegt de
+  app dat hij verlopen is in plaats van je op een leeg scherm achter te laten.
 
 ---
 
