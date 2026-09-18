@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { currentUser } from "@/lib/auth";
-import { SMark, PlusBadge } from "@/components/Logo";
+import { SMark, Wordmark, PlusBadge } from "@/components/Logo";
 import EnforcementClock from "./EnforcementClock";
 import ThemeToggle from "./ThemeToggle";
 import MobileNav from "./MobileNav";
@@ -40,7 +40,7 @@ export default async function Header() {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link href="/" className="flex items-center gap-3" aria-label="STAI home">
           <SMark size={30} />
-          <span className="f-display text-2xl leading-none tracking-[0.04em] text-cream-100">STAI</span>
+          <Wordmark height={22} className="text-cream-100" />
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">

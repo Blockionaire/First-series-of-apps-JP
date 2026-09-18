@@ -97,7 +97,7 @@ export function ogCard(opts: {
               </div>
             )}
             <div style={{ display: "flex", color: CREAM_DIM, fontSize: 17, letterSpacing: 4 }}>
-              STAI.AI
+              STAI-AHEAD.COM
             </div>
           </div>
         </div>

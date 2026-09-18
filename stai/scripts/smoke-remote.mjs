@@ -153,8 +153,12 @@ try {
     canonical,
     `got "${canonical}", want ${EXPECT_ORIGIN}`
   );
-  for (const bad of ["localhost", "workers.dev", "stai.ai/"]) {
-    check(!text.includes(bad), `no "${bad}" in homepage HTML`);
+  // Case-insensitive, and matching the bare domain rather than "stai.ai/".
+  // The earlier version missed "STAI.AI" rendered in an OG card, because it
+  // compared with includes() against a lower-case string ending in a slash.
+  // Any spelling of the old domain is a finding; stai-ahead.com cannot match.
+  for (const bad of [/localhost/i, /workers\.dev/i, /\bstai\.ai\b/i]) {
+    check(!bad.test(text), `no ${bad} in homepage HTML`);
   }
 } catch (e) {
   fail("homepage metadata", e.message);
