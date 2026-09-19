@@ -372,6 +372,19 @@ body {
   white-space: nowrap;
 }
 .btn:active { transform: translateY(1px); }
+/*
+ * Compact button, for the header row where a full-size .btn dominates.
+ *
+ * This has to be a real class, not Tailwind utilities on the element. `.btn`
+ * is unlayered CSS while Tailwind's utilities sit in @layer utilities, and
+ * unlayered always wins over layered no matter the source order — so a
+ * `text-[0.68rem]` or `px-3` alongside `btn` is silently ignored.
+ */
+.btn-sm {
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  padding: 0.45rem 0.85rem;
+}
 .btn-primary {
   background: var(--color-cream-200);
   color: var(--color-navy-900);
