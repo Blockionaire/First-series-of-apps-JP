@@ -146,6 +146,9 @@ Zonder dit werkt alles gewoon, maar ververst de app pas als je terugkeert naar h
   leesscherm. Dezelfde ster nog eens aantikken wist de beoordeling. Met het filter ernaast
   haal je eruit wat je goed vond (★★★★ en hoger), wat juist niet (★★ en lager), of wat je
   nog niet beoordeeld hebt.
+- **Sorteren** op nieuwste, oudste, hoogst beoordeeld of laagst beoordeeld. Artikelen zonder
+  oordeel staan altijd achteraan — ook bij *laagst beoordeeld*, want geen oordeel is iets
+  anders dan een slecht oordeel.
 - **Concepten blijven staan.** Sluit je het scherm halverwege, dan biedt de app bij het
   terugkomen *Restore draft* aan.
 

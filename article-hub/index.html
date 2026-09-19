@@ -369,6 +369,12 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
       <option value="low">★★ and below</option>
       <option value="none">Not rated yet</option>
     </select>
+    <select id="sortBy" aria-label="Sort order">
+      <option value="new">Newest first</option>
+      <option value="old">Oldest first</option>
+      <option value="best">Highest rated</option>
+      <option value="worst">Lowest rated</option>
+    </select>
     <input id="search" type="search" placeholder="Search by title, publisher or author" aria-label="Search">
   </div>
   <ul class="list" id="list"></ul>
@@ -532,6 +538,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
   let loaded = false;
   let filter = 'all';
   let rateFilter = 'any';
+  let sortBy = 'new';
   let folders = [];            // {id, name, parentId}
   let selFolder = 'all';       // 'all' | 'none' | folderId
   let expanded = new Set();
@@ -871,7 +878,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
 
     let rows = scope.filter(a => filter === 'all' || (filter === 'read') === (a.status === 'read')).filter(matchesRate);
     if (q) rows = rows.filter(a => [a.title, a.publisher, a.author].join(' ').toLowerCase().includes(q));
-    rows.sort((x, y) => String(y.createdAt).localeCompare(String(x.createdAt)));
+    sortRows(rows);
 
     const list = $('list');
     list.classList.toggle('dnd', !!db);
@@ -914,6 +921,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     renderLib();
   }));
   $('rateFilter').addEventListener('change', e => { rateFilter = e.target.value; renderLib(); });
+  $('sortBy').addEventListener('change', e => { sortBy = e.target.value; renderLib(); });
   $('search').addEventListener('input', renderLib);
   $('crumbs').addEventListener('click', e => { const b = e.target.closest('[data-sel]'); if (b) selectFolder(b.dataset.sel); });
 
@@ -1030,6 +1038,15 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
   $('list').addEventListener('contextmenu', e => { if (drag && drag.touch) e.preventDefault(); });
 
   // ---------- beoordeling ----------
+  // Wie het setup-script draaide voordat de sterren bestonden, mist de kolom.
+  // PostgREST meldt dat via de schema-cache; zeg dan meteen wat de oplossing is.
+  const RATING_SQL = 'alter table articles add column if not exists rating smallint check (rating between 1 and 5);';
+  function schemaHint(e){
+    const m = (e && e.message) || '';
+    return /rating/i.test(m) && /(schema cache|column|does not exist|PGRST204)/i.test(m)
+      ? 'Your articles table has no rating column yet. Run this in the Supabase SQL Editor: ' + RATING_SQL
+      : '';
+  }
   const RATE_WORD = ['', 'Poor', 'Meh', 'Okay', 'Good', 'Excellent'];
   function starsHtml(rating, disabled){
     const r = Math.max(0, Math.min(5, Number(rating) || 0));
@@ -1052,7 +1069,23 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     try {
       await db.doc('articles/' + a.id).update({rating: val});
       toast(val ? 'Rated ' + val + ' star' + (val > 1 ? 's' : '') + '.' : 'Rating removed.');
-    } catch(e) { toast('Saving the rating failed: ' + ((e && e.message) || 'unknown error'), true); }
+    } catch(e) { toast(schemaHint(e) || ('Saving the rating failed: ' + ((e && e.message) || 'unknown error')), true); }
+  }
+  function sortRows(rows){
+    const newest = (x, y) => String(y.createdAt || '').localeCompare(String(x.createdAt || ''));
+    const star = a => Number(a.rating) || 0;
+    if (sortBy === 'old') return rows.sort((x, y) => newest(y, x));
+    if (sortBy === 'best' || sortBy === 'worst') {
+      return rows.sort((x, y) => {
+        const sx = star(x), sy = star(y);
+        // Geen oordeel is iets anders dan een slecht oordeel: die gaan altijd
+        // achteraan, ook als je op laagste eerst sorteert.
+        if (!sx !== !sy) return sx ? -1 : 1;
+        if (sx !== sy) return sortBy === 'best' ? sy - sx : sx - sy;
+        return newest(x, y);
+      });
+    }
+    return rows.sort(newest);
   }
   function matchesRate(a){
     const r = Number(a.rating) || 0;
@@ -1656,7 +1689,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
         : c === 'invalid_argument' ? 'This article is too long to save in one go.'
         // De echte melding erbij: anders valt niet na te gaan of het aan de tabellen,
         // de policies of de verbinding ligt.
-        : 'Saving failed: ' + ((e && e.message) || 'unknown error'), true);
+        : schemaHint(e) || ('Saving failed: ' + ((e && e.message) || 'unknown error')), true);
     }
   });
 
