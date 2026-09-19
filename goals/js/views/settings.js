@@ -88,7 +88,7 @@ function storageBlock() {
     return `
       <p class="prose">Everything is stored on this device. Nothing leaves it, and no account is needed.</p>
       <p class="prose" style="margin-top:10px">To have the same goals on your phone and your laptop, fill in
-      <code>firebase-config.js</code> — the steps are in the README. Until then, use a backup file to move data across.</p>`;
+      <code>supabase-config.js</code> — the steps are in the README. Until then, use a backup file to move data across.</p>`;
   }
 
   const { user, status, busy, lastPush } = Sync.sync;
@@ -103,11 +103,15 @@ function storageBlock() {
     <p class="prose">Signed in as <b>${esc(user.email || "")}</b>. Changes appear on your other devices
     ${status === "active" ? "as you make them" : "as soon as the connection is back"}.</p>
     <p class="meta" style="margin-top:8px">
-      ${busy ? "Saving…" : lastPush ? `Last change sent ${new Date(lastPush).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : "Nothing sent yet"}
+      ${busy ? "Saving…"
+        : Sync.sync.error ? esc(Sync.sync.error)
+        : lastPush ? `Last change sent ${new Date(lastPush).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+        : "Nothing sent yet"}
     </p>
     <div class="row" style="margin-top:14px">
       <button class="button" data-do="signout">Sign out</button>
       <button class="button button--ghost" data-do="pushall">Upload everything again</button>
+      <button class="button button--ghost" data-do="pullnow">Check for changes</button>
     </div>`;
 }
 
@@ -143,6 +147,8 @@ export function mount(root) {
     if (action === "signout") { await Sync.signOut(); toast("Signed out."); }
 
     if (action === "pushall") { await Sync.pushAll(); toast("Everything uploaded."); }
+
+    if (action === "pullnow") { await Sync.pull({ full: true }); toast("Up to date."); }
   });
 
   $("#file", root).addEventListener("change", async event => {
