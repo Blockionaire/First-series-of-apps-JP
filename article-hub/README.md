@@ -87,6 +87,10 @@ create table annotations (
 `published_on` is bewust **text** en geen `date`: laat je het datumveld leeg, dan stuurt de
 app een lege tekst mee en zou een echte datumkolom het artikel weigeren.
 
+> Draaide je dit script al eerder, vóórdat de sterren bestonden? Dan hoef je alleen de
+> kolom toe te voegen: `alter table articles add column if not exists rating smallint
+> check (rating between 1 and 5);` — die regel staat ook onderin het SQL-bestand.
+
 **3. Alles achter slot.** Zonder dit kan iedereen met de anon-sleutel bij je artikelen:
 
 ```sql
@@ -138,6 +142,10 @@ Zonder dit werkt alles gewoon, maar ververst de app pas als je terugkeert naar h
 - **Mappen en submappen** om je archief te ordenen — slepen mag, en er is een aparte
   weergave voor alles wat nog geen map heeft.
 - **Gelezen / ongelezen**: elk artikel houdt zijn status bij en je kunt de lijst erop filteren.
+- **Beoordelen met sterren**: geef elk artikel 1 tot 5 sterren, vanuit de lijst of vanuit het
+  leesscherm. Dezelfde ster nog eens aantikken wist de beoordeling. Met het filter ernaast
+  haal je eruit wat je goed vond (★★★★ en hoger), wat juist niet (★★ en lager), of wat je
+  nog niet beoordeeld hebt.
 - **Concepten blijven staan.** Sluit je het scherm halverwege, dan biedt de app bij het
   terugkomen *Restore draft* aan.
 

@@ -14,7 +14,7 @@
   color-scheme: light;
   --bg:#f2f2f1; --panel:#ffffff; --ink:#1e2023; --muted:#6a6d72; --line:#dadbdd;
   --accent:#2a2d31; --accent-ink:#ffffff; --accent-soft:#e9e9ea; --paper:#ffffff; --paper-ink:#1e2023; --field:#f7f7f7; --warn:#a2382a;
-  --unread:#2a2d31; --unread-soft:#e4e4e5; --read:#6a6d72; --read-soft:#f2f2f1;
+  --unread:#2a2d31; --unread-soft:#e4e4e5; --read:#6a6d72; --read-soft:#f2f2f1; --star:#9c6f16;
 }
 *{box-sizing:border-box}
 [hidden]{display:none !important}
@@ -44,6 +44,12 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,[tabindex]:focus
 .tabs button[aria-pressed="true"]{background:var(--accent-soft);font-weight:600}
 .tabs .n{color:var(--muted);font-weight:400;margin-left:4px}
 .tools input{max-width:260px;margin-left:auto;background:var(--panel)}
+.tools select{width:auto;font-size:.85rem;padding:6px 8px;background:var(--panel);color:var(--ink)}
+.stars{display:inline-flex;gap:1px;align-items:center;flex:none}
+.stars button{border:none;background:none;padding:2px 1px;font-size:1.05rem;line-height:1;color:var(--line);border-radius:4px}
+.stars button.on{color:var(--star)}
+.stars button:not(:disabled):hover{color:var(--star);opacity:.7}
+.stars button:disabled{opacity:1;cursor:default}
 .list{list-style:none;margin:0;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:10px}
 .item{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 16px;border-top:1px solid var(--line)}
 .item:first-child{border-top:none}
@@ -141,7 +147,7 @@ textarea{min-height:280px;resize:vertical;font-size:.9rem;line-height:1.55}
 
 /* reader */
 .readbar{max-width:680px;margin:0 auto 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.readbar .sp{margin-right:auto}
+.readbar .sp{margin-right:auto;display:flex;align-items:center;gap:10px}
 .done{max-width:680px;margin:18px auto 0;text-align:center}
 .done button{padding:10px 18px;font-size:.95rem}
 
@@ -264,6 +270,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
   .stage .paper#preview{margin-top:0}
 }
 @media (pointer:coarse){
+  .stars button{font-size:1.3rem;padding:6px 3px}
   .sw{width:36px;height:36px}
   .swatches{gap:8px}
   .pop{padding:10px}
@@ -292,7 +299,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
 [data-theme="dark"]{
   --bg:#141517; --panel:#1c1e21; --ink:#e9e9e7; --muted:#9b9ea3; --line:#2f3236;
   --accent:#e9e9e7; --accent-ink:#17181a; --accent-soft:#2a2d31; --paper:#1b1d1f; --paper-ink:#e9e9e7;
-  --field:#212427; --warn:#ef8676; --unread:#e9e9e7; --unread-soft:#2a2d31; --read:#9b9ea3; --read-soft:#232629;
+  --field:#212427; --warn:#ef8676; --unread:#e9e9e7; --unread-soft:#2a2d31; --read:#9b9ea3; --read-soft:#232629; --star:#e0a944;
 }
 [data-theme="dark"] .paper{box-shadow:0 1px 2px rgba(0,0,0,.5)}
 [data-theme="dark"] .paper mark.hl{color:#17181a}
@@ -354,6 +361,14 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
       <button data-f="unread" aria-pressed="false">To read<span class="n" id="cUnread"></span></button>
       <button data-f="read" aria-pressed="false">Read<span class="n" id="cRead"></span></button>
     </div>
+    <select id="rateFilter" aria-label="Filter by rating">
+      <option value="any">Any rating</option>
+      <option value="5">★★★★★ only</option>
+      <option value="4">★★★★ and up</option>
+      <option value="3">★★★ and up</option>
+      <option value="low">★★ and below</option>
+      <option value="none">Not rated yet</option>
+    </select>
     <input id="search" type="search" placeholder="Search by title, publisher or author" aria-label="Search">
   </div>
   <ul class="list" id="list"></ul>
@@ -446,7 +461,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
 
 <section class="stage" id="viewRead" hidden>
   <div class="readbar">
-    <span class="sp"><span class="pill" id="readPill"></span></span>
+    <span class="sp"><span class="pill" id="readPill"></span><span id="readStars"></span></span>
     <button id="readToggle"></button>
     <button id="readMore" class="moreBtn" aria-expanded="false" aria-controls="readSec">More</button>
     <div class="sec" id="readSec">
@@ -516,6 +531,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
   let annotations = [];        // {id, articleId, b, s, e, quote, color, note, para, group}
   let loaded = false;
   let filter = 'all';
+  let rateFilter = 'any';
   let folders = [];            // {id, name, parentId}
   let selFolder = 'all';       // 'all' | 'none' | folderId
   let expanded = new Set();
@@ -853,7 +869,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     else if (!loaded) $('libSub').textContent = 'Laden…';
     else $('libSub').textContent = scope.length ? `${unread} to read, ${read} read.` : isFolder ? 'This folder is empty.' : 'No articles saved yet.';
 
-    let rows = scope.filter(a => filter === 'all' || (filter === 'read') === (a.status === 'read'));
+    let rows = scope.filter(a => filter === 'all' || (filter === 'read') === (a.status === 'read')).filter(matchesRate);
     if (q) rows = rows.filter(a => [a.title, a.publisher, a.author].join(' ').toLowerCase().includes(q));
     rows.sort((x, y) => String(y.createdAt).localeCompare(String(x.createdAt)));
 
@@ -863,6 +879,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
       const msg = !loaded ? 'Laden…'
         : !scope.length ? (isFolder ? 'Drag an article onto this folder, or add a new one.' : 'Click "New" to add your first article.')
         : q ? 'No articles match that search.'
+        : rateFilter !== 'any' ? (rateFilter === 'none' ? 'Everything here has a rating.' : 'No articles with that rating yet.')
         : filter === 'unread' ? 'All caught up. Nothing left on your reading list.'
         : 'No articles read yet.';
       list.innerHTML = `<li class="emptybox">${esc(msg)}</li>`;
@@ -876,6 +893,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
         <span class="dot" title="${isRead ? 'Read' : 'To read'}"></span>
         <div><button class="t" data-a="open">${esc(a.title || 'Untitled')}</button><div class="m">${esc(meta)}</div></div>
         <div class="acts">
+          ${starsHtml(a.rating, !db)}
           <button data-a="toggle">${isRead ? 'Mark as to read' : 'Mark as read'}</button>
           <button data-a="pdf">PDF</button>
         </div></li>`;
@@ -885,7 +903,8 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     const btn = e.target.closest('button'); if (!btn) return;
     const id = btn.closest('.item')?.dataset.id;
     const a = articles.find(x => x.id === id); if (!a) return;
-    if (btn.dataset.a === 'open') openReader(id);
+    if (btn.dataset.rate) setRating(a, Number(btn.dataset.rate));
+    else if (btn.dataset.a === 'open') openReader(id);
     else if (btn.dataset.a === 'toggle') setStatus(a, a.status === 'read' ? 'unread' : 'read');
     else if (btn.dataset.a === 'pdf') downloadPdf(a, a.images || [], btn);
   });
@@ -894,6 +913,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
     renderLib();
   }));
+  $('rateFilter').addEventListener('change', e => { rateFilter = e.target.value; renderLib(); });
   $('search').addEventListener('input', renderLib);
   $('crumbs').addEventListener('click', e => { const b = e.target.closest('[data-sel]'); if (b) selectFolder(b.dataset.sel); });
 
@@ -1009,6 +1029,39 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
   $('list').addEventListener('click', e => { if (suppressClick) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
   $('list').addEventListener('contextmenu', e => { if (drag && drag.touch) e.preventDefault(); });
 
+  // ---------- beoordeling ----------
+  const RATE_WORD = ['', 'Poor', 'Meh', 'Okay', 'Good', 'Excellent'];
+  function starsHtml(rating, disabled){
+    const r = Math.max(0, Math.min(5, Number(rating) || 0));
+    let h = '<span class="stars" role="group" aria-label="Rating">';
+    for (let i = 1; i <= 5; i++) {
+      const plural = i > 1 ? 's' : '';
+      h += '<button type="button" data-rate="' + i + '"'
+         + ' class="' + (i <= r ? 'on' : '') + '"'
+         + (disabled ? ' disabled' : '')
+         + ' aria-pressed="' + (i === r) + '"'
+         + ' aria-label="' + i + ' star' + plural + ', ' + RATE_WORD[i] + '"'
+         + ' title="' + i + ' star' + plural + (i === r ? ' \u2014 tap again to clear' : '') + '">\u2605</button>';
+    }
+    return h + '</span>';
+  }
+  // Dezelfde ster nog eens aantikken wist de beoordeling weer.
+  async function setRating(a, star){
+    if (!db) return;
+    const val = (Number(a.rating) || 0) === star ? null : star;
+    try {
+      await db.doc('articles/' + a.id).update({rating: val});
+      toast(val ? 'Rated ' + val + ' star' + (val > 1 ? 's' : '') + '.' : 'Rating removed.');
+    } catch(e) { toast('Saving the rating failed: ' + ((e && e.message) || 'unknown error'), true); }
+  }
+  function matchesRate(a){
+    const r = Number(a.rating) || 0;
+    if (rateFilter === 'any') return true;
+    if (rateFilter === 'none') return !r;
+    if (rateFilter === 'low') return r >= 1 && r <= 2;
+    return r >= Number(rateFilter);
+  }
+
   async function setStatus(a, status){
     if (!db) return;
     try {
@@ -1038,11 +1091,16 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     const rf = $('readFolder');
     rf.innerHTML = folderOptions(a.folderId && folderById(a.folderId) ? a.folderId : '');
     rf.disabled = !db;
+    $('readStars').innerHTML = starsHtml(a.rating, !db);
     $('readToggle').textContent = isRead ? 'Mark as to read' : 'Mark as read';
     $('readDone').textContent = isRead ? 'Back to library' : 'Done reading';
     document.title = (a.title || 'Artikel') + ' · Article Hub JP';
   }
   const current = () => articles.find(x => x.id === readingId);
+  $('readStars').addEventListener('click', e => {
+    const b = e.target.closest('button[data-rate]'); if (!b) return;
+    const a = current(); if (a) setRating(a, Number(b.dataset.rate));
+  });
   $('readFolder').addEventListener('change', async e => {
     const a = current(); if (!a || !db) return;
     const v = e.target.value || null;
@@ -1568,6 +1626,9 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
         ...d,
         images: images.map(({n, caption, w, h, assetId}) => ({n, caption: caption || '', w, h, assetId})),
         status: editStatus,
+        // Expliciet meesturen: anders hangt het behoud van de beoordeling
+        // af van welke kolommen de upsert toevallig aanraakt.
+        rating: existing && existing.rating != null ? existing.rating : null,
         folderId: $('folder').value || null,
         readAt: editStatus === 'read' ? (wasRead && existing.readAt ? existing.readAt : now) : null,
         createdAt: existing ? existing.createdAt : now,
@@ -1737,7 +1798,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     articles: {
       table: 'articles',
       out: {folderId: 'folder_id', readAt: 'read_at', createdAt: 'created_at', updatedAt: 'updated_at', date: 'published_on'},
-      cols: ['title', 'publisher', 'author', 'date', 'url', 'body', 'status', 'folderId', 'images', 'readAt', 'createdAt', 'updatedAt']
+      cols: ['title', 'publisher', 'author', 'date', 'url', 'body', 'status', 'rating', 'folderId', 'images', 'readAt', 'createdAt', 'updatedAt']
     },
     folders: {
       table: 'folders',

@@ -25,6 +25,7 @@ create table articles (
   url          text,
   body         text,
   status       text,
+  rating       smallint check (rating between 1 and 5),
   folder_id    uuid references folders on delete set null,
   images       jsonb,
   read_at      timestamptz,
@@ -82,6 +83,12 @@ create policy "eigen upload" on storage.objects for insert to authenticated
 create policy "eigen verwijderen" on storage.objects for delete to authenticated
   using (bucket_id = 'article-images'
          and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ------------------------------------------- draaide je dit script al eerder?
+-- Dan bestaat articles al en voeg je alleen de kolom voor de beoordeling toe.
+-- Deze regel is veilig om nog eens te draaien; hij doet niets als de kolom er is.
+
+alter table articles add column if not exists rating smallint check (rating between 1 and 5);
 
 -- ------------------------------------------------------------ met de hand
 -- 1. Authentication -> Providers -> Email aanzetten.
