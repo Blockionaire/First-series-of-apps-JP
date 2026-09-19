@@ -17,6 +17,11 @@
      5. Under Authentication → Providers, make sure Email is on. For a
         personal app it is easier to switch "Confirm email" off, so a
         new account can sign in straight away.
+     6. Under Authentication → URL Configuration → Redirect URLs, add
+        this app's own address followed by `**`. Goals sends that address
+        along with every mail it triggers, so you never have to change the
+        project-wide Site URL — which belongs to the project, not to this
+        app, and a project can serve several apps.
 
    This project may hold other apps. Everything this one creates is
    prefixed `goals_`, so it cannot collide with theirs, and the policies

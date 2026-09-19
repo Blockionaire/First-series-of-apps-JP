@@ -110,7 +110,7 @@ function draw() {
 
   /* An app with a cloud that insists on an account shows nothing else
      until you are in. */
-  const screen = Sync.needsAccount() ? Account : (SCREENS[name] || NotFound);
+  const screen = (Sync.inRecovery() || Sync.needsAccount()) ? Account : (SCREENS[name] || NotFound);
   const isSame = current.name === name;
 
   if (current.cleanup) { try { current.cleanup(); } catch (e) { console.error(e); } }

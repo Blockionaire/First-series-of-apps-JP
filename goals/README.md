@@ -69,6 +69,19 @@ To have them on your phone *and* your laptop, it is a one-time setup:
 5. Under **Authentication → Providers**, make sure **Email** is on. For a
    personal app it is easier to switch *Confirm email* off, so a new account
    can sign in straight away.
+6. Under **Authentication → URL Configuration → Redirect URLs**, add the
+   address this app runs at, followed by `**`:
+
+   ```
+   https://blockionaire.github.io/First-series-of-apps-JP/goals/**
+   ```
+
+   Goals sends that address along with every confirmation and reset mail, so
+   the link brings you back here. That list is an allow-list: adding an entry
+   cannot break anything. Because the address travels with the mail, you do
+   *not* have to touch **Site URL** — which matters when one project serves
+   several apps, since Site URL belongs to the project and not to any one of
+   them.
 
 Then sign in under Settings.
 

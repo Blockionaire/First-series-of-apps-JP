@@ -9,9 +9,10 @@
 import { Sync } from "../store.js";
 import { $, esc, toast } from "../util.js";
 
-export const title = () => "Sign in";
+export const title = () => (Sync.inRecovery() ? "New password" : "Sign in");
 
 export function html() {
+  if (Sync.inRecovery()) return recoveryHtml();
   return `
     <div class="page" style="max-width:420px;padding-top:14vh">
       <p class="eyebrow">Goals</p>
@@ -39,7 +40,56 @@ export function html() {
     </div>`;
 }
 
+function recoveryHtml() {
+  return `
+    <div class="page" style="max-width:420px;padding-top:14vh">
+      <p class="eyebrow">Goals</p>
+      <h1 class="title" style="margin:12px 0 8px">Choose a new password</h1>
+      <p class="prose" style="margin-bottom:26px">You opened a reset link. Pick a new password and you are straight back in.</p>
+
+      <form id="pwform" class="stack">
+        <label class="field">
+          <span class="field__label">New password</span>
+          <input class="input" type="password" name="password" autocomplete="new-password"
+                 minlength="6" required>
+        </label>
+        <label class="field">
+          <span class="field__label">Repeat new password</span>
+          <input class="input" type="password" name="repeat" autocomplete="new-password"
+                 minlength="6" required>
+        </label>
+        <button class="button button--solid button--block" type="submit" id="pwsubmit">Save new password</button>
+        <p class="meta" id="pwerror" role="alert"></p>
+      </form>
+    </div>`;
+}
+
+function mountRecovery(root) {
+  const form = $("#pwform", root);
+  const error = $("#pwerror", root);
+  const submit = $("#pwsubmit", root);
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const chosen = form.password.value;
+    if (chosen.length < 6) { error.textContent = "Pick a password of at least six characters."; return; }
+    if (chosen !== form.repeat.value) { error.textContent = "The two passwords do not match."; return; }
+    submit.disabled = true;
+    error.textContent = "";
+    try {
+      await Sync.setPassword(chosen);
+      toast("Password updated.");
+      location.hash = "#/home";
+    } catch (err) {
+      error.textContent = readable(err);
+    } finally {
+      submit.disabled = false;
+    }
+  });
+}
+
 export function mount(root) {
+  if (Sync.inRecovery()) return mountRecovery(root);
   const form = $("#form", root);
   const error = $("#error", root);
   const submit = $("#submit", root);

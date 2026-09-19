@@ -42,6 +42,32 @@ const POLL_MS = Number(config.pollSeconds || 45) * 1000;
 
 const SESSION_KEY = "goals.session";
 
+/* Waar Supabase zijn mails naartoe mag sturen. Meesturen bij elke mail houdt
+   deze app los van de projectbrede Site URL: die hoort bij het project, niet
+   bij deze app, en een project kan meer apps bedienen. */
+const appUrl = () => location.origin + location.pathname;
+
+/* Een herstel-link landt met zijn token in de hash — precies waar deze app
+   zijn eigen routes heeft staan. Lees hem hier, bij het laden van de module,
+   en haal hem uit de URL voordat de router hem als route leest. */
+const recoveryLink = (() => {
+  const raw = (location.hash || "").replace(/^#/, "");
+  if (!raw.includes("access_token") || !raw.includes("type=recovery")) return null;
+  const parts = new URLSearchParams(raw);
+  const token = parts.get("access_token");
+  if (!token) return null;
+  try {
+    history.replaceState(null, "", location.pathname + location.search);
+  } catch (e) {
+    location.hash = "";
+  }
+  return {
+    access_token: token,
+    refresh_token: parts.get("refresh_token") || null,
+    expires_in: Number(parts.get("expires_in")) || 3600,
+  };
+})();
+
 export const sync = {
   available: Boolean(URL_BASE && KEY),
   requireAccount: Boolean(config.requireAccount),
@@ -51,6 +77,7 @@ export const sync = {
   error: null,
   user: null,          // { id, email }
   status: "off",       // off | loading | signed-out | active | error
+  recovery: false,     // binnengekomen via een herstel-link, wacht op een nieuw wachtwoord
   lastPush: 0,
   lastPull: 0,
 };
@@ -77,6 +104,17 @@ export function init(hooks) {
 
   sync.started = true;
   session = readSession();
+
+  /* Binnen via een herstel-link: het token is een geldige sessie, maar we
+     beginnen nog niet met synchroniseren. Eerst een nieuw wachtwoord. */
+  if (recoveryLink) {
+    keep(recoveryLink);
+    sync.recovery = true;
+    sync.status = "loading";
+    onStatus();
+    loadUser().then(onStatus, () => onStatus());
+    return;
+  }
 
   if (!session) {
     sync.status = "signed-out";
@@ -200,7 +238,7 @@ export async function signIn(email, password) {
 }
 
 export async function register(email, password) {
-  const data = await request("/auth/v1/signup", {
+  const data = await request(`/auth/v1/signup?redirect_to=${encodeURIComponent(appUrl())}`, {
     method: "POST",
     body: { email, password },
     auth: false,
@@ -217,7 +255,32 @@ export async function register(email, password) {
 }
 
 export async function resetPassword(email) {
-  await request("/auth/v1/recover", { method: "POST", body: { email }, auth: false });
+  await request(`/auth/v1/recover?redirect_to=${encodeURIComponent(appUrl())}`,
+    { method: "POST", body: { email }, auth: false });
+}
+
+/* Een herstel-link draagt geen gebruiker bij zich, alleen een token. */
+async function loadUser() {
+  const user = await request("/auth/v1/user");
+  if (!user || !session) return;
+  session.user = { id: user.id, email: user.email };
+  sync.user = session.user;
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch (e) {
+    console.warn("Could not remember the session on this device.", e);
+  }
+}
+
+export const inRecovery = () => sync.recovery === true;
+
+export async function setPassword(password) {
+  await request("/auth/v1/user", { method: "PUT", body: { password } });
+  sync.recovery = false;
+  try { await loadUser(); } catch (e) { /* het wachtwoord staat, de naam volgt later */ }
+  sync.status = "loading";
+  onStatus();
+  await begin();
 }
 
 export async function signOut() {
