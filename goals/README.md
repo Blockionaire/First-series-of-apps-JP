@@ -59,21 +59,46 @@ period. Everything in it is editable — rename it, delete it, start your own.
 Without configuration your goals live only on the device you typed them into.
 To have them on your phone *and* your laptop, it is a one-time setup:
 
-1. Go to [console.firebase.google.com](https://console.firebase.google.com)
-   and create a free project (the Spark plan is plenty).
-2. Add a **web app** (the `</>` icon) and copy the `firebaseConfig` block.
-3. Paste it into **`firebase-config.js`**, in place of `firebase: null`.
-4. In the console, turn on **Authentication → Sign-in method → Email/password**.
-5. Create a **Firestore database** and paste in the rules from
-   `firestore.rules`.
+1. Go to [supabase.com](https://supabase.com) and create a free project.
+2. Open **SQL Editor → New query**, paste in the whole of **`supabase.sql`**
+   from this folder, and press **Run**. That creates the table and the rules
+   that keep your rows yours.
+3. Go to **Project Settings → API** and copy the **Project URL** and the
+   **anon / public** key.
+4. Paste both into **`supabase-config.js`**, in place of `supabase: null`.
+5. Under **Authentication → Providers**, make sure **Email** is on. For a
+   personal app it is easier to switch *Confirm email* off, so a new account
+   can sign in straight away.
 
-Then sign in under Settings. Anything already on that device goes up with you.
+Then sign in under Settings.
 
-**About that key in `firebase-config.js`:** it is meant to be public in a web
-app and is not a password. What protects your data are the rules, which only
-let you at documents under your own user id.
+**Sign in on the device that already has your goals first.** Every device
+seeds itself with the booklet on first run, so the *second* device would
+otherwise add its own copy to yours. A device that has never been used —
+nothing logged, nothing ticked, nothing written — hands itself over to the
+cloud's copy instead of merging with it. A device you have actually used
+merges, which is what you want the first time and not the second.
 
----
+**About that anon key:** it belongs in a web app and is not a password. Every
+request it makes still has to pass the row-level security policies from
+`supabase.sql`, which only ever return your own rows. **Never** put the
+`service_role` key there — that one bypasses every policy, and the file is
+public the moment it is pushed.
+
+### How the syncing works
+
+- One table, `records`, one row per document: `user_id`, `collection`, `id`,
+  `data` as jsonb, `updated`, `deleted`. That is the shape the app already
+  keeps on the device, so nothing has to be taken apart and put back together.
+- **Last write wins, per record.** Every record carries the moment it changed;
+  an arriving row that is older than what is on this device changes nothing.
+- **Deletes leave a tombstone**, so a device that was offline when you deleted
+  something does not cheerfully put it back.
+- Your own changes go up **immediately**. Changes from your other device
+  arrive when the app opens, when you switch back to it, and every 45 seconds
+  while you are looking at it.
+- It is still **offline-first**: everything is written to the device before it
+  is sent anywhere, so the app works on a plane and catches up later.
 
 ## Technical
 
@@ -91,9 +116,10 @@ let you at documents under your own user id.
   `prefers-reduced-motion`.
 - **IndexedDB** for storage, not localStorage: covers and years of logs add
   up, and localStorage stops around 5 MB.
-- **Firestore** is a copy on top of local storage, not a replacement. Last
-  write wins per record; deletes leave a tombstone so another device does not
-  put back what you removed.
+- **Supabase** is a copy on top of local storage, not a replacement, and it is
+  reached with plain `fetch` — no SDK, nothing from a CDN. Last write wins per
+  record; deletes leave a tombstone so another device does not put back what
+  you removed.
 - The **service worker** goes to the network first and falls back to the
   cache, so you always get the newest version when online and the whole app
   when you are not.
@@ -103,15 +129,15 @@ let you at documents under your own user id.
 
 ```
 index.html              the shell
-firebase-config.js      your settings (local-only by default)
-firestore.rules         the database rules — the actual security
+supabase-config.js      your settings (local-only by default)
+supabase.sql            the table and the rules — the actual security
 manifest.json  sw.js    installable, and offline
 css/app.css             the design, two themes
 js/app.js               router and screen switching
 js/store.js             all data and every change
 js/progress.js          metrics, standards, reviews — the sums
 js/db.js                IndexedDB
-js/sync.js              Firebase (optional)
+js/sync.js              Supabase (optional)
 js/util.js              formatting, dates, the sheet, small charts
 js/forms.js             every add and edit, in one place
 js/log.js               the logging sheet and the activity list

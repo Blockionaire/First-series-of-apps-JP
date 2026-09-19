@@ -117,6 +117,7 @@ export async function start() {
     onRemote: applyRemote,
     onStatus: notify,
     localSnapshot: () => snapshot(),
+    beforeFirstPull: adoptRemote,
   });
 
   return state;
@@ -321,6 +322,43 @@ function applyRemote(collection, records) {
   }
 
   if (touched) { sortAll(); notify(); }
+}
+
+/* ---------------------------------------------------------------
+   A device that has never been used
+   ---------------------------------------------------------------
+   Every device seeds itself with the booklet on first run. So the
+   second device you sign in on would otherwise end up with two of
+   everything: its own seed, plus yours from the cloud.
+
+   Untouched means exactly that: nothing logged, nothing reviewed,
+   nothing written, nothing ticked. In that case the cloud's copy wins
+   outright and the local seed goes quietly — quietly being the point,
+   because deleting it the normal way would leave tombstones that then
+   deleted your real goals everywhere else.
+   --------------------------------------------------------------- */
+export function untouched() {
+  return state.entries.length === 0 &&
+         state.weekly.length === 0 &&
+         state.monthly.length === 0 &&
+         state.notes.length === 0 &&
+         state.resources.length === 0 &&
+         state.backlog.every(item => !item.topicId) &&
+         !state.milestones.some(milestone => milestone.done) &&
+         !state.modules.some(module => module.done || (module.notes || "").trim());
+}
+
+async function adoptRemote(rowCount) {
+  if (!rowCount || !untouched()) return false;
+
+  for (const collection of COLLECTIONS) {
+    state[collection] = [];
+    graves.get(collection).clear();
+    if (state.storageWorks) await dbClear(collection).catch(e => console.error(e));
+  }
+
+  notify();
+  return true;
 }
 
 /* Everything local, for the first push to an empty cloud and for the

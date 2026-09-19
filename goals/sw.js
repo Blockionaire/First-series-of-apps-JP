@@ -8,13 +8,13 @@
    caches the app itself.
    ===================================================================== */
 
-const CACHE = "goals-v1";
+const CACHE = "goals-v2";
 
 const SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./firebase-config.js",
+  "./supabase-config.js",
   "./css/app.css",
   "./js/app.js",
   "./js/store.js",
@@ -62,7 +62,7 @@ self.addEventListener("fetch", event => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  if (url.origin !== location.origin) return;   // Firebase talks for itself
+  if (url.origin !== location.origin) return;   // Supabase talks for itself
 
   event.respondWith(
     fetch(request)

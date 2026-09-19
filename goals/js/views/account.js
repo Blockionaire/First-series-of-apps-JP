@@ -1,7 +1,7 @@
 /* =====================================================================
    GOALS — signing in
    =====================================================================
-   Only ever shown when firebase-config.js has a project AND asks for
+   Only ever shown when supabase-config.js has a project AND asks for
    an account. Without that configuration this screen never appears and
    the app belongs to the device.
    ===================================================================== */
@@ -79,15 +79,7 @@ export function mount(root) {
   });
 }
 
-/* Firebase error codes are not sentences. */
-function readable(e) {
-  const code = String(e && e.code || "");
-  if (code.includes("invalid-credential") || code.includes("wrong-password")) return "That email and password do not match.";
-  if (code.includes("user-not-found")) return "No account with that email yet.";
-  if (code.includes("email-already-in-use")) return "There is already an account with that email.";
-  if (code.includes("weak-password")) return "Pick a password of at least six characters.";
-  if (code.includes("invalid-email")) return "That does not look like an email address.";
-  if (code.includes("too-many-requests")) return "Too many attempts. Wait a minute and try again.";
-  if (code.includes("network")) return "No connection.";
-  return esc(e && e.message ? e.message : "Something went wrong.");
+/* The sync layer already turns Supabase's JSON into sentences. */
+function readable(error) {
+  return esc(error && error.message ? error.message : "Something went wrong.");
 }
