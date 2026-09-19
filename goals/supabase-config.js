@@ -10,34 +10,37 @@
      2. Open SQL Editor → New query, paste in the whole of
         supabase.sql from this folder, and press Run. That makes the
         table and the rules that keep your rows yours.
-     3. Go to Project Settings → API and copy two things:
-          • Project URL        → url
-          • anon / public key  → anonKey
+     3. Go to Project Settings → API keys and copy two things:
+          • Project URL          → url
+          • publishable key      → anonKey
      4. Paste them below, in place of `null`.
      5. Under Authentication → Providers, make sure Email is on. For a
         personal app it is easier to switch "Confirm email" off, so a
         new account can sign in straight away.
 
+   This project may hold other apps. Everything this one creates is
+   prefixed `goals_`, so it cannot collide with theirs, and the policies
+   in supabase.sql scope every row to the account that wrote it.
+
    The anon key belongs in a web app and is not a password: every
    request it makes still has to pass the row-level security policies
    from supabase.sql, which only ever return your own rows.
 
-   NEVER put the `service_role` key here. That one bypasses every
-   policy, and this file is public the moment it is pushed.
+   NEVER put a secret key here — `sb_secret_…`, or the older
+   `service_role` one. Those bypass every policy, and this file is
+   public the moment it is pushed.
    ===================================================================== */
 
 window.GOALS_CONFIG = {
 
-  supabase: null,
-
-  /* What it looks like once filled in:
-
   supabase: {
-    url: "https://abcdefghijklmno.supabase.co",
-    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…"
-  },
+    url: "https://dqwkbtsstvakcvlnwvwk.supabase.co",
 
-  */
+    /* The publishable key. It belongs in a web app: every request it
+       makes still has to pass the row-level security policies from
+       supabase.sql, which only ever return your own rows. */
+    anonKey: "sb_publishable_3XXbckuhutQNsEimUOBjPg_n4ag9IG-",
+  },
 
   /* With a cloud configured, should the app insist on an account?
      Leave this off and the app stays usable offline before signing in;

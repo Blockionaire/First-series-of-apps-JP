@@ -4,6 +4,11 @@
 -- Paste this whole file into Supabase → SQL Editor → New query and
 -- press Run. It is safe to run twice.
 --
+-- Everything here is prefixed `goals_`, because this project may hold
+-- other apps: a table called `records` could already belong to one of
+-- them, and `create table if not exists` would then quietly do nothing
+-- while this app wrote into their rows.
+--
 -- One table, one row per document, exactly the shape the app already
 -- keeps on the device:
 --
@@ -20,20 +25,19 @@
 -- you deleted something would cheerfully put it back.
 -- =====================================================================
 
-create table if not exists public.records (
+create table if not exists public.goals_records (
   user_id    uuid    not null references auth.users on delete cascade,
   collection text    not null,
   id         text    not null,
   data       jsonb   not null,
   updated    bigint  not null default 0,
   deleted    boolean not null default false,
-  synced_at  timestamptz not null default now(),
   primary key (user_id, collection, id)
 );
 
 -- Pulling "everything newer than X" is the only query the app makes.
-create index if not exists records_user_updated_idx
-  on public.records (user_id, updated);
+create index if not exists goals_records_user_updated_idx
+  on public.goals_records (user_id, updated);
 
 -- ---------------------------------------------------------------------
 -- The part that actually protects your data.
@@ -41,32 +45,15 @@ create index if not exists records_user_updated_idx
 -- Row-level security runs at Supabase, not in the browser, so it holds
 -- even for someone poking at the API with your public anon key.
 -- ---------------------------------------------------------------------
-alter table public.records enable row level security;
+alter table public.goals_records enable row level security;
 
-drop policy if exists "records are private to their owner" on public.records;
+drop policy if exists "goals records are private to their owner" on public.goals_records;
 
-create policy "records are private to their owner"
-  on public.records
+create policy "goals records are private to their owner"
+  on public.goals_records
   for all
   to authenticated
   using      (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
 -- Nobody signed in gets nothing: no policy for the anon role at all.
-
--- Keep synced_at honest on every write.
-create or replace function public.touch_synced_at()
-returns trigger
-language plpgsql
-as $$
-begin
-  new.synced_at = now();
-  return new;
-end;
-$$;
-
-drop trigger if exists records_touch_synced_at on public.records;
-
-create trigger records_touch_synced_at
-  before insert or update on public.records
-  for each row execute function public.touch_synced_at();

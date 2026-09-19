@@ -12,7 +12,8 @@
    it keeps this app what it has been all along — one folder of files
    with no build step and nothing loaded from a CDN.
 
-   Everything lives in one table, `records`, one row per document:
+   Everything lives in one table, `goals_records`, one row per document
+   — prefixed, because the project may hold other apps too:
 
        user_id | collection | id | data (jsonb) | updated | deleted
 
@@ -276,7 +277,7 @@ export async function pull({ full = false } = {}) {
 
   const since = full ? 0 : watermark;
   const rows = await request(
-    `/rest/v1/records?select=collection,id,data,updated,deleted` +
+    `/rest/v1/goals_records?select=collection,id,data,updated,deleted` +
     `&updated=gt.${since}&order=updated.asc&limit=10000`);
 
   sync.lastPull = Date.now();
@@ -326,7 +327,7 @@ async function write(pairs) {
       deleted: Boolean(record.deleted),
     }));
 
-    await request("/rest/v1/records", {
+    await request("/rest/v1/goals_records", {
       method: "POST",
       body: rows,
       headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
@@ -385,7 +386,7 @@ function readable(status, detail) {
   if (status === 422 && message.includes("password")) return "Pick a password of at least six characters.";
   if (status === 400 && message.includes("email")) return "That does not look like an email address.";
   if (status === 401) return "Not signed in.";
-  if (status === 404) return "The records table is missing — run supabase.sql in the SQL editor.";
+  if (status === 404) return "The goals_records table is missing — run supabase.sql in the SQL editor.";
   if (status === 429) return "Too many attempts. Wait a minute and try again.";
   if (status >= 500) return "Supabase is not answering right now.";
   return `Something went wrong (${status}).`;
