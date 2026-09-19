@@ -21,17 +21,20 @@ export default async function AdminPage() {
   if (!user || user.role !== "admin") redirect("/login?next=/admin");
 
   const s = sql();
-  const statSpecs: [string, string][] = [
-    ["Members (STAI+)", "SELECT COUNT(*) n FROM users WHERE plan='plus'"],
-    ["Free accounts", "SELECT COUNT(*) n FROM users WHERE plan='free'"],
-    ["Brief subscribers", "SELECT COUNT(*) n FROM newsletter"],
-    ["Training enquiries", "SELECT COUNT(*) n FROM enquiries"],
-    ["Assessments run", "SELECT COUNT(*) n FROM assessments"],
-    ["Published articles", "SELECT COUNT(*) n FROM articles WHERE status='published'"],
-    ["Published prompts", "SELECT COUNT(*) n FROM prompts WHERE status='published'"],
+  // Every tile goes somewhere. A number with no way through to the rows behind
+  // it tells you that something happened and then strands you, which is what
+  // these were before the register existed.
+  const statSpecs: [string, string, string][] = [
+    ["Members (STAI+)", "SELECT COUNT(*) n FROM users WHERE plan='plus'", "/admin/people?d=accounts&plan=plus"],
+    ["Free accounts", "SELECT COUNT(*) n FROM users WHERE plan='free'", "/admin/people?d=accounts&plan=free"],
+    ["Brief subscribers", "SELECT COUNT(*) n FROM newsletter", "/admin/people?d=newsletter"],
+    ["Training enquiries", "SELECT COUNT(*) n FROM enquiries", "/admin/people?d=training-enquiries"],
+    ["Assessments run", "SELECT COUNT(*) n FROM assessments", "/admin/people?d=assessments"],
+    ["Published articles", "SELECT COUNT(*) n FROM articles WHERE status='published'", "/admin/content"],
+    ["Published prompts", "SELECT COUNT(*) n FROM prompts WHERE status='published'", "/admin/prompts"],
   ];
   const stats = await Promise.all(
-    statSpecs.map(async ([label, query]) => ({ label, n: await count(query) }))
+    statSpecs.map(async ([label, query, href]) => ({ label, href, n: await count(query) }))
   );
   const founding = await foundingStatus();
 
@@ -45,8 +48,12 @@ export default async function AdminPage() {
     status: string;
     created_at: string;
   }>(
-    "SELECT id, name, email, firm, programme, seats, status, created_at FROM enquiries ORDER BY id DESC LIMIT 12"
+    // Five, not twelve. These are a glance at what just came in; the full,
+    // filterable, exportable lists are in the register, one click away.
+    "SELECT id, name, email, firm, programme, seats, status, created_at FROM enquiries ORDER BY id DESC LIMIT 5"
   );
+  const enquiriesTotal = await count("SELECT COUNT(*) n FROM enquiries");
+  const firmEnquiriesTotal = await count("SELECT COUNT(*) n FROM firm_enquiries");
 
   const firmEnquiries = await s.all<{
     id: number;
@@ -60,7 +67,7 @@ export default async function AdminPage() {
     seats: string;
     created_at: string;
   }>(
-    "SELECT id, name, email, firm, role, firm_size, jurisdiction, interests, seats, created_at FROM firm_enquiries ORDER BY id DESC LIMIT 12"
+    "SELECT id, name, email, firm, role, firm_size, jurisdiction, interests, seats, created_at FROM firm_enquiries ORDER BY id DESC LIMIT 5"
   );
 
   // The demand signal: what firms actually ask for decides build order.
@@ -98,13 +105,16 @@ export default async function AdminPage() {
           <h1 className="f-display mt-2 text-4xl text-cream-100">The desk</h1>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link href="/admin/growth" className="btn btn-ghost">
+          <Link href="/admin/people" className="btn btn-ghost btn-sm">
+            Register
+          </Link>
+          <Link href="/admin/growth" className="btn btn-ghost btn-sm">
             Growth
           </Link>
-          <Link href="/admin/prompts" className="btn btn-ghost">
+          <Link href="/admin/prompts" className="btn btn-ghost btn-sm">
             Prompt library
           </Link>
-          <Link href="/admin/content" className="btn btn-primary">
+          <Link href="/admin/content" className="btn btn-primary btn-sm">
             Content editor
           </Link>
         </div>
@@ -112,12 +122,16 @@ export default async function AdminPage() {
 
       <section className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map((s) => (
-          <div key={s.label} className="border p-4 rule">
+          <Link
+            key={s.label}
+            href={s.href}
+            className="border p-4 transition-colors rule hover:border-[var(--line-strong)]"
+          >
             <p className="f-mono text-3xl font-bold tabular-nums text-cream-100">{s.n}</p>
             <p className="f-label mt-1" style={{ color: "var(--ink-faint)" }}>
               {s.label}
             </p>
-          </div>
+          </Link>
         ))}
       </section>
 
@@ -164,9 +178,14 @@ export default async function AdminPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="f-label border-b pb-2 rule-strong" style={{ color: "var(--ink-faint)" }}>
-          Firm enquiries
-        </h2>
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b pb-2 rule-strong">
+          <h2 className="f-label" style={{ color: "var(--ink-faint)" }}>
+            Firm enquiries — latest {Math.min(5, firmEnquiriesTotal)} of {firmEnquiriesTotal}
+          </h2>
+          <Link href="/admin/people?d=firm-enquiries" className="f-label text-cream-400 hover:text-cream-100">
+            See all →
+          </Link>
+        </div>
         <div className="overflow-x-auto">
           <table className="mt-2 w-full min-w-[48rem] text-sm">
             <thead>
@@ -229,9 +248,14 @@ export default async function AdminPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="f-label border-b pb-2 rule-strong" style={{ color: "var(--ink-faint)" }}>
-          Training enquiries
-        </h2>
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b pb-2 rule-strong">
+          <h2 className="f-label" style={{ color: "var(--ink-faint)" }}>
+            Training enquiries — latest {Math.min(5, enquiriesTotal)} of {enquiriesTotal}
+          </h2>
+          <Link href="/admin/people?d=training-enquiries" className="f-label text-cream-400 hover:text-cream-100">
+            See all →
+          </Link>
+        </div>
         <div className="overflow-x-auto">
           <table className="mt-2 w-full min-w-[44rem] text-sm">
             <thead>
