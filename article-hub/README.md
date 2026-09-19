@@ -36,73 +36,33 @@ Disconnect this browser*.
 direct wilt kunnen inloggen na het aanmaken van een account.
 
 **2. De tabellen.** Alles staat klaar in [`supabase-setup.sql`](supabase-setup.sql) — plak
-de inhoud daarvan in de SQL Editor en draai het in één keer. Dit is wat erin zit:
+de inhoud daarvan in de SQL Editor en draai het in één keer. Dat maakt drie tabellen aan:
 
-```sql
-create table folders (
-  id         uuid primary key,
-  user_id    uuid not null references auth.users on delete cascade,
-  name       text,
-  parent_id  uuid references folders on delete cascade,
-  created_at timestamptz,
-  updated_at timestamptz
-);
+| Tabel | Waarvoor |
+|---|---|
+| `hub_folders` | je mappen, met submappen |
+| `hub_articles` | de artikelen zelf, inclusief sterren |
+| `hub_annotations` | markeringen en notities |
 
-create table articles (
-  id           uuid primary key,
-  user_id      uuid not null references auth.users on delete cascade,
-  title        text,
-  publisher    text,
-  author       text,
-  published_on text,
-  url          text,
-  body         text,
-  status       text,
-  folder_id    uuid references folders on delete set null,
-  images       jsonb,
-  read_at      timestamptz,
-  created_at   timestamptz,
-  updated_at   timestamptz
-);
-
-create table annotations (
-  id             uuid primary key,
-  user_id        uuid not null references auth.users on delete cascade,
-  article_id     uuid references articles on delete cascade,
-  block_index    int,
-  start_offset   int,
-  end_offset     int,
-  quote          text,
-  color          text,
-  note           text,
-  para           boolean,
-  grp            text,
-  note_at        timestamptz,
-  note_edited_at timestamptz,
-  created_at     timestamptz,
-  updated_at     timestamptz
-);
-```
+Alles heet `hub_*` zodat dit project ook je andere apps kan herbergen zonder dat de namen
+botsen — `goals_` en `ovs_` doen hetzelfde. Het script is veilig om nog eens te draaien:
+het gebruikt overal `if not exists`.
 
 `published_on` is bewust **text** en geen `date`: laat je het datumveld leeg, dan stuurt de
 app een lege tekst mee en zou een echte datumkolom het artikel weigeren.
 
-> Draaide je dit script al eerder, vóórdat de sterren bestonden? Dan hoef je alleen de
-> kolom toe te voegen: `alter table articles add column if not exists rating smallint
-> check (rating between 1 and 5);` — die regel staat ook onderin het SQL-bestand.
-
 **3. Alles achter slot.** Zonder dit kan iedereen met de anon-sleutel bij je artikelen:
 
 ```sql
-alter table folders     enable row level security;
-alter table articles    enable row level security;
-alter table annotations enable row level security;
+alter table public.hub_folders     enable row level security;
+alter table public.hub_articles    enable row level security;
+alter table public.hub_annotations enable row level security;
 
-create policy "eigen mappen"      on folders     for all
+create policy "eigen mappen" on public.hub_folders for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "eigen artikelen"   on articles    for all
+create policy "eigen artikelen" on public.hub_articles for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "eigen markeringen" on annotations for all
+create policy "eigen markeringen" on public.hub_annotations for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 ```
 
@@ -127,7 +87,7 @@ create policy "eigen verwijderen" on storage.objects for delete to authenticated
   using (bucket_id = 'article-images' and (storage.foldername(name))[1] = auth.uid()::text);
 ```
 
-**6. Live meekijken (optioneel).** Zet onder *Database → Replication* de drie tabellen aan
+**6. Live meekijken (optioneel).** Zet onder *Database → Replication* de drie `hub_`-tabellen aan
 in de `supabase_realtime` publicatie. Dan ziet een tweede geopend tabblad wijzigingen direct.
 Zonder dit werkt alles gewoon, maar ververst de app pas als je terugkeert naar het tabblad.
 

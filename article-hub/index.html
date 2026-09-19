@@ -1044,11 +1044,11 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
   // ---------- beoordeling ----------
   // Wie het setup-script draaide voordat de sterren bestonden, mist de kolom.
   // PostgREST meldt dat via de schema-cache; zeg dan meteen wat de oplossing is.
-  const RATING_SQL = 'alter table articles add column if not exists rating smallint check (rating between 1 and 5);';
+  const RATING_SQL = 'alter table hub_articles add column if not exists rating smallint check (rating between 1 and 5);';
   function schemaHint(e){
     const m = (e && e.message) || '';
     return /rating/i.test(m) && /(schema cache|column|does not exist|PGRST204)/i.test(m)
-      ? 'Your articles table has no rating column yet. Run this in the Supabase SQL Editor: ' + RATING_SQL
+      ? 'Your hub_articles table has no rating column yet. Run this in the Supabase SQL Editor: ' + RATING_SQL
       : '';
   }
   const RATE_WORD = ['', 'Poor', 'Meh', 'Okay', 'Good', 'Excellent'];
@@ -1833,17 +1833,17 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
   let sb = null, user = null, cfg = null;
   const TABLES = {
     articles: {
-      table: 'articles',
+      table: 'hub_articles',
       out: {folderId: 'folder_id', readAt: 'read_at', createdAt: 'created_at', updatedAt: 'updated_at', date: 'published_on'},
       cols: ['title', 'publisher', 'author', 'date', 'url', 'body', 'status', 'rating', 'folderId', 'images', 'readAt', 'createdAt', 'updatedAt']
     },
     folders: {
-      table: 'folders',
+      table: 'hub_folders',
       out: {parentId: 'parent_id', createdAt: 'created_at', updatedAt: 'updated_at'},
       cols: ['name', 'parentId', 'createdAt', 'updatedAt']
     },
     annotations: {
-      table: 'annotations',
+      table: 'hub_annotations',
       out: {articleId: 'article_id', b: 'block_index', s: 'start_offset', e: 'end_offset', group: 'grp',
             noteAt: 'note_at', noteEditedAt: 'note_edited_at', createdAt: 'created_at', updatedAt: 'updated_at'},
       cols: ['articleId', 'b', 's', 'e', 'quote', 'color', 'note', 'para', 'group', 'noteAt', 'noteEditedAt', 'createdAt', 'updatedAt']
@@ -1941,9 +1941,9 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
 
   async function loadAll(){
     const [f, a, n] = await Promise.all([
-      sb.from('folders').select('*'),
-      sb.from('articles').select('*'),
-      sb.from('annotations').select('*')
+      sb.from(TABLES.folders.table).select('*'),
+      sb.from(TABLES.articles.table).select('*'),
+      sb.from(TABLES.annotations.table).select('*')
     ]);
     for (const r of [f, a, n]) if (r.error) throw r.error;
     cache.folders = f.data.map(r => fromRow('folders', r));
