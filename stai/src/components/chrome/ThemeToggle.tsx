@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 
 /**
- * Dark/light switch in the system bar. The server renders the correct theme
- * from the `stai_theme` cookie (no flash); this just flips the attribute and
- * persists the choice.
+ * Dark/light switch, sized to sit in the header row beside the Menu button.
+ * The server renders the correct theme from the `stai_theme` cookie (no
+ * flash); this just flips the attribute and persists the choice.
+ *
+ * On mobile only the icon shows. On desktop the label reserves its width
+ * up front, so the placeholder that renders before mount cannot shove the
+ * account links sideways when the real label arrives.
  */
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<"dark" | "light" | null>(null);
@@ -26,9 +30,9 @@ export default function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
-      className="f-mono inline-flex items-center gap-1.5 border px-2 py-0.5 text-[0.6rem] font-semibold tracking-[0.14em] uppercase rule text-cream-400 transition-colors hover:border-[var(--line-strong)] hover:text-cream-100"
+      className="f-mono inline-flex items-center gap-1.5 border px-2.5 py-2 text-[0.7rem] font-semibold tracking-[0.14em] uppercase rule-strong text-cream-400 transition-colors hover:border-[var(--line-strong)] hover:text-cream-100"
     >
-      <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" className="shrink-0">
+      <svg width="12" height="12" viewBox="0 0 10 10" aria-hidden="true" className="shrink-0">
         {theme === "light" ? (
           /* moon */
           <path d="M8.4 6.1A3.9 3.9 0 0 1 3.9 1.6a4 4 0 1 0 4.5 4.5Z" fill="currentColor" />
@@ -40,7 +44,9 @@ export default function ThemeToggle() {
           </>
         )}
       </svg>
-      <span className="hidden sm:inline">{theme === null ? "…" : theme === "light" ? "Dark" : "Light"}</span>
+      <span className="hidden min-w-[2.4rem] text-left lg:inline-block">
+        {theme === null ? "" : theme === "light" ? "Dark" : "Light"}
+      </span>
     </button>
   );
 }

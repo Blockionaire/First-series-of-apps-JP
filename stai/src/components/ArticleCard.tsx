@@ -79,7 +79,19 @@ export function RowCard({ a }: { a: Article }) {
           {fmtDate(a.published_at).slice(0, 6)}
         </span>
         <span className="min-w-0">
-          <span className="block truncate text-[0.95rem] font-medium text-cream-200 transition-colors group-hover:text-cream-100">
+          {/* Wraps freely — no truncate, no line clamp.
+              This used to be `truncate`, which on a phone left about half a
+              headline: "the compliance stack conv". Worse, `truncate` implies
+              `white-space: nowrap`, and a nowrap child inside a bare `fr`
+              grid track raises that track's minimum to the full sentence
+              width — so instead of clipping the title it stretched the whole
+              homepage 121px past the screen edge.
+              A 2-line clamp was the obvious replacement and it is wrong too:
+              measured at 320px, "Vendor due diligence for AI tools: the
+              twelve questions" needs three lines, so the clamp went straight
+              back to hiding the end of a headline. Row heights in a wire rail
+              may vary; a title the reader cannot finish may not. */}
+          <span className="block text-[0.95rem] font-medium text-cream-200 transition-colors group-hover:text-cream-100">
             {a.title}
             {a.premium && (
               <span className="ml-2 align-middle">

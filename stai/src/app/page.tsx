@@ -125,7 +125,15 @@ export default async function Home() {
           </Link>
         </div>
 
-        <div className="mt-8 grid gap-12 lg:grid-cols-[1.6fr_1fr]">
+        {/* `minmax(0, …)` on every track, not a bare `1fr`.
+            A bare `fr` track carries an automatic minimum of min-content, so
+            it can never be narrower than its widest unbreakable child — and a
+            grid item cannot shrink a track the way a flex item shrinks. Any
+            `white-space: nowrap` descendant then silently widens the whole
+            page instead of being clipped. That is exactly what happened here:
+            the single mobile column measured 495px inside a 358px container
+            and dragged the document 121px past the screen edge. */}
+        <div className="mt-8 grid gap-12 grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <div>
             {lead && <LeadCard a={lead} />}
             <div className="mt-12 grid gap-8 sm:grid-cols-3">
