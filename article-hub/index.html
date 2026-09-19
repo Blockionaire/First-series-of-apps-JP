@@ -2148,7 +2148,10 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     gateErr(''); gateBusy(true); $('authGo').disabled = true;
     try {
       const {data, error} = signUpMode
-        ? await sb.auth.signUp({email, password})
+        // Expliciete redirect, net als bij het herstellen van een wachtwoord.
+        // Zo hangt deze app nergens af van de projectbrede Site URL, die in een
+        // project met meer apps aan een van de andere apps toebehoort.
+        ? await sb.auth.signUp({email, password, options: {emailRedirectTo: appUrl()}})
         : await sb.auth.signInWithPassword({email, password});
       if (error) throw error;
       if (!data.session) { gateBusy(false); $('authGo').disabled = false; return gateErr('Confirm your email address through the link Supabase sent you, then sign in.'); }

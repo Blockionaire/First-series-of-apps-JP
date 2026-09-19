@@ -66,16 +66,20 @@ create policy "eigen markeringen" on public.hub_annotations for all
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 ```
 
-**4. Waar de mails naartoe wijzen.** Ga naar *Authentication → URL Configuration*:
+**4. Waar de mails naartoe wijzen.** Ga naar *Authentication → URL Configuration* en zet
+onder **Redirect URLs** deze regel erbij:
 
-| Veld | Waarde |
-|---|---|
-| **Site URL** | `https://blockionaire.github.io/First-series-of-apps-JP/article-hub/` |
-| **Redirect URLs** | `https://blockionaire.github.io/First-series-of-apps-JP/article-hub/**` |
+```
+https://blockionaire.github.io/First-series-of-apps-JP/article-hub/**
+```
 
-Sla je dit over, dan staat de Site URL nog op de standaard `http://localhost:3000` en
-komt elke herstelmail uit op een adres waar niets draait — *deze pagina is niet
-bereikbaar*. Draai je de app ergens anders, zet dat adres er dan bij.
+Dat is een toelatingslijst: er iets aan toevoegen kan niets stukmaken.
+
+> ⚠️ **Laat Site URL met rust** als dit project ook je andere apps bedient. Die instelling
+> geldt voor het hele project, en apps die geen eigen adres meesturen — Goals doet dat niet —
+> sturen hun bevestigings- en herstelmails juist naar die Site URL. Verzet je hem, dan komen
+> die mails bij Article Hub uit. Article Hub stuurt zowel bij registreren als bij wachtwoord
+> herstellen zijn eigen adres mee, en heeft Site URL dus niet nodig.
 
 **5. Afbeeldingen.** Maak onder *Storage* een bucket met de naam **`article-images`** en zet
 hem op **public** — de app laadt plaatjes via een publieke URL. Uploaden mag alleen jij:

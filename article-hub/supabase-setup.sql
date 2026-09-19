@@ -96,10 +96,14 @@ create policy "eigen verwijderen" on storage.objects for delete to authenticated
 
 -- ------------------------------------------------------------ met de hand
 -- 1. Authentication -> Providers -> Email aanzetten.
--- 2. Authentication -> URL Configuration:
---      Site URL      https://blockionaire.github.io/First-series-of-apps-JP/article-hub/
---      Redirect URLs https://blockionaire.github.io/First-series-of-apps-JP/article-hub/**
---    Zonder dit wijzen de mails naar localhost en loopt 'wachtwoord vergeten' dood.
+-- 2. Authentication -> URL Configuration -> Redirect URLs: voeg toe
+--      https://blockionaire.github.io/First-series-of-apps-JP/article-hub/**
+--    Die lijst is een toelatingslijst: erbij zetten kan niets stukmaken.
+--    LAAT Site URL MET RUST als dit project ook andere apps bedient. Die
+--    instelling geldt projectbreed, en apps die geen eigen redirect meesturen
+--    (zoals Goals) sturen hun mails juist daarheen. Article Hub stuurt bij
+--    zowel registreren als wachtwoord herstellen zijn eigen adres mee en
+--    heeft Site URL dus niet nodig.
 -- 3. Optioneel, Database -> Replication: zet hub_folders, hub_articles en
 --    hub_annotations in de publicatie supabase_realtime voor live meekijken
 --    in een tweede tabblad.
