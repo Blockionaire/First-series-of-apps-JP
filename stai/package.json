@@ -1,0 +1,61 @@
+{
+  "name": "stai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "rm -rf .next && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --test-concurrency=1 \"tests/*.test.mjs\"",
+    "test:paywall": "node --test tests/production-paywall.test.mjs",
+    "seed:generate": "node scripts/generate-seed.mjs && node scripts/sync-sql.mjs",
+    "db:reset": "rm -rf .data && echo \"local database removed; next boot re-applies migrations and seeds\"",
+    "sql:sync": "node scripts/sync-sql.mjs",
+    "prebuild": "node scripts/sync-sql.mjs",
+    "cf:build": "rm -rf .next && STAI_BUILD_TARGET=workers opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare preview",
+    "cf:inspect": "node scripts/inspect-bundle.mjs",
+    "cf:dev": "wrangler dev",
+    "d1:migrate:local": "wrangler d1 migrations apply stai-production --local",
+    "d1:seed:local": "wrangler d1 execute stai-production --local --file=seeds/0001_verified_corpus.sql",
+    "d1:migrate:remote": "wrangler d1 migrations apply stai-production --remote",
+    "d1:seed:remote": "wrangler d1 execute stai-production --remote --file=seeds/0001_verified_corpus.sql --yes",
+    "d1:admin:remote": "node scripts/bootstrap-admin.mjs",
+    "cf:deploy": "npm run d1:migrate:remote && npm run d1:seed:remote && npm run d1:admin:remote && wrangler deploy",
+    "test:workers": "node --test --test-concurrency=1 \"tests/workers/*.test.mjs\"",
+    "verify": "npm run typecheck && npm run lint && npm run build && npm test && npm run cf:build && npm run test:workers"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.11.1",
+    "marked": "^18.0.5",
+    "next": "15.5.20",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "sanitize-html": "^2.17.6",
+    "stripe": "^22.3.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@opennextjs/cloudflare": "^1.20.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/sanitize-html": "^2.16.1",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.20",
+    "playwright": "^1.61.1",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "wrangler": "^4.132.0"
+  },
+  "engines": {
+    "node": ">=22.14.0 <23"
+  }
+}

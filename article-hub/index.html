@@ -1,0 +1,2216 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Article Hub JP</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f2f2f1; --panel:#ffffff; --ink:#1e2023; --muted:#6a6d72; --line:#dadbdd;
+  --accent:#2a2d31; --accent-ink:#ffffff; --accent-soft:#e9e9ea; --paper:#ffffff; --paper-ink:#1e2023; --field:#f7f7f7; --warn:#a2382a;
+  --unread:#2a2d31; --unread-soft:#e4e4e5; --read:#6a6d72; --read-soft:#f2f2f1; --star:#9c6f16;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Figtree,"Segoe UI",system-ui,sans-serif;font-size:15px;line-height:1.5}
+button{font:inherit;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 11px;font-size:.85rem}
+button:disabled{opacity:.5;cursor:default}
+.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.danger{color:var(--warn)}
+input,textarea{width:100%;font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+input:focus-visible,textarea:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+/* topbar */
+.top{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:10px 20px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:1.05rem;margin-right:auto;border:none;background:none;padding:2px 0;letter-spacing:-.01em;color:var(--ink)}
+.brand:hover{text-decoration:underline;text-underline-offset:3px}
+.toast{font-size:.85rem;color:var(--muted)}
+.toast.err{color:var(--warn)}
+
+/* library */
+.lib{max-width:860px;margin:0 auto;padding:28px 20px 60px}
+.lib h1{font-size:1.6rem;margin:0 0 4px}
+.lib .sub{color:var(--muted);margin:0 0 20px}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.tabs{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.tabs button{border:none;border-radius:0;padding:7px 14px}
+.tabs button[aria-pressed="true"]{background:var(--accent-soft);font-weight:600}
+.tabs .n{color:var(--muted);font-weight:400;margin-left:4px}
+.tools input{max-width:260px;margin-left:auto;background:var(--panel)}
+.tools select{width:auto;font-size:.85rem;padding:6px 8px;background:var(--panel);color:var(--ink)}
+.stars{display:inline-flex;gap:1px;align-items:center;flex:none}
+.stars button{border:none;background:none;padding:2px 1px;font-size:1.05rem;line-height:1;color:var(--line);border-radius:4px}
+.stars button.on{color:var(--star)}
+.stars button:not(:disabled):hover{color:var(--star);opacity:.7}
+.stars button:disabled{opacity:1;cursor:default}
+.list{list-style:none;margin:0;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 16px;border-top:1px solid var(--line)}
+.item:first-child{border-top:none}
+.item .t{font-weight:600;font-size:1.02rem;cursor:pointer;background:none;border:none;padding:0;text-align:left;color:var(--ink)}
+.item .t:hover{text-decoration:underline}
+.item.read .t{font-weight:500;color:var(--muted)}
+.item .m{font-size:.83rem;color:var(--muted);margin-top:2px}
+.item .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--unread)}
+.item.read .dot{background:transparent;border:1.5px solid var(--line)}
+@media (max-width:640px){.item{grid-template-columns:auto 1fr}.item .acts{grid-column:1/-1;justify-content:flex-start}.tools input{max-width:none;margin-left:0}}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 11px;font-size:.8rem;font-weight:600;border:1px solid transparent}
+.pill.unread{background:var(--unread-soft);color:var(--unread)}
+.pill.read{background:var(--read-soft);color:var(--read);border-color:var(--line)}
+.emptybox{padding:40px 20px;text-align:center;color:var(--muted)}
+
+/* mappen */
+.lib{max-width:1120px}
+.libgrid{display:grid;grid-template-columns:250px 1fr;gap:24px;align-items:start}
+@media (max-width:780px){.libgrid{grid-template-columns:1fr}}
+.tree{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 8px;position:sticky;top:70px}
+@media (max-width:780px){.tree{position:static}}
+.treehead{display:flex;align-items:center;justify-content:space-between;padding:2px 6px 8px}
+.treehead strong{font-size:.9rem}
+.tree ul{list-style:none;margin:0;padding:0}
+.tree ul ul{padding-left:14px}
+.node{display:flex;align-items:center;gap:2px;border-radius:6px}
+.node.sel{background:var(--accent-soft)}
+.node .tw{width:22px;height:26px;padding:0;border:none;background:none;color:var(--muted);font-size:.7rem;flex:none}
+.node .nm{flex:1;min-width:0;text-align:left;border:none;background:none;padding:5px 4px;display:flex;gap:6px;align-items:center}
+.node .nm span.l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.node.sel .nm{font-weight:600}
+.node .c{margin-left:auto;color:var(--muted);font-size:.78rem;font-weight:400;padding-left:6px}
+.tree .sep{border-top:1px solid var(--line);margin:6px 4px}
+.inline{display:flex;gap:6px;padding:4px 4px 6px 24px}
+.inline input{padding:5px 8px;font-size:.85rem}
+.inline button{flex:none}
+.crumbs{font-size:.85rem;color:var(--muted);margin:0 0 2px}
+.crumbs button{border:none;background:none;padding:0;color:var(--muted);text-decoration:underline;font-size:.85rem}
+.headrow{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:4px}
+.headrow h1{margin-right:auto}
+.folderacts{display:flex;gap:6px;flex-wrap:wrap}
+select{font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
+.readbar select{width:auto;max-width:220px;font-size:.85rem;padding:5px 8px;background:var(--panel)}
+
+/* editor */
+.edit{display:grid;grid-template-columns:minmax(320px,440px) 1fr;min-height:calc(100vh - 53px)}
+@media (max-width:880px){.edit{grid-template-columns:1fr}}
+.side{background:var(--panel);border-right:1px solid var(--line);padding:22px 22px 40px;display:flex;flex-direction:column;gap:16px}
+.restore{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;background:var(--field);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.85rem}
+.restore span{margin-right:auto;color:var(--muted)}
+.side h1{font-size:1.25rem;margin:0}
+label{display:block;font-weight:600;font-size:.85rem;margin-bottom:4px}
+.hint{font-weight:400;color:var(--muted)}
+textarea{min-height:280px;resize:vertical;font-size:.9rem;line-height:1.55}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.syntax{font-size:.8rem;color:var(--muted);margin:6px 0 0}
+.syntax code{background:var(--field);border:1px solid var(--line);border-radius:4px;padding:0 4px;font-size:.78rem}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:14px;text-align:center;color:var(--muted);font-size:.88rem;cursor:pointer}
+.drop .mb{display:none}
+@media (pointer:coarse){.drop .dk{display:none}.drop .mb{display:inline}.drop{padding:18px}}
+.drop.over{border-color:var(--accent);color:var(--ink)}
+.imgs{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:8px}
+.imgs li{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:6px}
+.imgs img{width:52px;height:40px;object-fit:cover;border-radius:3px}
+.imgs .tag{font-size:.85rem;font-weight:600}
+.imgs .up{font-weight:400;color:var(--muted)}
+.imgs .up.err{color:var(--warn)}
+.imgs .cap{font-size:.78rem;padding:4px 6px;margin-top:3px}
+.imgs .btns{display:flex;gap:4px}
+.status-choice{display:flex;gap:8px}
+.status-choice button[aria-pressed="true"].u{background:var(--unread-soft);color:var(--unread);border-color:var(--unread);font-weight:600}
+.status-choice button[aria-pressed="true"].r{background:var(--read-soft);color:var(--ink);border-color:var(--read);font-weight:600}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.actions .primary{flex:1;padding:10px 14px;font-size:.95rem}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* paper */
+.stage{padding:28px 20px 60px;overflow-x:auto}
+.paper{background:var(--paper);color:var(--paper-ink);max-width:680px;margin:0 auto;padding:56px 64px 64px;box-shadow:0 1px 3px rgba(0,0,0,.18);font-family:Newsreader,Georgia,serif;font-size:18px;line-height:1.62}
+@media (max-width:600px){.paper{padding:32px 22px}}
+.paper .pub{font-family:Figtree,system-ui,sans-serif;font-size:.8rem;color:#555;margin:0 0 10px}
+.paper h2.title{font-family:Figtree,system-ui,sans-serif;font-size:2rem;line-height:1.15;margin:0 0 10px;font-weight:700}
+.paper .meta{font-family:Figtree,system-ui,sans-serif;font-size:.82rem;color:#555;border-bottom:1px solid #ccc;padding-bottom:16px;margin-bottom:24px;overflow-wrap:anywhere}
+.paper .meta a{color:#2a2d31}
+.paper p{margin:0 0 .85em}
+.paper h3{font-family:Figtree,system-ui,sans-serif;font-size:1.15rem;margin:1.4em 0 .5em}
+.paper blockquote{margin:0 0 .85em;padding-left:14px;border-left:3px solid #bbb;font-style:italic}
+.paper ul{margin:0 0 .85em;padding-left:1.2em}
+.paper figure{margin:1.2em 0}
+.paper figure img{max-width:100%;display:block;margin:0 auto}
+.paper figcaption{font-size:.82rem;color:#555;text-align:center;margin-top:6px;font-family:Figtree,system-ui,sans-serif}
+.paper .missing{font-family:Figtree,system-ui,sans-serif;font-size:.8rem;color:#9a3b1f;border:1px dashed #9a3b1f;padding:8px;text-align:center}
+.empty{color:#888;font-style:italic}
+
+/* reader */
+.readbar{max-width:680px;margin:0 auto 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.readbar .sp{margin-right:auto;display:flex;align-items:center;gap:10px}
+.done{max-width:680px;margin:18px auto 0;text-align:center}
+.done button{padding:10px 18px;font-size:.95rem}
+
+/* markeringen en notities */
+.c-geel{background:#f6e27f}.c-groen{background:#c4e6b8}.c-blauw{background:#bcd7f2}.c-roze{background:#f4c6d6}.c-paars{background:#d9ccf0}
+.paper [data-b]{position:relative}
+.paper mark.hl{color:inherit;border-radius:2px;padding:1px 0;cursor:pointer;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.paper mark.nocolor{background:none;border-bottom:2px dotted #7c8a86}
+.paper mark.act,.paper .nt.act{outline:2px solid #2a2d31;outline-offset:2px}
+.paper .nt{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;padding:0;margin:0 1px 0 3px;vertical-align:-3px;border-radius:50%;border:1px solid #2a2d31;background:#ececed;color:#2a2d31}
+.paper .nt:hover{background:#2a2d31;color:#fff}
+.paper .nt svg{width:11px;height:11px}
+.paper .bn{position:absolute;left:-42px;top:3px;width:26px;height:26px;padding:0;display:flex;align-items:center;justify-content:center;border:1px solid #cfd6de;background:#fff;color:#5d6b7a;opacity:0;transition:opacity .15s}
+.paper .bn svg{width:13px;height:13px}
+.paper [data-b]:hover > .bn,.paper .bn:focus-visible{opacity:1}
+.paper li > .bn{left:-62px}
+@media (max-width:600px),(hover:none){.paper .bn{display:none}}
+.pop{position:absolute;z-index:30;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.2);padding:8px;font-size:.85rem;width:max-content;max-width:min(340px,calc(100vw - 16px))}
+.pop.wide{width:min(340px,calc(100vw - 16px))}
+.swatches{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.sw{width:26px;height:26px;border-radius:50%;padding:0;border:2px solid rgba(0,0,0,.12)}
+.sw[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--panel)}
+.pop .vsep{width:1px;align-self:stretch;background:var(--line);margin:0 2px}
+.pop .btnrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.pop .btnrow:first-child{margin-top:0}
+.pop textarea{min-height:100px;font-size:.9rem;margin:6px 0 0}
+.pop .q{color:var(--muted);font-style:italic;border-left:3px solid var(--line);padding-left:8px;margin:2px 2px 6px;max-height:4.6em;overflow:hidden}
+.pop .when{color:var(--muted);font-size:.78rem;margin:0 2px 2px;line-height:1.45}
+.pop .notetext{white-space:pre-wrap;overflow-wrap:anywhere;max-height:260px;overflow:auto;margin:2px 2px 4px;font-size:.92rem;line-height:1.5}
+.annlist{max-width:680px;margin:22px auto 0;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.annlist h2{font-size:1rem;margin:0 0 2px}
+.annlist .sub{color:var(--muted);font-size:.83rem;margin:0 0 8px}
+.annlist ul{list-style:none;margin:0;padding:0}
+.annlist li{display:flex;gap:8px;align-items:flex-start;border-top:1px solid var(--line);padding:8px 0}
+.annlist li:first-child{border-top:none}
+.annlist .ai{flex:1;display:flex;gap:10px;text-align:left;border:none;background:none;padding:2px 0;min-width:0}
+.annlist .bar{flex:none;width:5px;align-self:stretch;border-radius:3px}
+.annlist .bar.nocolor{background:none;border-left:2px dotted var(--muted)}
+.annlist .aq{display:block;font-family:Newsreader,Georgia,serif;font-size:.98rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.annlist .an{display:block;color:var(--muted);font-size:.83rem;margin-top:2px;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.annlist .an::before{content:"Notitie: ";font-weight:600;color:var(--ink)}
+.annlist .orph .aq{text-decoration:line-through;color:var(--muted)}
+
+/* drag to folders */
+.item{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.dnd .item{cursor:grab}
+.item.dragging{opacity:.4}
+body.dragging-on,body.dragging-on *{cursor:grabbing !important}
+.node.drop{background:var(--accent);}
+.node.drop .nm,.node.drop .c,.node.drop .tw{color:var(--accent-ink)}
+.ghost{position:fixed;z-index:40;pointer-events:none;background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:7px 12px;font-size:.85rem;font-weight:600;max-width:280px;box-shadow:0 8px 24px rgba(0,0,0,.25);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform:translate(14px,10px)}
+.ghost small{display:block;font-weight:400;opacity:.75}
+
+/* leesbalk: secundaire acties */
+.readbar .sec{display:contents}
+.moreBtn{display:none}
+.treetoggle{display:flex;align-items:center;gap:8px;border:none;background:none;padding:0;min-width:0;cursor:default}
+.treetoggle .cur,.treetoggle .chev{display:none}
+.dropsheet{position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -8px 28px rgba(0,0,0,.18);border-radius:14px 14px 0 0;padding:10px 12px calc(12px + env(safe-area-inset-bottom));max-height:55vh;overflow:auto}
+.dropsheet p{margin:0 4px 6px;font-size:.8rem;color:var(--muted)}
+.dropsheet ul{list-style:none;margin:0;padding:0}
+.dropsheet .nm{width:100%;text-align:left;border:1px solid var(--line);background:var(--field);padding:12px 12px;margin-top:6px;border-radius:8px;font-size:1rem}
+.dropsheet .node{display:block}
+.dropsheet .node.drop .nm{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+@media (max-width:780px){
+  .tree{padding:6px 8px}
+  .treehead{padding:4px 4px}
+  .treetoggle{flex:1;cursor:pointer;padding:6px 0}
+  .treetoggle .cur{display:block;color:var(--muted);font-size:.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .treetoggle .chev{display:block;margin-left:auto;color:var(--muted);transition:transform .15s}
+  .tree:not(.open) #treeBody{display:none}
+  .tree.open .chev{transform:rotate(180deg)}
+  .tree .node .nm{padding:9px 4px}
+  .tree .node .tw{height:36px;width:30px}
+  .libgrid{gap:16px}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  input,textarea,select{font-size:16px !important}
+  .top{padding:8px 14px;gap:8px;flex-wrap:nowrap}
+  .top button{padding:8px 12px}
+  .top .long{display:none}
+  /* De knoppen houden hun maat; de titel krimpt en krijgt beletselteken.
+     Anders duwt een lange titel Settings van het scherm af. */
+  .top>button:not(.brand){flex:none}
+  .brand{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+  .toast{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:45;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:10px 14px;box-shadow:0 6px 20px rgba(0,0,0,.25);font-size:.9rem}
+  .toast:empty{display:none}
+  .toast.err{background:var(--warn);color:#fff}
+  .lib{padding:16px 12px 48px}
+  .lib h1{font-size:1.35rem}
+  .tools{gap:8px}
+  .tabs{width:100%}
+  .tabs button{flex:1;padding:9px 6px}
+  .item{padding:14px 14px;gap:10px 12px}
+  .item .t{font-size:1.02rem;line-height:1.35}
+  .item .acts button{padding:8px 12px}
+  .folderacts{width:100%}
+  .stage{padding:12px 8px 40px}
+  .readbar{gap:6px;margin-bottom:10px}
+  .readbar button{padding:9px 12px}
+  .moreBtn{display:inline-block}
+  .readbar .sp{flex-basis:100%;margin-bottom:2px}
+  .readbar #readToggle{flex:1}
+  .readbar .sec{display:none;flex-basis:100%;gap:6px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px}
+  .readbar.more-open .sec{display:flex}
+  .readbar .sec select{max-width:none;width:100%;padding:9px 8px}
+  .readbar .sec button{flex:1}
+  .paper{padding:26px 18px 34px;font-size:18.5px;line-height:1.65;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+  .paper h2.title{font-size:1.55rem;line-height:1.2}
+  .paper .meta{margin-bottom:18px;padding-bottom:12px}
+  .paper figure{margin:1em -18px}
+  .annlist{margin-top:14px;padding:12px 14px}
+  .done{margin-top:14px}
+  .done button{width:100%;padding:13px}
+  .side{padding:16px 14px 28px}
+  .edit .row{grid-template-columns:1fr}
+  .actions .primary{padding:13px}
+  .stage .paper#preview{margin-top:0}
+}
+@media (pointer:coarse){
+  .stars button{font-size:1.3rem;padding:6px 3px}
+  .sw{width:36px;height:36px}
+  .swatches{gap:8px}
+  .pop{padding:10px}
+  .pop .btnrow button,.pop [data-act]{padding:9px 13px}
+  .paper .nt{width:24px;height:24px;vertical-align:-5px}
+  .paper .nt svg{width:13px;height:13px}
+}
+
+.gate{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;align-items:flex-start;justify-content:center;padding:8vh 16px 24px;overflow:auto}
+.gatebox{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 20px 20px}
+.gatebox h1{font-size:1.25rem;margin:0 0 10px}
+.gatebox .lead{margin:0 0 14px;color:var(--muted);font-size:.9rem;line-height:1.5}
+.gatebox label{display:block;font-weight:600;font-size:.85rem;margin:12px 0 4px}
+.gatebox input{width:100%}
+.gatebox .primary{width:100%;margin-top:16px;padding:12px}
+.gatebox .hint{color:var(--muted);font-size:.8rem;margin:10px 0 0;line-height:1.5}
+.gaterow{display:flex;gap:8px;margin-top:10px}
+.gaterow button{flex:1}
+.gateerr{margin:12px 0 0;color:var(--warn);font-size:.88rem;line-height:1.5}
+.gatenote{margin:12px 0 0;color:var(--muted);font-size:.88rem;line-height:1.5}
+.linkish{border:none;background:none;padding:0;color:var(--muted);font-size:.8rem;text-decoration:underline;text-underline-offset:2px}
+.linkish:hover{color:var(--ink)}
+.gateforgot{margin:10px 0 0;text-align:center}
+
+/* dark theme */
+[data-theme="dark"]{
+  --bg:#141517; --panel:#1c1e21; --ink:#e9e9e7; --muted:#9b9ea3; --line:#2f3236;
+  --accent:#e9e9e7; --accent-ink:#17181a; --accent-soft:#2a2d31; --paper:#1b1d1f; --paper-ink:#e9e9e7;
+  --field:#212427; --warn:#ef8676; --unread:#e9e9e7; --unread-soft:#2a2d31; --read:#9b9ea3; --read-soft:#232629; --star:#e0a944;
+}
+[data-theme="dark"] .paper{box-shadow:0 1px 2px rgba(0,0,0,.5)}
+[data-theme="dark"] .paper mark.hl{color:#17181a}
+[data-theme="dark"] .paper mark.nocolor{color:inherit;border-bottom-color:var(--muted)}
+[data-theme="dark"] .paper .nt{background:#2a2d31;color:var(--ink);border-color:#4a4e53}
+[data-theme="dark"] .paper .nt:hover{background:var(--ink);color:#17181a}
+[data-theme="dark"] .paper .bn{background:var(--panel);border-color:var(--line);color:var(--muted)}
+[data-theme="dark"] .annlist .bar.c-geel,[data-theme="dark"] .annlist .bar.c-groen,[data-theme="dark"] .annlist .bar.c-blauw,[data-theme="dark"] .annlist .bar.c-roze,[data-theme="dark"] .annlist .bar.c-paars{opacity:.85}
+/* settings */
+.setpage{max-width:620px;margin:0 auto;padding:26px 18px 60px}
+.setpage h1{font-size:1.5rem;margin:0 0 16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.card h2{font-size:1rem;margin:0 0 8px}
+.card p.small{color:var(--muted);font-size:.88rem;margin:0 0 12px;line-height:1.5;overflow-wrap:anywhere}
+.card label{display:block;font-weight:600;font-size:.85rem;margin:10px 0 4px}
+.card input{width:100%}
+.card .primary{margin-top:14px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.msg{font-size:.88rem;margin:10px 0 0}
+.msg.ok{color:var(--muted)}
+.msg.bad{color:var(--warn)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <button type="button" class="brand" id="brand" title="Back to your library">Article Hub JP</button>
+  <span class="toast" id="toast" role="status"></span>
+  <button id="navLib" hidden>Library</button>
+  <button class="primary" id="navNew">New<span class="long"> article</span></button>
+  <button id="navSet" hidden title="Profile &amp; settings">Settings</button>
+</header>
+
+<!-- ARCHIEF -->
+<section class="lib" id="viewLib">
+ <div class="libgrid">
+  <nav class="tree" aria-label="Mappen">
+    <div class="treehead"><button type="button" class="treetoggle" id="treeToggle" aria-expanded="false" aria-controls="treeBody"><strong>Folders</strong><span class="cur" id="treeCur"></span><span class="chev" aria-hidden="true">▾</span></button><button id="newRoot">New folder</button></div>
+    <div id="treeBody"><div id="tree"></div></div>
+  </nav>
+  <div>
+  <p class="crumbs" id="crumbs"></p>
+  <div class="headrow">
+    <h1 id="libTitle">Alle artikelen</h1>
+    <div class="folderacts" id="folderActs" hidden>
+      <button id="fSub">New subfolder</button>
+      <button id="fRename">Rename</button>
+      <button id="fDel" class="danger">Delete folder</button>
+    </div>
+  </div>
+  <div class="inline" id="fForm" hidden style="padding-left:0;max-width:420px">
+    <input id="fName" aria-label="Folder name"><button class="primary" id="fOk"></button><button id="fCancel">Cancel</button>
+  </div>
+  <p class="sub" id="libSub">Laden…</p>
+  <div class="tools">
+    <div class="tabs" role="group" aria-label="Filter by status">
+      <button data-f="all" aria-pressed="true">All<span class="n" id="cAll"></span></button>
+      <button data-f="unread" aria-pressed="false">To read<span class="n" id="cUnread"></span></button>
+      <button data-f="read" aria-pressed="false">Read<span class="n" id="cRead"></span></button>
+    </div>
+    <select id="rateFilter" aria-label="Filter by rating">
+      <option value="any">Any rating</option>
+      <option value="5">★★★★★ only</option>
+      <option value="4">★★★★ and up</option>
+      <option value="3">★★★ and up</option>
+      <option value="low">★★ and below</option>
+      <option value="none">Not rated yet</option>
+    </select>
+    <select id="sortBy" aria-label="Sort order">
+      <option value="new">Newest first</option>
+      <option value="old">Oldest first</option>
+      <option value="best">Highest rated</option>
+      <option value="worst">Lowest rated</option>
+    </select>
+    <input id="search" type="search" placeholder="Search by title, publisher or author" aria-label="Search">
+  </div>
+  <ul class="list" id="list"></ul>
+  </div>
+ </div>
+</section>
+
+<!-- EDITOR -->
+<section class="edit" id="viewEdit" hidden>
+  <aside class="side">
+    <h1 id="editHeading">New article</h1>
+    <div class="restore" id="restore" hidden><span>You have an unsaved draft.</span><button type="button" id="restoreBtn">Restore draft</button><button type="button" id="restoreDrop">Discard</button></div>
+    <div>
+      <label for="title">Title</label>
+      <input id="title" placeholder="Title of the article">
+    </div>
+    <div class="row">
+      <div><label for="publisher">Publisher</label><input id="publisher" placeholder="e.g. Dan Koe on X"></div>
+      <div><label for="date">Published on</label><input id="date" type="date"></div>
+    </div>
+    <div class="row">
+      <div><label for="author">Author <span class="hint">(optional)</span></label><input id="author"></div>
+      <div><label for="url">Source URL <span class="hint">(optional)</span></label><input id="url" type="url" placeholder="https://"></div>
+    </div>
+    <div>
+      <label for="body">Text</label>
+      <textarea id="body" placeholder="Paste the article text here…"></textarea>
+      <p class="syntax">Every line becomes a paragraph. <code># Heading</code> for a subheading, <code>- point</code> for a bullet, <code>&gt; quote</code> for a quote, <code>[image 1]</code> on its own line for an image.</p>
+    </div>
+    <div>
+      <label for="file">Images</label>
+      <div class="drop" id="drop" tabindex="0" role="button"><span class="dk">Drag images here, or click to choose</span><span class="mb">Tap to choose a photo or image</span></div>
+      <input id="file" type="file" accept="image/*" multiple class="visually-hidden">
+      <ul class="imgs" id="imgs"></ul>
+    </div>
+    <div>
+      <label for="folder">Folder</label>
+      <select id="folder"></select>
+    </div>
+    <div>
+      <label id="stLabel">Status</label>
+      <div class="status-choice" role="group" aria-labelledby="stLabel">
+        <button type="button" class="u" data-s="unread" aria-pressed="true">To read</button>
+        <button type="button" class="r" data-s="read" aria-pressed="false">Read</button>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="save" disabled>Save to library</button>
+      <button id="editPdf" disabled>PDF</button>
+    </div>
+    <div class="actions">
+      <button id="cancel">Cancel</button>
+    </div>
+  </aside>
+  <div class="stage"><article class="paper" id="preview" aria-label="Preview"></article></div>
+</section>
+
+<!-- LEZEN -->
+<section class="setpage" id="viewSet" hidden>
+  <h1>Profile &amp; settings</h1>
+  <div class="card">
+    <h2>Account</h2>
+    <p class="small">Signed in as <strong id="setMail"></strong></p>
+    <button id="setOut">Sign out</button>
+  </div>
+  <form class="card" id="pwForm" autocomplete="on">
+    <h2>Change password</h2>
+    <p class="small">Use at least 8 characters. You stay signed in on this device.</p>
+    <label for="pw1">New password</label>
+    <input id="pw1" type="password" autocomplete="new-password">
+    <label for="pw2">Repeat new password</label>
+    <input id="pw2" type="password" autocomplete="new-password">
+    <button class="primary" type="submit" id="pwGo">Update password</button>
+    <p class="msg" id="pwMsg" hidden role="status"></p>
+  </form>
+  <div class="card">
+    <h2>Appearance</h2>
+    <div class="seg" id="themeSeg" role="group" aria-label="Theme">
+      <button type="button" data-t="light" aria-pressed="false">Light</button>
+      <button type="button" data-t="dark" aria-pressed="false">Dark</button>
+      <button type="button" data-t="system" aria-pressed="false">System</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Database</h2>
+    <p class="small">Connected to <span id="setUrl"></span></p>
+    <button id="setDisconnect">Disconnect this browser</button>
+  </div>
+</section>
+
+<section class="stage" id="viewRead" hidden>
+  <div class="readbar">
+    <span class="sp"><span class="pill" id="readPill"></span><span id="readStars"></span></span>
+    <button id="readToggle"></button>
+    <button id="readMore" class="moreBtn" aria-expanded="false" aria-controls="readSec">More</button>
+    <div class="sec" id="readSec">
+      <select id="readFolder" aria-label="Folder"></select>
+      <button id="readPdf">Download PDF</button>
+      <button id="readEdit">Edit</button>
+      <button id="readDel" class="danger">Delete</button>
+    </div>
+  </div>
+  <article class="paper" id="reader"></article>
+  <section class="annlist" id="annList" aria-labelledby="annHead">
+    <h2 id="annHead">Highlights &amp; notes</h2>
+    <p class="sub" id="annSub"></p>
+    <ul id="annItems"></ul>
+  </section>
+  <div class="done"><button class="primary" id="readDone"></button></div>
+</section>
+<div class="pop" id="pop" role="dialog" aria-label="Annotation" hidden></div>
+<div class="gate" id="gate" hidden>
+  <div class="gatebox">
+    <h1>Article Hub JP</h1>
+    <form id="cfgForm" hidden autocomplete="on">
+      <p class="lead">Connect this page to your own Supabase project. These details stay in this browser.</p>
+      <label for="cfgUrl">Supabase project URL</label>
+      <input id="cfgUrl" type="url" placeholder="https://xxxxxxxx.supabase.co" required>
+      <label for="cfgKey">Anon key (publishable)</label>
+      <input id="cfgKey" type="text" placeholder="eyJhbGciOi..." required>
+      <button class="primary" type="submit">Connect</button>
+      <p class="hint">Find these in Supabase under Project Settings → API. Never use the service-role key here.</p>
+    </form>
+    <form id="authForm" hidden autocomplete="on">
+      <p class="lead" id="authLead">Sign in to your library.</p>
+      <label for="authMail">Email address</label>
+      <input id="authMail" type="email" autocomplete="username" required>
+      <label for="authPass">Password</label>
+      <input id="authPass" type="password" autocomplete="current-password" minlength="8" required>
+      <button class="primary" type="submit" id="authGo">Sign in</button>
+      <div class="gaterow">
+        <button type="button" id="authSwap">Create account</button>
+        <button type="button" id="cfgEdit">Other database</button>
+      </div>
+      <p class="gateforgot"><button type="button" class="linkish" id="authForgot">Forgot your password?</button></p>
+    </form>
+    <form id="recoverForm" hidden autocomplete="on">
+      <p class="lead">Choose a new password for <span id="recoverWho">your account</span>.</p>
+      <label for="recoverPass">New password</label>
+      <input id="recoverPass" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="recoverPass2">Repeat new password</label>
+      <input id="recoverPass2" type="password" autocomplete="new-password" minlength="8" required>
+      <button class="primary" type="submit" id="recoverGo">Save new password</button>
+    </form>
+    <p class="gateerr" id="gateErr" hidden role="alert"></p>
+    <p class="gatenote" id="gateNote" hidden role="status"></p>
+    <p class="hint" id="gateBusy" hidden>Working…</p>
+  </div>
+</div>
+<div class="dropsheet" id="dropSheet" hidden><p>Drop into a folder</p><ul id="dropList"></ul></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const fields = ['title','publisher','date','author','url','body'];
+
+  let db = null, assets = null, downloads = null;
+  let articles = [];           // {id, ...data}
+  let annotations = [];        // {id, articleId, b, s, e, quote, color, note, para, group}
+  let loaded = false;
+  let filter = 'all';
+  let rateFilter = 'any';
+  let sortBy = 'new';
+  let folders = [];            // {id, name, parentId}
+  let selFolder = 'all';       // 'all' | 'none' | folderId
+  let expanded = new Set();
+  let formMode = null;         // {type:'new', parentId} | {type:'rename', id}
+  try { expanded = new Set(JSON.parse(localStorage.getItem('leesarchief-open') || '[]')); } catch(e) {}
+  let view = 'lib';
+  let readingId = null;
+
+  // editor state
+  let editId = null;           // null = new article
+  let images = [];             // {n, caption, w, h, dataUrl?, assetId?}
+  let removedAssets = [];
+  let sessionUploads = new Set();   // uploaded during this editor session, not saved yet
+  let nextN = 1;
+  let lastCursor = 0;
+  let editStatus = 'unread';
+  let saving = false;
+
+  // ---------- helpers ----------
+  let toastTimer;
+  function toast(msg, err){
+    const t = $('toast'); t.textContent = msg; t.className = 'toast' + (err ? ' err' : '');
+    clearTimeout(toastTimer);
+    if (msg && !err) toastTimer = setTimeout(() => { t.textContent = ''; }, 3500);
+  }
+  function fmtDate(v){
+    if (!v) return '';
+    const d = new Date(v.length === 10 ? v + 'T12:00:00' : v);
+    return isNaN(d) ? v : d.toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
+  }
+  function fmtDateTime(v){
+    const d = new Date(v);
+    if (!v || isNaN(d)) return '';
+    return d.toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'}) + ' at ' + d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+  }
+  function metaLine(a){
+    return [a.author, a.date ? fmtDate(a.date) : ''].filter(Boolean).join(', ');
+  }
+  const imgSrc = im => im.dataUrl || (im.assetId ? blobUrl(im.assetId) : '');
+
+  function parse(text){
+    const blocks = [];
+    for (const raw of String(text || '').replace(/\r/g,'').split('\n')) {
+      const line = raw.trim();
+      if (!line) continue;
+      let m;
+      if ((m = line.match(/^\[(?:image|afbeelding)\s+(\d+)\]$/i))) blocks.push({type:'img', n:+m[1]});
+      else if ((m = line.match(/^#{1,3}\s+(.*)$/))) blocks.push({type:'h', text:m[1]});
+      else if ((m = line.match(/^[-•*]\s+(.*)$/))) blocks.push({type:'li', text:m[1]});
+      else if ((m = line.match(/^>\s*(.*)$/))) blocks.push({type:'q', text:m[1]});
+      else blocks.push({type:'p', text:line});
+    }
+    return blocks;
+  }
+
+
+  // ---------- annotations: rendering ----------
+  const COLORS = [['geel','Yellow'],['groen','Green'],['blauw','Blue'],['roze','Pink'],['paars','Purple']];
+  const NOTE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2.5h10v8l-3 3H3z"/><path d="M10 13.5v-3h3"/><path d="M5.5 6h5M5.5 8.5h3"/></svg>';
+  const PARA_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>';
+  const paraBtn = `<button type="button" class="bn" data-para title="Note on this paragraph" aria-label="Note on this paragraph">${PARA_ICON}</button>`;
+  const hasText = b => b && b.type !== 'img';
+  const colorOk = c => COLORS.some(x => x[0] === c);
+
+  // Re-anchors annotations onto the current text; falls back to searching for the quote after edits.
+  function anchorAll(blocks, anns){
+    const placed = new Map(), orphans = [];
+    for (const ann of anns) {
+      let pos = null;
+      const b = blocks[ann.b];
+      if (hasText(b) && ann.quote && b.text.slice(ann.s, ann.e) === ann.quote) pos = {b: ann.b, s: ann.s, e: ann.e};
+      else if (ann.quote) {
+        let best = null;
+        blocks.forEach((bl, i) => {
+          if (!hasText(bl)) return;
+          const k = bl.text.indexOf(ann.quote);
+          if (k >= 0 && (!best || Math.abs(i - ann.b) < Math.abs(best.b - ann.b))) best = {b: i, s: k, e: k + ann.quote.length};
+        });
+        if (best) pos = ann.para ? {b: best.b, s: 0, e: blocks[best.b].text.length} : best;
+        else if (ann.para) {
+          // paragraph note: fall back to a paragraph that starts with the same text
+          const head = ann.quote.slice(0, 20);
+          let j = -1;
+          blocks.forEach((bl, i) => { if (hasText(bl) && bl.text.startsWith(head) && (j < 0 || Math.abs(i - ann.b) < Math.abs(j - ann.b))) j = i; });
+          if (j >= 0) pos = {b: j, s: 0, e: blocks[j].text.length};
+        }
+      }
+      if (!pos) { orphans.push(ann); continue; }
+      if (!placed.has(pos.b)) placed.set(pos.b, []);
+      placed.get(pos.b).push({ann, s: pos.s, e: pos.e});
+    }
+    return {placed, orphans};
+  }
+  const byTime = (x, y) => String(x.ann.createdAt || '').localeCompare(String(y.ann.createdAt || ''));
+  function inline(text, list){
+    if (!list || !list.length) return esc(text);
+    const marks = list.filter(x => !x.ann.para);
+    const pts = [...new Set([0, text.length, ...marks.flatMap(x => [x.s, x.e])])].sort((a, b) => a - b);
+    let h = '';
+    const icons = e => list.filter(x => x.e === e && x.ann.note && (!x.ann.para || e === text.length))
+      .map(x => `<button type="button" class="nt" data-note="${esc(x.ann.id)}" title="View note" aria-label="View note">${NOTE_ICON}</button>`).join('');
+    for (let i = 0; i < pts.length - 1; i++) {
+      const s = pts[i], e = pts[i + 1];
+      const cover = marks.filter(x => x.s <= s && x.e >= e).sort(byTime).reverse();
+      const seg = esc(text.slice(s, e));
+      if (!cover.length) h += seg;
+      else {
+        const top = cover.find(x => colorOk(x.ann.color));
+        const cls = top ? 'c-' + top.ann.color : 'nocolor';
+        const ids = [...(top ? [top] : []), ...cover.filter(x => x !== top)].map(x => x.ann.id).join(' ');
+        h += `<mark class="hl ${cls}" data-ids="${esc(ids)}">${seg}</mark>`;
+      }
+      if (e !== text.length) h += icons(e);
+    }
+    return h + icons(text.length);
+  }
+
+  function paperHtml(a, imgs, placeholders, placed){
+    const blocks = parse(a.body);
+    let html = '';
+    if (a.publisher) html += `<p class="pub">${esc(a.publisher)}</p>`;
+    html += `<h2 class="title">${a.title ? esc(a.title) : (placeholders ? '<span class="empty">Title</span>' : '')}</h2>`;
+    const meta = metaLine(a);
+    const safeUrl = /^https?:\/\//i.test(a.url || '') ? a.url : '';
+    html += `<div class="meta">${meta ? esc(meta) : (placeholders ? '<span class="empty">Author and date</span>' : '')}${
+      safeUrl ? (meta || placeholders ? '<br>' : '') + `<a href="${esc(safeUrl)}" target="_blank" rel="noopener">${esc(safeUrl)}</a>` : ''}</div>`;
+    if (!blocks.length && placeholders) html += '<p class="empty">Your text appears here as soon as you paste it.</p>';
+    let inList = false;
+    blocks.forEach((b, i) => {
+      if (b.type !== 'li' && inList) { html += '</ul>'; inList = false; }
+      const T = () => placed ? inline(b.text, placed.get(i)) + paraBtn : esc(b.text);
+      const attr = placed ? ` data-b="${i}"` : '';
+      if (b.type === 'p') html += `<p${attr}>${T()}</p>`;
+      else if (b.type === 'h') html += `<h3${attr}>${T()}</h3>`;
+      else if (b.type === 'q') html += `<blockquote${attr}>${T()}</blockquote>`;
+      else if (b.type === 'li') { if (!inList) { html += '<ul>'; inList = true; } html += `<li${attr}>${T()}</li>`; }
+      else if (b.type === 'img') {
+        const im = (imgs || []).find(x => x.n === b.n);
+        if (im && imgSrc(im)) html += `<figure><img src="${esc(imgSrc(im))}" alt="${esc(im.caption || 'Image ' + im.n)}">${im.caption ? `<figcaption>${esc(im.caption)}</figcaption>` : ''}</figure>`;
+        else if (placeholders) html += `<div class="missing">Image ${b.n} has not been uploaded yet</div>`;
+      }
+    });
+    if (inList) html += '</ul>';
+    return html;
+  }
+
+  // ---------- navigatie ----------
+  function show(v){
+    view = v;
+    if (typeof closePop === 'function') closePop();
+    $('viewLib').hidden = v !== 'lib';
+    $('viewEdit').hidden = v !== 'edit';
+    $('viewRead').hidden = v !== 'read';
+    $('viewSet').hidden = v !== 'set';
+    $('navLib').hidden = v === 'lib';
+    $('navNew').hidden = v === 'edit';
+    $('navSet').hidden = v === 'set' || !user;
+    window.scrollTo(0, 0);
+  }
+  $('navLib').addEventListener('click', () => { document.title = 'Article Hub JP'; show('lib'); renderLib(); });
+  $('brand').addEventListener('click', () => { document.title = 'Article Hub JP'; show('lib'); renderLib(); });
+  $('navNew').addEventListener('click', () => openEditor(null));
+
+  // ---------- mappen ----------
+  const folderById = id => folders.find(f => f.id === id);
+  const childrenOf = pid => folders.filter(f => (f.parentId || null) === (pid || null) && (pid ? true : !f.parentId || !folderById(f.parentId)))
+    .sort((a, b) => a.name.localeCompare(b.name, 'nl'));
+  function subtree(id){
+    const out = new Set([id]);
+    const walk = pid => { for (const f of folders) if (f.parentId === pid && !out.has(f.id)) { out.add(f.id); walk(f.id); } };
+    walk(id);
+    return out;
+  }
+  function pathOf(id){
+    const parts = []; const seen = new Set();
+    let f = folderById(id);
+    while (f && !seen.has(f.id)) { seen.add(f.id); parts.unshift(f.name); f = folderById(f.parentId); }
+    return parts;
+  }
+  const inNoFolder = a => !a.folderId || !folderById(a.folderId);
+  function inSelected(a){
+    if (selFolder === 'all') return true;
+    if (selFolder === 'none') return inNoFolder(a);
+    return !!a.folderId && subtree(selFolder).has(a.folderId);
+  }
+  function saveExpanded(){ try { localStorage.setItem('leesarchief-open', JSON.stringify([...expanded])); } catch(e) {} }
+  function folderOptions(selected){
+    let html = `<option value="">No folder</option>`;
+    const walk = (pid, depth) => {
+      for (const f of childrenOf(pid)) {
+        html += `<option value="${esc(f.id)}"${f.id === selected ? ' selected' : ''}>${'\u00A0\u00A0\u00A0'.repeat(depth)}${esc(f.name)}</option>`;
+        walk(f.id, depth + 1);
+      }
+    };
+    walk(null, 0);
+    return html;
+  }
+
+  function nodeHtml(key, label, count, depth, hasKids){
+    const open = expanded.has(key);
+    return `<div class="node ${selFolder === key ? 'sel' : ''}" data-k="${esc(key)}">
+      ${hasKids ? `<button class="tw" data-tw="${esc(key)}" aria-expanded="${open}" aria-label="${open ? 'Inklappen' : 'Uitklappen'}">${open ? '▼' : '▶'}</button>` : '<span class="tw"></span>'}
+      <button class="nm" data-sel="${esc(key)}" ${selFolder === key ? 'aria-current="true"' : ''}><span class="l">${esc(label)}</span><span class="c">${count || ''}</span></button>
+    </div>`;
+  }
+  function renderTree(){
+    const countIn = id => { const t = subtree(id); return articles.filter(a => a.folderId && t.has(a.folderId)).length; };
+    const walk = pid => {
+      const kids = childrenOf(pid);
+      const form = formMode && formMode.type === 'new' && formMode.inTree && (formMode.parentId || null) === (pid || null);
+      if (!kids.length && !form) return '';
+      let h = '<ul>';
+      for (const f of kids) {
+        const sub = childrenOf(f.id).length > 0;
+        h += '<li>' + nodeHtml(f.id, f.name, countIn(f.id), 0, sub);
+        if (sub && expanded.has(f.id)) h += walk(f.id);
+        h += '</li>';
+      }
+      if (form) h += `<li><div class="inline"><input id="tName" placeholder="Folder name" aria-label="Folder name"><button class="primary" id="tOk">Create</button></div></li>`;
+      return h + '</ul>';
+    };
+    $('tree').innerHTML =
+      '<ul><li>' + nodeHtml('all', 'All articles', articles.length, 0, false) + '</li>' +
+      '<li>' + nodeHtml('none', 'No folder', articles.filter(inNoFolder).length, 0, false) + '</li></ul>' +
+      '<div class="sep"></div>' + (walk(null) || (formMode && formMode.inTree ? '' : '<p class="hint" style="font-size:.82rem;padding:0 8px;margin:4px 0">No folders yet.</p>'));
+    const t = $('tName');
+    if (t) {
+      t.focus();
+      t.addEventListener('keydown', e => { if (e.key === 'Enter') submitFolder(t.value); if (e.key === 'Escape') { formMode = null; renderTree(); } });
+      $('tOk').addEventListener('click', () => submitFolder(t.value));
+      t.addEventListener('blur', () => setTimeout(() => { if (formMode && formMode.inTree && document.activeElement !== $('tOk') && !t.value.trim()) { formMode = null; renderTree(); } }, 150));
+    }
+  }
+  $('tree').addEventListener('click', e => {
+    const tw = e.target.closest('[data-tw]');
+    if (tw) { const k = tw.dataset.tw; expanded.has(k) ? expanded.delete(k) : expanded.add(k); saveExpanded(); renderTree(); return; }
+    const sel = e.target.closest('[data-sel]');
+    if (sel) { selectFolder(sel.dataset.sel); if (narrow.matches) setTreeOpen(false); }
+  });
+  function selectFolder(k){
+    selFolder = k;
+    if (k !== 'all' && k !== 'none') { let f = folderById(folderById(k)?.parentId); while (f) { expanded.add(f.id); f = folderById(f.parentId); } saveExpanded(); }
+    closeForm();
+    renderLib();
+  }
+  $('newRoot').addEventListener('click', () => {
+    // Het invoerveld komt in #treeBody te staan, en dat is op smalle schermen
+    // dichtgeklapt. Zonder de lade open gebeurt er zichtbaar niets.
+    if (narrow.matches) setTreeOpen(true);
+    formMode = {type:'new', parentId:null, inTree:true};
+    renderTree();
+  });
+
+  function openForm(mode){
+    formMode = mode;
+    $('fForm').hidden = false;
+    $('fOk').textContent = mode.type === 'rename' ? 'Opslaan' : 'Maken';
+    $('fName').value = mode.type === 'rename' ? folderById(mode.id)?.name || '' : '';
+    $('fName').placeholder = mode.type === 'rename' ? 'New name' : 'Subfolder name';
+    $('fName').focus();
+  }
+  function closeForm(){ formMode = null; $('fForm').hidden = true; resetDel(); }
+  $('fSub').addEventListener('click', () => openForm({type:'new', parentId: selFolder}));
+  $('fRename').addEventListener('click', () => openForm({type:'rename', id: selFolder}));
+  $('fCancel').addEventListener('click', closeForm);
+  $('fOk').addEventListener('click', () => submitFolder($('fName').value));
+  $('fName').addEventListener('keydown', e => { if (e.key === 'Enter') submitFolder($('fName').value); if (e.key === 'Escape') closeForm(); });
+
+  async function submitFolder(raw){
+    const name = raw.trim().slice(0, 80);
+    if (!name) { toast('Give the folder a name.', true); return; }
+    if (!db) { toast('Saving is not available in this view.', true); return; }
+    const mode = formMode;
+    try {
+      if (mode.type === 'rename') {
+        await db.doc('folders/' + mode.id).update({name});
+        toast('Folder renamed.');
+      } else {
+        const ref = db.collection('folders').doc();
+        await ref.set({name, parentId: mode.parentId || null, createdAt: new Date().toISOString()});
+        if (mode.parentId) { expanded.add(mode.parentId); saveExpanded(); }
+        if (!folderById(ref.id)) folders.push({id: ref.id, name, parentId: mode.parentId || null});
+        selFolder = ref.id;
+        toast('Folder created.');
+      }
+      closeForm();
+      renderLib();
+    } catch(e) { toast(e && e.code === 'quota_exceeded' ? 'Your storage is full.'
+      : 'The folder could not be saved: ' + ((e && e.message) || 'unknown error'), true); }
+  }
+
+  function resetDel(){ const b = $('fDel'); b.dataset.armed = ''; b.textContent = 'Delete folder'; }
+  $('fDel').addEventListener('click', async () => {
+    const f = folderById(selFolder); if (!f) return;
+    const b = $('fDel');
+    if (b.dataset.armed !== '1') {
+      const n = articles.filter(a => a.folderId === f.id).length, k = childrenOf(f.id).length;
+      b.dataset.armed = '1';
+      b.textContent = (n || k) ? 'Sure? Contents move to ' + (f.parentId && folderById(f.parentId) ? 'the parent folder' : '"No folder"') : 'Click again to delete';
+      setTimeout(resetDel, 5000);
+      return;
+    }
+    resetDel();
+    const parent = f.parentId && folderById(f.parentId) ? f.parentId : null;
+    try {
+      for (const a of articles.filter(a => a.folderId === f.id)) await db.doc('articles/' + a.id).update({folderId: parent});
+      for (const c of childrenOf(f.id)) await db.doc('folders/' + c.id).update({parentId: parent});
+      await db.doc('folders/' + f.id).delete();
+      selFolder = parent || 'all';
+      toast('Folder deleted.');
+      renderLib();
+    } catch(e) { toast('Deleting failed. Please try again.', true); }
+  });
+
+  // ---------- archief ----------
+  function renderLib(){
+    if (selFolder !== 'all' && selFolder !== 'none' && loaded && !folderById(selFolder)) selFolder = 'all';
+    renderTree();
+    updateTreeCur();
+    const isFolder = selFolder !== 'all' && selFolder !== 'none';
+    const path = isFolder ? pathOf(selFolder) : [];
+    $('libTitle').textContent = selFolder === 'all' ? 'All articles' : selFolder === 'none' ? 'No folder' : path[path.length - 1];
+    $('folderActs').hidden = !isFolder || !db;
+    if (isFolder && path.length > 1) {
+      const chain = []; let f = folderById(folderById(selFolder).parentId);
+      while (f) { chain.unshift(f); f = folderById(f.parentId); }
+      $('crumbs').innerHTML = chain.map(c => `<button data-sel="${esc(c.id)}">${esc(c.name)}</button>`).join(' / ') + ' /';
+    } else $('crumbs').innerHTML = '';
+    const scope = articles.filter(inSelected);
+    const q = $('search').value.trim().toLowerCase();
+    const unread = scope.filter(a => a.status !== 'read').length;
+    const read = scope.length - unread;
+    $('cAll').textContent = scope.length; $('cUnread').textContent = unread; $('cRead').textContent = read;
+    if (!db) $('libSub').textContent = 'Saving is not available in this view.';
+    else if (!loaded) $('libSub').textContent = 'Laden…';
+    else $('libSub').textContent = scope.length ? `${unread} to read, ${read} read.` : isFolder ? 'This folder is empty.' : 'No articles saved yet.';
+
+    let rows = scope.filter(a => filter === 'all' || (filter === 'read') === (a.status === 'read')).filter(matchesRate);
+    if (q) rows = rows.filter(a => [a.title, a.publisher, a.author].join(' ').toLowerCase().includes(q));
+    sortRows(rows);
+
+    const list = $('list');
+    list.classList.toggle('dnd', !!db);
+    if (!rows.length) {
+      const msg = !loaded ? 'Laden…'
+        : !scope.length ? (isFolder ? 'Drag an article onto this folder, or add a new one.' : 'Click "New" to add your first article.')
+        : q ? 'No articles match that search.'
+        : rateFilter !== 'any' ? (rateFilter === 'none' ? 'Everything here has a rating.' : 'No articles with that rating yet.')
+        : filter === 'unread' ? 'All caught up. Nothing left on your reading list.'
+        : 'No articles read yet.';
+      list.innerHTML = `<li class="emptybox">${esc(msg)}</li>`;
+      return;
+    }
+    list.innerHTML = rows.map(a => {
+      const isRead = a.status === 'read';
+      const fp = a.folderId && folderById(a.folderId) && a.folderId !== selFolder ? pathOf(a.folderId).join(' / ') : '';
+      const meta = [fp ? 'In ' + fp : '', a.publisher, a.date ? fmtDate(a.date) : '', isRead && a.readAt ? 'read on ' + fmtDate(a.readAt) : ''].filter(Boolean).join(', ');
+      return `<li class="item ${isRead ? 'read' : ''}" data-id="${esc(a.id)}"${db ? ' title="Drag onto a folder to move it"' : ''}>
+        <span class="dot" title="${isRead ? 'Read' : 'To read'}"></span>
+        <div><button class="t" data-a="open">${esc(a.title || 'Untitled')}</button><div class="m">${esc(meta)}</div></div>
+        <div class="acts">
+          ${starsHtml(a.rating, !db)}
+          <button data-a="toggle">${isRead ? 'Mark as to read' : 'Mark as read'}</button>
+          <button data-a="pdf">PDF</button>
+        </div></li>`;
+    }).join('');
+  }
+  $('list').addEventListener('click', e => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    const id = btn.closest('.item')?.dataset.id;
+    const a = articles.find(x => x.id === id); if (!a) return;
+    if (btn.dataset.rate) setRating(a, Number(btn.dataset.rate));
+    else if (btn.dataset.a === 'open') openReader(id);
+    else if (btn.dataset.a === 'toggle') setStatus(a, a.status === 'read' ? 'unread' : 'read');
+    else if (btn.dataset.a === 'pdf') downloadPdf(a, a.images || [], btn);
+  });
+  document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+    filter = b.dataset.f;
+    document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    renderLib();
+  }));
+  $('rateFilter').addEventListener('change', e => { rateFilter = e.target.value; renderLib(); });
+  $('sortBy').addEventListener('change', e => { sortBy = e.target.value; renderLib(); });
+  $('search').addEventListener('input', renderLib);
+  $('crumbs').addEventListener('click', e => { const b = e.target.closest('[data-sel]'); if (b) selectFolder(b.dataset.sel); });
+
+
+
+  // ---------- mobile ----------
+  const narrow = window.matchMedia('(max-width: 780px)');
+  const treeNav = document.querySelector('.tree');
+  function setTreeOpen(open){ treeNav.classList.toggle('open', open); $('treeToggle').setAttribute('aria-expanded', String(open)); }
+  $('treeToggle').addEventListener('click', () => { if (narrow.matches) setTreeOpen(!treeNav.classList.contains('open')); });
+  function updateTreeCur(){
+    const k = selFolder;
+    $('treeCur').textContent = k === 'all' ? 'All articles' : k === 'none' ? 'No folder' : (folderById(k) ? pathOf(k).join(' / ') : '');
+  }
+  $('readMore').addEventListener('click', () => {
+    const bar = $('readMore').closest('.readbar'), open = !bar.classList.contains('more-open');
+    bar.classList.toggle('more-open', open); $('readMore').setAttribute('aria-expanded', String(open));
+    $('readMore').textContent = open ? 'Minder' : 'Meer';
+  });
+  function resetMore(){ const bar = $('readMore').closest('.readbar'); bar.classList.remove('more-open'); $('readMore').setAttribute('aria-expanded', 'false'); $('readMore').textContent = 'Meer'; }
+  function showDropSheet(){
+    const walk = (pid, depth) => childrenOf(pid).map(f => `<li><div class="node" data-k="${esc(f.id)}"><button class="nm" data-sel="${esc(f.id)}" style="padding-left:${12 + depth * 18}px">${esc(f.name)}</button></div></li>` + walk(f.id, depth + 1)).join('');
+    $('dropList').innerHTML = `<li><div class="node"><button class="nm" data-sel="none">No folder</button></div></li>` + walk(null, 0);
+    $('dropSheet').hidden = false;
+  }
+
+  // ---------- drag to folders ----------
+  let drag = null, suppressClick = false;
+  function dropTarget(x, y){
+    const el = document.elementFromPoint(x, y);
+    const nd = el && el.closest('#tree .node, #dropSheet .node');
+    const nm = nd && nd.querySelector('.nm[data-sel]');
+    return nm && nm.dataset.sel !== 'all' ? nm : null;
+  }
+  function startDrag(){
+    const a = articles.find(x => x.id === drag.id); if (!a) { endDrag(); return; }
+    drag.active = true;
+    drag.item.classList.add('dragging');
+    document.body.classList.add('dragging-on');
+    const g = document.createElement('div'); g.className = 'ghost';
+    g.innerHTML = `${esc(a.title || 'Untitled')}<small>Drop into a folder</small>`;
+    document.body.appendChild(g); drag.ghost = g;
+    if (narrow.matches && (drag.touch || !treeNav.classList.contains('open'))) showDropSheet();
+    moveDrag(drag.lx, drag.ly);
+    if (navigator.vibrate && drag.touch) navigator.vibrate(15);
+  }
+  function moveDrag(x, y){
+    drag.ghost.style.left = x + 'px'; drag.ghost.style.top = y + 'px';
+    const nm = dropTarget(x, y), node = nm && nm.closest('.node');
+    if (node !== drag.over) {
+      if (drag.over) drag.over.classList.remove('drop');
+      clearTimeout(drag.openTimer);
+      drag.over = node;
+      if (node) {
+        node.classList.add('drop');
+        const key = nm.dataset.sel, tw = node.querySelector('[data-tw]');
+        drag.ghost.querySelector('small').textContent = key === 'none' ? 'Remove from folder' : 'To ' + pathOf(key).join(' / ');
+        if (tw && !expanded.has(key)) drag.openTimer = setTimeout(() => { expanded.add(key); saveExpanded(); renderTree(); if (drag) { drag.over = null; moveDrag(drag.lx, drag.ly); } }, 700);
+      } else drag.ghost.querySelector('small').textContent = 'Drop into a folder';
+    }
+  }
+  function endDrag(){
+    if (!drag) return;
+    clearTimeout(drag.timer); clearTimeout(drag.openTimer);
+    if (drag.over) drag.over.classList.remove('drop');
+    drag.item.classList.remove('dragging');
+    if (drag.ghost) drag.ghost.remove();
+    document.body.classList.remove('dragging-on');
+    $('dropSheet').hidden = true;
+    drag = null;
+  }
+  async function moveTo(id, key){
+    const a = articles.find(x => x.id === id); if (!a || !db) return;
+    const target = key === 'none' ? null : key;
+    if ((a.folderId && folderById(a.folderId) ? a.folderId : null) === target) { toast(target ? 'This article is already in that folder.' : 'This article is already outside any folder.'); return; }
+    try {
+      await db.doc('articles/' + id).update({folderId: target});
+      a.folderId = target;
+      toast(target ? `"${a.title || 'Untitled'}" moved to ${pathOf(target).join(' / ')}.` : `"${a.title || 'Untitled'}" removed from its folder.`);
+      renderLib();
+    } catch(e) { toast('Moving failed. Please try again.', true); }
+  }
+  $('list').addEventListener('pointerdown', e => {
+    if (!db || drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const item = e.target.closest('.item[data-id]');
+    if (!item || e.target.closest('.acts')) return;
+    drag = {id: item.dataset.id, item, pid: e.pointerId, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, active: false, touch: e.pointerType !== 'mouse'};
+    if (drag.touch) drag.timer = setTimeout(() => { if (drag && !drag.active) startDrag(); }, 380);
+  });
+  document.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    drag.lx = e.clientX; drag.ly = e.clientY;
+    if (!drag.active) {
+      const dist = Math.hypot(e.clientX - drag.x, e.clientY - drag.y);
+      if (drag.touch) { if (dist > 10) endDrag(); return; }
+      if (dist < 6) return;
+      startDrag();
+    }
+    if (drag) moveDrag(e.clientX, e.clientY);
+  });
+  document.addEventListener('touchmove', e => { if (drag && drag.active) e.preventDefault(); }, {passive: false});
+  document.addEventListener('pointerup', e => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    if (drag.active) {
+      const nm = dropTarget(e.clientX, e.clientY), id = drag.id;
+      suppressClick = true; setTimeout(() => { suppressClick = false; }, 50);
+      endDrag();
+      if (nm) moveTo(id, nm.dataset.sel);
+    } else endDrag();
+  });
+  document.addEventListener('pointercancel', endDrag);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && drag && drag.active) { suppressClick = true; setTimeout(() => { suppressClick = false; }, 50); endDrag(); } });
+  $('list').addEventListener('click', e => { if (suppressClick) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  $('list').addEventListener('contextmenu', e => { if (drag && drag.touch) e.preventDefault(); });
+
+  // ---------- beoordeling ----------
+  // Wie het setup-script draaide voordat de sterren bestonden, mist de kolom.
+  // PostgREST meldt dat via de schema-cache; zeg dan meteen wat de oplossing is.
+  const RATING_SQL = 'alter table articles add column if not exists rating smallint check (rating between 1 and 5);';
+  function schemaHint(e){
+    const m = (e && e.message) || '';
+    return /rating/i.test(m) && /(schema cache|column|does not exist|PGRST204)/i.test(m)
+      ? 'Your articles table has no rating column yet. Run this in the Supabase SQL Editor: ' + RATING_SQL
+      : '';
+  }
+  const RATE_WORD = ['', 'Poor', 'Meh', 'Okay', 'Good', 'Excellent'];
+  function starsHtml(rating, disabled){
+    const r = Math.max(0, Math.min(5, Number(rating) || 0));
+    let h = '<span class="stars" role="group" aria-label="Rating">';
+    for (let i = 1; i <= 5; i++) {
+      const plural = i > 1 ? 's' : '';
+      h += '<button type="button" data-rate="' + i + '"'
+         + ' class="' + (i <= r ? 'on' : '') + '"'
+         + (disabled ? ' disabled' : '')
+         + ' aria-pressed="' + (i === r) + '"'
+         + ' aria-label="' + i + ' star' + plural + ', ' + RATE_WORD[i] + '"'
+         + ' title="' + i + ' star' + plural + (i === r ? ' \u2014 tap again to clear' : '') + '">\u2605</button>';
+    }
+    return h + '</span>';
+  }
+  // Dezelfde ster nog eens aantikken wist de beoordeling weer.
+  async function setRating(a, star){
+    if (!db) return;
+    const val = (Number(a.rating) || 0) === star ? null : star;
+    try {
+      await db.doc('articles/' + a.id).update({rating: val});
+      toast(val ? 'Rated ' + val + ' star' + (val > 1 ? 's' : '') + '.' : 'Rating removed.');
+    } catch(e) { toast(schemaHint(e) || ('Saving the rating failed: ' + ((e && e.message) || 'unknown error')), true); }
+  }
+  function sortRows(rows){
+    const newest = (x, y) => String(y.createdAt || '').localeCompare(String(x.createdAt || ''));
+    const star = a => Number(a.rating) || 0;
+    if (sortBy === 'old') return rows.sort((x, y) => newest(y, x));
+    if (sortBy === 'best' || sortBy === 'worst') {
+      return rows.sort((x, y) => {
+        const sx = star(x), sy = star(y);
+        // Geen oordeel is iets anders dan een slecht oordeel: die gaan altijd
+        // achteraan, ook als je op laagste eerst sorteert.
+        if (!sx !== !sy) return sx ? -1 : 1;
+        if (sx !== sy) return sortBy === 'best' ? sy - sx : sx - sy;
+        return newest(x, y);
+      });
+    }
+    return rows.sort(newest);
+  }
+  function matchesRate(a){
+    const r = Number(a.rating) || 0;
+    if (rateFilter === 'any') return true;
+    if (rateFilter === 'none') return !r;
+    if (rateFilter === 'low') return r >= 1 && r <= 2;
+    return r >= Number(rateFilter);
+  }
+
+  async function setStatus(a, status){
+    if (!db) return;
+    try {
+      await db.doc('articles/' + a.id).update({status, readAt: status === 'read' ? new Date().toISOString() : null});
+      toast(status === 'read' ? 'Marked as read.' : 'Back on your reading list.');
+    } catch(e) { toast('Changing the status failed. Please try again.', true); }
+  }
+
+  // ---------- reader ----------
+  function openReader(id){
+    readingId = id;
+    resetMore();
+    show('read');
+    renderReader();
+  }
+  function renderReader(){
+    const a = articles.find(x => x.id === readingId);
+    if (!a) { show('lib'); renderLib(); return; }
+    const isRead = a.status === 'read';
+    curBlocks = parse(a.body);
+    const {placed, orphans} = anchorAll(curBlocks, annotations.filter(x => x.articleId === a.id));
+    $('reader').innerHTML = paperHtml(a, a.images, false, placed);
+    renderAnnList(placed, orphans);
+    const pill = $('readPill');
+    pill.className = 'pill ' + (isRead ? 'read' : 'unread');
+    pill.textContent = isRead ? 'Read' + (a.readAt ? ' on ' + fmtDate(a.readAt) : '') : 'To read';
+    const rf = $('readFolder');
+    rf.innerHTML = folderOptions(a.folderId && folderById(a.folderId) ? a.folderId : '');
+    rf.disabled = !db;
+    $('readStars').innerHTML = starsHtml(a.rating, !db);
+    $('readToggle').textContent = isRead ? 'Mark as to read' : 'Mark as read';
+    $('readDone').textContent = isRead ? 'Back to library' : 'Done reading';
+    document.title = (a.title || 'Artikel') + ' · Article Hub JP';
+  }
+  const current = () => articles.find(x => x.id === readingId);
+  $('readStars').addEventListener('click', e => {
+    const b = e.target.closest('button[data-rate]'); if (!b) return;
+    const a = current(); if (a) setRating(a, Number(b.dataset.rate));
+  });
+  $('readFolder').addEventListener('change', async e => {
+    const a = current(); if (!a || !db) return;
+    const v = e.target.value || null;
+    try { await db.doc('articles/' + a.id).update({folderId: v}); toast(v ? 'Moved to ' + pathOf(v).join(' / ') + '.' : 'Removed from its folder.'); }
+    catch(err) { toast('Verplaatsen is mislukt.', true); renderReader(); }
+  });
+  $('readToggle').addEventListener('click', () => { const a = current(); if (a) setStatus(a, a.status === 'read' ? 'unread' : 'read'); });
+  $('readPdf').addEventListener('click', e => { const a = current(); if (a) downloadPdf(a, a.images || [], e.currentTarget); });
+  $('readEdit').addEventListener('click', () => { const a = current(); if (a) openEditor(a); });
+  $('readDone').addEventListener('click', async () => {
+    const a = current();
+    if (a && a.status !== 'read') await setStatus(a, 'read');
+    document.title = 'Article Hub JP';
+    show('lib'); renderLib();
+  });
+  $('readDel').addEventListener('click', async () => {
+    const a = current(); if (!a) return;
+    const btn = $('readDel');
+    if (btn.dataset.armed !== '1') {
+      btn.dataset.armed = '1'; btn.textContent = 'Klik nogmaals om te verwijderen';
+      setTimeout(() => { btn.dataset.armed = ''; btn.textContent = 'Verwijderen'; }, 4000);
+      return;
+    }
+    btn.dataset.armed = ''; btn.textContent = 'Verwijderen';
+    try {
+      await db.doc('articles/' + a.id).delete();
+      for (const x of annotations.filter(x => x.articleId === a.id)) { try { await db.doc('annotations/' + x.id).delete(); } catch(e) {} }
+      closePop();
+      if (assets) for (const im of a.images || []) if (im.assetId) { try { await assets.delete(im.assetId); } catch(e) {} }
+      toast('Artikel verwijderd.');
+      document.title = 'Article Hub JP';
+      show('lib'); renderLib();
+    } catch(e) { toast('Deleting failed. Please try again.', true); }
+  });
+
+
+  // ---------- annotations: interaction ----------
+  let curBlocks = [];
+  let popState = null;   // {mode, parts?, id?}
+  const pop = $('pop');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const annById = id => annotations.find(x => x.id === id);
+  const groupOf = ann => ann.group ? annotations.filter(x => x.group === ann.group) : [ann];
+  const noteOfGroup = ann => groupOf(ann).find(x => x.note) || null;
+  const short = (t, n) => { t = String(t || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+
+  function renderAnnList(placed, orphans){
+    const seen = new Set(), rows = [];
+    const ordered = [...placed.entries()].sort((a, b) => a[0] - b[0])
+      .flatMap(([, l]) => [...l].sort((x, y) => x.s - y.s)).map(x => x.ann);
+    for (const ann of [...ordered, ...orphans]) {
+      const key = ann.group || ann.id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const g = groupOf(ann);
+      const orphan = g.every(x => orphans.includes(x));
+      const note = (g.find(x => x.note) || {}).note || '';
+      rows.push(`<li class="${orphan ? 'orph' : ''}">
+        <button class="ai" ${orphan ? 'disabled' : `data-go="${esc(ann.id)}"`}>
+          <span class="bar ${colorOk(ann.color) ? 'c-' + ann.color : 'nocolor'}"></span>
+          <span style="min-width:0"><span class="aq">${ann.para ? '<em>Paragraph:</em> ' : ''}${esc(short(g.map(x => x.quote).join(' … '), 220))}</span>${note ? `<span class="an">${esc(note)}</span>` : ''}</span>
+        </button>
+        ${orphan ? `<button class="danger" data-rm="${esc(ann.id)}">Delete</button>` : ''}</li>`);
+    }
+    $('annItems').innerHTML = rows.join('');
+    const n = seen.size, lost = new Set(orphans.map(x => x.group || x.id)).size;
+    $('annSub').textContent = !db ? 'Highlighting is not available in this view.'
+      : !n ? 'Select text in the article to highlight it or add a note.' + (coarse ? '' : ' The plus sign beside a paragraph adds a note to the whole paragraph.')
+      : (n === 1 ? '1 highlight' : n + ' highlights') + (lost ? `. ${lost} of them point at text that no longer exists after editing.` : '. Click one to jump to it in the article.');
+  }
+  $('annItems').addEventListener('click', async e => {
+    const go = e.target.closest('[data-go]');
+    if (go) {
+      const el = $('reader').querySelector(`mark[data-ids~="${CSS.escape(go.dataset.go)}"], .nt[data-note="${CSS.escape(go.dataset.go)}"]`)
+        || [...$('reader').querySelectorAll('.nt')].find(n => groupOf(annById(go.dataset.go) || {}).some(x => x.id === n.dataset.note));
+      if (el) {
+        el.scrollIntoView({block: 'center', behavior: reduceMotion ? 'auto' : 'smooth'});
+        el.classList.add('act'); setTimeout(() => el.classList.remove('act'), 1800);
+      }
+      return;
+    }
+    const rm = e.target.closest('[data-rm]');
+    if (rm) { const a = annById(rm.dataset.rm); if (a) await removeGroup(a); }
+  });
+
+  function offsetIn(el, node, off){
+    const r = document.createRange(); r.selectNodeContents(el);
+    try { r.setEnd(node, off); } catch(e) { return 0; }
+    return r.toString().length;
+  }
+  function readSelection(){
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || sel.isCollapsed) return null;
+    const r = sel.getRangeAt(0), reader = $('reader');
+    if (!reader.contains(r.commonAncestorContainer)) return null;
+    const parts = [];
+    for (const el of reader.querySelectorAll('[data-b]')) {
+      if (!r.intersectsNode(el)) continue;
+      const b = +el.dataset.b, t = (curBlocks[b] || {}).text;
+      if (t == null) continue;
+      let s = el.contains(r.startContainer) ? offsetIn(el, r.startContainer, r.startOffset) : 0;
+      let e = el.contains(r.endContainer) ? offsetIn(el, r.endContainer, r.endOffset) : t.length;
+      s = Math.max(0, Math.min(s, t.length)); e = Math.max(0, Math.min(e, t.length));
+      while (s < e && /\s/.test(t[s])) s++;
+      while (e > s && /\s/.test(t[e - 1])) e--;
+      if (e > s) parts.push({b, s, e, quote: t.slice(s, e)});
+    }
+    return parts.length ? {parts, rect: r.getBoundingClientRect()} : null;
+  }
+
+  function place(rect, below){
+    pop.hidden = false;
+    const pw = pop.offsetWidth, ph = pop.offsetHeight, vw = document.documentElement.clientWidth;
+    let left = rect.left + rect.width / 2 - pw / 2;
+    left = Math.max(8, Math.min(left, vw - pw - 8));
+    let top = below ? rect.bottom + 10 : rect.top - ph - 10;
+    if (!below && top < 60) top = rect.bottom + 10;
+    if (below && top + ph > window.innerHeight - 8 && rect.top - ph - 10 > 60) top = rect.top - ph - 10;
+    pop.style.left = (left + window.scrollX) + 'px';
+    pop.style.top = (top + window.scrollY) + 'px';
+  }
+  function swatchesHtml(active){
+    return `${COLORS.map(([k, l]) =>
+      `<button type="button" class="sw c-${k}" data-color="${k}" title="${l}" aria-label="Highlight in ${l.toLowerCase()}" aria-pressed="${active === k}"></button>`).join('')}`;
+  }
+  function openPop(state, html, rect, opts = {}){
+    popState = state;
+    pop.innerHTML = html;
+    pop.classList.toggle('wide', !!opts.wide);
+    place(rect, opts.below ?? coarse);
+    const f = opts.focus && pop.querySelector(opts.focus);
+    if (f) f.focus();
+  }
+  function closePop(){
+    popState = null; pop.hidden = true; pop.innerHTML = '';
+    $('reader').querySelectorAll('.act').forEach(x => x.classList.remove('act'));
+  }
+
+  function showSelectionBar(){
+    if (view !== 'read' || !db) return;
+    if (popState && popState.mode !== 'sel') return;
+    const info = readSelection();
+    if (!info) { if (popState && popState.mode === 'sel') closePop(); return; }
+    openPop({mode: 'sel', parts: info.parts},
+      `<div class="swatches" role="group" aria-label="Colour">${swatchesHtml(null)}<span class="vsep"></span><button type="button" data-act="note">Note</button></div>`,
+      info.rect);
+  }
+  let selTimer;
+  document.addEventListener('selectionchange', () => { clearTimeout(selTimer); selTimer = setTimeout(showSelectionBar, coarse ? 450 : 200); });
+
+  function openAnnPop(ann, anchorEl){
+    const note = noteOfGroup(ann);
+    anchorEl.classList.add('act');
+    openPop({mode: 'ann', id: ann.id},
+      `<div class="swatches" role="group" aria-label="Colour">${swatchesHtml(ann.color)}</div>
+       <div class="btnrow"><button type="button" data-act="${note ? 'viewnote' : 'addnote'}">${note ? 'View note' : 'Add note'}</button>
+       <button type="button" class="danger" data-act="remove">Delete highlight</button></div>`,
+      anchorEl.getBoundingClientRect(), {below: true});
+  }
+  function openNotePop(ann, rect){
+    const g = groupOf(ann), note = noteOfGroup(ann) || ann;
+    openPop({mode: 'note', id: note.id},
+      `<div class="q">${esc(short(ann.para ? g[0].quote : g.map(x => x.quote).join(' … '), 200))}</div>
+       <div class="notetext">${esc(note.note)}</div>
+       <div class="when">Created ${esc(fmtDateTime(note.noteAt || note.createdAt))}${note.noteEditedAt ? `<br>Edited ${esc(fmtDateTime(note.noteEditedAt))}` : ''}</div>
+       <div class="btnrow"><button type="button" class="primary" data-act="editnote">Edit</button>
+       <button type="button" class="danger" data-act="delnote">Delete note</button></div>`,
+      rect, {wide: true, below: true, focus: '[data-act="editnote"]'});
+  }
+  function openNoteEditor(state, rect, value, quote){
+    openPop({...state, mode: 'edit'},
+      `${quote ? `<div class="q">${esc(short(quote, 200))}</div>` : ''}
+       <label for="noteInput" class="visually-hidden">Note</label>
+       <textarea id="noteInput" placeholder="Write your note…">${esc(value || '')}</textarea>
+       <div class="btnrow"><button type="button" class="primary" data-act="savenote">Save</button><button type="button" data-act="close">Cancel</button></div>`,
+      rect, {wide: true, below: true, focus: '#noteInput'});
+  }
+
+  // keep the text selection when clicking the toolbar
+  pop.addEventListener('mousedown', e => { if (e.target.closest('button') && popState && popState.mode === 'sel') e.preventDefault(); });
+  pop.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && popState && popState.mode === 'edit') { e.preventDefault(); saveNote(); }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && popState) { closePop(); } });
+  document.addEventListener('mousedown', e => {
+    if (!popState || pop.contains(e.target)) return;
+    if (popState.mode === 'sel' && $('reader').contains(e.target)) return;
+    if (e.target.closest('#reader mark.hl, #reader .nt, #reader .bn')) return;
+    closePop();
+  });
+  window.addEventListener('resize', () => { if (popState) closePop(); });
+
+  $('reader').addEventListener('click', e => {
+    if (!db) return;
+    const nt = e.target.closest('.nt');
+    if (nt) { const a = annById(nt.dataset.note); if (a) { closePop(); nt.classList.add('act'); openNotePop(a, nt.getBoundingClientRect()); } return; }
+    const bn = e.target.closest('.bn');
+    if (bn) {
+      const el = bn.closest('[data-b]'), b = +el.dataset.b, t = curBlocks[b].text;
+      const existing = annotations.find(x => x.articleId === readingId && x.para && x.b === b && x.quote === t);
+      closePop();
+      if (existing) openNotePop(existing, bn.getBoundingClientRect());
+      else openNoteEditor({parts: [{b, s: 0, e: t.length, quote: t, para: true}]}, bn.getBoundingClientRect(), '', t);
+      return;
+    }
+    const m = e.target.closest('mark.hl');
+    if (m) {
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed) return;
+      const a = annById(m.dataset.ids.split(' ')[0]);
+      if (a) { closePop(); openAnnPop(a, m); }
+    }
+  });
+
+  pop.addEventListener('click', async e => {
+    const btn = e.target.closest('button'); if (!btn || !popState) return;
+    const st = popState;
+    if (btn.dataset.color) {
+      if (st.mode === 'sel') { await createAnns(st.parts, btn.dataset.color, ''); window.getSelection().removeAllRanges(); closePop(); }
+      else if (st.mode === 'ann') { const a = annById(st.id); closePop(); if (a) await patchGroup(a, {color: btn.dataset.color}); }
+      return;
+    }
+    const act = btn.dataset.act;
+    const rect = pop.getBoundingClientRect();
+    const anchorRect = {left: rect.left, width: rect.width, top: rect.top, bottom: rect.top};
+    if (act === 'close') closePop();
+    else if (act === 'note' && st.mode === 'sel') {
+      const sel = window.getSelection(); const r = sel.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : anchorRect;
+      sel.removeAllRanges();
+      openNoteEditor({parts: st.parts}, r, '', st.parts.map(x => x.quote).join(' … '));
+    }
+    else if (act === 'addnote' || act === 'editnote') {
+      const a = annById(st.id); if (!a) return closePop();
+      const target = noteOfGroup(a) || groupOf(a)[groupOf(a).length - 1];
+      openNoteEditor({id: target.id}, anchorRect, target.note, a.para ? a.quote : groupOf(a).map(x => x.quote).join(' … '));
+    }
+    else if (act === 'viewnote') { const a = annById(st.id); if (a) openNotePop(a, anchorRect); }
+    else if (act === 'remove') { const a = annById(st.id); closePop(); if (a) await removeGroup(a); }
+    else if (act === 'delnote') {
+      const a = annById(st.id); closePop(); if (!a) return;
+      if (a.para || !colorOk(a.color)) await removeGroup(a);
+      else await patchOne(a, {note: '', noteAt: null, noteEditedAt: null}, 'Note deleted.');
+    }
+    else if (act === 'savenote') saveNote();
+  });
+
+  async function saveNote(){
+    const st = popState; if (!st || st.mode !== 'edit') return;
+    const text = $('noteInput').value.trim();
+    if (st.id) {
+      const a = annById(st.id); closePop(); if (!a) return;
+      if (!text && (a.para || !colorOk(a.color))) await removeGroup(a);
+      else if (text !== (a.note || '')) {
+        const now = new Date().toISOString();
+        await patchOne(a, a.note ? {note: text, noteEditedAt: text ? now : null, ...(text ? {} : {noteAt: null})} : {note: text, noteAt: now, noteEditedAt: null}, text ? 'Note saved.' : 'Note deleted.');
+      }
+    } else {
+      if (!text) { closePop(); return; }
+      closePop();
+      await createAnns(st.parts, null, text);
+    }
+  }
+
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  async function createAnns(parts, color, note){
+    if (!db || !readingId) return;
+    const now = new Date().toISOString();
+    const group = parts.length > 1 ? newId() : null;
+    try {
+      for (let i = 0; i < parts.length; i++) {
+        const p = parts[i];
+        const data = {articleId: readingId, b: p.b, s: p.s, e: p.e, quote: p.quote, para: !!p.para,
+          color: color || null, note: i === parts.length - 1 ? (note || '') : '', noteAt: i === parts.length - 1 && note ? now : null, group, createdAt: now, updatedAt: now};
+        const ref = db.collection('annotations').doc();
+        await ref.set(data);
+        if (!annById(ref.id)) annotations.push({id: ref.id, ...data});
+      }
+      toast(note ? 'Note saved.' : 'Highlighted.');
+      if (view === 'read') renderReader();
+    } catch(e) { toast('Saving the highlight failed. Please try again.', true); }
+  }
+  async function patchOne(a, patch, msg){
+    try {
+      await db.doc('annotations/' + a.id).update({...patch, updatedAt: new Date().toISOString()});
+      Object.assign(a, patch); toast(msg); if (view === 'read') renderReader();
+    } catch(e) { toast('The change failed. Please try again.', true); }
+  }
+  async function patchGroup(a, patch){
+    try {
+      for (const x of groupOf(a)) { await db.doc('annotations/' + x.id).update({...patch, updatedAt: new Date().toISOString()}); Object.assign(x, patch); }
+      if (view === 'read') renderReader();
+    } catch(e) { toast('The change failed. Please try again.', true); }
+  }
+  async function removeGroup(a){
+    try {
+      for (const x of groupOf(a)) await db.doc('annotations/' + x.id).delete();
+      const ids = new Set(groupOf(a).map(x => x.id));
+      annotations = annotations.filter(x => !ids.has(x.id));
+      toast('Deleted.');
+      if (view === 'read') renderReader();
+    } catch(e) { toast('Deleting failed. Please try again.', true); }
+  }
+
+  // ---------- editor ----------
+  const DRAFT = 'leesarchief-draft';
+  function openEditor(a){
+    editId = a ? a.id : null;
+    removedAssets = [];
+    sessionUploads = new Set();
+    if (a) {
+      fields.forEach(f => $(f).value = a[f] || '');
+      images = (a.images || []).map(im => ({...im}));
+      editStatus = a.status === 'read' ? 'read' : 'unread';
+      $('editHeading').textContent = 'Edit article';
+      $('save').textContent = 'Save changes';
+    } else {
+      fields.forEach(f => $(f).value = '');
+      images = [];
+      editStatus = 'unread';
+      $('editHeading').textContent = 'New article';
+      $('save').textContent = 'Save to library';
+    }
+    const fid = a ? (a.folderId && folderById(a.folderId) ? a.folderId : '') : (selFolder !== 'all' && selFolder !== 'none' ? selFolder : '');
+    $('folder').innerHTML = folderOptions(fid);
+    nextN = images.reduce((m, i) => Math.max(m, i.n), 0) + 1;
+    lastCursor = $('body').value.length;
+    renderStatusChoice(); renderImgList(); renderPreview();
+    pendingDraft = a ? null : readDraft();
+    $('restore').hidden = !pendingDraft;
+    show('edit');
+  }
+  function saveDraft(){
+    if (editId || view !== 'edit') return;
+    if (pendingDraft) { pendingDraft = null; $('restore').hidden = true; }
+    try { const o = {}; fields.forEach(f => o[f] = $(f).value); o.images = images.filter(im => im.assetId).map(({n, caption, w, h, assetId}) => ({n, caption: caption || '', w, h, assetId})); localStorage.setItem(DRAFT, JSON.stringify(o)); } catch(e) {}
+  }
+  let pendingDraft = null;
+  function readDraft(){
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(DRAFT) || 'null'); } catch(e) {}
+    if (!d || !(String(d.title || '').trim() || String(d.body || '').trim())) return null;
+    // draft that is already saved as an article: clean it up
+    if (articles.some(x => (x.title || '') === String(d.title || '').trim() && (x.body || '') === (d.body || ''))) { clearDraft(); return null; }
+    return d;
+  }
+  $('restoreBtn').addEventListener('click', () => {
+    const d = pendingDraft; if (!d) return;
+    fields.forEach(f => $(f).value = d[f] || '');
+    images = Array.isArray(d.images) ? d.images.filter(im => im && im.assetId) : [];
+    nextN = images.reduce((m, i) => Math.max(m, i.n), 0) + 1;
+    lastCursor = $('body').value.length;
+    pendingDraft = null; $('restore').hidden = true;
+    renderImgList(); renderPreview();
+  });
+  $('restoreDrop').addEventListener('click', () => {
+    const d = pendingDraft;
+    if (d && assets) for (const im of d.images || []) if (im.assetId && !articles.some(x => (x.images || []).some(y => y.assetId === im.assetId))) assets.delete(im.assetId).catch(() => {});
+    clearDraft(); pendingDraft = null; $('restore').hidden = true;
+  });
+  function clearDraft(){ try { localStorage.removeItem(DRAFT); } catch(e) {} }
+  function formData(){ const o = {}; fields.forEach(f => o[f] = $(f).value.trim()); o.body = $('body').value; return o; }
+
+  function renderPreview(){
+    const d = formData();
+    $('preview').innerHTML = paperHtml(d, images, true);
+    const ok = d.title && parse(d.body).length;
+    $('save').disabled = !ok || saving || !db || uploading > 0;
+    $('editPdf').disabled = !ok;
+  }
+  function renderStatusChoice(){
+    document.querySelectorAll('.status-choice button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === editStatus)));
+  }
+  document.querySelectorAll('.status-choice button').forEach(b => b.addEventListener('click', () => { editStatus = b.dataset.s; renderStatusChoice(); }));
+
+  function renderImgList(){
+    const ul = $('imgs');
+    ul.innerHTML = '';
+    for (const im of images) {
+      const li = document.createElement('li');
+      li.innerHTML = `<img src="${esc(imgSrc(im))}" alt="">
+        <div><div class="tag">[image ${im.n}]${im.uploading ? ' <span class="up">uploading…</span>' : im.failed ? ' <span class="up err">not uploaded, will retry on save</span>' : ''}</div>
+        <input class="cap" placeholder="Bijschrift (optioneel)" value="${esc(im.caption)}"></div>
+        <div class="btns"><button type="button" data-a="ins">Insert</button><button type="button" data-a="del" aria-label="Remove image ${im.n}">✕</button></div>`;
+      li.querySelector('.cap').addEventListener('input', e => { im.caption = e.target.value; renderPreview(); saveDraft(); });
+      li.querySelector('[data-a="ins"]').addEventListener('click', () => insertTag(im.n));
+      li.querySelector('[data-a="del"]').addEventListener('click', () => {
+        if (im.uploading) return;
+        if (im.assetId && sessionUploads.has(im.assetId)) {
+          sessionUploads.delete(im.assetId);
+          if (assets) assets.delete(im.assetId).catch(() => {});
+        } else if (im.assetId) removedAssets.push(im.assetId);
+        images = images.filter(x => x !== im); renderImgList(); renderPreview(); saveDraft();
+      });
+      ul.appendChild(li);
+    }
+  }
+  function insertTag(n){
+    const ta = $('body'), v = ta.value, pos = Math.min(lastCursor, v.length);
+    const before = v.slice(0, pos), after = v.slice(pos), tag = `[image ${n}]`;
+    const pre = before && !before.endsWith('\n') ? '\n' : '';
+    const post = after && !after.startsWith('\n') ? '\n' : '';
+    ta.value = before + pre + tag + post + after;
+    lastCursor = (before + pre + tag + post).length;
+    ta.focus(); ta.setSelectionRange(lastCursor, lastCursor);
+    saveDraft(); renderPreview();
+  }
+  function loadImage(file){
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onerror = () => reject(new Error('could not read file'));
+      r.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(Object.assign(new Error('not a valid image'), {code: 'decode'}));
+        img.onload = () => {
+          const scale = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
+          const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = c.toDataURL('image/jpeg', 0.88);
+          resolve({dataUrl, w, h});
+        };
+        img.src = r.result;
+      };
+      r.readAsDataURL(file);
+    });
+  }
+  function uploadMsg(e){
+    const c = e && e.code;
+    return c === 'too_large' ? 'This image is too large (20 MB max).'
+      : c === 'unsupported_type' ? 'This image type is not supported.'
+      : c === 'quota_or_state' ? 'Image storage is full. Delete older articles with images.'
+      : c === 'rate_limited' ? 'Too many uploads at once. Try again in a moment.'
+      : c === 'upstream_auth' ? 'Your session expired. Reload the page and try again.'
+      : c === 'no_bucket' ? 'Your Supabase project has no article-images bucket yet. Create it under Storage, then run supabase-setup.sql.'
+      : c === 'denied' ? 'Supabase refused the upload. Check the storage policies in supabase-setup.sql.'
+      : c === 'not_granted' || c === 'capability_disabled' || c === 'capability_removed' ? 'Uploading images is not available in this view.'
+      : 'Uploading the image failed: ' + ((e && e.message) || 'unknown error');
+  }
+  async function uploadImage(im){
+    let tries = 0;
+    while (true) {
+      try {
+        const res = await assets.upload(dataUrlToBlob(im.dataUrl), {type: 'image/jpeg'});
+        im.assetId = res.id; sessionUploads.add(res.id);
+        return;
+      } catch(e) {
+        if (e && e.code === 'store_unavailable' && tries++ < 1) { await new Promise(r => setTimeout(r, 1200)); continue; }
+        throw e;
+      }
+    }
+  }
+  let uploading = 0;
+  async function addFiles(list){
+    const files = [...list].filter(f => f.type.startsWith('image/') || /\.(heic|heif|jpe?g|png|webp|gif)$/i.test(f.name));
+    if (!files.length) { toast('Choose an image file (JPG, PNG, WebP or GIF).', true); return; }
+    if (!assets) { toast('Adding images is not available in this view.', true); return; }
+    uploading++; renderPreview();
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        let im;
+        try { im = {n: nextN++, caption: '', ...(await loadImage(f))}; }
+        catch(e) { toast(`${f.name} could not be read${/heic|heif/i.test(f.name + f.type) ? ' (this browser does not support HEIC; choose the photo as JPG)' : ''}.`, true); continue; }
+        im.uploading = true;
+        images.push(im); insertTag(im.n); renderImgList(); renderPreview();
+        toast(files.length > 1 ? `Uploading image ${i + 1} of ${files.length}…` : 'Uploading image…');
+        try { await uploadImage(im); toast('Image added.'); }
+        catch(e) { im.failed = true; toast(uploadMsg(e), true); }
+        im.uploading = false;
+        renderImgList(); saveDraft();
+      }
+    } finally { uploading--; renderPreview(); }
+  }
+  const drop = $('drop');
+  drop.addEventListener('click', () => $('file').click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('file').click(); } });
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); addFiles(e.dataTransfer.files); });
+  $('file').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+  $('body').addEventListener('paste', e => {
+    const files = [...(e.clipboardData?.files || [])];
+    if (files.length) { e.preventDefault(); lastCursor = $('body').selectionStart; addFiles(files); }
+  });
+  fields.forEach(f => $(f).addEventListener('input', () => { saveDraft(); renderPreview(); }));
+  ['keyup','click','blur'].forEach(ev => $('body').addEventListener(ev, () => { lastCursor = $('body').selectionStart; }));
+
+  $('cancel').addEventListener('click', () => {
+    if (editId) {
+      if (assets) for (const id of sessionUploads) assets.delete(id).catch(() => {});
+      sessionUploads = new Set();
+      openReader(editId);
+    } else { show('lib'); renderLib(); }
+  });
+  $('editPdf').addEventListener('click', e => downloadPdf(formData(), images, e.currentTarget));
+
+  function dataUrlToBlob(u){
+    const [head, data] = u.split(',');
+    const type = (head.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
+    const bin = atob(data), arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], {type});
+  }
+
+  $('save').addEventListener('click', async () => {
+    if (!db || saving) return;
+    const d = formData();
+    const pending = images.filter(im => !im.assetId);
+    if (pending.length && !assets) { toast('Saving images is not available in this view.', true); return; }
+    saving = true; renderPreview();
+    try {
+      for (let i = 0; i < pending.length; i++) {
+        toast(`Uploading image ${i + 1} of ${pending.length}…`);
+        await uploadImage(pending[i]);
+        pending[i].failed = false;
+      }
+      toast('Saving…');
+      const existing = editId ? articles.find(a => a.id === editId) : null;
+      const now = new Date().toISOString();
+      const wasRead = existing && existing.status === 'read';
+      const doc = {
+        ...d,
+        images: images.map(({n, caption, w, h, assetId}) => ({n, caption: caption || '', w, h, assetId})),
+        status: editStatus,
+        // Expliciet meesturen: anders hangt het behoud van de beoordeling
+        // af van welke kolommen de upsert toevallig aanraakt.
+        rating: existing && existing.rating != null ? existing.rating : null,
+        folderId: $('folder').value || null,
+        readAt: editStatus === 'read' ? (wasRead && existing.readAt ? existing.readAt : now) : null,
+        createdAt: existing ? existing.createdAt : now,
+        updatedAt: now
+      };
+      const ref = editId ? db.doc('articles/' + editId) : db.collection('articles').doc();
+      await ref.set(doc);
+      images.forEach(im => { delete im.dataUrl; delete im.failed; });
+      if (assets) for (const id of removedAssets) { try { await assets.delete(id); } catch(e) {} }
+      removedAssets = [];
+      sessionUploads = new Set();
+      if (!editId) clearDraft();
+      const id = ref.id;
+      if (!articles.some(a => a.id === id)) articles.push({id, ...doc});
+      toast(editId ? 'Changes saved.' : 'Article saved to your library.');
+      saving = false;
+      openReader(id);
+    } catch(e) {
+      saving = false; renderPreview();
+      const c = e && e.code;
+      renderImgList();
+      if (images.some(im => !im.assetId)) { toast(uploadMsg(e), true); return; }
+      toast(c === 'quota_exceeded' || c === 'quota_or_state' ? 'Your storage is full. Delete older articles and try again.'
+        : c === 'too_large' ? 'One of the images is too large to save.'
+        : c === 'invalid_argument' ? 'This article is too long to save in one go.'
+        // De echte melding erbij: anders valt niet na te gaan of het aan de tabellen,
+        // de policies of de verbinding ligt.
+        : schemaHint(e) || ('Saving failed: ' + ((e && e.message) || 'unknown error')), true);
+    }
+  });
+
+  // ---------- PDF ----------
+  const extra = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
+  function clean(s){
+    return String(s || '').normalize('NFC')
+      .replace(/[\u2018\u2019\u201B]/g, "'").replace(/[\u201C\u201D\u201F]/g, '"')
+      .replace(/[\u2010-\u2012]/g, '-').replace(/\u2192/g, '->').replace(/\u00A0/g, ' ')
+      .replace(/[\u200B-\u200D\uFE0F]/g, '')
+      .split('').filter(ch => ch.charCodeAt(0) <= 0xFF || extra.includes(ch)).join('')
+      .replace(/ {2,}/g, ' ').trim();
+  }
+  function blobToDataUrl(b){
+    return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
+  }
+  function imgToDataUrl(src){
+    return new Promise((res, rej) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0);
+        res(c.toDataURL('image/jpeg', 0.9));
+      };
+      img.onerror = rej;
+      img.src = src;
+    });
+  }
+  async function resolveImages(imgs){
+    const out = [];
+    for (const im of imgs) {
+      try {
+        const dataUrl = im.dataUrl || await imgToDataUrl(blobUrl(im.assetId));
+        out.push({...im, dataUrl});
+      } catch(e) { /* image unavailable: skip it */ }
+    }
+    return out;
+  }
+
+  function buildPdf(a, imgs){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({unit:'mm', format:'a4'});
+    const W = 210, H = 297, ML = 24, MR = 24, TOP = 24, BOTTOM = 22, CW = W - ML - MR;
+    let y = TOP;
+    const title = clean(a.title), pub = clean(a.publisher);
+    const need = h => { if (y + h > H - BOTTOM) { doc.addPage(); y = TOP; } };
+    function writeText(text, {font='times', style='normal', size=11.5, lh=1.45, indent=0, after=3, color=26}){
+      doc.setFont(font, style); doc.setFontSize(size); doc.setTextColor(color);
+      const lineH = size * 0.3528 * lh;
+      for (const ln of doc.splitTextToSize(text, CW - indent)) { need(lineH); doc.text(ln, ML + indent, y + lineH * 0.78); y += lineH; }
+      y += after;
+    }
+    if (pub) writeText(pub, {font:'helvetica', size:9, color:90, after:2});
+    writeText(title, {font:'helvetica', style:'bold', size:22, lh:1.2, after:3});
+    const meta = clean(metaLine(a));
+    if (meta) writeText(meta, {font:'helvetica', size:9.5, color:90, after:1});
+    if (a.url) writeText(clean(a.url), {font:'helvetica', size:8.5, color:110, after:1});
+    y += 3; doc.setDrawColor(190); doc.setLineWidth(0.3); doc.line(ML, y, W - MR, y); y += 8;
+
+    const blocks = parse(a.body);
+    for (let i = 0; i < blocks.length; i++) {
+      const b = blocks[i];
+      if (b.type === 'p') writeText(clean(b.text), {});
+      else if (b.type === 'h') { need(18); y += 3; writeText(clean(b.text), {font:'helvetica', style:'bold', size:13, lh:1.3, after:2.5}); }
+      else if (b.type === 'q') {
+        const y0 = y, p0 = doc.getNumberOfPages();
+        writeText(clean(b.text), {style:'italic', indent:6, color:60});
+        if (doc.getNumberOfPages() === p0) { doc.setDrawColor(180); doc.setLineWidth(0.8); doc.line(ML + 1, y0 + 0.5, ML + 1, y - 3.5); }
+      }
+      else if (b.type === 'li') {
+        const next = blocks[i+1];
+        need(6);
+        doc.setFont('times','normal'); doc.setFontSize(11.5); doc.setTextColor(26);
+        doc.text('•', ML + 1.5, y + 4.6);
+        writeText(clean(b.text), {indent:6, after: next && next.type === 'li' ? 1.2 : 3});
+      }
+      else if (b.type === 'img') {
+        const im = imgs.find(x => x.n === b.n);
+        if (!im || !im.dataUrl) continue;
+        let w = CW, h = CW * im.h / im.w;
+        if (h > 130) { h = 130; w = h * im.w / im.h; }
+        need(h + (im.caption ? 7 : 0) + 4);
+        y += 2;
+        doc.addImage(im.dataUrl, 'JPEG', ML + (CW - w) / 2, y, w, h);
+        y += h + 2;
+        if (im.caption) {
+          doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(90);
+          doc.splitTextToSize(clean(im.caption), CW).forEach(ln => { doc.text(ln, W / 2, y + 3, {align:'center'}); y += 3.8; });
+        }
+        y += 5;
+      }
+    }
+    const total = doc.getNumberOfPages();
+    const shortTitle = title.length > 70 ? title.slice(0, 67) + '...' : title;
+    for (let p = 1; p <= total; p++) {
+      doc.setPage(p);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(120);
+      if (p > 1) doc.text(shortTitle, ML, 13);
+      doc.text(pub || '', ML, H - 11);
+      doc.text(`${p} / ${total}`, W - MR, H - 11, {align:'right'});
+    }
+    return doc;
+  }
+  function fileName(a){
+    const base = String(a.title || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0, 60) || 'article';
+    return (a.date ? a.date + '-' : '') + base + '.pdf';
+  }
+  async function downloadPdf(a, imgs, btn){
+    if (!window.jspdf) { toast('The PDF library did not load. Reload the page.', true); return; }
+    if (!downloads) { toast('Downloading is not available in this view.', true); return; }
+    if (btn) btn.disabled = true;
+    toast('Building PDF…');
+    try {
+      const full = await resolveImages(imgs);
+      const blob = buildPdf(a, full).output('blob');
+      await downloads.save({filename: fileName(a), data: blob});
+      toast(full.length < imgs.length ? 'PDF downloaded, but not every image could be loaded.' : 'PDF downloaded.', full.length < imgs.length);
+    } catch(e) {
+      const c = e && e.code;
+      if (c === 'declined') toast('Download geannuleerd.');
+      else if (c === 'rate_limited') toast('A download dialog is already open.', true);
+      else toast('The PDF could not be created.', true);
+    } finally {
+      if (btn) btn.disabled = false;
+      if (view === 'edit') renderPreview();
+    }
+  }
+
+  // ---------- Supabase ----------
+  const CFG_KEY = 'ahjp.supabase';
+  const BUCKET = 'article-images';
+  // Want to pin the app to one project? Fill these in and the setup screen disappears.
+  const BUILT_IN = {url: '', key: ''};
+
+  let sb = null, user = null, cfg = null;
+  const TABLES = {
+    articles: {
+      table: 'articles',
+      out: {folderId: 'folder_id', readAt: 'read_at', createdAt: 'created_at', updatedAt: 'updated_at', date: 'published_on'},
+      cols: ['title', 'publisher', 'author', 'date', 'url', 'body', 'status', 'rating', 'folderId', 'images', 'readAt', 'createdAt', 'updatedAt']
+    },
+    folders: {
+      table: 'folders',
+      out: {parentId: 'parent_id', createdAt: 'created_at', updatedAt: 'updated_at'},
+      cols: ['name', 'parentId', 'createdAt', 'updatedAt']
+    },
+    annotations: {
+      table: 'annotations',
+      out: {articleId: 'article_id', b: 'block_index', s: 'start_offset', e: 'end_offset', group: 'grp',
+            noteAt: 'note_at', noteEditedAt: 'note_edited_at', createdAt: 'created_at', updatedAt: 'updated_at'},
+      cols: ['articleId', 'b', 's', 'e', 'quote', 'color', 'note', 'para', 'group', 'noteAt', 'noteEditedAt', 'createdAt', 'updatedAt']
+    }
+  };
+  const inMap = spec => Object.fromEntries(Object.entries(spec.out).map(([k, v]) => [v, k]));
+  function toRow(name, doc){
+    const spec = TABLES[name], row = {};
+    for (const k of Object.keys(doc)) {
+      if (!spec.cols.includes(k)) continue;
+      row[spec.out[k] || k] = doc[k] === undefined ? null : doc[k];
+    }
+    return row;
+  }
+  function fromRow(name, row){
+    const spec = TABLES[name], back = inMap(spec), doc = {id: row.id};
+    for (const [k, v] of Object.entries(row)) {
+      if (k === 'id' || k === 'user_id') continue;
+      doc[back[k] || k] = v;
+    }
+    return doc;
+  }
+  const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = crypto.getRandomValues(new Uint8Array(1))[0] % 16;
+        return (c === 'x' ? r : (r & 3 | 8)).toString(16);
+      }));
+  const cache = {articles: [], folders: [], annotations: []};
+  const subs = {articles: [], folders: [], annotations: []};
+  const emit = name => subs[name].forEach(cb => cb({docs: cache[name].map(d => ({id: d.id, data: () => ({...d})}))}));
+  function putLocal(name, doc){
+    const i = cache[name].findIndex(x => x.id === doc.id);
+    if (i < 0) cache[name].push(doc); else cache[name][i] = {...cache[name][i], ...doc};
+    emit(name);
+  }
+  function dropLocal(name, id){ cache[name] = cache[name].filter(x => x.id !== id); emit(name); }
+  function fail(error){
+    const e = new Error(error.message || 'Supabase-fout');
+    e.code = /network|fetch|timeout/i.test(error.message || '') ? 'store_unavailable' : (error.code || 'upstream_error');
+    throw e;
+  }
+  function docRef(name, id){
+    const t = TABLES[name].table;
+    return {
+      id,
+      async set(doc){
+        const row = {id, user_id: user.id, ...toRow(name, doc)};
+        const {error} = await sb.from(t).upsert(row);
+        if (error) fail(error);
+        putLocal(name, {id, ...doc});
+      },
+      async update(patch){
+        const {error} = await sb.from(t).update(toRow(name, patch)).eq('id', id);
+        if (error) fail(error);
+        putLocal(name, {id, ...patch});
+      },
+      async delete(){
+        const {error} = await sb.from(t).delete().eq('id', id);
+        if (error) fail(error);
+        dropLocal(name, id);
+      }
+    };
+  }
+  const supaDb = {
+    collection: name => ({
+      doc: id => docRef(name, id || uuid()),
+      onSnapshot(cb, onErr){ subs[name].push(cb); if (onErr) subs[name].err = onErr; cb({docs: cache[name].map(d => ({id: d.id, data: () => ({...d})}))}); }
+    }),
+    doc(path){ const [name, id] = path.split('/'); return docRef(name, id); }
+  };
+  const blobUrl = path => sb ? sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl : '';
+  const supaAssets = {
+    async upload(blob, opts){
+      const path = `${user.id}/${uuid()}.jpg`;
+      const {error} = await sb.storage.from(BUCKET).upload(path, blob, {contentType: (opts && opts.type) || 'image/jpeg', upsert: false});
+      if (error) {
+        const e = new Error(error.message);
+        e.code = /exceeded|maximum|too large|payload/i.test(error.message || '') ? 'too_large'
+          : /bucket/i.test(error.message || '') ? 'no_bucket'
+          : /row-level security|violates|policy|denied|unauthorized|not authorized/i.test(error.message || '') ? 'denied'
+          : /jwt|auth/i.test(error.message || '') ? 'upstream_auth' : 'upstream_error';
+        throw e;
+      }
+      return {id: path, url: blobUrl(path)};
+    },
+    async delete(path){ await sb.storage.from(BUCKET).remove([path]); return {deleted: true}; }
+  };
+  const supaDownloads = {
+    async save({filename, data}){
+      const u = URL.createObjectURL(data), a = document.createElement('a');
+      a.href = u; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(u), 4000);
+    }
+  };
+
+  async function loadAll(){
+    const [f, a, n] = await Promise.all([
+      sb.from('folders').select('*'),
+      sb.from('articles').select('*'),
+      sb.from('annotations').select('*')
+    ]);
+    for (const r of [f, a, n]) if (r.error) throw r.error;
+    cache.folders = f.data.map(r => fromRow('folders', r));
+    cache.articles = a.data.map(r => fromRow('articles', r));
+    cache.annotations = n.data.map(r => fromRow('annotations', r));
+    emit('folders'); emit('annotations'); emit('articles');
+  }
+  function liveSync(){
+    try {
+      sb.channel('hub').on('postgres_changes', {event: '*', schema: 'public'}, payload => {
+        const name = Object.keys(TABLES).find(k => TABLES[k].table === payload.table);
+        if (!name) return;
+        if (payload.eventType === 'DELETE') dropLocal(name, payload.old.id);
+        else putLocal(name, fromRow(name, payload.new));
+        if (view === 'lib') renderLib();
+        if (view === 'read' && !(popState && popState.mode === 'edit')) renderReader();
+      }).subscribe();
+    } catch(e) {}
+    let busy = false;
+    document.addEventListener('visibilitychange', async () => {
+      if (document.hidden || busy || view === 'edit' || saving) return;
+      busy = true;
+      try { await loadAll(); if (view === 'lib') renderLib(); if (view === 'read') renderReader(); } catch(e) {}
+      busy = false;
+    });
+  }
+
+  // ---------- theme ----------
+  const THEME_KEY = 'ahjp.theme';
+  const sysDark = window.matchMedia('(prefers-color-scheme: dark)');
+  let themeMode = 'light';
+  function applyTheme(){
+    const t = themeMode === 'system' ? (sysDark.matches ? 'dark' : 'light') : themeMode;
+    document.documentElement.setAttribute('data-theme', t);
+    document.documentElement.style.colorScheme = t;
+    [...$('themeSeg').children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.t === themeMode)));
+  }
+  function setTheme(mode){
+    themeMode = ['light', 'dark', 'system'].includes(mode) ? mode : 'light';
+    try { localStorage.setItem(THEME_KEY, themeMode); } catch(e) {}
+    applyTheme();
+  }
+  try { themeMode = localStorage.getItem(THEME_KEY) || 'light'; } catch(e) {}
+  $('themeSeg').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) setTheme(b.dataset.t); });
+  sysDark.addEventListener('change', () => { if (themeMode === 'system') applyTheme(); });
+  applyTheme();
+
+  // ---------- profile & settings ----------
+  $('navSet').addEventListener('click', () => {
+    if (!user) return;
+    $('setMail').textContent = user.email || '—';
+    $('setUrl').textContent = (cfg && cfg.url) || '—';
+    $('pw1').value = ''; $('pw2').value = ''; $('pwMsg').hidden = true;
+    applyTheme();
+    document.title = 'Settings · Article Hub JP';
+    show('set');
+  });
+  function pwMsg(text, bad){
+    const el = $('pwMsg');
+    el.hidden = false; el.textContent = text;
+    el.className = 'msg ' + (bad ? 'bad' : 'ok');
+  }
+  $('pwForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const a = $('pw1').value, b = $('pw2').value;
+    if (a.length < 8) return pwMsg('Use at least 8 characters.', true);
+    if (a !== b) return pwMsg('The two passwords do not match.', true);
+    $('pwGo').disabled = true; pwMsg('Updating…');
+    try {
+      const {error} = await sb.auth.updateUser({password: a});
+      if (error) throw error;
+      $('pw1').value = ''; $('pw2').value = '';
+      pwMsg('Password updated.');
+      toast('Password updated.');
+    } catch(err) {
+      pwMsg(/should be different|same as the old/i.test(err.message || '') ? 'That is already your current password.'
+        : /weak|password/i.test(err.message || '') ? (err.message || 'This password was rejected.')
+        : 'Updating the password failed. Please try again.', true);
+    }
+    $('pwGo').disabled = false;
+  });
+  $('setOut').addEventListener('click', async () => {
+    if (!confirm('Sign out of this device?')) return;
+    try { await sb.auth.signOut(); } catch(e) {}
+    location.reload();
+  });
+  $('setDisconnect').addEventListener('click', async () => {
+    if (!confirm('Forget this Supabase project on this browser? Your data stays in Supabase.')) return;
+    try { await sb.auth.signOut(); } catch(e) {}
+    try { localStorage.removeItem(CFG_KEY); } catch(e) {}
+    location.reload();
+  });
+
+  // ---------- setup and sign-in ----------
+  const gateErr = m => { $('gateErr').hidden = !m; $('gateErr').textContent = m || ''; if (m) gateNote(''); };
+  const gateNote = m => { $('gateNote').hidden = !m; $('gateNote').textContent = m || ''; };
+  const gateBusy = b => { $('gateBusy').hidden = !b; };
+  let signUpMode = false;
+  // Where Supabase should send a password link back to. Must also be listed under
+  // Authentication -> URL Configuration -> Redirect URLs in your project.
+  const appUrl = () => location.origin + location.pathname;
+  function clearUrl(){ try { history.replaceState(null, '', appUrl()); } catch(e) {} }
+  function readCfg(){
+    if (BUILT_IN.url && BUILT_IN.key) return {...BUILT_IN};
+    try { return JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); } catch(e) { return null; }
+  }
+  function showGate(which){
+    $('gate').hidden = false;
+    $('cfgForm').hidden = which !== 'cfg';
+    $('authForm').hidden = which !== 'auth';
+    $('recoverForm').hidden = which !== 'recover';
+    gateErr(''); gateNote(''); gateBusy(false);
+    setTimeout(() => {
+      const f = which === 'cfg' ? $('cfgUrl') : which === 'recover' ? $('recoverPass') : $('authMail');
+      if (f && !f.value) f.focus();
+    }, 50);
+  }
+  function showRecover(u){
+    showGate('recover');
+    $('recoverWho').textContent = (u && u.email) || 'your account';
+  }
+  $('cfgForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const url = $('cfgUrl').value.trim().replace(/\/+$/, ''), key = $('cfgKey').value.trim();
+    if (!/^https:\/\/.+/.test(url)) return gateErr('Enter the full project URL, starting with https://');
+    if (key.length < 30) return gateErr('That does not look like a valid anon key.');
+    try { localStorage.setItem(CFG_KEY, JSON.stringify({url, key})); } catch(err) { return gateErr('This browser does not allow local storage.'); }
+    location.reload();
+  });
+  $('cfgEdit').addEventListener('click', () => {
+    const c = readCfg() || {url: '', key: ''};
+    $('cfgUrl').value = c.url || ''; $('cfgKey').value = c.key || '';
+    showGate('cfg');
+  });
+  $('authSwap').addEventListener('click', () => {
+    signUpMode = !signUpMode;
+    $('authGo').textContent = signUpMode ? 'Create account' : 'Sign in';
+    $('authSwap').textContent = signUpMode ? 'I already have an account' : 'Create account';
+    $('authLead').textContent = signUpMode ? 'Create an account once, inside your own Supabase project.' : 'Sign in to your library.';
+    $('authPass').setAttribute('autocomplete', signUpMode ? 'new-password' : 'current-password');
+    $('authForgot').closest('.gateforgot').hidden = signUpMode;
+    gateErr(''); gateNote('');
+  });
+
+  $('authForgot').addEventListener('click', async () => {
+    const email = $('authMail').value.trim();
+    if (!email) { $('authMail').focus(); return gateErr('Fill in your email address first, then tap this again.'); }
+    gateErr(''); gateNote(''); gateBusy(true); $('authForgot').disabled = true;
+    try {
+      const {error} = await sb.auth.resetPasswordForEmail(email, {redirectTo: appUrl()});
+      if (error) throw error;
+      gateNote('Check your email. That link brings you back here to choose a new password.');
+    } catch(err) {
+      gateErr(/rate|too many|seconds/i.test(err.message || '') ? 'Just asked for one. Wait a minute before trying again.'
+        : err.message || 'Sending the email failed.');
+    }
+    gateBusy(false); $('authForgot').disabled = false;
+  });
+
+  $('recoverForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const a = $('recoverPass').value, b = $('recoverPass2').value;
+    if (a.length < 8) return gateErr('Use at least 8 characters.');
+    if (a !== b) return gateErr('The two passwords do not match.');
+    gateErr(''); gateNote(''); gateBusy(true); $('recoverGo').disabled = true;
+    try {
+      const {data, error} = await sb.auth.updateUser({password: a});
+      if (error) throw error;
+      recovering = false; clearUrl();
+      $('recoverPass').value = ''; $('recoverPass2').value = '';
+      gateBusy(false); $('recoverGo').disabled = false;
+      let u = data && data.user;
+      if (!u) { try { u = (await sb.auth.getUser()).data.user; } catch(err2) { u = null; } }
+      if (u) { toast('Password updated.'); await start(u); }
+      else { showGate('auth'); gateNote('Password updated. Sign in with your new password.'); }
+    } catch(err) {
+      gateBusy(false); $('recoverGo').disabled = false;
+      gateErr(/should be different|same as the old/i.test(err.message || '') ? 'That is already your current password. Pick a different one.'
+        : /expired|invalid|session|jwt/i.test(err.message || '') ? 'This password link has expired. Ask for a new one from the sign-in screen.'
+        : err.message || 'Updating the password failed.');
+    }
+  });
+  $('authForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = $('authMail').value.trim(), password = $('authPass').value;
+    gateErr(''); gateBusy(true); $('authGo').disabled = true;
+    try {
+      const {data, error} = signUpMode
+        ? await sb.auth.signUp({email, password})
+        : await sb.auth.signInWithPassword({email, password});
+      if (error) throw error;
+      if (!data.session) { gateBusy(false); $('authGo').disabled = false; return gateErr('Confirm your email address through the link Supabase sent you, then sign in.'); }
+      await start(data.session.user);
+    } catch(err) {
+      gateBusy(false); $('authGo').disabled = false;
+      gateErr(/invalid login/i.test(err.message || '') ? 'That email address or password is not right.'
+        : /already registered/i.test(err.message || '') ? 'That email address already has an account. Sign in instead.'
+        : /signups not allowed|disabled/i.test(err.message || '') ? 'Sign-ups are disabled in your Supabase project. Enable email sign-ups or create the user in the dashboard.'
+        : err.message || 'Signing in failed.');
+    }
+  });
+
+  async function start(u){
+    user = u;
+    db = supaDb; assets = supaAssets; downloads = supaDownloads;
+    try {
+      await loadAll();
+    } catch(err) {
+      gateBusy(false); $('authGo').disabled = false;
+      return gateErr(/relation|does not exist|schema/i.test(err.message || '')
+        ? 'The tables do not exist yet. Run supabase-setup.sql in your project\'s SQL Editor first.'
+        : 'Connecting to the database failed: ' + (err.message || 'unknown error'));
+    }
+    supaDb.collection('folders').onSnapshot(snap => {
+      folders = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      if (view === 'lib') renderLib();
+      if (view === 'read') renderReader();
+    });
+    supaDb.collection('annotations').onSnapshot(snap => {
+      annotations = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      if (view === 'read' && !(popState && popState.mode === 'edit')) renderReader();
+    });
+    supaDb.collection('articles').onSnapshot(snap => {
+      articles = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      loaded = true;
+      if (view === 'lib') renderLib();
+      if (view === 'read') renderReader();
+      if (view === 'edit') renderPreview();
+    });
+    loaded = true;
+    $('gate').hidden = true;
+    $('navSet').hidden = false;
+    $('navSet').title = 'Profile & settings (' + (u.email || '') + ')';
+    renderLib();
+    liveSync();
+  }
+
+  // ---------- boot ----------
+  renderLib();
+  // A password link lands here with its token in the URL. Read that now: supabase-js
+  // swallows and clears the URL while it starts up. Supabase uses the hash for the
+  // implicit flow and the query string for PKCE, so check both.
+  const linkBits = new URLSearchParams((location.hash || '').replace(/^#/, '') + '&' + (location.search || '').replace(/^\?/, ''));
+  let recovering = linkBits.get('type') === 'recovery';
+  const linkError = linkBits.get('error_description') || linkBits.get('error');
+
+  (async () => {
+    if (!window.supabase) { showGate('cfg'); gateErr('The Supabase library could not be loaded. Check your internet connection.'); return; }
+    cfg = readCfg();
+    if (!cfg) {
+      showGate('cfg');
+      // Reloading after Connect keeps the hash, so the link survives this detour.
+      if (recovering) gateNote('Connect to your Supabase project first. Your password link keeps working.');
+      return;
+    }
+    try { sb = window.supabase.createClient(cfg.url, cfg.key, {auth: {persistSession: true, autoRefreshToken: true}}); }
+    catch(e) { showGate('cfg'); return gateErr('That project URL or key does not work.'); }
+    try { sb.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY') recovering = true; }); } catch(e) {}
+    if (linkError) {
+      clearUrl();
+      showGate('auth');
+      return gateErr(/expired|invalid/i.test(linkError)
+        ? 'That link has expired or was already used. Ask for a new one below.'
+        : String(linkError).replace(/\+/g, ' '));
+    }
+    const {data} = await sb.auth.getSession();
+    if (data && data.session && recovering) return showRecover(data.session.user);
+    if (data && data.session) await start(data.session.user);
+    else showGate('auth');
+  })();
+})();
+</script>
+</body>
+</html>
