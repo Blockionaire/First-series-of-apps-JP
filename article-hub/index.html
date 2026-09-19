@@ -519,6 +519,10 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
       <input id="recoverPass2" type="password" autocomplete="new-password" minlength="8" required>
       <button class="primary" type="submit" id="recoverGo">Save new password</button>
     </form>
+    <div class="gaterow" id="gateFail" hidden>
+      <button type="button" id="gateRetry">Try again</button>
+      <button type="button" id="gateOther">Other database</button>
+    </div>
     <p class="gateerr" id="gateErr" hidden role="alert"></p>
     <p class="gatenote" id="gateNote" hidden role="status"></p>
     <p class="hint" id="gateBusy" hidden>Working…</p>
@@ -2051,11 +2055,29 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     $('cfgForm').hidden = which !== 'cfg';
     $('authForm').hidden = which !== 'auth';
     $('recoverForm').hidden = which !== 'recover';
+    $('gateFail').hidden = true;
     gateErr(''); gateNote(''); gateBusy(false);
     setTimeout(() => {
       const f = which === 'cfg' ? $('cfgUrl') : which === 'recover' ? $('recoverPass') : $('authMail');
       if (f && !f.value) f.focus();
     }, 50);
+  }
+  // Een fout uit start() belandde in #gateErr terwijl #gate nog verborgen stond:
+  // kom je binnen met een geldige sessie, dan wordt de gate nooit getoond en las
+  // je de melding dus nooit. Dit zet hem alsnog in beeld, met een uitweg.
+  function showGateError(msg){
+    $('gate').hidden = false;
+    $('cfgForm').hidden = true;
+    $('authForm').hidden = true;
+    $('recoverForm').hidden = true;
+    $('gateFail').hidden = false;
+    gateBusy(false); gateNote('');
+    gateErr(msg);
+  }
+  function editCfg(){
+    const c = readCfg() || {url: '', key: ''};
+    $('cfgUrl').value = c.url || ''; $('cfgKey').value = c.key || '';
+    showGate('cfg');
   }
   function showRecover(u){
     showGate('recover');
@@ -2069,11 +2091,9 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     try { localStorage.setItem(CFG_KEY, JSON.stringify({url, key})); } catch(err) { return gateErr('This browser does not allow local storage.'); }
     location.reload();
   });
-  $('cfgEdit').addEventListener('click', () => {
-    const c = readCfg() || {url: '', key: ''};
-    $('cfgUrl').value = c.url || ''; $('cfgKey').value = c.key || '';
-    showGate('cfg');
-  });
+  $('cfgEdit').addEventListener('click', editCfg);
+  $('gateOther').addEventListener('click', editCfg);
+  $('gateRetry').addEventListener('click', () => location.reload());
   $('authSwap').addEventListener('click', () => {
     signUpMode = !signUpMode;
     $('authGo').textContent = signUpMode ? 'Create account' : 'Sign in';
@@ -2149,8 +2169,8 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
       await loadAll();
     } catch(err) {
       gateBusy(false); $('authGo').disabled = false;
-      return gateErr(/relation|does not exist|schema/i.test(err.message || '')
-        ? 'The tables do not exist yet. Run supabase-setup.sql in your project\'s SQL Editor first.'
+      return showGateError(/relation|does not exist|schema/i.test(err.message || '')
+        ? 'This project has no Article Hub tables yet. Open the SQL Editor in Supabase and run supabase-setup.sql (it sits next to this page in the repository). Check that you picked the right project too.'
         : 'Connecting to the database failed: ' + (err.message || 'unknown error'));
     }
     supaDb.collection('folders').onSnapshot(snap => {
