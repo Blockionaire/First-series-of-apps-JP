@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { HEADER_ICON_BTN } from "./icon-button";
 
 /**
- * Dark/light switch, sized to sit in the header row beside the Menu button.
+ * Dark/light switch: the glyph alone, no frame and no label.
+ *
  * The server renders the correct theme from the `stai_theme` cookie (no
  * flash); this just flips the attribute and persists the choice.
  *
- * On mobile only the icon shows. On desktop the label reserves its width
- * up front, so the placeholder that renders before mount cannot shove the
- * account links sideways when the real label arrives.
+ * `theme` is null until mount, because the choice lives on `documentElement`
+ * and cannot be read while rendering on the server. The icon is held back
+ * until then rather than guessed — a sun that silently becomes a moon a frame
+ * later is worse than a beat of nothing, and the button keeps its size
+ * either way so the row does not shift.
  */
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<"dark" | "light" | null>(null);
@@ -30,23 +34,26 @@ export default function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
-      className="f-mono inline-flex items-center gap-1.5 border px-2.5 py-2 text-[0.7rem] font-semibold tracking-[0.14em] uppercase rule-strong text-cream-400 transition-colors hover:border-[var(--line-strong)] hover:text-cream-100"
+      title={theme === "light" ? "Dark theme" : "Light theme"}
+      className={HEADER_ICON_BTN}
     >
-      <svg width="12" height="12" viewBox="0 0 10 10" aria-hidden="true" className="shrink-0">
-        {theme === "light" ? (
-          /* moon */
-          <path d="M8.4 6.1A3.9 3.9 0 0 1 3.9 1.6a4 4 0 1 0 4.5 4.5Z" fill="currentColor" />
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">
+        {theme === null ? null : theme === "light" ? (
+          /* moon — shown on the light theme, because it switches TO dark */
+          <path d="M13.4 9.8A6.2 6.2 0 0 1 6.2 2.6a6.4 6.4 0 1 0 7.2 7.2Z" fill="currentColor" />
         ) : (
           /* sun */
           <>
-            <circle cx="5" cy="5" r="2.1" fill="currentColor" />
-            <path d="M5 0v1.6M5 8.4V10M0 5h1.6M8.4 5H10M1.5 1.5l1.1 1.1M7.4 7.4l1.1 1.1M8.5 1.5 7.4 2.6M2.6 7.4 1.5 8.5" stroke="currentColor" strokeWidth="0.9" />
+            <circle cx="8" cy="8" r="3.2" fill="currentColor" />
+            <path
+              d="M8 0.6v2M8 13.4v2M0.6 8h2M13.4 8h2M2.8 2.8l1.4 1.4M11.8 11.8l1.4 1.4M13.2 2.8l-1.4 1.4M4.2 11.8l-1.4 1.4"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+            />
           </>
         )}
       </svg>
-      <span className="hidden min-w-[2.4rem] text-left lg:inline-block">
-        {theme === null ? "" : theme === "light" ? "Dark" : "Light"}
-      </span>
     </button>
   );
 }
