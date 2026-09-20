@@ -7,7 +7,17 @@ export const SITE = {
   url: publicUrl(),
   name: "STAI",
   legalName: "STAI — Signal & Training for Audit Intelligence",
-  tagline: "Signal & training for audit intelligence",
+  /**
+   * The slogan, without the "STAI — " prefix: it is rendered as
+   * `STAI — ${tagline}` in the page title and the hero, so carrying the name
+   * here as well would print it twice.
+   *
+   * This is the single source. The hero, the About headline, the browser tab
+   * title, the Organization schema's `slogan` and the OG card all read it,
+   * because a brand line copied into six files is a brand line that ends up
+   * saying six different things.
+   */
+  tagline: "The platform to stay ahead of AI in audit & finance",
   description:
     "The intelligence platform for audit, accountancy and finance professionals across Europe. Editorial analysis of AI regulation and standards, an audit-grade prompt library, a grounded research assistant, and live training for firms.",
   locale: "en_GB",

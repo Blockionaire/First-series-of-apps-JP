@@ -12,6 +12,7 @@ import EnforcementClock from "@/components/chrome/EnforcementClock";
 import Reveal from "@/components/Reveal";
 import { LeadCard, IndexCard, RowCard } from "@/components/ArticleCard";
 import { PlusBadge } from "@/components/Logo";
+import { SITE } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function Home() {
         <div className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-14 pt-14 sm:px-6 lg:grid-cols-[1.5fr_1fr] lg:gap-16 lg:pb-20 lg:pt-20">
           <div>
             <p className="f-label" style={{ color: "var(--ink-muted)" }}>
-              STAI — Signal &amp; Training for Audit Intelligence
+              STAI — {SITE.tagline}
             </p>
             <h1 className="f-display mt-5 text-[clamp(2.6rem,7vw,5.2rem)] text-cream-100">
               AI is rewriting the audit.
