@@ -217,6 +217,7 @@ describe("free launch", { skip: hasBuild ? false : "no standalone build" }, () =
       ["/api/admin/early-access.csv", 403],
       ["/api/admin/export/accounts", 403],
       ["/api/admin/export/newsletter", 403],
+      ["/api/admin/live", 403],
     ]) {
       const res = await fetch(BASE + p, { redirect: "manual" });
       assert.equal(res.status, expected, `${p} should return ${expected}`);

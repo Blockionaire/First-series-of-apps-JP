@@ -188,6 +188,51 @@ describe("admin register — every dataset actually runs", { skip }, () => {
   });
 });
 
+describe("growth charts", { skip }, () => {
+  test("the live endpoint reports a shape the tile can render", async () => {
+    const res = await asAdmin("/api/admin/live");
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("cache-control"), "no-store", "a cached live number is a wrong number");
+    const live = await res.json();
+    assert.equal(typeof live.now, "number");
+    assert.ok(Array.isArray(live.buckets), "buckets must be an array");
+    assert.equal(live.buckets.length, 12, "the last hour in five-minute steps");
+    assert.ok(live.buckets.every((n) => typeof n === "number"), "every bucket is a number");
+  });
+
+  test("empty says so, and once there is data every bucket is plotted", async () => {
+    // One test, in order, because the two facts are about the same page in two
+    // states and splitting them would make each depend on the other's ordering.
+
+    // 1. Nothing tracked yet: the chart must say so rather than draw a flat
+    //    line at zero, which reads as a broken chart instead of as quiet.
+    const empty = await (await asAdmin("/admin/growth?w=1")).text();
+    assert.match(empty, /Nothing recorded in this window/);
+    assert.equal((empty.match(/<rect[^>]*fill="transparent"/g) ?? []).length, 0);
+
+    // 2. Record a couple of views on public paths.
+    for (const p of ["/", "/plus"]) {
+      const res = await fetch(`${BASE}/api/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "page_view", path: p }),
+      });
+      assert.equal(res.status, 200);
+    }
+
+    // 3. Every window now plots its full set of buckets, including the ones
+    //    where nothing happened — a quiet Tuesday must flatten the line, not
+    //    disappear from the axis and shorten the window.
+    //    The transparent <rect>s are the per-bucket hit targets: one per
+    //    bucket per chart, and there are two charts.
+    for (const [w, want] of [["1", 24], ["7", 7], ["30", 30]]) {
+      const html = await (await asAdmin(`/admin/growth?w=${w}`)).text();
+      const rects = (html.match(/<rect[^>]*fill="transparent"/g) ?? []).length;
+      assert.equal(rects / 2, want, `w=${w} should plot ${want} buckets per chart, got ${rects / 2}`);
+    }
+  });
+});
+
 describe("admin register — what the export may and may not contain", { skip }, () => {
   test("password hashes never leave the building", async () => {
     const text = await (await asAdmin("/api/admin/export/accounts")).text();
