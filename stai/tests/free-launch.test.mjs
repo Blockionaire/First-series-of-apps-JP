@@ -145,6 +145,50 @@ describe("free launch", { skip: hasBuild ? false : "no standalone build" }, () =
     }
   });
 
+  test("the back office is not counted as traffic", async () => {
+    const post = (path) =>
+      fetch(`${BASE}/api/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "page_view", path }),
+      });
+
+    const before = db();
+    const n0 = before.prepare("SELECT COUNT(*) AS n FROM events WHERE kind='page_view'").get().n;
+    before.close();
+
+    // Admin surfaces record nothing, and are not handed a visitor token —
+    // otherwise looking at the dashboard would inflate the dashboard.
+    for (const p of ["/admin", "/admin/growth", "/admin/people"]) {
+      const res = await post(p);
+      assert.equal(res.status, 200, `${p} should be accepted but ignored`);
+      assert.equal((await res.json()).recorded, false, `${p} must not be recorded`);
+      assert.equal(
+        res.headers.getSetCookie().filter((c) => c.startsWith("stai_v=")).length,
+        0,
+        `${p} must not mint a visitor token`
+      );
+    }
+
+    // Whole segments only. A bare startsWith("/admin") would swallow this one,
+    // and any future public path that merely begins with those letters.
+    for (const p of ["/administrators", "/account"]) {
+      assert.equal((await (await post(p)).json()).recorded, undefined, `${p} should still be recorded`);
+    }
+
+    const after = db();
+    const rows = after
+      .prepare("SELECT path FROM events WHERE kind='page_view' ORDER BY id DESC LIMIT 12")
+      .all()
+      .map((r) => r.path);
+    const n1 = after.prepare("SELECT COUNT(*) AS n FROM events WHERE kind='page_view'").get().n;
+    after.close();
+
+    assert.ok(!rows.some((p) => p === "/admin" || p.startsWith("/admin/")), `admin paths leaked: ${rows}`);
+    assert.ok(rows.includes("/administrators"), "the non-admin lookalike should be there");
+    assert.equal(n1 - n0, 2, "exactly the two public paths should have been added");
+  });
+
   test("analytics stores no identifying data", () => {
     const d = db();
     const cols = d.prepare("PRAGMA table_info(events)").all().map((c) => c.name);
