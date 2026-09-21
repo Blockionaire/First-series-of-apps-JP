@@ -9,15 +9,76 @@
  * about.
  *
  * `export *` does not carry a default export, which is why the default is
- * re-exported on its own line. The wildcard matters too: OpenNext exports its
+ * handled on its own below. The wildcard matters too: OpenNext exports its
  * own Durable Objects (DOQueueHandler, DOShardedTagCache, BucketCachePurge),
  * and dropping them here would quietly break anyone who later enables the
  * OpenNext caching that depends on them.
  *
  * Excluded from tsconfig.json: it imports a build artefact that does not exist
  * on a clean checkout, so type-checking it would fail before the first build.
+ * That exclusion is the reason everything below is kept as small and as dumb
+ * as possible — it is the one file in the project the compiler never sees.
  */
-export * from "../.open-next/worker.js";
-export { default } from "../.open-next/worker.js";
+import openNextWorker from "../.open-next/worker.js";
 
+export * from "../.open-next/worker.js";
 export { RateLimiterDO } from "./rate-limiter-do";
+
+/**
+ * Newsroom discovery, on a schedule.
+ *
+ * Cloudflare Cron Triggers invoke `scheduled()`, which is outside Next's
+ * request pipeline: there is no route, no session, and none of the app's
+ * module initialisation has necessarily run. Rather than reimplement any of
+ * that here, this makes an ordinary request back into the Worker's own fetch
+ * handler, which is the path everything else already takes.
+ *
+ * The shared secret is what authorises it. A cron trigger cannot present a
+ * session cookie, and an unauthenticated endpoint that makes dozens of
+ * outbound requests would be an amplifier pointed at other people's
+ * servers — including regulators whose goodwill this desk depends on.
+ *
+ * With `NEWSROOM_CRON_SECRET` unset, this does nothing at all. It does not
+ * fall back to an unauthenticated call; the route would refuse it anyway, and
+ * a scheduled job that quietly runs without its credential is worse than one
+ * that does not run.
+ */
+type CronEnv = { NEWSROOM_CRON_SECRET?: string; APP_URL?: string };
+
+const worker = {
+  ...openNextWorker,
+
+  async scheduled(event: ScheduledController, env: CronEnv, ctx: ExecutionContext) {
+    const secret = env.NEWSROOM_CRON_SECRET?.trim();
+    if (!secret) {
+      console.warn("[newsroom] cron fired but NEWSROOM_CRON_SECRET is not set — skipping");
+      return;
+    }
+
+    const origin = (env.APP_URL ?? "https://stai-ahead.com").replace(/\/+$/, "");
+    const request = new Request(`${origin}/api/newsroom/discover`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-newsroom-cron": secret,
+      },
+      body: "{}",
+    });
+
+    // waitUntil, so the run is not cut short when scheduled() returns.
+    const work = (async () => {
+      try {
+        const res = await openNextWorker.fetch(request, env, ctx);
+        const text = await res.text();
+        console.log(`[newsroom] discovery ${res.status}: ${text.slice(0, 500)}`);
+      } catch (e) {
+        console.error(`[newsroom] discovery failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    })();
+
+    ctx.waitUntil(work);
+    await work;
+  },
+};
+
+export default worker;

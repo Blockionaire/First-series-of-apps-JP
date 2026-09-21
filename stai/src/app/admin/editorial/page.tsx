@@ -93,17 +93,20 @@ export default async function EditorialPage() {
           </p>
           <h1 className="f-display mt-2 text-4xl text-cream-100">Editorial</h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
-            The Intelligence Engine newsroom. Phase 1 is the foundation — schema, source registry,
-            state machine and this shell. Nothing is discovered, researched or written yet, so every
-            counter below reads zero until phase 2 ships.
+            The Intelligence Engine newsroom. Discovery, clustering and the relevance gates are
+            live; research, drafting and publication are not. What the engine would have researched
+            is on the <Link href="/admin/editorial/dry-run" className="underline underline-offset-4">dry run</Link>.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Link href="/admin" className="btn btn-ghost btn-sm">
             Desk
           </Link>
-          <Link href="/admin/editorial/sources" className="btn btn-primary btn-sm">
+          <Link href="/admin/editorial/sources" className="btn btn-ghost btn-sm">
             Source registry
+          </Link>
+          <Link href="/admin/editorial/dry-run" className="btn btn-primary btn-sm">
+            Dry run
           </Link>
         </div>
       </header>

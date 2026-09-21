@@ -103,6 +103,23 @@ export type Source = {
   last_success_at: string | null;
   consecutive_failures: number;
   created_at: string;
+
+  /* ── Fetch telemetry (phase 2) ────────────────────────────────────────
+   * `last_success_at` answers "when did this last WORK". These answer "what
+   * happened the last time we TRIED", which is the question an operator
+   * actually asks when a feed looks quiet: a source whose last attempt was a
+   * 404 four minutes ago and one that simply has not been due for an hour are
+   * indistinguishable without them.
+   */
+  last_attempt_at: string | null;
+  last_outcome: string;
+  last_http_status: number | null;
+  last_error: string;
+  last_items_found: number;
+  last_items_new: number;
+  /** Conditional-GET validators, so most polls cost a bodyless 304. */
+  etag: string;
+  last_modified_header: string;
 };
 
 /** The per-tier default cadence, in minutes (masterplan §5). */
@@ -143,9 +160,33 @@ export type SourceInput = {
   snapshot_retention?: string;
 };
 
-export type SourceCheck =
-  | { ok: true; value: Omit<Source, "id" | "active" | "activated_at" | "activated_by" | "last_success_at" | "consecutive_failures" | "created_at"> }
-  | { ok: false; error: string };
+/**
+ * What a caller may state about a source.
+ *
+ * Everything else on `Source` is the system's own record — activation,
+ * health, fetch telemetry, conditional-GET validators — and none of it is
+ * accepted from an API body. Listing the editable fields explicitly rather
+ * than subtracting the others from `Source` means a new system field is
+ * un-settable by default: the failure would be at the type level, not a
+ * quietly writable column.
+ */
+export type SourceFields = Pick<
+  Source,
+  | "name"
+  | "domain"
+  | "source_type"
+  | "authority_tier"
+  | "jurisdictions"
+  | "topics"
+  | "ingestion_method"
+  | "feed_url"
+  | "fetch_frequency"
+  | "fetch_allowed"
+  | "license_notes"
+  | "snapshot_retention"
+>;
+
+export type SourceCheck = { ok: true; value: SourceFields } | { ok: false; error: string };
 
 /**
  * Validate a registry entry.

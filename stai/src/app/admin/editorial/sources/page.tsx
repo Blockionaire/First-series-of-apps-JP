@@ -95,6 +95,13 @@ export default async function SourcesPage() {
           retention: s.snapshot_retention,
           health: s.health.state,
           healthDetail: s.health.detail,
+          lastAttemptAt: s.last_attempt_at,
+          lastOutcome: s.last_outcome,
+          lastHttpStatus: s.last_http_status,
+          lastError: s.last_error,
+          lastItemsFound: s.last_items_found,
+          lastItemsNew: s.last_items_new,
+          consecutiveFailures: s.consecutive_failures,
         }))}
         proposedCount={PROPOSED_SOURCES.length}
         alreadyLoaded={sources.length > 0}

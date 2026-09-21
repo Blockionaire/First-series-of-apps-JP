@@ -24,6 +24,21 @@
     "head_sampling_rate": 1
   },
 
+  // Newsroom discovery.
+  //
+  // Every thirty minutes is the TRIGGER rate, not the fetch rate. Each run
+  // asks every registered source whether its own cadence has elapsed — Tier 1
+  // every 30 minutes, Tier 2 hourly, Tier 3 every two hours — so most firings
+  // skip most sources and log why. That is the intent: one schedule here,
+  // per-source politeness enforced in the code that knows the source.
+  //
+  // The run authorises itself with NEWSROOM_CRON_SECRET, set as a Secret in
+  // the dashboard. With no secret the scheduled handler does nothing at all;
+  // it does not fall back to an unauthenticated call. See DISCOVERY.md.
+  "triggers": {
+    "crons": ["*/30 * * * *"]
+  },
+
   "d1_databases": [
     {
       "binding": "DB",

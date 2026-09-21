@@ -20,6 +20,19 @@ export type RegistryRow = {
   retention: string;
   health: string;
   healthDetail: string;
+  /* ── Fetch telemetry ──────────────────────────────────────────────────
+   * What happened the LAST TIME WE TRIED, as distinct from when this last
+   * worked. A source whose last attempt was a 404 four minutes ago and one
+   * that simply has not been due for an hour are indistinguishable without
+   * these, and they need opposite responses.
+   */
+  lastAttemptAt: string | null;
+  lastOutcome: string;
+  lastHttpStatus: number | null;
+  lastError: string;
+  lastItemsFound: number;
+  lastItemsNew: number;
+  consecutiveFailures: number;
 };
 
 type Props = {
@@ -176,10 +189,31 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                   <td className="f-mono py-2 text-[0.72rem] text-cream-400">
                     {s.active ? (
                       <>
-                        {s.health}
+                        <span className={s.health === "ok" ? "text-cream-400" : "text-gold-300"}>
+                          {s.health}
+                        </span>
                         {s.healthDetail && (
                           <span className="block" style={{ color: "var(--ink-faint)" }}>
                             {s.healthDetail}
+                          </span>
+                        )}
+                        {/* The last ATTEMPT, which is a different question
+                            from the last success and is usually the one being
+                            asked when a feed looks quiet. */}
+                        {s.lastAttemptAt && (
+                          <span className="block" style={{ color: "var(--ink-faint)" }}>
+                            {s.lastAttemptAt.slice(5, 16).replace("T", " ")} · {s.lastOutcome}
+                            {s.lastHttpStatus ? ` ${s.lastHttpStatus}` : ""} · {s.lastItemsFound}{" "}
+                            found, {s.lastItemsNew} new
+                          </span>
+                        )}
+                        {s.lastError && (
+                          <span className="block text-gold-300">{s.lastError.slice(0, 90)}</span>
+                        )}
+                        {s.consecutiveFailures > 0 && (
+                          <span className="block text-gold-300">
+                            {s.consecutiveFailures} consecutive failure
+                            {s.consecutiveFailures === 1 ? "" : "s"}
                           </span>
                         )}
                       </>
