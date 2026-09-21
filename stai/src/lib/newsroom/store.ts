@@ -668,3 +668,51 @@ export async function discoverySummary(): Promise<{
     lastRunAt: last?.started_at ?? null,
   };
 }
+
+/**
+ * Change a source's feed URL.
+ *
+ * Exists because feed URLs move, and the first one to be caught was the AFM's
+ * — found by an operator clicking the link the registry now shows. Without
+ * this, every such correction is a code change and a deploy, which is absurd
+ * overhead for replacing one string and guarantees broken feeds sit unfixed.
+ *
+ * ── Editing the URL revokes retrieval permission ─────────────────────────
+ * Deliberate, and the reason is the whole premise of the two-switch gate:
+ * permission was granted for a SPECIFIC address, after a human checked that
+ * address's robots.txt and terms. A new address has not been checked. Keeping
+ * the tick would silently convert "I approved fetching this" into "I approved
+ * fetching whatever this row points at next".
+ *
+ * `active` is left alone. Wanting a source is a judgement about the
+ * publication, which a corrected URL does not change.
+ */
+export async function updateSourceFeedUrl(input: {
+  id: number;
+  feedUrl: string;
+  actor: string;
+}): Promise<void> {
+  await sql().run(
+    `UPDATE newsroom_sources SET
+       feed_url = ?,
+       fetch_allowed = 0,
+       etag = '',
+       last_modified_header = '',
+       last_outcome = '',
+       last_error = '',
+       last_http_status = NULL,
+       consecutive_failures = 0,
+       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+     WHERE id = ?`,
+    [input.feedUrl, input.id]
+  );
+
+  // The conditional-GET validators and the health record belong to the OLD
+  // address. Carried over, an ETag from the previous URL would make the first
+  // fetch of the new one answer 304 and look healthy while returning nothing.
+  await sql().run(
+    `INSERT INTO newsroom_fetch_log (source_id, outcome, error, items_found, items_new)
+     VALUES (?, 'skipped_not_due', ?, 0, 0)`,
+    [input.id, `feed URL changed by ${input.actor} — retrieval permission reset`]
+  );
+}

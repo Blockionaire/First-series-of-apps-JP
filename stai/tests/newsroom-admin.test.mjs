@@ -89,13 +89,27 @@ async function post(body, auth = true) {
   return { status: res.status, json: await res.json().catch(() => ({})) };
 }
 
-const db = () => new Database(path.join(dataDir, "stai.db"), { readonly: true });
+const db = (writable = false) =>
+  new Database(path.join(dataDir, "stai.db"), { readonly: !writable });
 
 function query(sql, params = []) {
   const d = db();
   const rows = d.prepare(sql).all(...params);
   d.close();
   return rows;
+}
+
+const one = (sql, params = []) => query(sql, params)[0];
+
+/**
+ * A direct write, used only to set up a state the API cannot produce —
+ * stale ETags and a failure record from a previous address. Everything the
+ * application is responsible for still goes through the real route.
+ */
+function exec(sql, params = []) {
+  const d = db(true);
+  d.prepare(sql).run(...params);
+  d.close();
 }
 
 before(async () => {
@@ -341,6 +355,152 @@ describe("hand-registered sources are validated at the boundary", { skip }, () =
     const row = query("SELECT active, fetch_allowed FROM newsroom_sources WHERE id=?", [json.id])[0];
     assert.equal(row.fetch_allowed, 0, "the route must ignore a fetch_allowed it was handed");
     assert.equal(row.active, 0, "and an active flag too");
+  });
+});
+
+describe("correcting a moved feed URL", { skip }, () => {
+  /** The AFM row, whose feed URL was the first found to 404 in production. */
+  const afm = () => one("SELECT * FROM newsroom_sources WHERE domain='afm.nl'");
+
+  test("an operator can replace a feed URL from the browser", async () => {
+    const before = afm();
+    assert.ok(before, "the AFM should be registered");
+
+    const { status, json } = await post({
+      action: "set_feed_url",
+      id: before.id,
+      feed_url: "https://www.afm.nl/en/sector/actueel/rss",
+    });
+    assert.equal(status, 200, JSON.stringify(json));
+
+    const after = afm();
+    // Stored canonically — validateSource strips the www from the DOMAIN but
+    // keeps the URL as given, since a feed host is not ours to rewrite.
+    assert.equal(after.feed_url, "https://www.afm.nl/en/sector/actueel/rss");
+  });
+
+  test("changing the URL revokes retrieval permission", async () => {
+    // The whole premise of the two-switch gate: permission was granted for a
+    // SPECIFIC address whose robots.txt and terms a human checked. A new
+    // address has not been checked, so the tick cannot carry over.
+    const s = afm();
+    await post({ action: "set_flag", id: s.id, field: "fetch_allowed", value: true });
+    assert.equal(afm().fetch_allowed, 1);
+
+    await post({
+      action: "set_feed_url",
+      id: s.id,
+      feed_url: "https://www.afm.nl/nl-nl/professionals/nieuws/rss",
+    });
+    assert.equal(afm().fetch_allowed, 0, "a corrected URL is an unchecked URL");
+  });
+
+  test("the old address's cache validators and health do not carry over", async () => {
+    // An ETag from the previous URL would make the first fetch of the new one
+    // answer 304 and look healthy while returning nothing.
+    const s = afm();
+    exec(
+      "UPDATE newsroom_sources SET etag=?, last_modified_header=?, last_outcome=?, last_error=?, consecutive_failures=? WHERE id=?",
+      ['"abc123"', "Mon, 01 Jan 2026 00:00:00 GMT", "http_error", "404 Not Found", 4, s.id]
+    );
+
+    await post({
+      action: "set_feed_url",
+      id: s.id,
+      feed_url: "https://www.afm.nl/nl-nl/rss/actueel",
+    });
+
+    const after = afm();
+    assert.equal(after.etag, "");
+    assert.equal(after.last_modified_header, "");
+    assert.equal(after.last_error, "");
+    assert.equal(after.consecutive_failures, 0, "the new address starts with a clean record");
+  });
+
+  test("the change is on the audit trail", () => {
+    const row = one(
+      "SELECT * FROM newsroom_fetch_log WHERE source_id=(SELECT id FROM newsroom_sources WHERE domain='afm.nl') ORDER BY id DESC LIMIT 1"
+    );
+    assert.ok(row, "a URL change must leave a record");
+    assert.match(row.error, /feed URL changed by/);
+    assert.match(row.error, new RegExp(ADMIN_EMAIL.replace(".", "\\.")));
+  });
+
+  test("a correction cannot repoint a source at another host", async () => {
+    // This is what stops a Tier-1 row quietly becoming a laundering route for
+    // somebody's blog. Same rule as registration, same function.
+    const s = afm();
+    const { status, json } = await post({
+      action: "set_feed_url",
+      id: s.id,
+      feed_url: "https://random-blog.example.com/feed.xml",
+    });
+    assert.equal(status, 400);
+    assert.match(json.error, /does not belong/);
+    assert.match(afm().feed_url, /afm\.nl/, "and the stored URL is untouched");
+  });
+
+  test("http, javascript: and empty are all refused", async () => {
+    const s = afm();
+    const original = afm().feed_url;
+    for (const bad of [
+      "http://www.afm.nl/rss",
+      "javascript:alert(1)",
+      "not a url",
+      "",
+      "   ",
+    ]) {
+      const { status } = await post({ action: "set_feed_url", id: s.id, feed_url: bad });
+      assert.equal(status, 400, `${bad || "(empty)"} must be refused`);
+    }
+    assert.equal(afm().feed_url, original, "nothing was written");
+  });
+
+  test("a subdomain of the registered domain is accepted", async () => {
+    const arxiv = one("SELECT * FROM newsroom_sources WHERE domain='arxiv.org'");
+    const { status } = await post({
+      action: "set_feed_url",
+      id: arxiv.id,
+      feed_url: "https://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.CL",
+    });
+    assert.equal(status, 200);
+  });
+
+  test("an unknown source id is a 404, not a silent no-op", async () => {
+    const { status } = await post({
+      action: "set_feed_url",
+      id: 999999,
+      feed_url: "https://afm.nl/rss",
+    });
+    assert.equal(status, 404);
+  });
+
+  test("a signed-out caller cannot change a feed URL", async () => {
+    const s = afm();
+    const original = s.feed_url;
+    const { status } = await post(
+      { action: "set_feed_url", id: s.id, feed_url: "https://www.afm.nl/hacked" },
+      false
+    );
+    assert.equal(status, 403);
+    assert.equal(afm().feed_url, original);
+  });
+
+  test("the registry page offers the control", async () => {
+    const html = await (await authed("/admin/editorial/sources")).text();
+    assert.match(html, /Edit</, "each row needs an edit control");
+  });
+
+  test("the form warns that saving costs the retrieval tick", () => {
+    // Asserted against the component rather than the HTML: the warning sits
+    // inside the edit form, which only exists once a row is open, so it is
+    // client-rendered and never appears in a server response.
+    const src = fs.readFileSync(
+      path.join(ROOT, "src/components/admin/SourceRegistry.tsx"),
+      "utf8"
+    );
+    assert.match(src, /Saving resets Retrievable/, "the operator must be told what it costs");
+    assert.match(src, /belong to \{s\.domain\}/, "and which host the new URL must belong to");
   });
 });
 

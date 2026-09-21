@@ -103,6 +103,36 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
     }
   }
 
+  /**
+   * Correcting a moved feed.
+   *
+   * Feed URLs move — the AFM's was the first to be caught, by clicking the
+   * link this table shows. Without an edit here every correction is a code
+   * change and a deploy, which is absurd for replacing one string and is how
+   * broken feeds end up staying broken.
+   */
+  const [editing, setEditing] = useState<number | null>(null);
+  const [draftUrl, setDraftUrl] = useState("");
+
+  async function saveFeedUrl(id: number) {
+    setBusy(id);
+    setError("");
+    setMessage("");
+    try {
+      const json = await post({ action: "set_feed_url", id, feed_url: draftUrl });
+      setEditing(null);
+      setDraftUrl("");
+      setMessage(
+        `Feed URL updated to ${json.feed_url}. Retrieval permission was reset — re-check the new address before ticking Permitted.`
+      );
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not update the feed URL");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function toggle(id: number, field: "active" | "fetch_allowed", value: boolean) {
     setBusy(id);
     setError("");
@@ -177,7 +207,43 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                         look identical from the health column alone. Shown
                         verbatim rather than shortened, and `break-all` so a
                         long query string wraps instead of widening the table. */}
-                    {s.feedUrl ? (
+                    {editing === s.id ? (
+                      <span className="mt-2 block">
+                        <input
+                          type="url"
+                          value={draftUrl}
+                          onChange={(e) => setDraftUrl(e.target.value)}
+                          placeholder="https://…"
+                          className="f-mono w-full border bg-transparent px-2 py-1 text-[0.72rem] rule text-cream-100"
+                        />
+                        <span className="mt-1 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={busy === s.id || !draftUrl.trim()}
+                            onClick={() => saveFeedUrl(s.id)}
+                            className="btn btn-primary btn-sm"
+                          >
+                            {busy === s.id ? "Saving…" : "Save URL"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditing(null);
+                              setDraftUrl("");
+                            }}
+                            className="btn btn-ghost btn-sm"
+                          >
+                            Cancel
+                          </button>
+                        </span>
+                        <span
+                          className="mt-1 block text-[0.68rem]"
+                          style={{ color: "var(--ink-faint)" }}
+                        >
+                          Must be https and belong to {s.domain}. Saving resets Retrievable.
+                        </span>
+                      </span>
+                    ) : s.feedUrl ? (
                       <span className="mt-1 block">
                         {linkable(s.feedUrl) ? (
                           <>
@@ -196,7 +262,17 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                               className="f-mono whitespace-nowrap text-[0.68rem] text-gold-300 hover:underline"
                             >
                               Open feed ↗
-                            </a>
+                            </a>{" "}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditing(s.id);
+                                setDraftUrl(s.feedUrl);
+                              }}
+                              className="f-mono whitespace-nowrap text-[0.68rem] text-cream-400 underline underline-offset-4 hover:text-cream-100"
+                            >
+                              Edit
+                            </button>
                           </>
                         ) : (
                           <span className="f-mono text-[0.7rem] break-all text-gold-300">

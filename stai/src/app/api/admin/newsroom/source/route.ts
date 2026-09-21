@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { guard, WINDOW } from "@/lib/ratelimit";
-import { createSource, setSourceActive, setSourceFetchAllowed, allSources } from "@/lib/newsroom/store";
+import {
+  allSources,
+  createSource,
+  setSourceActive,
+  setSourceFetchAllowed,
+  sourceById,
+  updateSourceFeedUrl,
+} from "@/lib/newsroom/store";
 import { proposedAsSourceCreates } from "@/lib/newsroom/proposed-sources";
 import { validateSource } from "@/lib/newsroom/sources";
 
 /**
  * The source registry's write path.
  *
- * Three actions, and what they deliberately cannot do matters as much as what
+ * Four actions, and what they deliberately cannot do matters as much as what
  * they can:
  *
  *   load_proposal — registers the proposed list. Every row lands `active = 0`
@@ -19,9 +26,13 @@ import { validateSource } from "@/lib/newsroom/sources";
  *   set_flag      — flips `active` or `fetch_allowed` on ONE source, recording
  *                   who did it. No id list, no "all" — fifty sources approved
  *                   in one click is fifty sources nobody read.
+ *   set_feed_url  — corrects a moved feed. Validated by the same function that
+ *                   guards registration, and it RESETS retrieval permission,
+ *                   because permission was granted for the old address.
  *   create        — registers one hand-entered source, validated.
  *
- * Nothing here fetches anything. Phase 1 has no ingestion.
+ * Nothing here fetches anything. Correcting a URL does not test it; the next
+ * discovery run does, and reports what it found.
  */
 
 export async function POST(req: NextRequest) {
@@ -83,6 +94,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: `Unknown field: ${field}` }, { status: 400 });
+  }
+
+  if (action === "set_feed_url") {
+    const id = Number(b.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return NextResponse.json({ error: "A source id is required" }, { status: 400 });
+    }
+    const source = await sourceById(id);
+    if (!source) return NextResponse.json({ error: "No such source" }, { status: 404 });
+
+    const feed_url = String(b.feed_url ?? "").trim();
+    if (!feed_url) {
+      return NextResponse.json({ error: "A feed URL is required" }, { status: 400 });
+    }
+
+    // Validated by the SAME function that guards registration, against the
+    // source's own existing fields. That is what keeps the rules identical:
+    // https only, and the feed must belong to the registered domain, so a
+    // correction cannot quietly repoint a Tier-1 row at somebody's blog.
+    const check = validateSource({
+      name: source.name,
+      domain: source.domain,
+      source_type: source.source_type,
+      authority_tier: source.authority_tier,
+      jurisdictions: source.jurisdictions,
+      topics: source.topics,
+      ingestion_method: source.ingestion_method,
+      feed_url,
+      fetch_frequency: source.fetch_frequency,
+      license_notes: source.license_notes,
+      snapshot_retention: source.snapshot_retention,
+    });
+    if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
+
+    await updateSourceFeedUrl({ id, feedUrl: check.value.feed_url, actor: user.email });
+    return NextResponse.json({ ok: true, feed_url: check.value.feed_url });
   }
 
   if (action === "create") {
