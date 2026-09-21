@@ -1,6 +1,6 @@
 # STAI Intelligence Engine — masterplan
 
-**Status:** design approved. Phase 1 in build.
+**Status:** design approved. Phases 1 and 2 built; phase 2.5 proposed.
 **Supersedes:** "STAI Intelligence Engine — System Design v1.0".
 **Operator decisions of 21 September 2026 are recorded in §25 and folded into
 the sections they affect.**
@@ -679,11 +679,25 @@ per euro is least proven.
 
 ### The ceiling
 
-**€75 per month, hard.** Set by the operator, 21 September 2026.
+**€100 per month, hard.** Raised from €75 on 21 September 2026, after working
+out what €75 actually bought.
 
-At the estimate above the newsroom lands near €65, so €75 is a working ceiling
-with roughly 15% of headroom — not a comfortable one. Two consequences follow
-and both are deliberate:
+**This is a ceiling, not a budget to spend.** Expected spend is unchanged at
+roughly €63 a month. Pacing comes from the research cap — a count — and the
+money is the safety net behind it. At €75 those two jobs collided: the
+throttle divides the month's remaining budget by the expected cost of a story,
+and €75 over 22 working days supported the target of 8 stories a day only
+while a story cost at most 42.5 cents against a 40 cent estimate. A 6% margin.
+Any underestimate would have quietly cut the desk to five or six stories a
+day — a failure that reads as "the engine isn't finding much" rather than "we
+hit the budget", which is the kind that misdirects the diagnosis for weeks.
+
+€100 raises that tolerance to ~57 cents a story, a 42% underestimate, while
+still stopping a runaway inside one month's damage. Revisit once
+`newsroom_ai_spend` holds real rows: measured cost/story beats every estimate
+in this document.
+
+Two consequences follow and both are deliberate:
 
 - The research cap (§7) is the throttle. If spend is tracking ahead of the
   month, the engine researches fewer stories per day. It does not skip
@@ -944,7 +958,8 @@ limitation to be lifted later; it is the editorial position.
 | Phase | Scope | Exit criterion |
 |---|---|---|
 | **1 — Foundation** | Database schema, source registry, state machine, Editorial Inbox shell, **spend-control scaffolding [C1]**. No AI. | Schema migrated; a story can be moved through every state by hand; budget config exists and is read. |
-| **2 — Discovery** | Connectors, ingestion, normalisation, dedup, lexical clustering [C4], relevance gates + rank [C2], source health [C15]. No generation. | **Two-week dry run [C3]**: the Inbox lists what it *would* have researched, daily, with rationales. Hand-label the clusters, measure precision/recall, tune the gates. No LLM spend beyond classification. |
+| **2 — Discovery** *(built)* | Connectors, ingestion, normalisation, dedup, lexical clustering [C4], relevance gates + rank [C2], source health [C15]. No generation. | **Two-week dry run [C3]**: the Inbox lists what it *would* have researched, daily, with rationales. Hand-label the clusters, measure precision/recall, tune the gates. No LLM spend beyond classification. |
+| **2.5 — Extractors** *(proposed)* | Six site-specific extractors for the primary sources that publish no feed — IAASB, EFRAG, AI Office, IESBA, NBA, CEAOB. No generic scraper. See PHASE_2_5_EXTRACTORS.md. | Those six produce items, or are confirmed to have a feed instead. |
 | **3 — Evidence** | Research workflow, primary-source retrieval, evidence packs, claim model, audit trail, AI Gateway with live spend limits. No writing. | Evidence packs for a week of stories that a human judges sufficient to write from. |
 | **4 — Articles** | Writer → extraction → adjudication → editorial QA → review screen, `editorial_decisions` capture [C9], publication through the shared write path [C7]. Manual publication only. | 20 consecutive drafts with zero unsupported material claims reaching review. |
 | **5 — Hardening** | Retries, DLQ and Queues *if measured as needed* [C12], monitoring, tests, prompt versioning, eval harness against the captured set, cost analytics. | Eval set of ≥50; a prompt change can be measured against it. |
@@ -965,7 +980,7 @@ this is the index.
 |---|---|---|
 | **D1** | Tier 3 may open a cluster and surface it for a human, but a story may not progress to article generation without sufficient Tier-1/2 evidence. Human escalation is an audited override. | §5 |
 | **D2** | Publish target 1–3/weekday **during validation**, as configured settings, not a design limit. Reviewed after the dry run; expected path to 3–5/day if the §22 KPIs hold. | §19 |
-| **D3** | Newsroom hard monthly budget **€75**. The research cap is the throttle; quality is never the thing traded away. Podcast budgeted separately. | §16 |
+| **D3** | Newsroom hard monthly budget **€100** (raised from €75, 21 Sep 2026 — a ceiling, not a spend target; expected spend ~€63). The research cap is the throttle; quality is never the thing traded away. Podcast budgeted separately. | §16 |
 | **D4** | Podcast: yes, **after** the article engine, **2 episodes/week** initially. | §18 |
 | **D5** | Source registry: a proposed 40–60 source list ships in phase 1, every row `active = 0`, activated individually by the operator. No bulk enable. | §5 |
 | **D6** | Disclosure sentence fixed: *"This article was produced with AI-assisted research and drafting and reviewed against the cited sources before publication."* | §11 |

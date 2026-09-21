@@ -53,6 +53,19 @@ export const TOGGLES: Toggle[] = [
   { id: "assessment", label: "AI-readiness assessment", path: "/assessment", on: true, blurb: "The assessment and its scoring." },
   { id: "research", label: "Research desk", path: "/research", on: true, blurb: "The research index." },
   { id: "newsletter", label: "Brief sign-up", on: true, blurb: "The newsletter form in the footer and on the homepage. Off hides the form; nothing already collected is touched." },
+  /**
+   * The scheduled newsroom crawl.
+   *
+   * OFF by default, and it is the switch the cron trigger reads. That lets the
+   * trigger be deployed before a single source has been approved: it fires,
+   * finds discovery switched off, logs why and does nothing. Same rule as the
+   * source registry, applied to the schedule — the machinery ships dormant and
+   * a person starts it.
+   *
+   * Off does not disable the manual "Run discovery now" button, which is an
+   * operator deliberately asking for one run.
+   */
+  { id: "discovery", label: "Newsroom discovery (scheduled)", on: false, blurb: "The cron-driven crawl of approved sources. Off means the schedule fires and does nothing; the manual run button still works. Nothing is fetched from a source that is not both active and retrievable." },
 ];
 
 const toggleKey = (id: string) => `page.${id}.enabled`;

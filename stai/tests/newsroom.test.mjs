@@ -42,6 +42,7 @@ import {
 } from "../src/lib/newsroom/jurisdictions.ts";
 
 import {
+  EXPECTED_STORY_COST_CENTS,
   MONTHLY_CAP_CENTS,
   STAGE_CEILINGS,
   STORY_CEILING_CENTS,
@@ -290,14 +291,45 @@ describe("jurisdiction tagging", () => {
 // ─── Budget ───────────────────────────────────────────────────────────────
 
 describe("budget", () => {
-  test("the ceiling is the €75 the operator set", () => {
-    assert.equal(MONTHLY_CAP_CENTS, 7500);
+  test("the ceiling is the €100 the operator set", () => {
+    assert.equal(MONTHLY_CAP_CENTS, 10000);
   });
 
   test("the daily share divides by working days, not calendar days", () => {
-    // 7500 / 22 = 340 cents. Dividing by 30 would give 250, which the engine
-    // would underspend five days a week and then breach on the sixth.
-    assert.equal(dailyCapCents(), Math.floor(7500 / 22));
+    // Dividing by 30 calendar days would set a cap the engine underspends
+    // five days a week and then breaches on the sixth.
+    assert.equal(dailyCapCents(), Math.floor(MONTHLY_CAP_CENTS / 22));
+  });
+
+  test("the ceiling leaves the cost estimate room to be wrong", () => {
+    // The point of raising it from €75. At €75 the throttle allowed exactly
+    // the target of 8 stories a day IF a story cost exactly 40 cents, so any
+    // underestimate silently cut the desk's output — a failure that looks
+    // like "the engine isn't finding much" rather than "we hit the budget".
+    const atEstimate = researchCapToday({
+      configuredCap: 8,
+      monthSpentCents: 0,
+      workingDaysLeft: 22,
+    });
+    assert.equal(atEstimate.cap, 8);
+
+    // The headroom, stated as what it actually is. At €75 the throttle held
+    // 8/day only while a story cost at most 42.5 cents — a 6% margin on a 40
+    // cent estimate, which is no margin at all.
+    const perDay = Math.floor(MONTHLY_CAP_CENTS / 22);
+    const maxCostPerStory = perDay / 8;
+    const tolerance = maxCostPerStory / EXPECTED_STORY_COST_CENTS - 1;
+    assert.ok(
+      tolerance >= 0.4,
+      `the estimate should have at least 40% of room; it has ${Math.round(tolerance * 100)}%`
+    );
+
+    // And the ceiling must still be a real stop, not a rubber stamp: a month
+    // of runaway spend has to hit it.
+    assert.ok(
+      MONTHLY_CAP_CENTS < 22 * 8 * STORY_CEILING_CENTS,
+      "the cap must bind before every story spends its full per-story ceiling"
+    );
   });
 
   test("a story cannot cost more than its stages allow, together", () => {
@@ -313,20 +345,20 @@ describe("budget", () => {
 
   test("running ahead throttles the story count — it does not stop the desk", () => {
     // Most of the month's money gone with half the month left.
-    const r = researchCapToday({ configuredCap: 8, monthSpentCents: 7000, workingDaysLeft: 11 });
+    const r = researchCapToday({ configuredCap: 8, monthSpentCents: MONTHLY_CAP_CENTS - 500, workingDaysLeft: 11 });
     assert.ok(r.cap < 8, "the cap must come down");
     assert.ok(r.cap >= 0);
     assert.match(r.reason, /throttled|cannot cover/);
   });
 
   test("an exhausted month researches nothing rather than overspending", () => {
-    const r = researchCapToday({ configuredCap: 8, monthSpentCents: 7500, workingDaysLeft: 5 });
+    const r = researchCapToday({ configuredCap: 8, monthSpentCents: MONTHLY_CAP_CENTS, workingDaysLeft: 5 });
     assert.equal(r.cap, 0);
     assert.match(r.reason, /exhausted/);
   });
 
   test("the throttle never returns a negative cap", () => {
-    const r = researchCapToday({ configuredCap: 8, monthSpentCents: 9999, workingDaysLeft: 3 });
+    const r = researchCapToday({ configuredCap: 8, monthSpentCents: MONTHLY_CAP_CENTS + 500, workingDaysLeft: 3 });
     assert.equal(r.cap, 0);
   });
 
@@ -336,7 +368,7 @@ describe("budget", () => {
       estimateCents: 100,
       storySpentCents: 0,
       stageSpentCents: 0,
-      monthSpentCents: 7450,
+      monthSpentCents: MONTHLY_CAP_CENTS - 50,
     });
     assert.equal(v.allowed, false);
     assert.match(v.reason, /monthly cap/);

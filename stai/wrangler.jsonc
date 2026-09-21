@@ -32,9 +32,12 @@
   // skip most sources and log why. That is the intent: one schedule here,
   // per-source politeness enforced in the code that knows the source.
   //
-  // The run authorises itself with NEWSROOM_CRON_SECRET, set as a Secret in
-  // the dashboard. With no secret the scheduled handler does nothing at all;
-  // it does not fall back to an unauthenticated call. See DISCOVERY.md.
+  // The handler calls the discovery service directly — it makes no HTTP
+  // request to the application's own routes, so there is no public endpoint
+  // that starts a crawl and no shared secret to manage. Whether it does
+  // anything is a site setting ("Newsroom discovery (scheduled)"), which ships
+  // OFF: this trigger can be live for weeks while discovery is switched off.
+  // See DISCOVERY.md.
   "triggers": {
     "crons": ["*/30 * * * *"]
   },

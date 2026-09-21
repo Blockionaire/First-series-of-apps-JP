@@ -30,25 +30,25 @@ needed to write that prompt well. `scoreStory()` in
 
 ## 2. Manual Cloudflare configuration
 
-Three things, none of which code can do.
+Two things, and **no secret to manage**.
 
-### 2.1 The cron secret
+The scheduled run calls the discovery service directly from the Worker's
+`scheduled()` handler. There is no public endpoint that starts a crawl, so
+there is nothing to protect with a shared token. The manual "Run discovery
+now" button goes to `/api/admin/newsroom/discover`, which requires an admin
+session like every other admin route.
 
-Cron triggers cannot carry a session cookie, so the scheduled run authorises
-itself with a shared secret. **With no secret set, the scheduled run does
-nothing** — it does not fall open.
+### 2.1 Switch discovery on
 
-```bash
-openssl rand -hex 24
-```
+`/admin/settings` → **Newsroom discovery (scheduled)**. It ships **off**.
 
-Cloudflare dashboard → Workers & Pages → **stai** → Settings → Variables and
-Secrets → add as a **Secret** (not a plain variable — unlike the IndexNow key,
-this one is never meant to be public):
+This is the control that starts and stops the crawl, and it needs no deploy.
+The trigger can be live for weeks while this is off: it fires, finds discovery
+switched off, logs why and does nothing. Same rule as the source registry,
+applied to the schedule.
 
-```
-NEWSROOM_CRON_SECRET = <the value>
-```
+Switching it off does **not** disable the manual run button — that is an
+operator deliberately asking for one run.
 
 ### 2.2 The cron trigger
 
@@ -65,8 +65,9 @@ hourly, Tier 3 every two hours), so a half-hourly trigger does **not** mean
 every source is fetched every half hour. Most firings skip most sources, which
 is the intent.
 
-To pause discovery entirely without a deploy: delete the trigger, or unset the
-secret.
+To pause discovery: switch **Newsroom discovery (scheduled)** off in site
+settings. No deploy, effective on the next firing. Deleting the trigger works
+too and is the heavier option.
 
 ### 2.3 Check the outbound request budget
 
@@ -124,8 +125,9 @@ fetch nothing.
 That matters for what the dry run can tell you: IAASB and EFRAG are primary
 sources for auditing and sustainability-reporting claims, and neither is
 reachable yet. Expect the dry run to under-represent standard-setting relative
-to regulation, and read the candidate list with that in mind. Per-site
-extractors are the obvious phase-2.5 follow-up.
+to regulation, and read the candidate list with that in mind.
+`PHASE_2_5_EXTRACTORS.md` proposes site-specific extractors for the six that
+matter.
 
 This is deliberate: a generic extractor would fill the Inbox with navigation
 links and look like it was working. Per-site extractors are a separate piece of
@@ -170,7 +172,7 @@ them.
 | Day | What to do |
 |---|---|
 | 1 | Register sources, approve 10–15, run discovery manually, fix feed URLs that do not resolve. |
-| 2 | Add the cron secret and deploy. Confirm the trigger fires (check `newsroom_pipeline_runs`). |
+| 2 | Switch **Newsroom discovery (scheduled)** on and deploy. Confirm the trigger fires (check `newsroom_pipeline_runs`). |
 | 3–5 | Label every candidate daily. Widen the active set as feeds prove themselves. |
 | 6–10 | Keep labelling. Watch the source-health column for feeds that went quiet. |
 | 11–14 | Keep labelling. Stop adding sources so the last week measures a stable configuration. |
@@ -243,8 +245,9 @@ manual run during a scheduled one is one run, not two.
 
 ## 8. If something goes wrong
 
-**Stop everything:** unset `NEWSROOM_CRON_SECRET`, or delete the cron trigger.
-Discovery cannot start without one of them.
+**Stop everything:** switch **Newsroom discovery (scheduled)** off in site
+settings. Effective on the next firing, no deploy. Deleting the cron trigger is
+the heavier equivalent.
 
 **A run failed:** its row in `newsroom_pipeline_runs` has `status = 'failed'`
 and the error. The Inbox shows the count of recent failed runs.

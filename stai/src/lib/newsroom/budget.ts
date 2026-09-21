@@ -7,9 +7,24 @@
  * weeks. A budget that arrives in phase 5 arrives after the bill.
  *
  * ── The ceiling ──────────────────────────────────────────────────────────
- * €75 a month, set by the operator on 21 September 2026. The estimate for the
- * newsroom at target volume is around €65, so this is a working ceiling with
- * roughly 15% of headroom, not a comfortable one.
+ * €100 a month. Raised from €75 on 21 September 2026, and the reason is worth
+ * stating because the number is easy to misread: THIS IS A CEILING, NOT A
+ * BUDGET TO SPEND. Expected spend is unchanged at roughly €63 a month, and
+ * pacing comes from the research cap — a count — not from the money.
+ *
+ * At €75 the two jobs collided. The throttle divides the month's remaining
+ * budget by the expected cost of a story, and €75 across 22 working days at
+ * ~40 cents a story yields exactly 8 — the target. So €75 supported the
+ * intended volume only if the cost estimate was exactly right, and any
+ * underestimate would silently throttle the desk to five or six stories a day.
+ * That failure looks like "the engine isn't finding much", not like "we hit
+ * the budget", which is the worst kind: it misdirects the diagnosis.
+ *
+ * €100 tolerates a story costing up to ~57 cents — a 42% underestimate —
+ * before the throttle touches the target volume, against 42.5 cents and 6% at
+ * €75. It still stops a runaway inside one month's damage.
+ * Revisit once newsroom_ai_spend holds real numbers — cost/story from the
+ * ledger beats any estimate in this file.
  *
  * ── Degrade, never fail ──────────────────────────────────────────────────
  * When spend runs ahead, the engine researches fewer stories. It does not skip
@@ -26,7 +41,7 @@
 /** Cents throughout. Floating-point euros in a budget is how money goes missing. */
 export type Cents = number;
 
-export const MONTHLY_CAP_CENTS: Cents = 7500;
+export const MONTHLY_CAP_CENTS: Cents = 10000;
 
 /**
  * Working days per month, for deriving a daily allowance.

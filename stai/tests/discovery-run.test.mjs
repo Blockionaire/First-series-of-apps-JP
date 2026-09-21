@@ -148,7 +148,6 @@ function startServer() {
       ANTHROPIC_API_KEY: "",
       RESEND_API_KEY: "",
       INDEXNOW_KEY: "",
-      NEWSROOM_CRON_SECRET: "",
       STAI_ADMIN_EMAIL: ADMIN_EMAIL,
       STAI_ADMIN_PASSWORD: ADMIN_PASSWORD,
     },
@@ -220,7 +219,7 @@ function addSource(o) {
 }
 
 async function runDiscovery() {
-  const res = await fetch(`${BASE}/api/newsroom/discover`, {
+  const res = await fetch(`${BASE}/api/admin/newsroom/discover`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Cookie: cookie },
     body: JSON.stringify({ force: true }),
@@ -756,7 +755,7 @@ describe("the rest of STAI is unaffected", { skip }, () => {
   });
 
   test("the discovery endpoint refuses an unauthenticated caller", async () => {
-    const res = await fetch(`${BASE}/api/newsroom/discover`, {
+    const res = await fetch(`${BASE}/api/admin/newsroom/discover`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "{}",
@@ -764,18 +763,88 @@ describe("the rest of STAI is unaffected", { skip }, () => {
     assert.equal(res.status, 403, "an open crawl trigger would be an amplifier");
   });
 
-  test("a wrong cron secret does not authorise a run", async () => {
+  test("there is no unauthenticated way in, by any header", async () => {
+    // The scheduled run calls the service directly from the Worker, so no
+    // header, token or secret authorises this route. An admin session is the
+    // only key, and the route lives under /api/admin for that reason.
+    for (const headers of [
+      { "x-newsroom-cron": "anything" },
+      { authorization: "Bearer anything" },
+      { "x-internal": "true" },
+    ]) {
+      const res = await fetch(`${BASE}/api/admin/newsroom/discover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headers },
+        body: "{}",
+      });
+      assert.equal(res.status, 403, JSON.stringify(headers));
+    }
+  });
+
+  test("the old public discovery route no longer exists", async () => {
     const res = await fetch(`${BASE}/api/newsroom/discover`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-newsroom-cron": "not-the-secret" },
+      headers: { "Content-Type": "application/json" },
       body: "{}",
     });
-    assert.equal(res.status, 403);
+    assert.equal(res.status, 404, "the endpoint protected by a shared secret is gone");
   });
 
   test("the manual content editor still works", async () => {
     assert.equal((await get("/admin/content")).status, 200);
     assert.equal((await get("/admin/content/new")).status, 200);
+  });
+});
+
+describe("the scheduled run is gated by a setting, not a secret", { skip }, () => {
+  test("discovery ships switched off", () => {
+    // The cron trigger can be deployed before a single source is approved: it
+    // fires, finds this off, logs why and does nothing.
+    //
+    // Asserted against the registry source, because a shipped DEFAULT is
+    // precisely the thing a database cannot show — an unset key is the
+    // default, so there is no row to read.
+    const src = fs.readFileSync(path.join(ROOT, "src/lib/site-config.ts"), "utf8");
+    const entry = src.split("\n").find((l) => l.includes('id: "discovery"'));
+    assert.ok(entry, "there must be a discovery switch in TOGGLES");
+    assert.match(entry, /on: false/, "and it must ship off");
+    assert.ok(!/path:/.test(entry), "it guards a schedule, not a page");
+  });
+
+  test("the scheduled handler reads that switch and holds no secret", () => {
+    const raw = fs.readFileSync(path.join(ROOT, "src/lib/newsroom/scheduled.ts"), "utf8");
+    // Comments are stripped first: this file explains the design it replaced,
+    // and grepping prose for "secret" finds that explanation rather than any
+    // code. The claim is about what the module DOES.
+    const code = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+    assert.match(code, /isEnabled\("discovery"\)/, "the schedule is gated by the setting");
+    assert.ok(
+      !/secret|token|authoriz|bearer/i.test(code),
+      "the scheduled path authorises nothing — it calls the service directly"
+    );
+    assert.ok(!/\bfetch\s*\(/.test(code), "no HTTP hop back into the app");
+    assert.match(code, /runDiscovery\(/, "it calls the discovery service");
+  });
+
+  test("the Worker entry delegates and holds no logic", () => {
+    // entry.ts is the one file tsconfig never sees, so anything beyond
+    // delegation there is untypechecked by construction.
+    const raw = fs.readFileSync(path.join(ROOT, "worker/entry.ts"), "utf8");
+    const code = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+    assert.match(code, /runScheduledDiscovery/);
+    assert.ok(!/secret|x-newsroom-cron/i.test(code), "no secret in the entry point either");
+    assert.ok(!/new Request\(/.test(code), "it does not construct a request into itself");
+  });
+
+  test("switching it off does not disable the manual run", async () => {
+    await fetch(`${BASE}/api/admin/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: cookie },
+      body: JSON.stringify({ values: { "page.discovery.enabled": "0" } }),
+    });
+    const { status } = await runDiscovery();
+    assert.equal(status, 200, "an operator asking for one run is not the schedule");
   });
 });
 

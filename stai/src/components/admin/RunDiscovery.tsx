@@ -23,7 +23,7 @@ export default function RunDiscovery() {
     setState("running");
     setMessage("");
     try {
-      const res = await fetch("/api/newsroom/discover", {
+      const res = await fetch("/api/admin/newsroom/discover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ force: true }),
