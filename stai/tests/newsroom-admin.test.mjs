@@ -241,6 +241,54 @@ describe("the approval gate", { skip }, () => {
   });
 });
 
+describe("the registry shows the feed URL it will actually fetch", { skip }, () => {
+  test("the proposal preview links every feed before anything is registered", async () => {
+    // Shown BEFORE registration on purpose: these URLs are documented
+    // locations nobody has fetched, and checking one is the difference
+    // between registering a working source and registering a 404.
+    const html = await (await authed("/admin/editorial/sources")).text();
+    assert.match(html, /https:\/\/eur-lex\.europa\.eu\/EN\/display-feed\.rss/);
+    assert.match(html, /target="_blank"/);
+  });
+
+  test("each registered row shows its exact feed URL, as a link", async () => {
+    await post({ action: "load_proposal" });
+    const html = await (await authed("/admin/editorial/sources")).text();
+
+    // The full string, not a shortened one: a feed URL that 404s and one that
+    // serves a landing page are indistinguishable from the health column, so
+    // the operator has to be able to read and open the exact value.
+    const rows = query(
+      "SELECT name, feed_url FROM newsroom_sources WHERE feed_url != '' ORDER BY id LIMIT 8"
+    );
+    assert.ok(rows.length >= 5, "there should be registered sources with feeds");
+
+    // As TEXT, not merely somewhere in the markup. Checking `includes(url)`
+    // is satisfied by the href alone, so a truncated label like
+    // "https://eur-lex.europa.eu/EN/dis…" would pass it while defeating the
+    // entire purpose — reading the exact value before approving retrieval.
+    // A text node sits between tags, hence the delimiters.
+    const escape = (u) => u.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    for (const r of rows) {
+      const text = escape(r.feed_url);
+      assert.ok(
+        html.includes(`>${text}<`),
+        `${r.name}: the exact URL must be readable on the page, not only in an href`
+      );
+      assert.ok(html.includes(`href="${text}"`), `${r.name}: and it must be the link target`);
+    }
+    assert.match(html, /Open feed/, "with a labelled control");
+    assert.match(html, /rel="noreferrer/, "external links must not leak the admin referrer");
+  });
+
+  test("a source with no feed says so rather than showing an empty link", async () => {
+    const html = await (await authed("/admin/editorial/sources")).text();
+    // LinkedIn is registered `manual` because its terms forbid retrieval.
+    assert.match(html, /no feed — entered by hand/);
+  });
+});
+
 describe("hand-registered sources are validated at the boundary", { skip }, () => {
   const base = {
     action: "create",

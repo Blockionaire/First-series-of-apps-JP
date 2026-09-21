@@ -138,7 +138,31 @@ export default async function SourcesPage() {
               <tbody>
                 {PROPOSED_SOURCES.map((p) => (
                   <tr key={p.domain} className="border-b rule align-top">
-                    <td className="py-2 pr-4 text-cream-200">{p.name}</td>
+                    <td className="py-2 pr-4">
+                      <span className="text-cream-200">{p.name}</span>
+                      {/* The feed, openable before anything is registered.
+                          These URLs are documented locations that have never
+                          been fetched from this codebase, so checking one is
+                          the difference between registering a working source
+                          and registering a 404. */}
+                      {p.feed_url ? (
+                        <a
+                          href={p.feed_url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="f-mono mt-1 block text-[0.7rem] break-all text-cream-400 underline underline-offset-4 hover:text-cream-100"
+                        >
+                          {p.feed_url} ↗
+                        </a>
+                      ) : (
+                        <span
+                          className="f-mono mt-1 block text-[0.7rem]"
+                          style={{ color: "var(--ink-faint)" }}
+                        >
+                          no feed — entered by hand
+                        </span>
+                      )}
+                    </td>
                     <td className="f-mono py-2 pr-4 tabular-nums text-cream-400">{p.authority_tier}</td>
                     <td className="py-2 pr-4 text-cream-400">
                       {p.jurisdictions.map(jurisdictionLabel).join(", ")}

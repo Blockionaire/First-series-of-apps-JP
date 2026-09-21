@@ -42,6 +42,22 @@ type Props = {
 };
 
 /**
+ * Is this safe to put in an href?
+ *
+ * `validateSource` already requires https for everything the engine fetches,
+ * so in practice every stored feed URL passes. This guards the case it does
+ * not cover: a row written straight to the database. Rendering an arbitrary
+ * stored string as a link is how a `javascript:` URL becomes a click, and the
+ * check costs one line.
+ *
+ * A URL that fails this is still SHOWN — seeing that a row holds something
+ * unopenable is exactly the diagnosis an operator needs — just not linked.
+ */
+function linkable(url: string): boolean {
+  return /^https?:\/\//i.test(url);
+}
+
+/**
  * The approval surface.
  *
  * One row, two independent switches, and no bulk activate anywhere. Loading
@@ -153,6 +169,47 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                     <span className="f-mono block text-[0.7rem]" style={{ color: "var(--ink-faint)" }}>
                       {s.domain} · {s.type} · keeps {s.retention.replace(/_/g, " ")}
                     </span>
+
+                    {/* The configured feed, in full and openable.
+                        This is what has to be checked before a source is
+                        marked retrievable, and the exact string matters: a
+                        feed URL that 404s and one that serves a landing page
+                        look identical from the health column alone. Shown
+                        verbatim rather than shortened, and `break-all` so a
+                        long query string wraps instead of widening the table. */}
+                    {s.feedUrl ? (
+                      <span className="mt-1 block">
+                        {linkable(s.feedUrl) ? (
+                          <>
+                            <a
+                              href={s.feedUrl}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="f-mono text-[0.7rem] break-all text-cream-400 underline underline-offset-4 hover:text-cream-100"
+                            >
+                              {s.feedUrl}
+                            </a>{" "}
+                            <a
+                              href={s.feedUrl}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="f-mono whitespace-nowrap text-[0.68rem] text-gold-300 hover:underline"
+                            >
+                              Open feed ↗
+                            </a>
+                          </>
+                        ) : (
+                          <span className="f-mono text-[0.7rem] break-all text-gold-300">
+                            {s.feedUrl} — not an http(s) URL
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="f-mono mt-1 block text-[0.7rem]" style={{ color: "var(--ink-faint)" }}>
+                        no feed — entered by hand
+                      </span>
+                    )}
+
                     {s.licenseNotes && (
                       <span className="mt-1 block text-[0.72rem] text-gold-300">{s.licenseNotes}</span>
                     )}
