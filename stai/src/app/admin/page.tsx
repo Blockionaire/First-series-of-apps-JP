@@ -114,6 +114,9 @@ export default async function AdminPage() {
           <Link href="/admin/growth" className="btn btn-ghost btn-sm">
             Growth
           </Link>
+          <Link href="/admin/editorial" className="btn btn-ghost btn-sm">
+            Editorial
+          </Link>
           <Link href="/admin/podcast" className="btn btn-ghost btn-sm">
             Podcast
           </Link>
