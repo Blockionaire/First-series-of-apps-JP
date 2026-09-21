@@ -9,6 +9,7 @@ export type EditorArticle = {
   title: string;
   dek: string;
   category: string;
+  kind: string;
   tags: string;
   author: string;
   author_role: string;
@@ -22,6 +23,16 @@ export type EditorArticle = {
 };
 
 const CATEGORIES = ["Regulation", "Analysis", "Practice", "Tools", "News"];
+
+/**
+ * The section, which is a different axis from the category above.
+ * Changing it moves the piece between /news and /insights; it does not change
+ * the article's address, so nothing linking to it breaks.
+ */
+const KINDS = [
+  { id: "news", label: "News — timely" },
+  { id: "insight", label: "Insight — standing analysis" },
+];
 
 export default function ArticleEditor({ initial }: { initial: EditorArticle }) {
   const [a, setA] = useState(initial);
@@ -81,6 +92,21 @@ export default function ArticleEditor({ initial }: { initial: EditorArticle }) {
               <option key={c}>{c}</option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className="f-label" style={{ color: "var(--ink-muted)" }} htmlFor="ed-kind">
+            Section
+          </label>
+          <select id="ed-kind" className="input-stai mt-1.5" value={a.kind} onChange={(e) => set("kind", e.target.value)}>
+            {KINDS.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-[0.72rem]" style={{ color: "var(--ink-faint)" }}>
+            Which index this appears on. The address stays the same either way.
+          </p>
         </div>
         <div>
           <label className="f-label" style={{ color: "var(--ink-muted)" }} htmlFor="ed-author">

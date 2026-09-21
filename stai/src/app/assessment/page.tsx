@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { pageMeta } from "@/lib/seo";
 import AssessmentQuiz from "@/components/assessment/AssessmentQuiz";
 import EnforcementClock from "@/components/chrome/EnforcementClock";
+import { requirePage } from "@/lib/page-guard";
 
 export const metadata: Metadata = pageMeta({
   title: "AI-readiness assessment for audit firms",
@@ -9,7 +10,10 @@ export const metadata: Metadata = pageMeta({
   path: "/assessment",
 });
 
-export default function AssessmentPage() {
+export default async function AssessmentPage() {
+  // Switched off in site settings → this page does not exist.
+  await requirePage("assessment");
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <header className="mb-8">

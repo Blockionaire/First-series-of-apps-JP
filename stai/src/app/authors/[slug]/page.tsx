@@ -126,7 +126,7 @@ export default async function AuthorPage({ params }: Props) {
           Keep reading
         </p>
         <div className="mt-3 flex flex-wrap gap-3">
-          <Link href="/briefing" className="btn btn-ghost">
+          <Link href="/news" className="btn btn-ghost">
             The full Briefing
           </Link>
           <Link href="/ai-act" className="btn btn-ghost">

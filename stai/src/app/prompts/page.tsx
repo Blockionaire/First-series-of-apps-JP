@@ -4,6 +4,7 @@ import Link from "next/link";
 import { allPrompts } from "@/lib/content";
 import { currentUser } from "@/lib/auth";
 import PromptExplorer from "@/components/prompts/PromptExplorer";
+import { requirePage } from "@/lib/page-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,9 @@ export const metadata: Metadata = pageMeta({
 });
 
 export default async function PromptsPage() {
+  // Switched off in site settings → this page does not exist.
+  await requirePage("prompts");
+
   const user = await currentUser();
   const isPlus = user?.plan === "plus";
   const prompts = await allPrompts();

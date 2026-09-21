@@ -19,7 +19,7 @@ export default async function NotFound() {
       </p>
 
       <div className="mt-7 flex flex-wrap gap-3">
-        <Link href="/briefing" className="btn btn-primary">
+        <Link href="/news" className="btn btn-primary">
           Open the Briefing
         </Link>
         <Link href="/ask" className="btn btn-ghost">

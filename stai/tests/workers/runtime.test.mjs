@@ -187,8 +187,16 @@ describe("Workers runtime — it is genuinely D1, not SQLite", { skip }, () => {
   });
 
   test("migrations and seed were applied by wrangler, not by the Worker", () => {
+    // Compared against migrations/ on disk rather than a hardcoded list: the
+    // claim is that wrangler applied EVERY migration in order, not that there
+    // happen to be two of them.
+    const onDisk = fs
+      .readdirSync(path.join(ROOT, "migrations"))
+      .filter((f) => f.endsWith(".sql"))
+      .sort();
     const migrations = d1("SELECT name FROM d1_migrations ORDER BY id").map((r) => r.name);
-    assert.deepEqual(migrations, ["0001_initial_schema.sql", "0002_indexes.sql"]);
+    assert.ok(onDisk.length >= 3, "the migration set should not have shrunk");
+    assert.deepEqual(migrations, onDisk, "wrangler applied every migration, in order");
 
     const [a] = d1("SELECT COUNT(*) n, SUM(status='published') pub FROM articles");
     assert.equal(a.n, 11);

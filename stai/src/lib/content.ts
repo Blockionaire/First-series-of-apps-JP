@@ -16,6 +16,15 @@ export type Article = {
   urgency: number;
   premium: boolean;
   body_md: string;
+  /**
+   * Which section the piece is filed under: "news" or "insight".
+   *
+   * A second axis to `category`, not a replacement for it. A piece can be
+   * Regulation and be either a timely item or a standing analysis, and the
+   * categories already carry the category pages. The article's URL does not
+   * contain the kind, so moving one between sections never breaks a link.
+   */
+  kind: string;
 };
 
 export type Prompt = {
@@ -42,6 +51,17 @@ export type Podcast = {
   description: string;
   duration_min: number;
   published_at: string;
+  /**
+   * Where the episode actually plays.
+   *
+   * Episodes are published on an external host — that host provides the RSS
+   * feed Apple and Spotify consume — and this is the link back to it. Empty
+   * means the show notes are up but the audio is not linked yet, which the
+   * hub states rather than offering a player that goes nowhere.
+   */
+  audio_url: string;
+  status: string;
+  updated_at: string | null;
 };
 
 export type ResearchPaper = {
@@ -107,6 +127,21 @@ export async function allArticles(): Promise<Article[]> {
   return rows.map(rowToArticle);
 }
 
+/** The two sections. `news` is the default every existing piece carries. */
+export const ARTICLE_KINDS = ["news", "insight"] as const;
+export type ArticleKind = (typeof ARTICLE_KINDS)[number];
+export const isArticleKind = (v: string): v is ArticleKind =>
+  (ARTICLE_KINDS as readonly string[]).includes(v);
+
+/** One section's published pieces, newest first. */
+export async function articlesByKind(kind: ArticleKind): Promise<Article[]> {
+  const rows = await sql().all<ArticleRow>(
+    "SELECT * FROM articles WHERE status='published' AND kind=? ORDER BY published_at DESC, id DESC",
+    [kind]
+  );
+  return rows.map(rowToArticle);
+}
+
 export async function articleBySlug(slug: string): Promise<Article | null> {
   const r = await sql().first<ArticleRow>(
     "SELECT * FROM articles WHERE slug=? AND status='published'",
@@ -157,8 +192,11 @@ export async function bumpPromptUses(id: number): Promise<void> {
   await sql().run("UPDATE prompts SET uses = uses + 1 WHERE id=?", [id]);
 }
 
+/** Published episodes, newest first. Drafts are admin-only, like articles. */
 export async function allPodcasts(): Promise<Podcast[]> {
-  return sql().all<Podcast>("SELECT * FROM podcasts ORDER BY episode_no DESC");
+  return sql().all<Podcast>(
+    "SELECT * FROM podcasts WHERE status='published' ORDER BY episode_no DESC"
+  );
 }
 
 export async function allResearch(): Promise<ResearchPaper[]> {

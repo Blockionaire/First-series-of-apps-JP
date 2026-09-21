@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { pageMeta } from "@/lib/seo";
 import { currentUser, peekAnonId, getUsage } from "@/lib/auth";
 import AskConsole from "@/components/ask/AskConsole";
+import { requirePage } from "@/lib/page-guard";
+import { limit as readLimit } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 
@@ -11,21 +13,29 @@ export const metadata: Metadata = pageMeta({
   path: "/ask",
 });
 
-const FREE_QUOTA = 5;
-const ANON_QUOTA = 2;
 
 export default async function AskPage() {
+  // Switched off in site settings → this page does not exist.
+  await requirePage("ask");
+
   const user = await currentUser();
+  // The same two settings the API enforces. Read here rather than restated,
+  // so the number the console shows can never promise more than the route
+  // will actually serve.
+  const [anonQuota, freeQuota] = await Promise.all([
+    readLimit("limit.ask.anon"),
+    readLimit("limit.ask.free"),
+  ]);
   let plan: "anon" | "free" | "plus" = "anon";
   let used = 0;
-  let limit = ANON_QUOTA;
+  let limit = anonQuota;
 
   if (user) {
     plan = user.plan === "plus" ? "plus" : "free";
     if (plan === "plus") {
       limit = -1;
     } else {
-      limit = FREE_QUOTA;
+      limit = freeQuota;
       used = await getUsage(`user:${user.id}`, "ask");
     }
   } else {

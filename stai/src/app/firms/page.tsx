@@ -8,6 +8,7 @@ import { EARLY_BIRD_END_ISO } from "@/lib/content";
 import { daysUntil } from "@/lib/format";
 import EnforcementClock from "@/components/chrome/EnforcementClock";
 import FirmEnquiryForm from "@/components/firms/FirmEnquiryForm";
+import { requirePage } from "@/lib/page-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,10 @@ export const metadata: Metadata = pageMeta({
 
 const eur = (n: number) => `€${n.toLocaleString("en-IE")}`;
 
-export default function FirmsPage() {
+export default async function FirmsPage() {
+  // Switched off in site settings → this page does not exist.
+  await requirePage("firms");
+
   const days = daysUntil(EARLY_BIRD_END_ISO);
   const available = FIRM_INTERESTS.filter((i) => i.available);
   const building = FIRM_INTERESTS.filter((i) => !i.available);

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { SMark } from "@/components/Logo";
 import NewsletterForm from "@/components/NewsletterForm";
+import { enabledMap, toggleForPath } from "@/lib/site-config";
 
 const COLS: { head: string; links: { href: string; label: string }[] }[] = [
   {
     head: "Intelligence",
     links: [
-      { href: "/briefing", label: "The Briefing" },
+      { href: "/news", label: "News" },
+      { href: "/insights", label: "Insights" },
       { href: "/podcast", label: "Podcast" },
       { href: "/research", label: "Research desk" },
       { href: "/ask", label: "Ask STAI" },
@@ -35,7 +37,19 @@ const COLS: { head: string; links: { href: string; label: string }[] }[] = [
   },
 ];
 
-export default function Footer() {
+export default async function Footer() {
+  // The footer is the other place a switched-off page leaks out. The header
+  // was filtered from the start; this column list was not, so /ask stayed
+  // linked here while the route already answered 404. One map, both menus.
+  const enabled = await enabledMap();
+  const live = (href: string) => {
+    const t = toggleForPath(href);
+    return !t || enabled[t.id];
+  };
+  const cols = COLS.map((c) => ({ ...c, links: c.links.filter((l) => live(l.href)) })).filter(
+    (c) => c.links.length > 0
+  );
+
   return (
     <footer className="border-t bg-navy-950 rule-strong">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
@@ -51,14 +65,16 @@ export default function Footer() {
               and finance. It hasn&apos;t started yet — join the waitlist and we&apos;ll write to you once,
               when the first issue is ready. No mail until then.
             </p>
-            <div className="mt-4 max-w-md">
-              <NewsletterForm source="footer" />
-            </div>
+            {enabled.newsletter && (
+              <div className="mt-4 max-w-md">
+                <NewsletterForm source="footer" />
+              </div>
+            )}
           </div>
 
           {/* Sitemap */}
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
-            {COLS.map((col) => (
+            {cols.map((col) => (
               <div key={col.head}>
                 <h3 className="f-label" style={{ color: "var(--ink-faint)" }}>
                   {col.head}

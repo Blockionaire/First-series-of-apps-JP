@@ -4,6 +4,7 @@ import { sql } from "@/lib/sql";
 import { NOW_MS } from "@/lib/now";
 import { invalidateSearchIndex } from "@/lib/search";
 import { guard, WINDOW } from "@/lib/ratelimit";
+import { isArticleKind } from "@/lib/content";
 
 export async function POST(req: NextRequest) {
   const blocked = await guard(req, "admin-article", 60, WINDOW.hour);
@@ -33,6 +34,10 @@ export async function POST(req: NextRequest) {
     title,
     String(b.dek ?? "").trim(),
     String(b.category ?? "Analysis"),
+    // The section. Anything unrecognised files as news, which is where every
+    // existing piece already sits — a bad value must not hide a published
+    // article from both sections at once.
+    isArticleKind(String(b.kind)) ? String(b.kind) : "news",
     JSON.stringify(
       String(b.tags ?? "")
         .split(",")
@@ -56,15 +61,15 @@ export async function POST(req: NextRequest) {
       // updated_at is what moves the Ask STAI corpus fingerprint. Without it
       // an edit is invisible to every isolate holding a cached index.
       await sql().run(
-        `UPDATE articles SET slug=?, title=?, dek=?, category=?, tags=?, author=?,
+        `UPDATE articles SET slug=?, title=?, dek=?, category=?, kind=?, tags=?, author=?,
          author_role=?, published_at=?, reading_min=?, featured=?,
          urgency=?, premium=?, status=?, body_md=?, updated_at=${NOW_MS} WHERE id=?`,
         [...values, id]
       );
     } else {
       const info = await sql().run(
-        `INSERT INTO articles (slug, title, dek, category, tags, author, author_role, published_at, reading_min, featured, urgency, premium, status, body_md, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${NOW_MS})`,
+        `INSERT INTO articles (slug, title, dek, category, kind, tags, author, author_role, published_at, reading_min, featured, urgency, premium, status, body_md, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${NOW_MS})`,
         values
       );
       id = info.lastRowId;
