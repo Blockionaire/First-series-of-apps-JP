@@ -20,13 +20,34 @@ export type CandidateCard = {
   firstSeen: string;
   lastSeen: string;
   updateCount: number;
+  /**
+   * How many source ITEMS are in this story — rows in newsroom_story_sources,
+   * one per document retrieved.
+   *
+   * Named `sourceCount` in the database and shown as "items" here, because the
+   * first production run read "9 sources" off a card when only one publisher
+   * was active and reasonably concluded something was wrong. One feed can
+   * legitimately contribute several documents to one story; nine of them is
+   * not nine publishers agreeing.
+   */
   sourceCount: number;
+  /** Distinct registered publishers behind those items. The corroboration number. */
+  publisherCount: number;
   tier1: number;
   tier2: number;
   tier3: number;
   primary: number;
   feedbackCount: number;
-  sources: { name: string; tier: number; url: string; relationship: string }[];
+  sources: {
+    name: string;
+    tier: number;
+    url: string;
+    relationship: string;
+    /* The raw ingested dates, per item. Without these there is no way to see
+     * from the browser which member a date-based gate actually judged. */
+    publishedAt: string | null;
+    retrievedAt: string;
+  }[];
 };
 
 const VERDICTS = [
@@ -137,12 +158,17 @@ export default function DryRunCandidates({ cards }: { cards: CandidateCard[] }) 
             )}
 
             {/* provenance */}
+            {/* Items and publishers, separately and always both. The count
+                that matters editorially is publishers — several outlets
+                reporting one development is evidence it matters, several
+                documents from one feed is not. */}
             <p className="f-mono mt-3 text-[0.72rem]" style={{ color: "var(--ink-faint)" }}>
-              {c.jurisdictions.join(", ") || "no jurisdiction"} · {c.sourceCount} source
-              {c.sourceCount === 1 ? "" : "s"} ({c.tier1} T1 / {c.tier2} T2 / {c.tier3} T3,{" "}
+              {c.jurisdictions.join(", ") || "no jurisdiction"} · {c.sourceCount} item
+              {c.sourceCount === 1 ? "" : "s"} from {c.publisherCount} publisher
+              {c.publisherCount === 1 ? "" : "s"} ({c.tier1} T1 / {c.tier2} T2 / {c.tier3} T3,{" "}
               {c.primary} primary) · first seen {c.firstSeen.slice(0, 16).replace("T", " ")} · last{" "}
               {c.lastSeen.slice(0, 16).replace("T", " ")}
-              {c.updateCount > 0 && ` · moved ${c.updateCount}×`}
+              {c.updateCount > 0 && ` · updated ${c.updateCount}× (items joined or revised)`}
             </p>
 
             <button
@@ -173,7 +199,8 @@ export default function DryRunCandidates({ cards }: { cards: CandidateCard[] }) 
                 </ul>
 
                 <p className="f-label mt-4" style={{ color: "var(--ink-faint)" }}>
-                  Sources
+                  Items in this story ({c.sourceCount} from {c.publisherCount} publisher
+                  {c.publisherCount === 1 ? "" : "s"})
                 </p>
                 <ul className="mt-2 space-y-1">
                   {c.sources.map((s) => (
@@ -189,6 +216,20 @@ export default function DryRunCandidates({ cards }: { cards: CandidateCard[] }) 
                       >
                         open
                       </a>
+                      {/* The dates exactly as ingested. A feed that supplies no
+                          date at all and one that supplies an old date look
+                          identical from the story's summary line, and they are
+                          completely different problems. */}
+                      <span
+                        className="f-mono block text-[0.68rem]"
+                        style={{ color: "var(--ink-faint)" }}
+                      >
+                        published{" "}
+                        {s.publishedAt
+                          ? s.publishedAt.slice(0, 16).replace("T", " ")
+                          : "— none in the feed"}{" "}
+                        · retrieved {s.retrievedAt.slice(0, 16).replace("T", " ")}
+                      </span>
                     </li>
                   ))}
                 </ul>

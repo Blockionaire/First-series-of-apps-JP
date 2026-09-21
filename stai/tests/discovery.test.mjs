@@ -20,6 +20,7 @@ import {
 } from "../src/lib/newsroom/normalise.ts";
 import {
   MATCH_THRESHOLD,
+  buildCandidates,
   WINDOW_DAYS,
   clusterTitle,
   entities,
@@ -225,6 +226,202 @@ const candidate = (id, title, lead, url, lastSeen = "2026-09-21T09:00:00.000Z") 
 
 const NOW = Date.parse("2026-09-21T12:00:00.000Z");
 
+describe("clustering does not run away — the EBA case", () => {
+  /**
+   * Found in the first production run, with the EBA as the only active source.
+   *
+   * Nine items from one feed collapsed into a single story, and the card then
+   * showed one item's headline beside a different item's publication date. Two
+   * distinct causes, both reproduced here.
+   */
+  const ALERT = (day, month) => ({
+    url: `https://www.eba.europa.eu/eba-e-mail-alert-${day}-${month}-2026`,
+    title: `EBA e-mail alert ${day} ${month}, 2026`,
+    lead: "The EBA publishes its regular e-mail alert for subscribers.",
+    publishedAt: `2026-${month === "September" ? "09" : "08"}-${String(day).padStart(2, "0")}T09:30:00.000Z`,
+  });
+
+  /**
+   * Mirrors what the orchestrator does: feed items in, grow clusters.
+   *
+   * Deliberately rebuilds candidates through the REAL `buildCandidates` on
+   * every item, including its ordering contract, rather than maintaining its
+   * own cluster shape. A harness that constructs candidates by hand tests the
+   * harness: the union-of-members bug lived in exactly that fold, so a harness
+   * that did not use it could not see the bug.
+   */
+  function cluster(items, now) {
+    const stories = [];
+    const members = [];
+
+    for (const it of items) {
+      // Oldest first per story, as the orchestrator's ORDER BY delivers them.
+      const ordered = [...members].sort((a, b) =>
+        (a.published_at ?? a.retrieved_at).localeCompare(b.published_at ?? b.retrieved_at)
+      );
+      const match = findCluster(it, buildCandidates(stories, ordered), now);
+
+      const storyId = match?.storyId ?? stories.length + 1;
+      if (!match) {
+        stories.push({
+          id: storyId,
+          canonical_title: it.title,
+          last_seen_at: new Date(now).toISOString(),
+        });
+      }
+      members.push({
+        story_id: storyId,
+        canonical_url: it.url,
+        title: it.title,
+        lead: it.lead,
+        published_at: it.publishedAt,
+        retrieved_at: new Date(now).toISOString(),
+      });
+    }
+
+    return stories.map((s) => ({
+      storyId: s.id,
+      members: members.filter((m) => m.story_id === s.id),
+    }));
+  }
+
+  test("a weekly boilerplate alert is a separate story each week", () => {
+    // These differ only by the date in the title. They are five separate
+    // mailings, not one development reported five times.
+    const weekly = [
+      ALERT(18, "September"),
+      ALERT(11, "September"),
+      ALERT(4, "September"),
+      ALERT(28, "August"),
+      ALERT(5, "August"),
+    ];
+    const out = cluster(weekly, NOW);
+    assert.equal(
+      out.length,
+      weekly.length,
+      `expected ${weekly.length} stories, got ${out.length} — boilerplate titles merged`
+    );
+  });
+
+  test("a cluster does not become an attractor as it grows", () => {
+    // The structural failure: similarity was measured against the UNION of
+    // every member's text, so the more a cluster absorbed the better it
+    // matched the next thing, and one cluster swallowed the feed.
+    const items = [
+      ALERT(18, "September"),
+      ALERT(11, "September"),
+      ALERT(4, "September"),
+      {
+        url: "https://www.eba.europa.eu/dora-rts",
+        title: "EBA publishes final draft technical standards on DORA incident reporting",
+        lead: "The European Banking Authority published final draft regulatory technical standards today.",
+        publishedAt: "2026-09-20T09:00:00.000Z",
+      },
+      {
+        url: "https://www.eba.europa.eu/ict-consultation",
+        title: "EBA consults on guidelines for ICT risk management",
+        lead: "The European Banking Authority launched a consultation on ICT risk management guidelines.",
+        publishedAt: "2026-09-19T09:00:00.000Z",
+      },
+    ];
+    const out = cluster(items, NOW);
+    const biggest = Math.max(...out.map((c) => c.members.length));
+    assert.equal(biggest, 1, `one cluster absorbed ${biggest} unrelated items`);
+  });
+
+  test("genuine coverage of one development still clusters", () => {
+    // The fix must not break the thing clustering is FOR.
+    const items = [
+      {
+        url: "https://ec.europa.eu/ip-26-1234",
+        title: "European Commission adopts implementing act on AI Act audit documentation",
+        lead: "The requirement applies from 1 January 2027 for regulated entities across the European Union.",
+        publishedAt: "2026-09-21T09:00:00.000Z",
+      },
+      {
+        url: "https://reuters.com/eu-aiact-audit",
+        title: "EU adopts AI Act audit documentation rules",
+        lead: "The European Commission adopted an implementing act on AI Act audit documentation, applying from 1 January 2027 for regulated entities.",
+        publishedAt: "2026-09-21T14:00:00.000Z",
+      },
+    ];
+    const out = cluster(items, NOW);
+    assert.equal(out.length, 1, "a regulator's announcement and the coverage of it are one story");
+    assert.equal(out[0].members.length, 2);
+  });
+
+  test("items published days apart are not the same development", () => {
+    // Even near-identical text. One development happens once; coverage of it
+    // lands within a few days, not a fortnight later.
+    const a = {
+      url: "https://www.eba.europa.eu/a",
+      title: "EBA publishes guidelines on ICT risk management",
+      lead: "Guidelines for ICT risk management in financial institutions.",
+      publishedAt: "2026-09-20T09:00:00.000Z",
+    };
+    const b = {
+      ...a,
+      url: "https://www.eba.europa.eu/b",
+      publishedAt: "2026-08-20T09:00:00.000Z",
+    };
+    const out = cluster([a, b], NOW);
+    assert.equal(out.length, 2, "a month apart is not one development");
+  });
+
+  /* ── The union, isolated ──────────────────────────────────────────────
+   * The two causes are separable, and the proximity guard alone would hide
+   * this one: everything below is published inside the three-day window, so
+   * only the representative rule can keep these apart.
+   */
+  const STORY = [{ id: 1, canonical_title: "EBA DORA standards", last_seen_at: "2026-09-21T09:00:00.000Z" }];
+  const TWO_MEMBERS = [
+    {
+      story_id: 1,
+      canonical_url: "https://www.eba.europa.eu/dora-rts",
+      title: "EBA publishes final draft technical standards on DORA incident reporting",
+      lead: "The European Banking Authority published final draft regulatory technical standards.",
+      published_at: "2026-09-20T09:00:00.000Z",
+      retrieved_at: "2026-09-20T10:00:00.000Z",
+    },
+    {
+      // A member that does not belong — however it got here, the cluster must
+      // not start matching on its vocabulary.
+      story_id: 1,
+      canonical_url: "https://www.esma.europa.eu/sustainability-templates",
+      title: "ESMA consults on sustainability disclosure templates for asset managers",
+      lead: "The consultation covers sustainability disclosure templates used by asset managers.",
+      published_at: "2026-09-21T09:00:00.000Z",
+      retrieved_at: "2026-09-21T10:00:00.000Z",
+    },
+  ];
+
+  test("a cluster's text is its first member's, not every member's", () => {
+    const [c] = buildCandidates(STORY, TWO_MEMBERS);
+    assert.ok(c.tokens.includes("dora"), "keeps the representative's own terms");
+    assert.ok(
+      !c.tokens.includes("sustainability"),
+      "a later member's vocabulary leaked into the cluster's text"
+    );
+    assert.deepEqual(c.urls.length, 2, "but every member's URL is still matchable");
+    assert.equal(c.publishedAt, "2026-09-20T09:00:00.000Z", "the representative's date");
+  });
+
+  test("a cluster does not match on a member it should never have absorbed", () => {
+    const [c] = buildCandidates(STORY, TWO_MEMBERS);
+    const incoming = {
+      url: "https://www.esma.europa.eu/sustainability-templates-funds",
+      title: "ESMA consults on sustainability disclosure templates for investment funds",
+      lead: "The consultation covers sustainability disclosure templates used by investment funds.",
+      publishedAt: "2026-09-21T11:00:00.000Z",
+    };
+    assert.equal(
+      findCluster(incoming, [c], NOW),
+      null,
+      "matched the second member's text — the cluster is acting as an attractor"
+    );
+  });
+});
+
 describe("clustering", () => {
   test("eighteen reports of one development are one story", () => {
     const existing = [
@@ -428,6 +625,59 @@ describe("relevance gates", () => {
   test("stale news is rejected", () => {
     const gates = runGates(facts({ publishedAt: "2026-01-01T00:00:00.000Z" }), NOW);
     assert.equal(gate(gates, "fresh").passed, false);
+  });
+
+  /* The second half of the first production run's confusion. A card headed
+   * "EBA e-mail alert 18 September" was rejected as "published 47 days ago",
+   * because the freshness gate was handed the OLDEST member's date while the
+   * title came from a different member. A living story is as recent as its
+   * newest development, not its first. */
+  test("a story is as fresh as its newest development, not its first", () => {
+    const gates = runGates(
+      facts({
+        publishedAt: "2026-08-05T09:30:00.000Z", // 47 days back — the first report
+        latestPublishedAt: "2026-09-17T09:00:00.000Z", // 4 days back — the follow-up
+      }),
+      NOW
+    );
+    assert.equal(gate(gates, "fresh").passed, true, gate(gates, "fresh").detail);
+  });
+
+  test("a story whose newest member is also old is still rejected", () => {
+    // The fix must not become a way for anything with a long tail to pass.
+    const gates = runGates(
+      facts({
+        publishedAt: "2026-01-01T00:00:00.000Z",
+        latestPublishedAt: "2026-06-01T12:00:00.000Z",
+      }),
+      NOW
+    );
+    assert.equal(gate(gates, "fresh").passed, false);
+    assert.match(gate(gates, "fresh").detail, /112 days ago/);
+  });
+
+  test("the rejection reason quotes the date it actually judged", () => {
+    // The card said "47 days" next to a headline dated three days earlier, and
+    // there was no way to tell from the Inbox which date had been used.
+    const gates = runGates(
+      facts({ publishedAt: "2026-08-05T09:30:00.000Z", latestPublishedAt: null }),
+      NOW
+    );
+    assert.equal(gate(gates, "fresh").passed, false);
+    assert.match(gate(gates, "fresh").detail, /47 days ago/);
+    assert.match(gate(gates, "fresh").detail, /2026-08-05/, "names the judged date");
+  });
+
+  test("ranking recency follows the newest development too", () => {
+    const stale = scoreStory(facts({ publishedAt: "2026-09-01T09:00:00.000Z" }), NOW);
+    const revived = scoreStory(
+      facts({
+        publishedAt: "2026-09-01T09:00:00.000Z",
+        latestPublishedAt: "2026-09-21T09:00:00.000Z",
+      }),
+      NOW
+    );
+    assert.ok(revived.score > stale.score, "a story that moved today ranks above one that did not");
   });
 
   test("every gate runs even after one fails", () => {

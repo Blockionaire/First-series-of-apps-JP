@@ -43,7 +43,26 @@ export type StoryFacts = {
   tier3Count: number;
   sourceCount: number;
   firstSeenAt: string;
+  /**
+   * When the development FIRST broke — the oldest member's publication instant.
+   *
+   * Kept distinct from `latestPublishedAt` because the two answer different
+   * questions and the first production run conflated them: a card headed with
+   * one member's title was rejected for another member's age.
+   */
   publishedAt: string | null;
+  /**
+   * When the story LAST moved — the newest member's publication instant.
+   *
+   * This is what freshness means for a living story. A regulation announced in
+   * August and amended four days ago is current news, and judging it on the
+   * August date rejects it as six weeks stale.
+   *
+   * Optional, and falls back to `publishedAt`: for a one-item story the two
+   * are the same row, and a caller that knows only one date is not asserting
+   * anything false by giving only that one.
+   */
+  latestPublishedAt?: string | null;
   /** Titles of already-published STAI articles, for the "already covered" gate. */
   publishedTitles: string[];
   /** True when a human deliberately escalated a discovery-only cluster. */
@@ -231,17 +250,47 @@ export function runGates(facts: StoryFacts, now = Date.now()): GateResult[] {
   });
 
   // 7. Not stale. Republished old news with no new development.
-  const published = facts.publishedAt ? Date.parse(facts.publishedAt) : NaN;
+  //
+  // Judged on the story's NEWEST member, because "no new development" is the
+  // whole condition: a story that moved yesterday has, by definition, a new
+  // development, whatever the date of the first report in it. The detail names
+  // the date it used — the Inbox showed "47 days ago" beside a headline three
+  // days old and there was no way to tell which member that referred to.
+  const judged = latestOf(facts);
+  const published = judged ? Date.parse(judged) : NaN;
   const ageDays = Number.isFinite(published) ? (now - published) / 86_400_000 : 0;
   gates.push({
     id: "fresh",
     label: "Recent enough to matter",
     passed: ageDays <= 45,
     detail:
-      ageDays > 45 ? `published ${Math.round(ageDays)} days ago` : "",
+      ageDays > 45
+        ? `last moved ${Math.round(ageDays)} days ago (${judged!.slice(0, 10)})`
+        : "",
   });
 
   return gates;
+}
+
+/**
+ * The story's newest known publication instant.
+ *
+ * Deliberately `??` rather than a max: if `evaluate` ever hands these over the
+ * wrong way round, that is a query bug and it should surface as a wrong date in
+ * the Inbox, not be silently corrected here.
+ *
+ * ── How much this currently moves ───────────────────────────────────────
+ * Less than it looks, and worth being honest about. `SAME_DEVELOPMENT_DAYS`
+ * caps how far a member may be published from its story's representative, so
+ * today the two dates differ by at most three days (revisions, which can move
+ * a member's publication date, are the exception) and the verdict only changes
+ * in a narrow band around the 45-day line. It is kept because it is what
+ * "stale" actually means, and because it decouples the judged date from the
+ * clustering window: widen that window after the dry run — a likely outcome —
+ * and without this the gate would quietly start rejecting live stories.
+ */
+function latestOf(facts: StoryFacts): string | null {
+  return facts.latestPublishedAt ?? facts.publishedAt;
 }
 
 export function gatesPassed(gates: GateResult[]): boolean {
@@ -304,7 +353,10 @@ export function scoreStory(facts: StoryFacts, now = Date.now()): Score {
 
   // Recency. Not a cliff: a three-day-old regulatory development is still
   // worth writing about, it is just behind today's.
-  const published = facts.publishedAt ? Date.parse(facts.publishedAt) : Date.parse(facts.firstSeenAt);
+  // The newest development, for the same reason the freshness gate uses it:
+  // a story that moved today is today's news however long it has been running.
+  const newest = latestOf(facts);
+  const published = newest ? Date.parse(newest) : Date.parse(facts.firstSeenAt);
   const ageDays = Number.isFinite(published) ? Math.max(0, (now - published) / 86_400_000) : 7;
   const recency = Math.max(0, Math.round(15 - ageDays * 2));
   score += recency;

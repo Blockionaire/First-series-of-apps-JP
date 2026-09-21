@@ -72,6 +72,11 @@ export default async function DryRunPage({ searchParams }: Props) {
         lastSeen: c.last_seen_at,
         updateCount: c.update_count,
         sourceCount: c.source_count,
+        // Distinct publishers, counted from the members rather than stored.
+        // `source_count` counts ITEMS, and the two diverge exactly when one
+        // feed contributes several documents — which is the case that made
+        // the first production run look like nine publishers agreeing.
+        publisherCount: new Set(members.map((m) => m.source_id)).size,
         tier1: c.tier1_source_count,
         tier2: c.tier2_source_count,
         tier3: c.tier3_source_count,
@@ -82,6 +87,8 @@ export default async function DryRunPage({ searchParams }: Props) {
           tier: m.tier,
           url: m.canonical_url,
           relationship: m.relationship,
+          publishedAt: m.published_at,
+          retrievedAt: m.retrieved_at,
         })),
       };
     })

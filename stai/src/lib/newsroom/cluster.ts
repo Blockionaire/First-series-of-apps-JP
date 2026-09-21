@@ -83,8 +83,21 @@ export type ClusterCandidate = {
   title: string;
   /** Canonical URLs already in the cluster. */
   urls: string[];
+  /**
+   * Tokens of the cluster's REPRESENTATIVE member, not of every member joined
+   * together.
+   *
+   * The distinction is the whole of the first production bug. Similarity was
+   * measured against the union of all members' text, and `weightedOverlap`
+   * asks what fraction of the incoming item's tokens appear in that set — so
+   * every join made the set larger and the cluster a better match for the next
+   * thing. One cluster swallowed nine items from a single feed. A cluster
+   * compared against one fixed document cannot become an attractor.
+   */
   tokens: string[];
   entities: string[];
+  /** The representative's publication instant, for the proximity check. */
+  publishedAt?: string | null;
   lastSeenAt: string;
 };
 
@@ -92,6 +105,7 @@ export type ClusterInput = {
   url: string;
   title: string;
   lead: string;
+  publishedAt?: string | null;
 };
 
 export type Match = {
@@ -121,6 +135,26 @@ export const MATCH_THRESHOLD = 0.42;
 
 /** Days a story stays open to new members. */
 export const WINDOW_DAYS = 7;
+
+/**
+ * How far apart two items may be published and still be one development.
+ *
+ * The second half of the EBA fix. Lexical similarity alone cannot separate a
+ * weekly mailing from last week's: "EBA e-mail alert 18 September" and "EBA
+ * e-mail alert 11 September" differ by two tokens out of a dozen, and no
+ * symmetric text measure calls that a different document. What separates them
+ * is that they were published a week apart — one development happens once.
+ *
+ * Three days, because coverage of an announcement lands the same day or the
+ * next, and a Friday announcement can draw Monday analysis. It is deliberately
+ * shorter than the seven-day membership window: that window says how long a
+ * story stays open at all, this says how close two reports must be to be the
+ * same report.
+ *
+ * Applied only when BOTH dates are known. An unknown date is not evidence of
+ * distance, and blocking on it would split stories whose feeds omit dates.
+ */
+export const SAME_DEVELOPMENT_DAYS = 3;
 
 /**
  * Find the story this item belongs to, if any.
@@ -161,8 +195,21 @@ export function findCluster(
     for (const t of new Set(c.tokens)) df.set(t, (df.get(t) ?? 0) + 1);
   }
 
+  const itemPublished = item.publishedAt ? Date.parse(item.publishedAt) : NaN;
+
   let best: Match | null = null;
   for (const c of open) {
+    // Publication proximity, before any text is compared. Two near-identical
+    // documents published a week apart are a recurring bulletin, not one
+    // development reported twice — and that is the only thing that separates
+    // them, since their text barely differs. Skipped when either date is
+    // unknown: an absent date is not evidence of distance.
+    const candidatePublished = c.publishedAt ? Date.parse(c.publishedAt) : NaN;
+    if (Number.isFinite(itemPublished) && Number.isFinite(candidatePublished)) {
+      const apart = Math.abs(itemPublished - candidatePublished);
+      if (apart > SAME_DEVELOPMENT_DAYS * 86_400_000) continue;
+    }
+
     const lexical = weightedOverlap(itemTokens, c.tokens, df, open.length);
 
     const sharedEntities = itemEntities.filter((e) => c.entities.includes(e));
@@ -183,6 +230,62 @@ export function findCluster(
   }
 
   return best;
+}
+
+/* ── Building candidates ────────────────────────────────────────────────── */
+
+export type StoryRow = { id: number; canonical_title: string; last_seen_at: string };
+export type MemberRow = {
+  story_id: number;
+  canonical_url: string;
+  title: string;
+  lead: string;
+  published_at: string | null;
+  retrieved_at: string;
+};
+
+/**
+ * Turn stories and their members into things `findCluster` can match against.
+ *
+ * Lives here rather than beside the query it serves, and is pure, because this
+ * fold IS the first production bug. It used to join every member's text
+ * together, and the consequence — one EBA cluster absorbing nine items — was
+ * invisible until it happened live. A pure function can be held to the rule
+ * directly, which is the only way this stays fixed.
+ *
+ * `members` must arrive OLDEST FIRST; the caller's ORDER BY guarantees it, and
+ * the first row seen for a story becomes that story's representative.
+ */
+export function buildCandidates(stories: StoryRow[], members: MemberRow[]): ClusterCandidate[] {
+  const byStory = new Map<
+    number,
+    { urls: string[]; repText: string | null; repPublished: string | null }
+  >();
+  for (const m of members) {
+    const entry = byStory.get(m.story_id) ?? { urls: [], repText: null, repPublished: null };
+    // Every URL, for the identity check — a story matches on any member's
+    // address, even though it matches on only one member's text.
+    entry.urls.push(m.canonical_url);
+    if (entry.repText === null) {
+      entry.repText = `${m.title} ${m.lead}`;
+      entry.repPublished = m.published_at;
+    }
+    byStory.set(m.story_id, entry);
+  }
+
+  return stories.map((s) => {
+    const entry = byStory.get(s.id);
+    const text = entry?.repText ?? s.canonical_title;
+    return {
+      storyId: s.id,
+      title: s.canonical_title,
+      urls: entry?.urls ?? [],
+      tokens: tokenize(text),
+      entities: entities(text),
+      publishedAt: entry?.repPublished ?? null,
+      lastSeenAt: s.last_seen_at,
+    };
+  });
 }
 
 /**

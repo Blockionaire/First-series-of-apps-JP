@@ -31,7 +31,15 @@ import { sql } from "../sql";
 import { limit } from "../site-config";
 import { fetchSource, shouldFetch, FAILURE_OUTCOMES, type FetchOutcome } from "./fetcher.ts";
 import { normaliseItem } from "./normalise.ts";
-import { clusterTitle, entities, findCluster, tokenize, WINDOW_DAYS, type ClusterCandidate } from "./cluster.ts";
+import {
+  buildCandidates,
+  clusterTitle,
+  findCluster,
+  WINDOW_DAYS,
+  type ClusterCandidate,
+  type MemberRow,
+  type StoryRow,
+} from "./cluster.ts";
 import { applyCap, firstFailure, gatesPassed, runGates, scoreStory, type Candidate, type GateResult } from "./relevance.ts";
 import { allSources, moveStory, type Story } from "./store.ts";
 import type { Source } from "./sources.ts";
@@ -285,7 +293,7 @@ async function ingest(
 /** Stories still open to new members, with the text needed to match against. */
 async function openClusters(): Promise<ClusterCandidate[]> {
   const cutoff = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString();
-  const stories = await sql().all<{ id: number; canonical_title: string; last_seen_at: string }>(
+  const stories = await sql().all<StoryRow>(
     `SELECT id, canonical_title, last_seen_at FROM newsroom_stories
       WHERE last_seen_at >= ? AND duplicate_of IS NULL
       ORDER BY last_seen_at DESC LIMIT 400`,
@@ -295,34 +303,18 @@ async function openClusters(): Promise<ClusterCandidate[]> {
 
   const ids = stories.map((s) => s.id);
   const placeholders = ids.map(() => "?").join(",");
-  const members = await sql().all<{ story_id: number; canonical_url: string; title: string; lead: string }>(
-    `SELECT ss.story_id, i.canonical_url, i.title, i.lead
+  // Oldest first — buildCandidates takes the first row it sees per story as
+  // that story's representative, so this ORDER BY is load-bearing.
+  const members = await sql().all<MemberRow>(
+    `SELECT ss.story_id, i.canonical_url, i.title, i.lead, i.published_at, i.retrieved_at
        FROM newsroom_story_sources ss
        JOIN newsroom_source_items i ON i.id = ss.source_item_id
-      WHERE ss.story_id IN (${placeholders})`,
+      WHERE ss.story_id IN (${placeholders})
+      ORDER BY COALESCE(i.published_at, i.retrieved_at) ASC`,
     ids
   );
 
-  const byStory = new Map<number, { urls: string[]; text: string[] }>();
-  for (const m of members) {
-    const entry = byStory.get(m.story_id) ?? { urls: [], text: [] };
-    entry.urls.push(m.canonical_url);
-    entry.text.push(`${m.title} ${m.lead}`);
-    byStory.set(m.story_id, entry);
-  }
-
-  return stories.map((s) => {
-    const entry = byStory.get(s.id) ?? { urls: [], text: [s.canonical_title] };
-    const joined = entry.text.join(" ");
-    return {
-      storyId: s.id,
-      title: s.canonical_title,
-      urls: entry.urls,
-      tokens: tokenize(joined),
-      entities: entities(joined),
-      lastSeenAt: s.last_seen_at,
-    };
-  });
+  return buildCandidates(stories, members);
 }
 
 async function attachToStory(storyId: number, item: IngestedItem, relationship: string): Promise<void> {
@@ -405,12 +397,25 @@ async function evaluate(stories: Story[], covered: string[], now: number): Promi
   const out: EvaluatedStory[] = [];
 
   for (const story of stories) {
+    // Both ends of the story, because they answer different questions. The
+    // oldest member is when the development broke and supplies the lead the
+    // gates read; the newest is when it last moved, which is what freshness
+    // and recency mean for a living story. The first production run used the
+    // oldest for both and rejected a four-day-old development as 47 days old.
     const earliest = await sql().first<{ published_at: string | null; lead: string }>(
       `SELECT i.published_at, i.lead
          FROM newsroom_story_sources ss
          JOIN newsroom_source_items i ON i.id = ss.source_item_id
         WHERE ss.story_id = ?
         ORDER BY COALESCE(i.published_at, i.retrieved_at) ASC LIMIT 1`,
+      [story.id]
+    );
+    const newest = await sql().first<{ published_at: string | null }>(
+      `SELECT i.published_at
+         FROM newsroom_story_sources ss
+         JOIN newsroom_source_items i ON i.id = ss.source_item_id
+        WHERE ss.story_id = ?
+        ORDER BY COALESCE(i.published_at, i.retrieved_at) DESC LIMIT 1`,
       [story.id]
     );
 
@@ -424,6 +429,7 @@ async function evaluate(stories: Story[], covered: string[], now: number): Promi
       sourceCount: story.source_count,
       firstSeenAt: story.first_seen_at,
       publishedAt: earliest?.published_at ?? null,
+      latestPublishedAt: newest?.published_at ?? null,
       publishedTitles: covered,
       escalated: !!story.escalated_by,
     };
@@ -557,7 +563,11 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
       // earlier source in this same run created.
       for (const item of fresh) {
         const candidates = await openClusters();
-        const match = findCluster({ url: item.url, title: item.title, lead: item.lead }, candidates, now);
+        const match = findCluster(
+          { url: item.url, title: item.title, lead: item.lead, publishedAt: item.publishedAt },
+          candidates,
+          now
+        );
 
         if (match) {
           await attachToStory(match.storyId, item, item.tier === 1 ? "primary_text" : "corroborating");
