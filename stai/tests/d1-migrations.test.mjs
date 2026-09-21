@@ -77,7 +77,12 @@ describe("D1 migrations", () => {
     ]) {
       assert.ok(tables.includes(t), `missing table: ${t}`);
     }
-    assert.deepEqual(migrated, ["0001_initial_schema.sql", "0002_indexes.sql"], "both files applied, in order");
+    // Compared against the directory rather than a hardcoded list: the point
+    // is that EVERY migration applied, in name order. Pinning the filenames
+    // here just means the next migration fails this test for existing.
+    const onDisk = sqlFiles("migrations").map((f) => f.name);
+    assert.ok(onDisk.length >= 3, "the migration set should not have shrunk");
+    assert.deepEqual(migrated, onDisk, "every migration applied, in order");
     cleanup();
   });
 
@@ -87,7 +92,7 @@ describe("D1 migrations", () => {
     assert.deepEqual(second, [], "a second run applies nothing");
 
     const tracked = d.prepare("SELECT name FROM d1_migrations ORDER BY id").all().map((r) => r.name);
-    assert.deepEqual(tracked, ["0001_initial_schema.sql", "0002_indexes.sql"]);
+    assert.deepEqual(tracked, sqlFiles("migrations").map((f) => f.name));
 
     // Re-applying without tracking must fail — proof the tracking is what
     // prevents it, not luck. CREATE TABLE has no IF NOT EXISTS in 0001.

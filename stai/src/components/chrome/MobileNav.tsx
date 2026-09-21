@@ -8,6 +8,8 @@ import { SMark, Wordmark } from "@/components/Logo";
 type Props = {
   nav: { href: string; label: string }[];
   user: { name: string; plus: boolean } | null;
+  /** Whether the STAI+ page is switched on; hides the membership button when not. */
+  plusOn: boolean;
 };
 
 /**
@@ -33,7 +35,7 @@ type Props = {
  * during SSR and during hydration, and can only turn true from a click in
  * the browser.
  */
-export default function MobileNav({ nav, user }: Props) {
+export default function MobileNav({ nav, user, plusOn }: Props) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -130,7 +132,7 @@ export default function MobileNav({ nav, user }: Props) {
                     Sign in
                   </Link>
                 )}
-                {(!user || !user.plus) && (
+                {(!user || !user.plus) && plusOn && (
                   <Link href="/plus" onClick={close} className="btn btn-plus premium-focus">
                     STAI+ membership
                   </Link>

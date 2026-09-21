@@ -5,6 +5,7 @@ import { allPodcasts } from "@/lib/content";
 import { fmtDate } from "@/lib/format";
 import JsonLd from "@/components/JsonLd";
 import { abs } from "@/lib/seo";
+import { requirePage } from "@/lib/page-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,11 @@ export const metadata: Metadata = pageMeta({
   path: "/podcast",
 });
 
-/** Deterministic decorative waveform per episode — no assets, no randomness across renders. */
+/**
+ * Deterministic decorative waveform per episode — no assets, no randomness
+ * across renders. It is a drawing beside the episode, not a player: the real
+ * link sits under it and points at the host the episode is published on.
+ */
 function bars(slug: string): number[] {
   let h = 2166136261;
   const out: number[] = [];
@@ -27,6 +32,9 @@ function bars(slug: string): number[] {
 }
 
 export default async function PodcastPage() {
+  // Switched off in site settings → this page does not exist.
+  await requirePage("podcast");
+
   const episodes = await allPodcasts();
 
   return (
@@ -74,7 +82,7 @@ export default async function PodcastPage() {
             Until then, the Briefing carries the analysis and the EU AI Act tracker carries the deadlines.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Link href="/briefing" className="btn btn-primary">Read the Briefing</Link>
+            <Link href="/news" className="btn btn-primary">Read the News desk</Link>
             <Link href="/ai-act" className="btn btn-ghost">EU AI Act tracker</Link>
           </div>
         </div>
@@ -111,6 +119,24 @@ export default async function PodcastPage() {
                 <p className="mt-4 max-w-2xl leading-relaxed" style={{ color: "var(--ink-muted)" }}>
                   {ep.description}
                 </p>
+                {/* The decorative waveform above is a drawing, not a player.
+                    When an episode has a link it gets a real one; when it does
+                    not, the page says so rather than showing a control that
+                    goes nowhere. */}
+                {ep.audio_url ? (
+                  <a
+                    href={ep.audio_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary btn-sm mt-5"
+                  >
+                    Listen to episode {ep.episode_no} →
+                  </a>
+                ) : (
+                  <p className="f-mono mt-5 text-[0.68rem] tracking-[0.06em]" style={{ color: "var(--ink-faint)" }}>
+                    Audio for this episode is not linked yet.
+                  </p>
+                )}
               </div>
             </details>
           </li>

@@ -105,11 +105,17 @@ export default async function AdminPage() {
           <h1 className="f-display mt-2 text-4xl text-cream-100">The desk</h1>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Link href="/admin/settings" className="btn btn-ghost btn-sm">
+            Settings
+          </Link>
           <Link href="/admin/people" className="btn btn-ghost btn-sm">
             Register
           </Link>
           <Link href="/admin/growth" className="btn btn-ghost btn-sm">
             Growth
+          </Link>
+          <Link href="/admin/podcast" className="btn btn-ghost btn-sm">
+            Podcast
           </Link>
           <Link href="/admin/prompts" className="btn btn-ghost btn-sm">
             Prompt library

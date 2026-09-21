@@ -9,6 +9,7 @@ import CopyButton from "@/components/CopyButton";
 import BookmarkButton from "@/components/BookmarkButton";
 import AdaptPanel from "@/components/prompts/AdaptPanel";
 import { PlusBadge } from "@/components/Logo";
+import { requirePage } from "@/lib/page-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PromptPage({ params }: Props) {
+  // Switched off in site settings → this page does not exist.
+  await requirePage("prompts");
+
   const { slug } = await params;
   const prompt = await promptBySlug(slug);
   if (!prompt) notFound();

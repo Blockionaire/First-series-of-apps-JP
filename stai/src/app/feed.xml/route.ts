@@ -39,7 +39,7 @@ export async function GET() {
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
     <title>STAI — The Briefing</title>
-    <link>${abs("/briefing")}</link>
+    <link>${abs("/news")}</link>
     <atom:link href="${abs("/feed.xml")}" rel="self" type="application/rss+xml" />
     <description>${esc(SITE.description)}</description>
     <language>en-gb</language>

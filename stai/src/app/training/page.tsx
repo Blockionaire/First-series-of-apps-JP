@@ -6,6 +6,7 @@ import { daysUntil } from "@/lib/format";
 import EnquiryForm from "@/components/training/EnquiryForm";
 import JsonLd from "@/components/JsonLd";
 import { abs, breadcrumbSchema } from "@/lib/seo";
+import { requirePage } from "@/lib/page-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,10 @@ export const metadata: Metadata = pageMeta({
 
 const eur = (n: number) => `€${n.toLocaleString("en-IE")}`;
 
-export default function TrainingPage() {
+export default async function TrainingPage() {
+  // Switched off in site settings → this page does not exist.
+  await requirePage("training");
+
   const days = daysUntil(EARLY_BIRD_END_ISO);
 
   // Course + Offer markup: these are purchasable programmes, and the

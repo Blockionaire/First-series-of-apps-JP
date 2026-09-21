@@ -6,6 +6,7 @@ import EnforcementClock from "@/components/chrome/EnforcementClock";
 import { DEPLOYER_OBLIGATIONS, ARTEFACTS, MILESTONES, PENALTIES } from "@/lib/aiact";
 import { allArticles } from "@/lib/content";
 import { fmtDate } from "@/lib/format";
+import { requirePage } from "@/lib/page-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,9 @@ export const metadata: Metadata = pageMeta({
 });
 
 export default async function AiActPage() {
+  // Switched off in site settings → this page does not exist.
+  await requirePage("aiAct");
+
   const related = (await allArticles())
     .filter((a) => a.tags.some((t) => /AI Act|supervision|ISQM|deployer/i.test(t)) || a.category === "Regulation")
     .slice(0, 4);
