@@ -1,8 +1,10 @@
 import { ImageResponse } from "next/og";
 import { SITE } from "./seo";
 
-export const OG_SIZE = { width: 1200, height: 630 };
-export const OG_CONTENT_TYPE = "image/png";
+// Re-exported so the image routes keep one import; the values live in
+// lib/og-size.ts, which anything can import without dragging next/og along.
+export { OG_SIZE, OG_CONTENT_TYPE } from "./og-size";
+import { OG_SIZE } from "./og-size";
 
 const NAVY = "#0E1726";
 const NAVY_DEEP = "#0A111D";

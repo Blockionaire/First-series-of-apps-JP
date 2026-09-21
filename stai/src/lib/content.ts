@@ -25,6 +25,16 @@ export type Article = {
    * contain the kind, so moving one between sections never breaks a link.
    */
   kind: string;
+  /**
+   * When the row was last written, at millisecond resolution.
+   *
+   * Already stamped by every article write path (see lib/now.ts) and already
+   * load-bearing for the Ask STAI corpus fingerprint. It is declared here so
+   * the SEO layer can read it too: `dateModified` and the sitemap's `lastmod`
+   * both derive from it via lib/article-dates.ts. Nullable because rows
+   * predating the column exist.
+   */
+  updated_at: string | null;
 };
 
 export type Prompt = {

@@ -5,6 +5,7 @@ import { NOW_MS } from "@/lib/now";
 import { invalidateSearchIndex } from "@/lib/search";
 import { guard, WINDOW } from "@/lib/ratelimit";
 import { isArticleKind } from "@/lib/content";
+import { pingIndexNow } from "@/lib/indexnow";
 
 export async function POST(req: NextRequest) {
   const blocked = await guard(req, "admin-article", 60, WINDOW.hour);
@@ -26,6 +27,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Slug, title and body are required" }, { status: 400 });
   }
 
+  // The section. Anything unrecognised files as news, which is where every
+  // existing piece already sits — a bad value must not hide a published
+  // article from both sections at once.
+  const kind = isArticleKind(String(b.kind)) ? String(b.kind) : "news";
+
   // Positional, in this exact order, for both statements below. D1 accepts
   // only `?` parameters, so the named form these used to carry is not
   // expressible — the order is now load-bearing.
@@ -34,10 +40,7 @@ export async function POST(req: NextRequest) {
     title,
     String(b.dek ?? "").trim(),
     String(b.category ?? "Analysis"),
-    // The section. Anything unrecognised files as news, which is where every
-    // existing piece already sits — a bad value must not hide a published
-    // article from both sections at once.
-    isArticleKind(String(b.kind)) ? String(b.kind) : "news",
+    kind,
     JSON.stringify(
       String(b.tags ?? "")
         .split(",")
@@ -85,5 +88,20 @@ export async function POST(req: NextRequest) {
   // the updated_at stamp above: every retrieval re-checks the corpus
   // fingerprint, so isolates this call can never reach still rebuild.
   invalidateSearchIndex();
-  return NextResponse.json({ ok: true, id });
+
+  // Tell the participating search engines the piece moved.
+  //
+  // Only for published work: a draft's URL answers 404, and asking a crawler
+  // to come and find that spends the domain's credibility for nothing. The
+  // section index goes in alongside it because it genuinely changed too.
+  //
+  // Awaited, but it cannot fail the save — pingIndexNow never throws and is
+  // bounded by its own timeout. The result rides along in the response so the
+  // admin UI can eventually surface it; nothing depends on it today.
+  const published = b.status !== "draft";
+  const indexnow = published
+    ? await pingIndexNow([`/briefing/${slug}`, kind === "insight" ? "/insights" : "/news"])
+    : { ok: false as const, reason: "draft — not submitted" };
+
+  return NextResponse.json({ ok: true, id, indexnow });
 }
