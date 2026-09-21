@@ -12,10 +12,24 @@ import EnforcementClock from "@/components/chrome/EnforcementClock";
 import Reveal from "@/components/Reveal";
 import { LeadCard, IndexCard, RowCard } from "@/components/ArticleCard";
 import { PlusBadge } from "@/components/Logo";
-import { SITE } from "@/lib/seo";
+import { SITE, pageMeta } from "@/lib/seo";
 import { enabledMap, homeCopy } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * The homepage states its own canonical like every other page.
+ *
+ * It used to inherit one from the root layout, which happened to be correct
+ * here and wrong everywhere else. `absoluteTitle` because this title already
+ * carries the brand and the layout's `%s — STAI` template would repeat it.
+ */
+export const metadata = pageMeta({
+  title: `STAI — ${SITE.tagline}`,
+  description: SITE.description,
+  path: "/",
+  absoluteTitle: true,
+});
 
 export default async function Home() {
   const featured = await featuredArticles();

@@ -3,6 +3,7 @@ import { allArticles, allPrompts } from "@/lib/content";
 import { AUTHORS } from "@/lib/authors";
 import { CATEGORIES, categorySlug } from "@/lib/categories";
 import { abs } from "@/lib/seo";
+import { lastModified } from "@/lib/article-dates";
 import { enabledMap, toggleForPath } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +19,22 @@ export const dynamic = "force-dynamic";
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const articles = await allArticles();
-  const newest = articles[0]?.published_at ?? new Date().toISOString().slice(0, 10);
   const enabled = await enabledMap();
+
+  /**
+   * The most recent change across a set of articles.
+   *
+   * `lastmod` means "when did this page last change", and an index page
+   * changes when any piece on it changes — including an edit to a piece
+   * published months ago. Taking the newest `published_at` (which is what the
+   * list order gives you for free) would miss exactly that case and leave the
+   * index looking frozen. Comparing ISO strings is a correct chronological
+   * comparison because every value here is UTC with fixed-width fields.
+   */
+  const newestOf = (set: typeof articles): string | undefined =>
+    set.length === 0 ? undefined : set.map(lastModified).reduce((a, b) => (b > a ? b : a));
+
+  const newest = newestOf(articles) ?? new Date().toISOString();
 
   /** True when nothing guards this path, or the thing that guards it is on. */
   const live = (path: string) => {
@@ -58,14 +73,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .filter((r) => live(r.path))
       .map((r) => ({
         url: abs(r.path),
-        lastModified: r.path === "/" || r.path === "/news" ? newest : undefined,
+        lastModified:
+          r.path === "/"
+            ? newest
+            : r.path === "/news"
+              ? newestOf(articles.filter((a) => a.kind === "news"))
+              : r.path === "/insights"
+                ? newestOf(articles.filter((a) => a.kind === "insight"))
+                : undefined,
         changeFrequency: r.freq,
         priority: r.priority,
       })),
     ...(articlesReachable
       ? CATEGORIES.map((c) => ({
           url: abs(`/briefing/category/${categorySlug(c)}`),
-          lastModified: articles.find((a) => a.category === c)?.published_at,
+          lastModified: newestOf(articles.filter((a) => a.category === c)),
           changeFrequency: "weekly" as const,
           priority: 0.7,
         }))
@@ -73,7 +95,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...(articlesReachable
       ? articles.map((a) => ({
           url: abs(`/briefing/${a.slug}`),
-          lastModified: a.published_at,
+          lastModified: lastModified(a),
           changeFrequency: "monthly" as const,
           // Act-critical pieces are the ones worth crawling first.
           priority: a.featured === 1 ? 0.9 : a.urgency >= 3 ? 0.8 : 0.7,

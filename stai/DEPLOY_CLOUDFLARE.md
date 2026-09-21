@@ -317,6 +317,34 @@ checkout unavailable and the sandbox path unreachable. Ask STAI runs in
 retrieval-only mode without `ANTHROPIC_API_KEY`; leave it unset for this
 deployment.
 
+### Optional search-engine variables
+
+Three variables that are not secrets and are not required. Absent, the
+corresponding feature is simply off — no tags rendered, no submissions made,
+and nothing fails.
+
+| Variable | What it does when set |
+| --- | --- |
+| `GOOGLE_SITE_VERIFICATION` | Renders the `google-site-verification` meta tag Search Console looks for. |
+| `BING_SITE_VERIFICATION` | Renders the `msvalidate.01` meta tag Bing Webmaster Tools looks for. |
+| `INDEXNOW_KEY` | Serves the key at `/indexnow.txt` and enables IndexNow submissions on publish. |
+
+They are plain **Variables**, not Secrets: all three end up publicly visible
+by design — two as meta tags in every page, one as the body of
+`/indexnow.txt`. Storing them as secrets would only hide them from the
+dashboard, not from the internet.
+
+`INDEXNOW_KEY` must be 8–128 characters of `[a-zA-Z0-9-]`. Anything else is
+treated as unset, so a typo reads as "off" rather than as submissions being
+rejected with a 403 nobody looks at. Generate one with:
+
+```bash
+openssl rand -hex 16
+```
+
+Each of the three has a dashboard step that code cannot do; they are listed in
+`SEO_SETUP.md`.
+
 ## 6. Deploy to workers.dev
 
 ```bash
