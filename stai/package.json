@@ -25,7 +25,8 @@
     "d1:admin:remote": "node scripts/bootstrap-admin.mjs",
     "cf:deploy": "npm run d1:migrate:remote && npm run d1:seed:remote && npm run d1:admin:remote && wrangler deploy",
     "test:workers": "node --test --test-concurrency=1 \"tests/workers/*.test.mjs\"",
-    "verify": "npm run typecheck && npm run lint && npm run build && npm test && npm run cf:build && npm run test:workers"
+    "verify": "npm run typecheck && npm run lint && npm run build && npm test && npm run cf:build && npm run test:workers",
+    "e2e": "node e2e/smoke.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

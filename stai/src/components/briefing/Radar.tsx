@@ -103,6 +103,26 @@ export default function Radar({ items }: { items: RadarItem[] }) {
     const cream = canvasInk; // ink follows the theme: cream on dark, navy on light
 
     const draw = (animate: boolean) => {
+      // Nothing to draw into a box with no size.
+      //
+      // BriefingExplorer wraps this in `hidden sm:block`, so below 640px the
+      // canvas is display:none and its rect is 0×0 — but the component still
+      // mounts and this still runs. R then computes to -34 and the first
+      // ctx.arc() throws "The radius provided (-8.5) is negative", an uncaught
+      // exception on every mobile visit to /news. Invisible on the page, since
+      // the radar is meant to be hidden there, which is exactly why it went
+      // unnoticed until the smoke suite read the console.
+      //
+      // The guard is on the draw rather than on the mount: the element is
+      // hidden by CSS, so the component cannot know at mount whether it has a
+      // box. Widening past the breakpoint fires the window resize handler,
+      // which re-measures and either draws directly (reduced motion) or lets
+      // the running animation frame pick up the new size — so returning early
+      // here costs nothing once the canvas has one.
+      //
+      // 68 is 2 × the 34px label margin below, which is what makes R positive.
+      if (!(w > 68 && h > 68)) return;
+
       ctx.clearRect(0, 0, w, h);
       const cx = w / 2;
       const cy = h / 2;
