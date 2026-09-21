@@ -189,6 +189,46 @@ describe("free launch", { skip: hasBuild ? false : "no standalone build" }, () =
     assert.equal(n1 - n0, 2, "exactly the two public paths should have been added");
   });
 
+  test("every icon surface serves the mark, and they share one source", async () => {
+    const html = await (await fetch(`${BASE}/`)).text();
+
+    // Declared: the tab icon, the high-resolution icon, the iOS touch icon
+    // and the manifest. A phone reads a different one of these from a laptop,
+    // which is how a stale icon survives on one device and not the other.
+    for (const rel of [
+      /<link rel="icon" href="\/favicon\.ico"/,
+      /<link rel="icon" href="\/icon\.png/,
+      /<link rel="apple-touch-icon" href="\/apple-icon\.png/,
+      /<link rel="manifest" href="\/manifest\.webmanifest"/,
+    ]) {
+      assert.match(html, rel, `the document must declare ${rel}`);
+    }
+
+    // Served, with the right media type — a manifest served as HTML is
+    // ignored silently by Chrome.
+    for (const [p, type] of [
+      ["/favicon.ico", /image\//],
+      ["/icon.png", /image\/png/],
+      ["/apple-icon.png", /image\/png/],
+      ["/manifest.webmanifest", /application\/manifest\+json/],
+    ]) {
+      const res = await fetch(BASE + p);
+      assert.equal(res.status, 200, `${p} should be served`);
+      assert.match(res.headers.get("content-type") ?? "", type, `${p} content type`);
+    }
+
+    const manifest = await (await fetch(`${BASE}/manifest.webmanifest`)).json();
+    // One source of truth: the manifest must reuse the same files the <link>
+    // tags point at. Copies in public/ are how two of three surfaces get
+    // updated and the third keeps showing last year's mark.
+    const srcs = new Set(manifest.icons.map((i) => i.src));
+    assert.deepEqual([...srcs].sort(), ["/apple-icon.png", "/icon.png"]);
+    assert.ok(
+      manifest.icons.some((i) => i.purpose === "maskable"),
+      "Android crops adaptive icons; without a maskable entry it pads onto a white plate"
+    );
+  });
+
   test("analytics stores no identifying data", () => {
     const d = db();
     const cols = d.prepare("PRAGMA table_info(events)").all().map((c) => c.name);
