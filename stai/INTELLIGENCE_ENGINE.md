@@ -1,8 +1,9 @@
 # STAI Intelligence Engine — masterplan
 
-**Status:** design approved for build, phase 1 not started.
+**Status:** design approved. Phases 1 and 2 built; phase 2.5 proposed.
 **Supersedes:** "STAI Intelligence Engine — System Design v1.0".
-**Owner decision required before phase 3.** See *Cost* and *Open decisions*.
+**Operator decisions of 21 September 2026 are recorded in §25 and folded into
+the sections they affect.**
 
 This is the working brief for the automated research and content pipeline. It
 is written to be read by whoever — person or agent — builds each phase, so it
@@ -159,6 +160,19 @@ the simpler arrangement is inadequate.
 
 An admin-managed allowlist. The engine never pulls arbitrary web pages.
 
+### Nothing is active until a human activates it
+
+Decided 21 September 2026. Phase 1 ships a **proposed** list of 40–60 sources
+as a reviewable file, and every row lands in the database with
+`active = 0`. There is no bulk-enable. The operator reads a source, checks that
+its tier and jurisdiction are right and that retrieving it is permitted, and
+activates it individually in `/admin/editorial/sources`.
+
+This is not ceremony. The source registry is the only thing standing between
+"an allowlist of considered publications" and "whatever the seed file happened
+to contain", and a seeded row that quietly became active is exactly how the
+second happens. Activation is recorded with who and when.
+
 ```
 source_id, name, domain, source_type, authority_tier, jurisdiction,
 topics[], ingestion_method, feed_url, active, license_notes,
@@ -174,9 +188,29 @@ snapshot_retention [C8], fetch_allowed [C8]
 | **2 — trusted secondary** | Quality journalism, trade press, research houses, law-firm analyses, Big Four publications | Context and discovery. |
 | **3 — discovery** | Social, forums, blogs, broad web search | Signal only. |
 
-**A Tier-3 source alone can never trigger an article.** It can open a story
-cluster; the cluster cannot leave the relevance gate without corroboration from
-Tier 1 or 2.
+### What a Tier-3 source may and may not do
+
+Stated precisely, because this is the rule most likely to be eroded by a
+convenient exception:
+
+| Stage | Tier 3 alone |
+|---|---|
+| Open a story cluster | **Yes.** Discovery is exactly what Tier 3 is for. |
+| Attract further sources into that cluster | Yes. |
+| Appear in the Editorial Inbox as a discovered story | Yes, labelled `discovery-only`. |
+| Pass the relevance gate into research | **No.** |
+| Reach article generation | **No.** |
+| Support a factual claim in a published piece | **No.** |
+
+A cluster whose only members are Tier 3 sits at `DISCOVERED` and is visible to
+a human, who may escalate it by hand if they judge it worth chasing. It cannot
+progress on its own. The gate is: **a cluster requires sufficient Tier-1 or
+Tier-2 evidence before it may progress to article generation**, and for
+regulatory content §8's stricter primary-source rule applies on top of that.
+
+Escalation by a human is recorded as an editorial decision with a reason, like
+every other transition — it is an override, not a loophole, and it shows up in
+the audit trail as one.
 
 ### Ingestion cadence
 
@@ -450,11 +484,16 @@ Everything publishes under the existing `STAI Editorial` byline
 fabricated credentials — the right foundation.
 
 AI-assisted pieces carry an explicit line in the article footer, beside the
-existing editorial disclosure:
+existing editorial disclosure. **Final wording, set by the operator on
+21 September 2026:**
 
-> Researched and drafted with AI assistance from named public sources, verified
-> against primary sources, and reviewed and approved by a human editor before
-> publication.
+> This article was produced with AI-assisted research and drafting and reviewed
+> against the cited sources before publication.
+
+It lives in one constant and is rendered from there, never retyped. It applies
+to every piece that passed through the engine, whatever the human then did to
+it — a draft rewritten heavily by an editor was still AI-drafted, and the
+sentence stays.
 
 For an audience trained in professional scepticism about sources, stating this
 plainly is worth more than hiding it, and it is consistent with the
@@ -638,6 +677,41 @@ tiers of commercial TTS pricing and can **double or triple the total bill** on
 its own. That is a second reason it comes last: it is the component whose value
 per euro is least proven.
 
+### The ceiling
+
+**€100 per month, hard.** Raised from €75 on 21 September 2026, after working
+out what €75 actually bought.
+
+**This is a ceiling, not a budget to spend.** Expected spend is unchanged at
+roughly €63 a month. Pacing comes from the research cap — a count — and the
+money is the safety net behind it. At €75 those two jobs collided: the
+throttle divides the month's remaining budget by the expected cost of a story,
+and €75 over 22 working days supported the target of 8 stories a day only
+while a story cost at most 42.5 cents against a 40 cent estimate. A 6% margin.
+Any underestimate would have quietly cut the desk to five or six stories a
+day — a failure that reads as "the engine isn't finding much" rather than "we
+hit the budget", which is the kind that misdirects the diagnosis for weeks.
+
+€100 raises that tolerance to ~57 cents a story, a 42% underestimate, while
+still stopping a runaway inside one month's damage. Revisit once
+`newsroom_ai_spend` holds real rows: measured cost/story beats every estimate
+in this document.
+
+Two consequences follow and both are deliberate:
+
+- The research cap (§7) is the throttle. If spend is tracking ahead of the
+  month, the engine researches fewer stories per day. It does not skip
+  verification, shorten evidence packs or downgrade the writer model, because
+  those trade quality for volume and volume is the thing we are willing to
+  lose.
+- Prompt caching and batch submission are not optimisations to add later. At
+  this ceiling they are the difference between 6–8 researched stories a day and
+  4.
+
+The podcast is **outside** this ceiling and gets its own budget line when
+phase 6 starts, because mixing them would let TTS costs silently eat the
+newsroom's research capacity.
+
 ### Controls, in phase 1 [C1]
 
 - hard daily and monthly spend ceiling, enforced at AI Gateway
@@ -723,6 +797,19 @@ match to the article, reject anything new. Register may change freely —
 
 — same information, different medium.
 
+### Cadence
+
+**Two episodes per week, not daily.** Decided 21 September 2026.
+
+This roughly quarters the TTS bill against a daily show and, more importantly,
+changes what an episode is: two episodes a week can each cover the week's
+genuinely significant developments, where a daily show has to fill Tuesdays.
+The engine already optimises for "what must a practitioner know" rather than
+volume; the podcast should not be the one component that contradicts that.
+
+Phase 6 does not begin until the article engine is running to the §22
+standard. Revisit daily only if listener completion justifies it.
+
 First version 8–12 minutes. Not 30, simply because a model can generate 30.
 
 Audio in R2 under `podcasts/YYYY/MM/DD/stai-daily-YYYY-MM-DD.mp3` with a
@@ -737,14 +824,80 @@ whose audio is not yet linked.
 v1.0's illustration was five articles every morning. That is 150 a month, into
 a site with eleven published pieces and an audience that does not exist yet.
 
-**v1 target: 1–3 published items per weekday.** The Editorial Inbox surfaces 5–8
-researched candidates; the human picks. A desk that publishes two things a day
-that practitioners actually read is a publication. One that publishes five
-things a day that nobody reads is a content farm with better provenance
-tracking.
+**Validation target: 1–3 published items per weekday.** The Editorial Inbox
+surfaces 5–8 researched candidates; the human picks. A desk that publishes two
+things a day that practitioners actually read is a publication. One that
+publishes five things a day that nobody reads is a content farm with better
+provenance tracking.
 
-Raise the number when reader metrics — completion, saves, returns — justify it,
-not before.
+**This is a configured value, not a design limit.** It lives in site settings
+as `newsroom.publish_target_min` / `newsroom.publish_target_max` and
+`newsroom.research_cap_per_day`, alongside the existing operator-controlled
+limits. Nothing in the schema, the state machine or the workflows assumes a
+particular number; raising the target is a settings change, not a code change.
+
+**Expected path:** 1–3/day through validation, reviewed after the phase-2 dry
+run and the first weeks of live review, then 3–5/day if the quality KPIs in §22
+hold and reader metrics — completion, saves, returns — justify it. The research
+cap and the spend ceiling move together: raising the publish target without
+raising the budget just means more rejected drafts, which costs the same as
+publishing them.
+
+---
+
+## 19b. Jurisdiction
+
+Decided 21 September 2026. **Every article carries one or more jurisdiction
+tags**, so a reader can see at a glance which market a piece applies to.
+
+Multi-value is the normal case, not the exception. A piece on the EU AI Act as
+it lands on Dutch audit firms is `EU` **and** `NL`; an IAASB standard is
+`GLOBAL`; a UK-only FRC consultation is `UK`. Tagging one of those with a
+single value would be a small lie in the most scannable part of the page.
+
+### The set
+
+**European-first, country-aware.** The taxonomy covers what the desk actually
+writes about now, with room to extend:
+
+| Group | Codes |
+|---|---|
+| Supranational | `GLOBAL`, `EU`, `EEA` |
+| Countries in scope | `NL`, `BE`, `DE`, `FR`, `UK`, `IE`, `LU`, `ES`, `IT`, `NORDICS`, `CH`, `PL`, `AT`, `PT` |
+| Out of scope for now | `US`, `APAC` — defined so a piece that genuinely touches them can be tagged honestly, but not part of the editorial focus |
+
+Rules:
+
+- `GLOBAL` is for genuinely jurisdiction-independent material (IAASB, IFRS,
+  vendor releases) and is **exclusive**: combining it with a country tag means
+  the piece is not global.
+- `EU` does **not** imply its member states. Tag `EU` alone for the instrument
+  itself; add `NL` when the piece says something specific about the Dutch
+  implementation, supervisor or market.
+- `UK` is first-class, not an afterthought. It has its own regulator, its own
+  standards route and a large share of the audience.
+- Unknown or unvalidated codes are rejected at the write path, the same way
+  article kinds are.
+
+### Language
+
+**All content is in English, for now.** The audience spans European markets and
+English is the working language of audit standards, EU instruments in practice
+and the firms' own methodology. A Dutch edition is a later decision, and the
+language switcher in the header already lists Dutch as "soon" rather than
+pretending it exists.
+
+Jurisdiction tagging is precisely what makes a single-language, multi-market
+desk workable: the reader filters by relevance to their market rather than by
+the language the piece happens to be written in.
+
+### Scope note for the build
+
+Phase 1 delivers the taxonomy module and the schema — the newsroom tables and a
+nullable `jurisdictions` column on `articles`. **Surfacing the tag to readers,
+and adding the field to the manual article editor, is deliberately not part of
+phase 1**, which is schema, registry, state machine and admin shell. It is a
+small follow-up on the live site and is tracked separately.
 
 ---
 
@@ -805,7 +958,8 @@ limitation to be lifted later; it is the editorial position.
 | Phase | Scope | Exit criterion |
 |---|---|---|
 | **1 — Foundation** | Database schema, source registry, state machine, Editorial Inbox shell, **spend-control scaffolding [C1]**. No AI. | Schema migrated; a story can be moved through every state by hand; budget config exists and is read. |
-| **2 — Discovery** | Connectors, ingestion, normalisation, dedup, lexical clustering [C4], relevance gates + rank [C2], source health [C15]. No generation. | **Two-week dry run [C3]**: the Inbox lists what it *would* have researched, daily, with rationales. Hand-label the clusters, measure precision/recall, tune the gates. No LLM spend beyond classification. |
+| **2 — Discovery** *(built)* | Connectors, ingestion, normalisation, dedup, lexical clustering [C4], relevance gates + rank [C2], source health [C15]. No generation. | **Two-week dry run [C3]**: the Inbox lists what it *would* have researched, daily, with rationales. Hand-label the clusters, measure precision/recall, tune the gates. No LLM spend beyond classification. |
+| **2.5 — Extractors** *(proposed)* | Six site-specific extractors for the primary sources that publish no feed — IAASB, EFRAG, AI Office, IESBA, NBA, CEAOB. No generic scraper. See PHASE_2_5_EXTRACTORS.md. | Those six produce items, or are confirmed to have a feed instead. |
 | **3 — Evidence** | Research workflow, primary-source retrieval, evidence packs, claim model, audit trail, AI Gateway with live spend limits. No writing. | Evidence packs for a week of stories that a human judges sufficient to write from. |
 | **4 — Articles** | Writer → extraction → adjudication → editorial QA → review screen, `editorial_decisions` capture [C9], publication through the shared write path [C7]. Manual publication only. | 20 consecutive drafts with zero unsupported material claims reaching review. |
 | **5 — Hardening** | Retries, DLQ and Queues *if measured as needed* [C12], monitoring, tests, prompt versioning, eval harness against the captured set, cost analytics. | Eval set of ≥50; a prompt change can be measured against it. |
@@ -817,16 +971,24 @@ answered before any money is spent on turning the wrong things into articles.
 
 ---
 
-## 24. Open decisions
+## 25. Decisions taken
 
-Four things this document cannot decide.
+All recorded 21 September 2026. Each is folded into the section it governs;
+this is the index.
 
-1. **Monthly ceiling.** ~€65/month for the newsroom, materially more with a
-   daily podcast. What is the number, and what happens at it?
-2. **Phase 6 go/no-go.** The podcast is the largest single cost and the least
-   proven value. Consider a weekly episode before a daily one.
-3. **Source registry seeding.** 40–60 sources with working feed URLs is real
-   work, and several standard setters will need scraping rather than RSS. Who
-   compiles the list, and when?
-4. **Disclosure wording.** §11 proposes a footer line. Confirm the exact
-   sentence before phase 4 ships, because it appears on every piece.
+| # | Decision | Section |
+|---|---|---|
+| **D1** | Tier 3 may open a cluster and surface it for a human, but a story may not progress to article generation without sufficient Tier-1/2 evidence. Human escalation is an audited override. | §5 |
+| **D2** | Publish target 1–3/weekday **during validation**, as configured settings, not a design limit. Reviewed after the dry run; expected path to 3–5/day if the §22 KPIs hold. | §19 |
+| **D3** | Newsroom hard monthly budget **€100** (raised from €75, 21 Sep 2026 — a ceiling, not a spend target; expected spend ~€63). The research cap is the throttle; quality is never the thing traded away. Podcast budgeted separately. | §16 |
+| **D4** | Podcast: yes, **after** the article engine, **2 episodes/week** initially. | §18 |
+| **D5** | Source registry: a proposed 40–60 source list ships in phase 1, every row `active = 0`, activated individually by the operator. No bulk enable. | §5 |
+| **D6** | Disclosure sentence fixed: *"This article was produced with AI-assisted research and drafting and reviewed against the cited sources before publication."* | §11 |
+| **D7** | Every article carries one or more jurisdiction tags. European-first, country-aware, `GLOBAL` exclusive, `EU` does not imply member states. All content in English for now. | §19b |
+
+### Still open
+
+- **Phase 5 Queues.** Decided by measurement in phase 5, not in advance.
+- **Embeddings for clustering.** Decided by the phase-2 dry-run measurement.
+- **Reader-facing jurisdiction display** on existing articles: a small
+  follow-up on the live site, outside phase 1.

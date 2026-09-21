@@ -24,6 +24,24 @@
     "head_sampling_rate": 1
   },
 
+  // Newsroom discovery.
+  //
+  // Every thirty minutes is the TRIGGER rate, not the fetch rate. Each run
+  // asks every registered source whether its own cadence has elapsed — Tier 1
+  // every 30 minutes, Tier 2 hourly, Tier 3 every two hours — so most firings
+  // skip most sources and log why. That is the intent: one schedule here,
+  // per-source politeness enforced in the code that knows the source.
+  //
+  // The handler calls the discovery service directly — it makes no HTTP
+  // request to the application's own routes, so there is no public endpoint
+  // that starts a crawl and no shared secret to manage. Whether it does
+  // anything is a site setting ("Newsroom discovery (scheduled)"), which ships
+  // OFF: this trigger can be live for weeks while discovery is switched off.
+  // See DISCOVERY.md.
+  "triggers": {
+    "crons": ["*/30 * * * *"]
+  },
+
   "d1_databases": [
     {
       "binding": "DB",

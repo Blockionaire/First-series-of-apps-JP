@@ -53,6 +53,19 @@ export const TOGGLES: Toggle[] = [
   { id: "assessment", label: "AI-readiness assessment", path: "/assessment", on: true, blurb: "The assessment and its scoring." },
   { id: "research", label: "Research desk", path: "/research", on: true, blurb: "The research index." },
   { id: "newsletter", label: "Brief sign-up", on: true, blurb: "The newsletter form in the footer and on the homepage. Off hides the form; nothing already collected is touched." },
+  /**
+   * The scheduled newsroom crawl.
+   *
+   * OFF by default, and it is the switch the cron trigger reads. That lets the
+   * trigger be deployed before a single source has been approved: it fires,
+   * finds discovery switched off, logs why and does nothing. Same rule as the
+   * source registry, applied to the schedule — the machinery ships dormant and
+   * a person starts it.
+   *
+   * Off does not disable the manual "Run discovery now" button, which is an
+   * operator deliberately asking for one run.
+   */
+  { id: "discovery", label: "Newsroom discovery (scheduled)", on: false, blurb: "The cron-driven crawl of approved sources. Off means the schedule fires and does nothing; the manual run button still works. Nothing is fetched from a source that is not both active and retrievable." },
 ];
 
 const toggleKey = (id: string) => `page.${id}.enabled`;
@@ -146,6 +159,41 @@ export const LIMIT_FIELDS: LimitField[] = [
     min: 0,
     max: 1_000_000,
     help: "Model calls per month across everyone. On breach Ask STAI serves cited passages instead of generated answers — readers keep getting citations, the bill stops growing.",
+  },
+
+  /* ── Newsroom ───────────────────────────────────────────────────────────
+   * The volume targets are CONFIGURED, not designed in (masterplan decision
+   * D2). 1–3 a day is the validation setting, not a limit of the system:
+   * raising it after the dry run is an edit here, not a change to the schema,
+   * the state machine or any workflow.
+   *
+   * The research cap and the budget move together. Raising the publish target
+   * without raising the ceiling only produces more rejected drafts, which cost
+   * the same as published ones.
+   */
+  {
+    key: "newsroom.research_cap_per_day",
+    label: "Newsroom — stories researched per day",
+    fallback: 8,
+    min: 0,
+    max: 50,
+    help: "The throttle. Research is capped by COUNT, not by a relevance threshold, so a quiet news day yields fewer candidates instead of filler and a heavy one cannot overspend. Shrinks automatically when the month's budget is running ahead. 0 pauses research entirely.",
+  },
+  {
+    key: "newsroom.publish_target_min",
+    label: "Newsroom — publish target, minimum",
+    fallback: 1,
+    min: 0,
+    max: 20,
+    help: "Lower end of the daily publishing target during validation. A target, not a quota — the engine never pads to reach it.",
+  },
+  {
+    key: "newsroom.publish_target_max",
+    label: "Newsroom — publish target, maximum",
+    fallback: 3,
+    min: 0,
+    max: 20,
+    help: "Upper end of the daily publishing target. Expected to move to 5 after the dry run if the quality KPIs hold.",
   },
 ];
 

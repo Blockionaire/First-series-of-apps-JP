@@ -1,0 +1,117 @@
+import { NextRequest, NextResponse } from "next/server";
+import { currentUser } from "@/lib/auth";
+import { guard, WINDOW } from "@/lib/ratelimit";
+import { createSource, setSourceActive, setSourceFetchAllowed, allSources } from "@/lib/newsroom/store";
+import { proposedAsSourceCreates } from "@/lib/newsroom/proposed-sources";
+import { validateSource } from "@/lib/newsroom/sources";
+
+/**
+ * The source registry's write path.
+ *
+ * Three actions, and what they deliberately cannot do matters as much as what
+ * they can:
+ *
+ *   load_proposal — registers the proposed list. Every row lands `active = 0`
+ *                   and `fetch_allowed = 0`. There is no parameter that would
+ *                   change that, because "seed and enable" in one call is
+ *                   exactly how a reviewed allowlist becomes an unreviewed
+ *                   crawl.
+ *   set_flag      — flips `active` or `fetch_allowed` on ONE source, recording
+ *                   who did it. No id list, no "all" — fifty sources approved
+ *                   in one click is fifty sources nobody read.
+ *   create        — registers one hand-entered source, validated.
+ *
+ * Nothing here fetches anything. Phase 1 has no ingestion.
+ */
+
+export async function POST(req: NextRequest) {
+  const blocked = await guard(req, "admin-newsroom-source", 120, WINDOW.hour);
+  if (blocked) return blocked;
+
+  const user = await currentUser();
+  if (!user || user.role !== "admin") {
+    return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  }
+
+  const b = await req.json().catch(() => ({}));
+  const action = String(b.action ?? "");
+
+  if (action === "load_proposal") {
+    // Idempotent by the registry's own UNIQUE(domain): re-running skips what
+    // is already registered rather than duplicating it or failing the batch.
+    // A duplicate domain is not an error worth stopping for — it means the row
+    // is already there, which is the desired end state.
+    const existing = new Set((await allSources()).map((s) => s.domain));
+    let inserted = 0;
+    const rejected: string[] = [];
+
+    for (const candidate of proposedAsSourceCreates()) {
+      if (existing.has(candidate.domain)) continue;
+
+      // Validated on the way in, not trusted because it shipped in the repo.
+      // A malformed proposal entry should fail here, visibly, rather than sit
+      // in the registry looking approved.
+      const check = validateSource(candidate);
+      if (!check.ok) {
+        rejected.push(`${candidate.name}: ${check.error}`);
+        continue;
+      }
+      await createSource({
+        ...check.value,
+        authority_tier: check.value.authority_tier,
+      });
+      inserted++;
+    }
+
+    return NextResponse.json({ ok: true, inserted, rejected });
+  }
+
+  if (action === "set_flag") {
+    const id = Number(b.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return NextResponse.json({ error: "A source id is required" }, { status: 400 });
+    }
+    const field = String(b.field ?? "");
+    const value = b.value === true;
+
+    if (field === "active") {
+      await setSourceActive(id, value, user.email);
+      return NextResponse.json({ ok: true });
+    }
+    if (field === "fetch_allowed") {
+      await setSourceFetchAllowed(id, value);
+      return NextResponse.json({ ok: true });
+    }
+    return NextResponse.json({ error: `Unknown field: ${field}` }, { status: 400 });
+  }
+
+  if (action === "create") {
+    const check = validateSource({
+      name: String(b.name ?? ""),
+      domain: String(b.domain ?? ""),
+      source_type: String(b.source_type ?? ""),
+      authority_tier: Number(b.authority_tier),
+      jurisdictions: Array.isArray(b.jurisdictions) ? b.jurisdictions.map(String) : [],
+      topics: Array.isArray(b.topics) ? b.topics.map(String) : [],
+      ingestion_method: String(b.ingestion_method ?? ""),
+      feed_url: String(b.feed_url ?? ""),
+      fetch_frequency: b.fetch_frequency === undefined ? undefined : Number(b.fetch_frequency),
+      fetch_allowed: false,
+      license_notes: String(b.license_notes ?? ""),
+      snapshot_retention: b.snapshot_retention ? String(b.snapshot_retention) : undefined,
+    });
+    if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
+
+    try {
+      const id = await createSource(check.value);
+      return NextResponse.json({ ok: true, id });
+    } catch (e) {
+      if (e instanceof Error && /UNIQUE/.test(e.message)) {
+        return NextResponse.json({ error: "That domain is already registered" }, { status: 409 });
+      }
+      throw e;
+    }
+  }
+
+  return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
+}
