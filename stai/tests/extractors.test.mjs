@@ -24,11 +24,19 @@ import path from "node:path";
 import {
   APAS_INDEX_URLS,
   acceptsApasIndex,
+  apas,
+  detailApas,
+  detailDate,
+  detailTitle,
   extractApas,
   hasDatedPath,
+  isApasDetailPage,
   isApasDocument,
   isApasPublication,
+  plausibleTitle,
+  seriesKind,
 } from "../src/lib/newsroom/extractors/apas.ts";
+import { hydrate } from "../src/lib/newsroom/extractors/hydrate.ts";
 import {
   acceptsAnthropicIndex,
   extractAnthropic,
@@ -56,6 +64,53 @@ const APAS_HOME = fs.readFileSync(
 );
 const APAS_HOME_URL = "https://www.apasbafa.bund.de/APAS/DE/Home/home_node.html";
 const PAGE = "https://www.apasbafa.bund.de/SharedDocs/Kurzmeldungen/APAS/DE/kurzmeldungen_node.html";
+
+/**
+ * The Verlautbarungen surface, and the pages behind it.
+ *
+ * The second live test confirmed the index and the `vb_verlautbarung_NN.html`
+ * addresses on it. Nobody has seen a detail page, so those fixtures are the
+ * Government Site Builder's conventions rather than observation — see their
+ * headers. The assertions below are about BEHAVIOUR (a title and a date must
+ * come from the page; an entry without both is dropped), which is what should
+ * survive those fixtures being replaced with real saved pages.
+ */
+const fixture = (name) =>
+  fs.readFileSync(path.join(import.meta.dirname, `fixtures/${name}`), "utf8");
+
+const VB_INDEX = fixture("apas-verlautbarungen.html");
+// The URL actually registered, and the one the operator's live test
+// confirmed: it returns 200 and lists the numbered series.
+const VB_INDEX_URL =
+  "https://www.apasbafa.bund.de/SharedDocs/Kurzmeldungen/APAS/DE/kurzmeldungen_node.html";
+const VB_PAGES = {
+  "/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_26.html": fixture("apas-vb-26.html"),
+  "/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_25.html": fixture("apas-vb-25.html"),
+  "/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_24.html": fixture("apas-vb-24.html"),
+  "/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_22.html": fixture("apas-vb-22.html"),
+  // 23 is deliberately absent: a live index routinely links a page that has
+  // been withdrawn, and one 404 must not cost the other four.
+};
+
+/**
+ * A fetch that serves the detail fixtures and records what was asked for.
+ *
+ * The recording is the point. Half of what these tests check is which
+ * requests were NOT made — nothing off the domain, nothing under the BAFA
+ * mandant, nothing beyond the cap.
+ */
+function detailFetch() {
+  const asked = [];
+  const fn = async (url) => {
+    asked.push(url);
+    const path = new URL(url).pathname.replace(/;jsessionid=[^/;?]*/gi, "");
+    const body = VB_PAGES[path];
+    if (!body) return new Response("not found", { status: 404, statusText: "Not Found" });
+    return new Response(body, { status: 200, headers: { "content-type": "text/html" } });
+  };
+  fn.asked = asked;
+  return fn;
+}
 
 /* ── German dates ───────────────────────────────────────────────────────── */
 
@@ -385,6 +440,385 @@ describe("a changed page is an outage, not a quiet week", () => {
     const r = extractApas(FIXTURE, PAGE);
     assert.ok(r.ok);
     assert.ok(r.rejected.length > 0, "a jump in this number is how a template change is spotted");
+  });
+});
+
+/* ── The Verlautbarungen series: two requests, one publication ───────────── */
+
+describe("APAS numbered series URL rules", () => {
+  const vb = "https://www.apasbafa.bund.de/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_26.html";
+
+  test("a numbered Verlautbarung is a detail page", () => {
+    assert.equal(isApasDetailPage(vb), true);
+    assert.equal(seriesKind(new URL(vb).pathname), "Verlautbarung");
+  });
+
+  test("it is NOT treated as a self-describing publication", () => {
+    // The whole correction. The old rule demanded a date in the address and
+    // this address has none — which is why it has to be opened rather than
+    // read off the index.
+    assert.equal(isApasPublication(vb), false);
+    assert.equal(hasDatedPath(new URL(vb).pathname), false);
+  });
+
+  test("the same series name under the BAFA mandant is refused", () => {
+    // The isolation that may never be relaxed. apasbafa.bund.de serves both
+    // authorities, and a rule keyed on the file name alone would file an
+    // export-control pronouncement as German audit oversight.
+    const bafa =
+      "https://www.apasbafa.bund.de/SharedDocs/Downloads/BAFA/DE/vb_verlautbarung_9.html";
+    assert.equal(isApasDetailPage(bafa), false);
+    assert.equal(isApasPublication(bafa), false);
+  });
+
+  test("a session id does not hide the series", () => {
+    const withSession = `${vb};jsessionid=9F2C4A1B`;
+    assert.equal(isApasDetailPage(withSession), true);
+  });
+
+  test("navigation and reusable blocks are still not detail pages", () => {
+    for (const path of [
+      "/SharedDocs/Kurzmeldungen/APAS/DE/slogan.html",
+      "/SharedDocs/Kurzmeldungen/APAS/DE/teaser.html",
+      "/SharedDocs/Downloads/APAS/DE/downloads_node.html",
+      "/SharedDocs/Kurzmeldungen/APAS/DE/aufgaben-und-befugnisse.html",
+    ]) {
+      assert.equal(
+        isApasDetailPage(`https://www.apasbafa.bund.de${path}`),
+        false,
+        `${path} was taken for a publication`
+      );
+    }
+  });
+
+  test("the series table does not degrade into 'anything with a number'", () => {
+    // The generalisation this file refuses to make. A numbered reusable block
+    // is exactly what a loose rule would swallow.
+    assert.equal(
+      isApasDetailPage("https://www.apasbafa.bund.de/SharedDocs/Kurzmeldungen/APAS/DE/teaser_2.html"),
+      false
+    );
+  });
+
+  test("a file name is not a headline", () => {
+    assert.equal(plausibleTitle("vb_verlautbarung_26.html"), false);
+    assert.equal(plausibleTitle("Verlautbarung Nr. 26 zur Berichterstattung"), true);
+  });
+});
+
+describe("the Verlautbarungen index asks for pages rather than inventing items", () => {
+  const out = extractApas(VB_INDEX, VB_INDEX_URL);
+
+  test("it succeeds, and emits nothing from the index alone", () => {
+    assert.equal(out.ok, true, out.ok ? "" : out.error);
+    assert.equal(
+      out.items.length,
+      0,
+      "the index carries no titles and no dates, so it can produce no items"
+    );
+  });
+
+  test("every numbered APAS Verlautbarung is queued to be opened", () => {
+    const paths = out.pending.map((p) => new URL(p.url).pathname);
+    for (const n of [26, 25, 24, 23, 22]) {
+      assert.ok(
+        paths.some((p) => p.endsWith(`vb_verlautbarung_${n}.html`)),
+        `Verlautbarung ${n} was not queued`
+      );
+    }
+  });
+
+  test("nothing else is queued", () => {
+    assert.equal(out.pending.length, 5, JSON.stringify(out.pending, null, 1));
+    const queued = out.pending.map((p) => p.url).join(" ");
+    for (const unwanted of ["BAFA", "slogan", "teaser", "kontakt", "_node.html", "bafa.de"]) {
+      assert.ok(!queued.includes(unwanted), `${unwanted} was queued for fetching`);
+    }
+  });
+
+  test("the link text is carried for the error message, never as a title", () => {
+    const first = out.pending.find((p) => p.url.endsWith("vb_verlautbarung_26.html"));
+    assert.equal(first.linkText, "vb_verlautbarung_26.html");
+  });
+});
+
+describe("a publication exists once its own page says so", () => {
+  test("a metadata date is preferred over the page's rebuild date", () => {
+    // og:updated_time on the fixture is five months later. An item dated by
+    // its last rebuild arrives at the top of the Inbox looking like news.
+    const r = detailApas(
+      VB_PAGES["/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_26.html"],
+      "https://www.apasbafa.bund.de/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_26.html"
+    );
+    assert.equal(r.ok, true, r.ok ? "" : r.error);
+    assert.equal(r.item.publishedAt.slice(0, 10), "2026-03-15");
+    assert.equal(r.item.title, "Verlautbarung Nr. 26 zur Berichterstattung über Inspektionen");
+    assert.match(r.item.documentUrl, /vb_verlautbarung_26\.pdf/);
+    assert.equal(r.item.category, "Verlautbarung");
+  });
+
+  test("a labelled date in the body carries a page with no metadata", () => {
+    const r = detailApas(
+      VB_PAGES["/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_25.html"],
+      "https://www.apasbafa.bund.de/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_25.html"
+    );
+    assert.equal(r.ok, true, r.ok ? "" : r.error);
+    assert.equal(r.item.publishedAt.slice(0, 10), "2026-02-04");
+  });
+
+  test("the site-wide footer date is not any publication's date", () => {
+    // Every page on this site ends "Stand: 01.01.2026". A date parser that is
+    // not scoped to the content region gives the whole series that date, and
+    // nothing about the result looks broken.
+    for (const [path, html] of Object.entries(VB_PAGES)) {
+      const r = detailApas(html, `https://www.apasbafa.bund.de${path}`);
+      if (!r.ok) continue;
+      assert.notEqual(
+        r.item.publishedAt.slice(0, 10),
+        "2026-01-01",
+        `${path} took its date from the footer`
+      );
+    }
+  });
+
+  test("the banner heading is not mistaken for the document title", () => {
+    // Verlautbarung 25's only <h1> is the authority's name in the site header.
+    const html = VB_PAGES["/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_25.html"];
+    // Exact, not a substring. A substring assertion passes on anything that
+    // merely CONTAINS the headline, which is what a swallowed comment or a
+    // whole <title> element produces — and is how this very defect survived
+    // its own test until a sabotage run found the test toothless.
+    assert.equal(
+      detailTitle(html),
+      "Verlautbarung Nr. 25 zur Unabhängigkeit bei Nichtprüfungsleistungen"
+    );
+  });
+
+  test("a page with no date is not a publication, however real the address", () => {
+    // The rule that makes the whole two-phase design worth having: the
+    // address is genuine, the title is genuine, and it is still dropped.
+    const html = VB_PAGES["/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_22.html"];
+    assert.equal(detailDate(html), null);
+    const r = detailApas(
+      html,
+      "https://www.apasbafa.bund.de/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_22.html"
+    );
+    assert.equal(r.ok, false);
+    assert.match(r.error, /no publication date/i);
+  });
+
+  test("a page with no title is not a publication either", () => {
+    const stripped = VB_PAGES["/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_26.html"]
+      .replace(/<h1[\s\S]*?<\/h1>/i, "")
+      .replace(/<meta property="og:title"[^>]*>/i, "")
+      .replace(/<title\b[\s\S]*?<\/title>/i, "<title>APAS</title>");
+    const r = detailApas(
+      stripped,
+      "https://www.apasbafa.bund.de/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_26.html"
+    );
+    assert.equal(r.ok, false);
+    assert.match(r.error, /no usable title/i);
+  });
+
+  test("a detail parser pointed off the mandant refuses", () => {
+    const r = detailApas(
+      VB_PAGES["/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_26.html"],
+      "https://www.apasbafa.bund.de/SharedDocs/Downloads/BAFA/DE/vb_verlautbarung_26.html"
+    );
+    assert.equal(r.ok, false);
+    assert.match(r.error, /not an APAS page/i);
+  });
+});
+
+describe("hydrating the Verlautbarungen index end to end", () => {
+  test("it returns finished publications with titles, dates and documents", async () => {
+    const fetchFn = detailFetch();
+    const { result, fetched, listed } = await hydrate(
+      apas,
+      extractApas(VB_INDEX, VB_INDEX_URL),
+      { fetch: fetchFn }
+    );
+
+    assert.equal(result.ok, true, result.ok ? "" : result.error);
+    assert.equal(listed, 5);
+    assert.equal(fetched, 5);
+    // 23 is a 404 and 22 carries no date. Three survive, and every one of
+    // them has both facts that make an item publishable.
+    assert.equal(result.items.length, 3, JSON.stringify(result.items.map((i) => i.title), null, 1));
+    for (const item of result.items) {
+      assert.ok(item.title.length > 12, `no title: ${item.url}`);
+      assert.ok(item.publishedAt, `no date: ${item.url}`);
+      assert.equal(item.category, "Verlautbarung");
+    }
+  });
+
+  test("the items are dated from their own pages, not from the index", async () => {
+    const { result } = await hydrate(apas, extractApas(VB_INDEX, VB_INDEX_URL), {
+      fetch: detailFetch(),
+    });
+    const dates = Object.fromEntries(
+      result.items.map((i) => [i.url.match(/_(\d+)\.html/)[1], i.publishedAt.slice(0, 10)])
+    );
+    assert.deepEqual(dates, { 26: "2026-03-15", 25: "2026-02-04", 24: "2025-11-18" });
+  });
+
+  test("a withdrawn page and an undated one are recorded, not silently lost", async () => {
+    const { result } = await hydrate(apas, extractApas(VB_INDEX, VB_INDEX_URL), {
+      fetch: detailFetch(),
+    });
+    const why = result.rejected.join("\n");
+    assert.match(why, /vb_verlautbarung_23\.html — 404/);
+    assert.match(why, /vb_verlautbarung_22\.html — no publication date/i);
+  });
+
+  test("it never requests anything but APAS publication pages", async () => {
+    const fetchFn = detailFetch();
+    await hydrate(apas, extractApas(VB_INDEX, VB_INDEX_URL), { fetch: fetchFn });
+    for (const url of fetchFn.asked) {
+      assert.match(url, /^https:\/\/www\.apasbafa\.bund\.de\//, url);
+      assert.equal(isApasDetailPage(url), true, `requested a non-publication: ${url}`);
+    }
+    assert.ok(!fetchFn.asked.join(" ").includes("/BAFA/"), "requested BAFA content");
+  });
+
+  test("the cap bounds how many pages one retrieval opens", async () => {
+    const fetchFn = detailFetch();
+    const { fetched, listed } = await hydrate(
+      apas,
+      extractApas(VB_INDEX, VB_INDEX_URL),
+      { fetch: fetchFn, limit: 2 }
+    );
+    assert.equal(listed, 5);
+    assert.equal(fetched, 2);
+    assert.equal(fetchFn.asked.length, 2);
+  });
+
+  test("every detail page failing is an outage, not an empty week", async () => {
+    // The site is up, the index is intact, and the template changed. Zero
+    // items here would read as "APAS published nothing", which is a plausible
+    // sentence and a month of blindness.
+    const gone = async () => new Response("", { status: 500, statusText: "Server Error" });
+    const { result } = await hydrate(apas, extractApas(VB_INDEX, VB_INDEX_URL), { fetch: gone });
+    assert.equal(result.ok, false);
+    assert.match(result.error, /none yielded both a title and a date|structure has probably changed/i);
+  });
+
+  test("a queued URL off the publisher's domain is never requested", async () => {
+    // The guard that survives an extractor being wrong. `pending` is built by
+    // the extractor, so if a redesign ever put a third-party address where a
+    // publication used to be, this is the thing standing between that and an
+    // outbound request to it.
+    const fetchFn = detailFetch();
+    const { result } = await hydrate(
+      apas,
+      {
+        ok: true,
+        items: [],
+        rejected: [],
+        pending: [
+          { url: "https://evil.example.com/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_1.html" },
+          { url: "https://www.apasbafa.bund.de/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_26.html" },
+        ],
+      },
+      { fetch: fetchFn }
+    );
+    assert.equal(fetchFn.asked.length, 1, `requested: ${fetchFn.asked.join(", ")}`);
+    assert.match(fetchFn.asked[0], /apasbafa\.bund\.de/);
+    assert.ok(result.ok);
+    assert.match(
+      result.rejected.join("\n"),
+      /evil\.example\.com[^\n]* — outside apasbafa\.bund\.de, not opened/
+    );
+  });
+
+  test("hydrate is a no-op for an extractor that reads one page", async () => {
+    let called = 0;
+    const counted = async () => {
+      called += 1;
+      return new Response("", { status: 200 });
+    };
+    const single = extractApas(FIXTURE, PAGE);
+    const { result, fetched } = await hydrate(apas, single, { fetch: counted });
+    assert.equal(fetched, 0);
+    assert.equal(called, 0, "a single-page extract must cost no extra requests");
+    assert.equal(result.ok, true);
+    assert.equal(result.items.length, single.items.length);
+  });
+});
+
+/* ── Comments are not content ───────────────────────────────────────────── */
+
+describe("commented-out markup is not read as a page", () => {
+  // Found by sabotaging a passing test: a comment in a fixture contained the
+  // text "<h1>", the matcher opened it there and closed it on the next real
+  // </h1>, and an extracted title came back containing the comment. The same
+  // mechanism collects a commented-out <a href> as a live link, which brings
+  // a withdrawn publication back on the next poll.
+
+  test("a withdrawn APAS publication left in a comment is not collected", () => {
+    const withGhost = VB_INDEX.replace(
+      "</ul>",
+      `<!-- withdrawn, kept for reference
+         <li><a href="/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_99.html">Verlautbarung Nr. 99</a></li>
+       --></ul>`
+    );
+    const out = extractApas(withGhost, VB_INDEX_URL);
+    assert.ok(out.ok, out.ok ? "" : out.error);
+    assert.ok(
+      !out.pending.some((p) => p.url.includes("vb_verlautbarung_99")),
+      "a commented-out publication was queued for fetching"
+    );
+  });
+
+  test("a comment cannot swallow the element after it", () => {
+    const html = `<!doctype html><html><body>
+      <!-- the <h1> below is the real one -->
+      <main><h1>Verlautbarung Nr. 31 zur Aktenführung bei Inspektionen</h1>
+      <p>Stand: 03.03.2026</p></main></body></html>`;
+    assert.equal(detailTitle(html), "Verlautbarung Nr. 31 zur Aktenführung bei Inspektionen");
+    assert.equal(detailDate(html).slice(0, 10), "2026-03-03");
+  });
+
+  test("every extractor strips comments, not just the one that was caught", () => {
+    // The defect was in a shared parsing assumption, so the fix has to be
+    // shared too. Each extractor is given its own fixture with a publication
+    // link commented out, and none of them may return it.
+    // Read here rather than from the module-level constants further down the
+    // file, which are not initialised yet when this suite is defined.
+    const cases = [
+      {
+        name: "Anthropic",
+        run: () =>
+          extractAnthropic(
+            fixture("anthropic-news.html").replace(
+              "</body>",
+              '<!-- <a href="/news/ghost-post">Ghost post that was pulled</a> --></body>'
+            ),
+            "https://www.anthropic.com/news"
+          ),
+        ghost: "ghost-post",
+      },
+      {
+        name: "CEAOB",
+        run: () =>
+          extractCeaob(
+            fixture("ceaob-page.html").replace(
+              "</body>",
+              '<!-- <a href="/ceaob-ghost-report_en">Ghost report (withdrawn)</a> --></body>'
+            ),
+            "https://finance.ec.europa.eu/regulation-and-supervision/expert-groups-comitology-and-other-committees/committee-european-auditing-oversight-bodies_en"
+          ),
+        ghost: "ghost",
+      },
+    ];
+    for (const c of cases) {
+      const out = c.run();
+      assert.ok(out.ok, `${c.name}: ${out.ok ? "" : out.error}`);
+      assert.ok(
+        !out.items.some((i) => i.url.includes(c.ghost)),
+        `${c.name} collected a commented-out link`
+      );
+    }
   });
 });
 

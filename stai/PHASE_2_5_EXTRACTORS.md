@@ -1,8 +1,8 @@
 # Phase 2.5 — source-specific extractors
 
-**Status:** the machinery is built and **APAS is the first extractor**. The six
-sources below are still awaiting Step 0 verification before any more are
-written.
+**Status:** the machinery is built and **three extractors are written** — APAS,
+Anthropic and CEAOB. The remaining sources in the original proposal below are
+still awaiting Step 0 verification before any more are written.
 
 ## What exists now
 
@@ -15,18 +15,55 @@ its index.
 
 | Publisher | File | Status |
 |---|---|---|
-| APAS (`apasbafa.bund.de`) | `extractors/apas.ts` | written, **selectors unverified against the live site** |
+| APAS (`apasbafa.bund.de`) | `extractors/apas.ts` | index confirmed live; **detail-page selectors unverified** |
+| Anthropic (`anthropic.com/news`) | `extractors/anthropic.ts` | written, **unverified against the live site** |
+| CEAOB (`finance.ec.europa.eu`) | `extractors/ceaob.ts` | written, **unverified against the live site** |
 
-The APAS extractor anchors on the Government Site Builder URL taxonomy
-(`/SharedDocs/` documents, `_node.html` section indexes) rather than on class
-names, requires a German date near each link, refuses navigation, and returns
-an **error** rather than an empty list when a page yields nothing recognisable
-— so a redesign reads as an outage rather than as a quiet news week.
+All three anchor on URL taxonomy rather than class names, refuse navigation,
+and return an **error** rather than an empty list when a page yields nothing
+recognisable — so a redesign reads as an outage rather than as a quiet news
+week.
 
-It was written without network access, so no APAS page has ever been fetched by
-this code. `tests/fixtures/apas-index.html` is synthetic and says so. **Run
-Test source on the APAS row before marking it retrievable**; the probe runs the
-extractor itself, so what you see is what a discovery run would get.
+### APAS is two-phase, and why
+
+Two live tests corrected it twice, and both corrections are worth keeping in
+mind before pointing an extractor at any government site.
+
+The first test found the landing page served 200 and linked plenty of
+`/SharedDocs/…/APAS/DE/…` URLs, none of them publications — `slogan.html` is a
+strapline. On the Government Site Builder `/SharedDocs/` is a shared *content
+repository*, so "not navigation" is not "is a publication".
+
+The second found that the confirmed index lists its publications as
+
+    /SharedDocs/Downloads/APAS/DE/vb_verlautbarung_26.html
+
+— a series numbered sequentially, with **no date in the address**, **no
+headline in the link text**, and **no date on the index at all**. So the
+extractor returns those links as `pending`, `hydrate()` opens each one, and
+`detail()` reads the title and the publication date off the page itself. An
+entry that cannot produce **both** is dropped, however genuine its URL looks.
+
+Bounds: a retrieval opens at most 30 detail pages, a `Test source` at most 6,
+sequentially, and every URL is re-checked against the APAS mandant before the
+request leaves. `Test source` reports how many it opened against how many were
+listed, so a sample is never mistaken for the whole source.
+
+### Still unverified
+
+No APAS page has been fetched by this code — the build environment has no
+outbound network. The index URL and the `vb_verlautbarung_NN.html` pattern come
+from the operator's live tests. **What a detail page looks like has been seen
+by nobody**, so the date chain tries named metadata, `<time datetime>`, a
+labelled date line and finally a German date in the content region — in that
+order, all but the first scoped to the content region so the site-wide footer
+date cannot stamp the whole series. Expect the detail selectors, not the URL
+rules, to be what the next live test corrects.
+
+Every fixture under `tests/fixtures/` is synthetic and says so in its header.
+**Run Test source before marking any of these retrievable**; the probe runs the
+extractor and its detail fetches, so what you see is what a discovery run would
+get.
 
 ---
 

@@ -1,0 +1,53 @@
+<!doctype html>
+<!--
+  REPRESENTATIVE, NOT A SAVED COPY — see apas-vb-26.html.
+
+  The same publication shape with NO metadata date, which is the case that
+  decides whether the fallbacks are worth having. It exercises the SECOND tier
+  of the date chain: a labelled German date in the body ("Stand: 04.02.2026").
+
+  Two traps are deliberate:
+
+    · The footer carries a DIFFERENT date, 01.01.2026, on this page and on
+      every other page of the site. If the date parser is not scoped to the
+      content region it will read the footer, and every APAS publication will
+      share one plausible-looking publication date.
+    · The <h1> is the site's own banner, not the document's title, so the
+      title has to come from og:title. A parser that took the first <h1> on
+      the page would file this as "Abschlussprüferaufsichtsstelle".
+-->
+<html lang="de">
+<head>
+  <title>Verlautbarung Nr. 25 - Abschlussprüferaufsichtsstelle - APAS</title>
+  <meta property="og:title" content="Verlautbarung Nr. 25 zur Unabhängigkeit bei Nichtprüfungsleistungen" />
+</head>
+<body>
+<header>
+  <h1>Abschlussprüferaufsichtsstelle</h1>
+</header>
+<nav>
+  <a href="/APAS/DE/Home/home_node.html">Startseite</a>
+</nav>
+
+<div id="content">
+  <h2>Verlautbarung Nr. 25 zur Unabhängigkeit bei Nichtprüfungsleistungen</h2>
+  <p class="date">Stand: 04.02.2026</p>
+
+  <p>
+    Die Verlautbarung legt dar, unter welchen Voraussetzungen Nichtprüfungsleistungen
+    für Unternehmen von öffentlichem Interesse mit der Unabhängigkeit des
+    Abschlussprüfers vereinbar sind.
+  </p>
+
+  <p>
+    <a href="/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_25.pdf?__blob=publicationFile">
+      Verlautbarung Nr. 25 (PDF, 280 KB)
+    </a>
+  </p>
+</div>
+
+<footer>
+  <p>Stand: 01.01.2026 &middot; Abschlussprüferaufsichtsstelle beim BAFA</p>
+</footer>
+</body>
+</html>

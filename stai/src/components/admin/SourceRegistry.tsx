@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import AddSource from "./AddSource";
 
 export type RegistryRow = {
   id: number;
@@ -126,6 +127,9 @@ export type ProbeResult = {
   extractor?: string;
   /** Links that extractor saw and refused. */
   rejectedCount?: number;
+  /** Publication pages this test opened, against how many were listed. */
+  detailsFetched?: number;
+  detailsListed?: number;
 };
 
 /**
@@ -386,6 +390,11 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
           </button>
         </div>
       )}
+
+      {/* Registering one by hand, beside the bulk loader rather than on a
+          page of its own: finding a feed and registering it is one piece of
+          work, and a second screen is where that work goes to be forgotten. */}
+      <AddSource />
 
       {message && (
         <p className="f-mono mt-4 text-[0.75rem] text-gold-300">{message}</p>
@@ -742,6 +751,15 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                               {typeof probes[s.id].rejectedCount === "number"
                                 ? ` · ${probes[s.id].rejectedCount} links refused as not publications`
                                 : ""}
+                            </span>
+                          )}
+                          {/* Said explicitly, because "3 items" from an index
+                              of twenty reads as a smaller source than it is.
+                              A test samples; a retrieval opens more. */}
+                          {typeof probes[s.id].detailsListed === "number" && (
+                            <span className="block">
+                              opened {probes[s.id].detailsFetched} of {probes[s.id].detailsListed}{" "}
+                              publication pages — a test samples, a retrieval opens more
                             </span>
                           )}
                           <span className="block break-all">tested {probes[s.id].url}</span>

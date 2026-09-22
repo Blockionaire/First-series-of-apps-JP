@@ -358,6 +358,165 @@ describe("hand-registered sources are validated at the boundary", { skip }, () =
   });
 });
 
+describe("registering a source from the browser", { skip }, () => {
+  // The endpoint's validation is covered above. What these check is that a
+  // person with only a browser can actually reach it, and that reaching it
+  // still cannot switch anything on — the approval gate has to survive the
+  // arrival of a convenient form.
+
+  test("the registry offers a way to add one by hand", async () => {
+    const html = await (await authed("/admin/editorial/sources")).text();
+    assert.match(html, /Add a source/i);
+  });
+
+  // The form itself is behind the button — it is not in the page until
+  // somebody opens it — so these read the component rather than the rendered
+  // HTML. That is the honest thing to check: a collapsed client component has
+  // no fields to find in a server response, and a test that searched for them
+  // there would either fail or pass on an accident of string slicing. (It did
+  // the latter, until a run caught it: `indexOf` returned -1 for a marker that
+  // was never rendered, and `slice(i, -1)` handed back most of the page.)
+  const FORM = fs.readFileSync(
+    path.join(ROOT, "src/components/admin/AddSource.tsx"),
+    "utf8"
+  );
+
+  /**
+   * Just the request payload, not the whole component.
+   *
+   * Scoped deliberately. A first version of this searched the file for each
+   * key and passed while the payload was missing `jurisdictions` entirely —
+   * it was matching the `const [jurisdictions, setJurisdictions]` declaration
+   * instead. A field the form holds in state and never sends is exactly the
+   * bug being looked for, so the search has to be where the sending happens.
+   */
+  const PAYLOAD = (() => {
+    const from = FORM.indexOf('action: "create"');
+    assert.ok(from > 0, "the add form makes no create request");
+    return FORM.slice(from, FORM.indexOf("}),", from));
+  })();
+
+  test("the form sends every field the validator requires", () => {
+    // The actual contract with `validateSource`: these are the keys it reads,
+    // and a form that omits one can only ever produce a 400 that the person
+    // filling it in has no way to diagnose.
+    for (const key of [
+      "name",
+      "domain",
+      "source_type",
+      "authority_tier",
+      "ingestion_method",
+      "feed_url",
+      "jurisdictions",
+    ]) {
+      // `[,:]` because half of these are shorthand properties in the payload.
+      assert.match(PAYLOAD, new RegExp(`\\b${key}\\s*[,:]`), `the add form never sends ${key}`);
+    }
+  });
+
+  test("every field it sends is labelled for a person", () => {
+    // A payload key with no visible label is a box nobody can fill in
+    // correctly. Whitespace-tolerant because these labels sit on their own
+    // line in the JSX.
+    for (const label of [
+      "Name",
+      "Domain",
+      "Type",
+      "Authority tier",
+      "Ingestion method",
+      "Feed URL",
+      "Jurisdictions",
+    ]) {
+      assert.match(FORM, new RegExp(`>\\s*${label}`, "i"), `no visible ${label} label`);
+    }
+  });
+
+  test("its option lists come from the taxonomy, not from copies", () => {
+    // A hand-typed list of source types drifts the first time one is added,
+    // and the symptom is a 400 from a value the form itself offered.
+    for (const constant of ["SOURCE_TYPES", "INGESTION_METHODS", "TIERS", "RETENTION", "JURISDICTIONS"]) {
+      assert.ok(FORM.includes(`${constant}.`) || FORM.includes(`${constant})`), `${constant} not used`);
+    }
+  });
+
+  test("it says plainly that saving grants nothing", () => {
+    // The distinction the whole registry rests on, stated where the decision
+    // is made rather than in a paragraph further up the page.
+    assert.match(FORM, /does not fetch anything and does not grant retrieval/i);
+  });
+
+  test("the form offers no way to activate or permit retrieval", () => {
+    // Not a matter of the server ignoring the flags — it does, and that is
+    // tested above. This is about the form never suggesting the two decisions
+    // are one, which is how they end up being made together.
+    assert.ok(!/\bactive\s*[,:]/.test(PAYLOAD), "the add form sends an active flag");
+    assert.ok(!/fetch_allowed/.test(PAYLOAD), "the add form sends a retrieval flag");
+  });
+
+  test("a manual source needs no feed URL", async () => {
+    // The one case where a missing feed URL is correct rather than an
+    // oversight: a publisher whose terms forbid retrieval, kept in the
+    // registry so items can be entered by hand.
+    const { status, json } = await post({
+      action: "create",
+      name: "By Hand Only",
+      domain: "by-hand-only.eu",
+      source_type: "news",
+      authority_tier: 3,
+      jurisdictions: ["EU"],
+      ingestion_method: "manual",
+      feed_url: "",
+    });
+    assert.equal(status, 200, JSON.stringify(json));
+    const row = query(
+      "SELECT active, fetch_allowed, feed_url FROM newsroom_sources WHERE id=?",
+      [json.id]
+    )[0];
+    assert.equal(row.feed_url, "");
+    assert.equal(row.active, 0);
+    assert.equal(row.fetch_allowed, 0);
+  });
+
+  test("omitted frequency and retention take the tier's defaults", async () => {
+    // The form leaves both blank and shows the default in the placeholder, so
+    // that a later change to the defaults reaches rows added today.
+    const { status, json } = await post({
+      action: "create",
+      name: "Defaults Please",
+      domain: "defaults-please.eu",
+      source_type: "regulator",
+      authority_tier: 1,
+      jurisdictions: ["DE"],
+      ingestion_method: "rss",
+      feed_url: "https://defaults-please.eu/feed.xml",
+    });
+    assert.equal(status, 200, JSON.stringify(json));
+    const row = query(
+      "SELECT fetch_frequency, snapshot_retention FROM newsroom_sources WHERE id=?",
+      [json.id]
+    )[0];
+    assert.equal(row.snapshot_retention, "indefinite", "Tier 1 keeps official texts");
+    assert.ok(row.fetch_frequency >= 15, "a frequency was defaulted, not left null");
+  });
+
+  test("a source with no jurisdiction is refused", async () => {
+    // Jurisdiction is what decides whose desk an item reaches. A row without
+    // one is invisible rather than global.
+    const { status, json } = await post({
+      action: "create",
+      name: "Nowhere In Particular",
+      domain: "nowhere-in-particular.eu",
+      source_type: "news",
+      authority_tier: 3,
+      jurisdictions: [],
+      ingestion_method: "rss",
+      feed_url: "https://nowhere-in-particular.eu/feed.xml",
+    });
+    assert.equal(status, 400);
+    assert.match(json.error, /jurisdiction/i);
+  });
+});
+
 describe("correcting a moved feed URL", { skip }, () => {
   /** The AFM row, whose feed URL was the first found to 404 in production. */
   const afm = () => one("SELECT * FROM newsroom_sources WHERE domain='afm.nl'");

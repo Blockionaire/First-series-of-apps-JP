@@ -30,6 +30,7 @@
 import { parseFeed } from "./feed.ts";
 import { USER_AGENT } from "./fetcher.ts";
 import { extractorFor } from "./extractors/index.ts";
+import { hydrate } from "./extractors/hydrate.ts";
 
 /** What the feed turned out to be, including the cases that are not feeds. */
 export type ProbeFormat = "rss" | "atom" | "json" | "html" | "html_extractor" | "unknown";
@@ -63,11 +64,29 @@ export type Probe = {
   extractor?: string;
   /** Links the extractor saw and refused. A jump here is a template change. */
   rejectedCount?: number;
+  /**
+   * Publication pages this test opened, and how many the index offered.
+   *
+   * Reported because a test that opens 6 of 20 and says "6 items" is telling
+   * the truth in a way that reads as a smaller source than it is. The operator
+   * approving retrieval should see that the index has twenty and that a test
+   * deliberately sampled six of them.
+   */
+  detailsFetched?: number;
+  detailsListed?: number;
 };
 
 const TIMEOUT_MS = 15_000;
 const MAX_BYTES = 4 * 1024 * 1024;
 const SAMPLE = 3;
+/**
+ * Publication pages one test may open.
+ *
+ * Six, against a retrieval's thirty. A test is a sample: enough to show the
+ * operator real headlines and real dates so they can recognise the source,
+ * far short of pulling the whole index every time somebody clicks a button.
+ */
+const PROBE_DETAIL_LIMIT = 6;
 
 /**
  * What is this, really?
@@ -211,13 +230,24 @@ export async function probeFeed(
         error: `${extractor.name} does not recognise this URL as a publications index.${where}`,
       });
     }
-    const out = extractor.extract(body, finalUrl);
+    const extracted = extractor.extract(body, finalUrl);
+    // A two-phase extractor is tested the way it runs, or the test proves
+    // nothing about the thing being approved. Capped well below a real
+    // retrieval: this is a diagnostic an admin may fire a hundred times an
+    // hour, and each firing is requests at a government host.
+    const { result: out, fetched, listed } = await hydrate(extractor, extracted, {
+      fetch: doFetch,
+      userAgent: USER_AGENT,
+      limit: PROBE_DETAIL_LIMIT,
+    });
+    const detail = listed > 0 ? { detailsFetched: fetched, detailsListed: listed } : {};
     if (!out.ok) {
       return blank({
         ...base,
         bytes: body.length,
         format,
         extractor: extractor.name,
+        ...detail,
         error: out.error,
         durationMs: elapsed(),
       });
@@ -228,6 +258,7 @@ export async function probeFeed(
       ok: out.items.length > 0,
       format: "html_extractor",
       extractor: extractor.name,
+      ...detail,
       rejectedCount: out.rejected.length,
       bytes: body.length,
       itemCount: out.items.length,

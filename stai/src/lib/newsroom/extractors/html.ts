@@ -127,6 +127,105 @@ export function enclosingBlock(html: string, a: Anchor): string | null {
 }
 
 /**
+ * The document with its comments removed.
+ *
+ * Not cosmetic. A comment is markup as far as every regex in this file is
+ * concerned, and CMS templates are full of them — editor notes, build
+ * markers, and above all blocks of old page structure left commented out
+ * during a redesign. Two things go wrong if they are left in:
+ *
+ *   · A commented-out `<a href="…">` is collected as a live link, so a
+ *     publication that was taken down comes back on the next poll.
+ *   · A comment containing something tag-shaped but unclosed — `<h1>` written
+ *     inside a note about the template — is opened by the matcher and closed
+ *     by the NEXT real tag of that name, swallowing everything between. That
+ *     is not hypothetical: it is how the comment in a fixture here ended up
+ *     inside an extracted title.
+ *
+ * Applied at the top of each extractor rather than inside `findAnchors`,
+ * because anchors carry offsets into the string they were found in and the
+ * windowing helpers index back into it. One stripped string, used throughout.
+ */
+export function stripComments(html: string): string {
+  return html.replace(/<!--[\s\S]*?-->/g, " ");
+}
+
+/**
+ * The content of one named `<meta>`, by `name` or by `property`.
+ *
+ * Named explicitly by the caller rather than swept up wholesale. A page's head
+ * carries several date-shaped values — when it was published, when it was last
+ * touched, when the CMS rebuilt it — and they are not interchangeable: the
+ * difference between `dcterms.issued` and `og:updated_time` is the difference
+ * between a two-year-old pronouncement and breaking news. An extractor that
+ * takes the first date it finds in the head will eventually take the wrong one
+ * and there will be nothing in the output to show it.
+ */
+export function metaContent(html: string, names: string[]): string {
+  const head = html.slice(0, 60_000);
+  const wanted = new Set(names.map((n) => n.toLowerCase()));
+  for (const m of head.matchAll(/<meta\b([^>]*)>/gi)) {
+    const attrs = m[1];
+    const key = (attr(attrs, "name") || attr(attrs, "property") || attr(attrs, "itemprop")).toLowerCase();
+    if (!key || !wanted.has(key)) continue;
+    const value = attr(attrs, "content");
+    if (value) return value;
+  }
+  return "";
+}
+
+/**
+ * The page's own content, with the furniture around it removed.
+ *
+ * Dates and headings appear in a government template's header, breadcrumb,
+ * sidebar and footer as well as in the article: a "Stand: 01.01.2026" in a
+ * site-wide footer would date every publication on the site to the same day,
+ * and it would look entirely plausible.
+ *
+ * Falls back to the whole document when no landmark is found, because a page
+ * with no `<main>` is still a page — the caller's own validation is what keeps
+ * that case honest, not this.
+ */
+export function mainRegion(html: string): string {
+  const stripped = stripComments(html)
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    // The head goes too. It is the richest source of date-shaped values on the
+    // page and none of them is the content: a caller that wants metadata asks
+    // for it by name through `metaContent`, where it has to say which field it
+    // means. Leaving the head in would make "the date in the content" quietly
+    // include og:updated_time on any page without a <main>.
+    .replace(/<head\b[\s\S]*?<\/head\s*>/i, " ")
+    .replace(/<nav\b[\s\S]*?<\/nav>/gi, " ")
+    .replace(/<header\b[\s\S]*?<\/header>/gi, " ")
+    .replace(/<footer\b[\s\S]*?<\/footer>/gi, " ");
+
+  const main = /<main\b[^>]*>([\s\S]*?)<\/main\s*>/i.exec(stripped);
+  if (main) return main[1];
+
+  // Government Site Builder marks its content column this way, and has since
+  // long before it emitted HTML5 landmarks.
+  const byId = /<div\b[^>]*\b(?:id|class)\s*=\s*(["'])[^"']*\b(?:content|inhalt|main)\b[^"']*\1[^>]*>([\s\S]*)/i.exec(
+    stripped
+  );
+  if (byId) return byId[2];
+
+  return stripped;
+}
+
+/**
+ * The first `<h1>`, as plain text.
+ *
+ * `<h1>` and not `<title>`: the title element on these sites is the headline
+ * plus the authority's name plus the section, assembled by the CMS, and
+ * splitting that back apart is guesswork that fails differently on every page.
+ */
+export function firstHeading(html: string, level: 1 | 2 = 1): string {
+  const m = new RegExp(`<h${level}\\b[^>]*>([\\s\\S]*?)</h${level}\\s*>`, "i").exec(html);
+  return m ? plainText(m[1]).trim() : "";
+}
+
+/**
  * German dates: 15.01.2026, 5.1.2026, and the written month form.
  *
  * `Date.parse` cannot be used here. It reads "01.02.2026" as an American

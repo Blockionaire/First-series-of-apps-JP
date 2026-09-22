@@ -26,6 +26,7 @@
 
 import { parseFeed, type FeedItem } from "./feed.ts";
 import { extractorFor } from "./extractors/index.ts";
+import { hydrate } from "./extractors/hydrate.ts";
 import type { IngestionMethod, Source } from "./sources.ts";
 
 /** Every way a fetch attempt can end. Recorded verbatim in newsroom_fetch_log. */
@@ -297,7 +298,14 @@ export async function fetchSource(
     // An extractor's failure is a parse_error, the same outcome a malformed
     // feed produces, so a broken extractor shows up in the health column
     // beside a broken feed rather than as a quiet source.
-    const out = extractor.extract(body, res.url || source.feed_url);
+    const extracted = extractor.extract(body, res.url || source.feed_url);
+    // Publications whose title and date live behind the link, opened one
+    // level deep and bounded by the extractor's own cap. Runs unconditionally
+    // because it is a no-op for every extractor that reads a single page.
+    const { result: out } = await hydrate(extractor, extracted, {
+      fetch: doFetch,
+      userAgent: USER_AGENT,
+    });
     if (!out.ok) {
       return {
         outcome: "parse_error",

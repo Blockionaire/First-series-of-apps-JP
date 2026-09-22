@@ -30,7 +30,7 @@
 
 import type { FeedItem } from "../feed.ts";
 import type { Extractor, ExtractResult } from "./types.ts";
-import { findAnchors, findDate, windowAround } from "./html.ts";
+import { findAnchors, findDate, stripComments, windowAround } from "./html.ts";
 
 const DOMAIN = "anthropic.com";
 
@@ -139,7 +139,11 @@ export function titleFromSlug(url: string): string {
   }
 }
 
-export function extractAnthropic(html: string, pageUrl: string): ExtractResult {
+export function extractAnthropic(raw: string, pageUrl: string): ExtractResult {
+  // A redesign leaves the old listing commented out, and its anchors still
+  // point at real publication URLs. Stripped once, before anything indexes
+  // into the string — see stripComments.
+  const html = stripComments(raw);
   const anchors = findAnchors(html);
   if (anchors.length === 0) {
     return { ok: false, error: "no links found — the response did not parse as an HTML page" };

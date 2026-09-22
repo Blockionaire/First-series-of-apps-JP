@@ -10,6 +10,8 @@
  */
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 
 import { parseFeed, parseFeedDate, plainText, decodeEntities } from "../src/lib/newsroom/feed.ts";
 import {
@@ -966,6 +968,124 @@ describe("probing a candidate feed", () => {
     assert.equal(detectFormat('<?xml version="1.0"?><feed xmlns="...">', ""), "atom");
     assert.equal(detectFormat('<?xml version="1.0"?><rss version="2.0">', ""), "rss");
     assert.equal(detectFormat("", ""), "unknown");
+  });
+});
+
+describe("Test source on a two-phase extractor", () => {
+  // The operator's question about APAS is "does this URL serve publications",
+  // and for a source whose titles and dates live one page deeper, the only
+  // answer worth giving is one that opened some of those pages. A probe that
+  // stopped at the index would report zero items for a working source.
+
+  const read = (name) =>
+    fs.readFileSync(path.join(import.meta.dirname, `fixtures/${name}`), "utf8");
+
+  // The registered surface, confirmed live: 200, and twenty APAS links.
+  const APAS_INDEX =
+    "https://www.apasbafa.bund.de/SharedDocs/Kurzmeldungen/APAS/DE/kurzmeldungen_node.html";
+
+  /** The index, plus the publication pages behind it. */
+  const apasSite = () => {
+    const pages = {
+      "/SharedDocs/Kurzmeldungen/APAS/DE/kurzmeldungen_node.html": read("apas-verlautbarungen.html"),
+      "/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_26.html": read("apas-vb-26.html"),
+      "/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_25.html": read("apas-vb-25.html"),
+      "/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_24.html": read("apas-vb-24.html"),
+      "/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_22.html": read("apas-vb-22.html"),
+    };
+    const asked = [];
+    const fn = async (url) => {
+      asked.push(url);
+      const key = new URL(url).pathname.replace(/;jsessionid=[^/;?]*/gi, "");
+      const body = pages[key];
+      return new Response(body ?? "not found", {
+        status: body ? 200 : 404,
+        statusText: body ? "OK" : "Not Found",
+        headers: { "content-type": "text/html" },
+      });
+    };
+    fn.asked = asked;
+    return fn;
+  };
+
+  test("it reports usable · html_extractor · N items with real headlines", async () => {
+    const fetchFn = apasSite();
+    const p = await probeFeed(APAS_INDEX, {
+      fetch: fetchFn,
+      hint: "html_scrape",
+      domain: "apasbafa.bund.de",
+    });
+
+    assert.equal(p.ok, true, p.error);
+    assert.equal(p.format, "html_extractor");
+    assert.match(p.extractor, /APAS/);
+    assert.ok(p.itemCount > 0, "a working source reported no items");
+    // The point of the sample: an operator recognises the source from these.
+    assert.ok(
+      p.sampleTitles.some((t) => /Verlautbarung Nr\. \d+/.test(t)),
+      `expected real headlines, got ${JSON.stringify(p.sampleTitles)}`
+    );
+    assert.ok(p.latestPublishedAt, "no dates came back");
+    assert.equal(p.itemsWithoutDate, 0, "an item without a date should never be emitted");
+  });
+
+  test("it says how many pages it opened against how many were listed", async () => {
+    // Otherwise "3 items" reads as a smaller source than it is, and the
+    // operator approving retrieval cannot tell a sample from the whole thing.
+    const p = await probeFeed(APAS_INDEX, {
+      fetch: apasSite(),
+      hint: "html_scrape",
+      domain: "apasbafa.bund.de",
+    });
+    assert.equal(p.detailsListed, 5);
+    assert.ok(p.detailsFetched > 0 && p.detailsFetched <= p.detailsListed);
+  });
+
+  test("a test opens fewer pages than a retrieval would", async () => {
+    // A diagnostic an admin may fire a hundred times an hour must not pull a
+    // government site's entire publication series each time.
+    const fetchFn = apasSite();
+    await probeFeed(APAS_INDEX, {
+      fetch: fetchFn,
+      hint: "html_scrape",
+      domain: "apasbafa.bund.de",
+    });
+    assert.ok(
+      fetchFn.asked.length <= 7,
+      `a probe made ${fetchFn.asked.length} requests: ${fetchFn.asked.join(", ")}`
+    );
+  });
+
+  test("it never requests anything outside the APAS mandant", async () => {
+    const fetchFn = apasSite();
+    await probeFeed(APAS_INDEX, {
+      fetch: fetchFn,
+      hint: "html_scrape",
+      domain: "apasbafa.bund.de",
+    });
+    for (const url of fetchFn.asked) {
+      assert.match(url, /^https:\/\/www\.apasbafa\.bund\.de\//, url);
+      assert.ok(!url.includes("/BAFA/"), `the probe requested BAFA content: ${url}`);
+    }
+  });
+
+  test("an index whose pages all fail is reported as a failure, not as empty", async () => {
+    const indexOnly = async (url) =>
+      new URL(url).pathname.endsWith("kurzmeldungen_node.html")
+        ? new Response(read("apas-verlautbarungen.html"), {
+            status: 200,
+            headers: { "content-type": "text/html" },
+          })
+        : new Response("", { status: 500, statusText: "Server Error" });
+
+    const p = await probeFeed(APAS_INDEX, {
+      fetch: indexOnly,
+      hint: "html_scrape",
+      domain: "apasbafa.bund.de",
+    });
+    assert.equal(p.ok, false);
+    assert.ok(p.error, "a broken template must produce an error, not a quiet zero");
+    assert.equal(p.detailsListed, 5, "the count of what was listed survives the failure");
   });
 });
 
