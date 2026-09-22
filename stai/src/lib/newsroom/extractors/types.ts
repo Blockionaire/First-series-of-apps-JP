@@ -41,5 +41,18 @@ export type Extractor = {
    * publications, must say so rather than guess.
    */
   accepts(url: string): boolean;
+  /**
+   * Where this publisher actually lists its publications.
+   *
+   * Candidates, not gospel — nobody here has fetched them. Their job is to
+   * make a refusal actionable: "this is the homepage" is a true and useless
+   * error, while "this is the homepage; publications are listed at X or Y" is
+   * something an operator can act on without reading the source.
+   *
+   * The APAS row was registered against the site's landing page, which served
+   * 200 and linked plenty of /SharedDocs/ URLs — none of them publications.
+   * That is the failure this exists to shorten.
+   */
+  indexUrls?: string[];
   extract(html: string, pageUrl: string): ExtractResult;
 };

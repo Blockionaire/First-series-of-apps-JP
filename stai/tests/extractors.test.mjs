@@ -22,8 +22,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  APAS_INDEX_URLS,
   acceptsApasIndex,
   extractApas,
+  hasDatedPath,
   isApasDocument,
   isApasPublication,
 } from "../src/lib/newsroom/extractors/apas.ts";
@@ -47,6 +49,12 @@ const FIXTURE = fs.readFileSync(
   path.join(import.meta.dirname, "fixtures/apas-index.html"),
   "utf8"
 );
+/** The surface the first live test was wrongly pointed at. */
+const APAS_HOME = fs.readFileSync(
+  path.join(import.meta.dirname, "fixtures/apas-home.html"),
+  "utf8"
+);
+const APAS_HOME_URL = "https://www.apasbafa.bund.de/APAS/DE/Home/home_node.html";
 const PAGE = "https://www.apasbafa.bund.de/SharedDocs/Kurzmeldungen/APAS/DE/kurzmeldungen_node.html";
 
 /* ── German dates ───────────────────────────────────────────────────────── */
@@ -88,9 +96,40 @@ describe("German dates", () => {
 describe("APAS URL rules", () => {
   const P = "https://www.apasbafa.bund.de";
 
-  test("a SharedDocs document page is a publication", () => {
+  test("a DATED SharedDocs page is a publication", () => {
     assert.equal(isApasPublication(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/2026/meldung.html`), true);
     assert.equal(isApasPublication(`${P}/SharedDocs/Bekanntmachungen/APAS/DE/2026/b.html`), true);
+    // The year may be in the filename rather than a path segment.
+    assert.equal(
+      isApasPublication(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/bekanntmachung_2026_03.html`),
+      true
+    );
+  });
+
+  test("an UNDATED SharedDocs page is a reusable block, not a publication", () => {
+    // The finding from the first live run. SharedDocs is a shared content
+    // repository: slogans, teasers and contact blocks live there under the
+    // same mandant and the same Kurzmeldungen type as real announcements.
+    // slogan.html is the confirmed live example.
+    assert.equal(isApasPublication(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/slogan.html`), false);
+    for (const stem of ["teaser", "intro", "kontakt", "einleitung", "standardartikel"]) {
+      assert.equal(
+        isApasPublication(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/${stem}.html`),
+        false,
+        `${stem}.html was collected as a publication`
+      );
+    }
+  });
+
+  test("a dated address is what marks a publication", () => {
+    assert.equal(hasDatedPath("/SharedDocs/Kurzmeldungen/APAS/DE/2026/x.html"), true);
+    assert.equal(hasDatedPath("/SharedDocs/Kurzmeldungen/APAS/DE/bericht_2025.html"), true);
+    assert.equal(hasDatedPath("/SharedDocs/Kurzmeldungen/APAS/DE/slogan.html"), false);
+    // A four-digit document number is not a year.
+    assert.equal(hasDatedPath("/SharedDocs/Downloads/APAS/DE/formular_1700.pdf"), false);
+    assert.equal(hasDatedPath("/SharedDocs/Kurzmeldungen/APAS/DE/isa_3402.html"), false);
+    // Nor is a year far enough out to be a typo.
+    assert.equal(hasDatedPath("/SharedDocs/Kurzmeldungen/APAS/DE/2099/x.html"), false);
   });
 
   test("a _node.html section index is navigation, not a publication", () => {
@@ -104,34 +143,46 @@ describe("APAS URL rules", () => {
     // session cookie, which a crawler permanently is. Rejecting these would
     // drop genuine Bekanntmachungen on most runs; canonicalUrl strips the id
     // so identity still collapses to one document.
-    assert.equal(isApasPublication(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/x.html;jsessionid=ABC`), true);
     assert.equal(
-      canonicalUrl(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/x.html;jsessionid=ABC`),
-      canonicalUrl(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/x.html`),
+      isApasPublication(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/2026/x.html;jsessionid=ABC`),
+      true
+    );
+    assert.equal(
+      canonicalUrl(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/2026/x.html;jsessionid=ABC`),
+      canonicalUrl(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/2026/x.html`),
       "the same page under two addresses must be one item"
     );
   });
 
   test("another domain is never an APAS publication", () => {
-    assert.equal(isApasPublication("https://www.bafa.de/SharedDocs/Kurzmeldungen/APAS/DE/x.html"), false);
-    assert.equal(isApasPublication("https://evil.example.com/SharedDocs/Kurzmeldungen/APAS/DE/x.html"), false);
+    assert.equal(isApasPublication("https://www.bafa.de/SharedDocs/Kurzmeldungen/APAS/DE/2026/x.html"), false);
+    assert.equal(isApasPublication("https://evil.example.com/SharedDocs/Kurzmeldungen/APAS/DE/2026/x.html"), false);
     // The near-miss a naive suffix check would wave through.
     assert.equal(isApasPublication("https://apasbafa.bund.de.evil.com/SharedDocs/x.html"), false);
   });
 
   test("a path outside SharedDocs is not a publication", () => {
     assert.equal(isApasPublication(`${P}/APAS/DE/Service/Impressum/impressum.html`), false);
+    assert.equal(isApasPublication(`${P}/SharedDocs/Kurzmeldungen/BAFA/DE/2026/x.html`), false);
   });
 
   test("documents are SharedDocs PDFs on the same domain", () => {
     assert.equal(isApasDocument(`${P}/SharedDocs/Downloads/APAS/DE/2026/b.pdf`), true);
     assert.equal(isApasDocument(`${P}/SharedDocs/Downloads/APAS/DE/2026/b.html`), false);
     assert.equal(isApasDocument("https://elsewhere.example/a.pdf"), false);
+    assert.equal(isApasDocument(`${P}/SharedDocs/Downloads/BAFA/DE/2026/b.pdf`), false, "mandant");
+    // A dated Downloads file is a publication in its own right.
+    assert.equal(isApasPublication(`${P}/SharedDocs/Downloads/APAS/DE/2026/bericht.pdf`), true);
   });
 
   test("the extractor refuses pages it does not understand", () => {
     assert.equal(acceptsApasIndex(PAGE), true);
     assert.equal(acceptsApasIndex(`${P}/APAS/DE/Aktuelles/aktuelles_node.html`), true);
+    // The surface the first live test was pointed at. It returns 200 and
+    // links plenty of /SharedDocs/ URLs, which is exactly why refusing it by
+    // name matters more than any markup check.
+    assert.equal(acceptsApasIndex(APAS_HOME_URL), false, "the landing page is not a listing");
+    assert.equal(acceptsApasIndex(`${P}/APAS/DE/Service/Impressum/impressum.html`), false);
     assert.equal(acceptsApasIndex("https://www.bafa.de/anything"), false, "another publisher");
     assert.equal(
       acceptsApasIndex(`${P}/SharedDocs/Kurzmeldungen/BAFA/DE/kurzmeldungen_node.html`),
@@ -150,7 +201,61 @@ describe("extracting APAS publications", () => {
 
   test("it succeeds and returns only genuine publications", () => {
     assert.equal(result.ok, true, result.ok ? "" : result.error);
-    assert.equal(result.items.length, 4, JSON.stringify(result.items.map((i) => i.title), null, 1));
+    assert.equal(result.items.length, 5, JSON.stringify(result.items.map((i) => i.title), null, 1));
+  });
+
+  test("a dated file under Downloads is a publication in its own right", () => {
+    // The operator confirmed genuine publications live under
+    // /SharedDocs/Downloads/APAS/DE/ as well as under Kurzmeldungen.
+    const report = result.items.find((i) => i.url.includes("taetigkeitsbericht_2025"));
+    assert.ok(report, "a Downloads publication was dropped");
+    assert.match(report.title, /T\u00e4tigkeitsbericht 2025/);
+    assert.equal(report.publishedAt.slice(0, 10), "2025-11-04");
+    assert.equal(report.documentUrl, report.url, "for a file, the page IS the document");
+  });
+
+  test("reusable blocks in the listing are refused even when dated nearby", () => {
+    // teaser.html and kontakt.html sit in the list with a date beside them.
+    // Only the undated ADDRESS separates them from real announcements.
+    const urls = result.items.map((i) => i.url).join(" ");
+    for (const stem of ["slogan", "teaser", "kontakt"]) {
+      assert.ok(!urls.includes(`/${stem}.html`), `${stem}.html was collected`);
+    }
+  });
+
+  test("a block whose name nobody anticipated is refused too", () => {
+    // The test that makes the dated-path rule load-bearing rather than
+    // decorative. This entry has a plausible headline, a date beside it in
+    // the listing, and a name no denylist would contain — only its undated
+    // address marks it as a reusable block.
+    const urls = result.items.map((i) => i.url).join(" ");
+    assert.ok(
+      !urls.includes("aufgaben-und-befugnisse"),
+      "an undated reusable block was collected as a publication"
+    );
+    assert.ok(
+      !result.items.some((i) => /Aufgaben und Befugnisse/i.test(i.title)),
+      "an undated reusable block was collected as a publication"
+    );
+  });
+
+  test("the landing page is refused outright, with somewhere to go instead", () => {
+    // Refused before parsing, so the operator is told the surface is wrong
+    // rather than being handed an empty list from a page that returned 200.
+    assert.equal(acceptsApasIndex(APAS_HOME_URL), false);
+    const r = extractApas(APAS_HOME, APAS_HOME_URL);
+    assert.equal(r.ok, false, "the landing page yielded items");
+    assert.match(r.error, /reusable content blocks|not an APAS publications listing/i);
+    // And it names where publications actually live.
+    assert.ok(
+      APAS_INDEX_URLS.some((u) => r.error.includes(u)),
+      `the error should name a real index: ${r.error}`
+    );
+  });
+
+  test("the landing page's own links are named in the refusal", () => {
+    const r = extractApas(APAS_HOME, APAS_HOME_URL);
+    assert.match(r.error, /slogan\.html|teaser\.html|intro\.html/, r.error);
   });
 
   test("BAFA content on the same host is not collected as APAS", () => {
@@ -260,17 +365,20 @@ describe("a changed page is an outage, not a quiet week", () => {
     const moved = FIXTURE.replace(/\/SharedDocs\//g, "/Publikationen/");
     const r = extractApas(moved, PAGE);
     assert.equal(r.ok, false);
-    assert.match(r.error, /structure has probably changed/i);
+    assert.match(r.error, /not an APAS publications listing/i);
+    assert.ok(
+      APAS_INDEX_URLS.some((u) => r.error.includes(u)),
+      "a structural failure should still say where to look"
+    );
   });
 
   test("a page where every date disappeared is an error", () => {
-    const undated = FIXTURE.replace(/\d{1,2}\.\s*\d{1,2}\.\s*\d{4}/g, "").replace(
-      /12\.\s+Dezember\s+2025/,
-      ""
-    );
+    // Dates stripped from the ENTRIES while the addresses stay dated: the
+    // listing still looks like a listing and carries nothing rankable.
+    const undated = FIXTURE.replace(/<span class=["']?date["']?>[^<]*<\/span>/gi, "");
     const r = extractApas(undated, PAGE);
     assert.equal(r.ok, false);
-    assert.match(r.error, /structure has probably changed/i);
+    assert.match(r.error, /listing structure has probably changed/i);
   });
 
   test("rejections are counted even on success", () => {

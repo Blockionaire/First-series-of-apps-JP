@@ -330,10 +330,19 @@ export const PROPOSED_SOURCES: Proposed[] = [
     // as unsupported; having an extractor for this exact domain is what makes
     // the method retrievable, and that is checked per publisher.
     //
-    // The APAS mandant's own Kurzmeldungen index. The `/APAS/` segment is
-    // load-bearing: this host also serves BAFA (export control, energy,
-    // trade) under the identical taxonomy, and the extractor refuses anything
-    // without it.
+    // The APAS mandant's own Kurzmeldungen index, NOT the landing page. Two
+    // path facts are load-bearing:
+    //
+    //   · `/APAS/` — this host also serves BAFA (export control, energy,
+    //     trade) under the identical taxonomy, and the extractor refuses
+    //     anything without it;
+    //   · this is a LISTING. The landing page returns 200 and links plenty of
+    //     /SharedDocs/ URLs, all of which are reusable content blocks; the
+    //     extractor now refuses it by name and says where to look instead.
+    //
+    // A row already registered from an earlier version of this file keeps its
+    // stored feed_url — `load_proposal` skips domains it already has — so an
+    // existing APAS row has to be corrected with Edit in the registry.
     feed_url:
       "https://www.apasbafa.bund.de/SharedDocs/Kurzmeldungen/APAS/DE/kurzmeldungen_node.html",
     rationale:

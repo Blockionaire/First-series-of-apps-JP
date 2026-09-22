@@ -7,31 +7,45 @@
  * APAS is the only primary source for anything about German audit oversight.
  * It publishes no RSS and no API.
  *
- * ── What makes this APAS-specific rather than a scraper ─────────────────
- * The anchor is the URL taxonomy, not the markup. APAS runs on the German
- * federal Government Site Builder, where every published document lives under
- * `/SharedDocs/` and section indexes are `_node.html`. That taxonomy is a
- * property of the publishing system and changes far less often than the class
- * names on a page, so matching on it is both more robust and — the point here
- * — not transferable: point this at another site and `accepts()` refuses.
+ * ── What the first live test taught, and what changed ───────────────────
+ * The first version was pointed at the site's landing page. It returned 200,
+ * it linked plenty of `/SharedDocs/…/APAS/DE/…` URLs, and not one of them was
+ * a publication. The example that settled it was
  *
- * Everything that survives must additionally look like a publication: a title
- * of plausible length that is not a known navigation label, and a German date
- * found near the link. Items failing either are dropped and COUNTED, so a
- * template change shows up as "34 rejected" rather than as silence.
+ *     /SharedDocs/Kurzmeldungen/APAS/DE/slogan.html
  *
- * ── The selectors here are unverified ───────────────────────────────────
- * This was written without network access — the build environment refuses
- * every outbound host — so no page from apasbafa.bund.de has ever been
- * fetched by this code. The URL taxonomy above is documented behaviour of the
- * platform; the surrounding markup is not, which is exactly why nothing here
- * depends on a class name and why the failure modes are loud.
+ * which is a strapline, embedded into pages as a reusable block.
  *
- * Verify with Test source on the APAS row before marking it retrievable. If
- * the structure differs, `extract` will say which stage failed rather than
- * return a plausible-looking empty list. Replace tests/fixtures/apas-index.html
- * with a real saved page when one is available; the tests are written against
- * behaviour, not against that file's exact bytes.
+ * That is not a quirk. On the Government Site Builder, `/SharedDocs/` is a
+ * shared CONTENT REPOSITORY, not a publications folder: slogans, teasers,
+ * standard paragraphs and contact blocks live there beside real
+ * announcements, all under the same mandant and the same `Kurzmeldungen`
+ * type. So the old rule — mandant, plus not `_node.html` — was a test for the
+ * ABSENCE of navigation, and absence of navigation is not presence of a
+ * publication.
+ *
+ * Two changes follow, and both tighten:
+ *
+ *   1. `accepts` no longer takes the landing page. `/APAS/DE/Home/…` and the
+ *      service pages are refused by name, so the extractor cannot be pointed
+ *      at the front door and asked what it finds.
+ *
+ *   2. `isApasPublication` now requires POSITIVE evidence: a year in the path.
+ *      APAS files its announcements under a dated address; `slogan.html`,
+ *      `teaser.html` and their siblings have no date because they are not
+ *      published on a day. This is the rule that separates them, and it is a
+ *      property of how the content is addressed rather than of how the page
+ *      looked this month.
+ *
+ * Nothing was relaxed to make the live test pass. Everything below is a
+ * narrower filter than the version that failed.
+ *
+ * ── Still unverified ────────────────────────────────────────────────────
+ * The build environment refuses every outbound host, so no APAS page has been
+ * fetched by this code. The mandant and `_node.html` conventions are
+ * documented platform behaviour; the dated-path rule is inferred from the
+ * operator's own report of where genuine publications live. `indexUrls` below
+ * are candidates to try with Test source, not confirmed addresses.
  */
 
 import type { FeedItem } from "../feed.ts";
@@ -39,13 +53,55 @@ import type { Extractor, ExtractResult } from "./types.ts";
 import { findAnchors, findDate, windowAround } from "./html.ts";
 
 const DOMAIN = "apasbafa.bund.de";
+const ORIGIN = `https://www.${DOMAIN}`;
+
+/**
+ * The APAS mandant segment.
+ *
+ * `apasbafa.bund.de` serves TWO authorities. BAFA is the federal office for
+ * economic affairs and export control; APAS is the audit oversight body that
+ * sits inside it. Their content shares the host and the taxonomy, and is
+ * separated only by this segment:
+ *
+ *   /SharedDocs/Kurzmeldungen/APAS/DE/…   audit oversight
+ *   /SharedDocs/Kurzmeldungen/BAFA/DE/…   export control, energy, trade
+ *
+ * Matching `/SharedDocs/` alone would file dual-use export licensing notices
+ * as Tier-1 German audit-oversight primary sources. That is not a missed item;
+ * it is a wrong citation with a regulator's authority attached to it.
+ */
+const MANDANT = /\/SharedDocs\/[^/]+\/APAS\//i;
+
+/**
+ * Where APAS publications are listed.
+ *
+ * Candidates. Reported in the refusal message so an operator pointed at the
+ * wrong surface is told where to look instead, rather than being left with a
+ * true and useless "this is not a publications index".
+ */
+export const APAS_INDEX_URLS = [
+  `${ORIGIN}/SharedDocs/Kurzmeldungen/APAS/DE/kurzmeldungen_node.html`,
+  `${ORIGIN}/APAS/DE/Aktuelles/aktuelles_node.html`,
+  `${ORIGIN}/APAS/DE/Publikationen/publikationen_node.html`,
+  `${ORIGIN}/SharedDocs/Downloads/APAS/DE/downloads_node.html`,
+];
+
+/**
+ * Sections of the site that are never a publications listing.
+ *
+ * The landing page is the one that matters: it served 200, it linked
+ * `/SharedDocs/` URLs, and it produced nothing — the most expensive kind of
+ * wrong surface, because it looks like it is working.
+ */
+const NOT_A_LISTING =
+  /\/APAS\/[A-Z]{2}\/(Home|Service|Impressum|Datenschutz|Kontakt|Barrierefreiheit)\//i;
 
 /**
  * Pages this may be pointed at.
  *
- * An index of publications, not an arbitrary page on the domain. Being
- * specific here is what stops the extractor being quietly repurposed: aimed at
- * the contact page it refuses, instead of returning whatever links it finds.
+ * A listing of publications, not an arbitrary page on the domain. An index
+ * under the APAS mandant, or one of the site's own APAS section pages —
+ * excluding the front door and the service furniture.
  */
 export function acceptsApasIndex(url: string): boolean {
   let u: URL;
@@ -59,40 +115,48 @@ export function acceptsApasIndex(url: string): boolean {
   if (host !== DOMAIN && !host.endsWith(`.${DOMAIN}`)) return false;
 
   const path = u.pathname;
-  // A SharedDocs index for the APAS mandant, or one of the site's own /APAS/
-  // listing pages. Both name APAS explicitly — see MANDANT below for why that
-  // segment is the whole of the distinction on this host.
+  if (NOT_A_LISTING.test(path)) return false;
+  // The GSB search form, scoped to APAS, is a legitimate listing surface.
+  if (/\/SiteGlobals\/Forms\//i.test(path)) return /APAS/i.test(u.href);
   return MANDANT.test(path) || /\/APAS\/[A-Z]{2}\//i.test(path);
 }
 
 /**
- * The APAS mandant segment.
+ * Does this address carry a publication date?
  *
- * ── The bug this fixes ──────────────────────────────────────────────────
- * `apasbafa.bund.de` serves TWO authorities. BAFA is the federal office for
- * economic affairs and export control; APAS is the audit oversight body that
- * sits inside it. Their content shares the host and the Government Site
- * Builder taxonomy, and is separated only by this path segment:
+ * The rule that separates a Bekanntmachung from a strapline. APAS addresses
+ * its announcements by the year they belong to — as a path segment
+ * (`/APAS/DE/2026/…`) or inside the filename (`bekanntmachung_2026_03.html`).
+ * Reusable content blocks have no year because they were not published on a
+ * day: `slogan.html`, `teaser.html`, `kontakt.html`.
  *
- *   /SharedDocs/Kurzmeldungen/APAS/DE/…   audit oversight
- *   /SharedDocs/Kurzmeldungen/BAFA/DE/…   export control, energy, trade
- *
- * Matching `/SharedDocs/` alone — which this extractor did first — would file
- * dual-use export licensing notices as Tier-1 German audit-oversight primary
- * sources. That is not a missed item; it is a wrong citation with a
- * regulator's authority attached to it, which is the single worst failure
- * this pipeline can produce.
+ * Bounded to plausible years so a document number that happens to be four
+ * digits — `ISA 3402`, `Formular 1700` — is not read as a date.
  */
-const MANDANT = /\/SharedDocs\/[^/]+\/APAS\//i;
+export function hasDatedPath(path: string): boolean {
+  const thisYear = new Date().getUTCFullYear();
+  for (const m of path.matchAll(/(?:^|[^0-9])((?:19|20)\d{2})(?:[^0-9]|$)/g)) {
+    const year = Number(m[1]);
+    if (year >= 1998 && year <= thisYear + 1) return true;
+  }
+  return false;
+}
 
 /**
- * Is this href a published APAS document rather than a part of the furniture?
+ * Is this href a published APAS document?
  *
- * `_node.html` is the Government Site Builder's own suffix for a section
- * node — an overview page listing other pages. Those are navigation by
- * definition, and excluding them is the single most valuable rule here: they
- * are numerous, they sit in the same lists as real items, and their titles
- * ("Bekanntmachungen", "Publikationen") read like plausible headlines.
+ * Three conditions, and the third is the one the live test added:
+ *   · the APAS mandant, not BAFA's;
+ *   · not a `_node.html` section index — navigation by definition;
+ *   · a dated address, which is what a publication has and a strapline does not.
+ *
+ * There is deliberately NO denylist of block names beside this. An earlier
+ * draft carried one — slogan, teaser, kontakt and so on — and every name on it
+ * was already excluded by the dated-path rule, because a reusable block is
+ * undated by nature. A list that catches nothing its neighbour does not is
+ * worse than no list: it reads like a safety rule, so the next person to meet
+ * a new block name adds it there and believes the job is done. The general
+ * rule is the rule.
  */
 export function isApasPublication(url: string): boolean {
   let u: URL;
@@ -110,10 +174,14 @@ export function isApasPublication(url: string): boolean {
   // drop real Bekanntmachungen on most runs. `canonicalUrl` removes it for
   // identity; this only has to see past it.
   const path = u.pathname.replace(/;jsessionid=[^/;?]*/gi, "");
+
   if (!MANDANT.test(path)) return false;
   if (/_node\.html?$/i.test(path)) return false;
+  if (!hasDatedPath(path)) return false;
 
-  return /\.html?$/i.test(path);
+  // Both shapes the operator confirmed: an announcement page under
+  // Kurzmeldungen, and a published file under Downloads.
+  return /\.html?$/i.test(path) || isApasDocument(u.href);
 }
 
 /** The official document behind a publication, where the page links one. */
@@ -126,7 +194,7 @@ export function isApasDocument(url: string): boolean {
   }
   const host = u.host.toLowerCase().replace(/^www\./, "");
   if (host !== DOMAIN && !host.endsWith(`.${DOMAIN}`)) return false;
-  return MANDANT.test(u.pathname) && /\.pdf$/i.test(u.pathname);
+  return MANDANT.test(u.pathname) && /\.(pdf|docx?|xlsx?)$/i.test(u.pathname);
 }
 
 /**
@@ -168,20 +236,43 @@ export function extractApas(html: string, pageUrl: string): ExtractResult {
     return { ok: false, error: "no links found — the response did not parse as an HTML page" };
   }
 
-  const candidates = anchors.filter((a) => {
+  const resolve = (href: string): string | null => {
     try {
-      return isApasPublication(new URL(a.href, pageUrl).href);
+      return new URL(href, pageUrl).href;
     } catch {
-      return false;
+      return null;
     }
+  };
+
+  // Counted separately so the failure message can distinguish "this is not an
+  // APAS surface at all" from "this is an APAS surface listing no
+  // publications" — the exact distinction the landing page blurred.
+  const mandantLinks = anchors
+    .map((a) => resolve(a.href))
+    .filter((u): u is string => !!u && MANDANT.test(new URL(u).pathname));
+
+  const candidates = anchors.filter((a) => {
+    const u = resolve(a.href);
+    return !!u && isApasPublication(u);
   });
 
   if (candidates.length === 0) {
+    const where = APAS_INDEX_URLS.join(" or ");
+    if (mandantLinks.length === 0) {
+      return {
+        ok: false,
+        error:
+          `found ${anchors.length} links but none under /SharedDocs/…/APAS/ — ` +
+          `this is not an APAS publications listing. Try ${where}`,
+      };
+    }
+    const examples = mandantLinks.slice(0, 3).map((u) => new URL(u).pathname).join(", ");
     return {
       ok: false,
       error:
-        `found ${anchors.length} links but none under /SharedDocs/…/APAS/ — ` +
-        `the APAS page structure has probably changed, or this is not a publications index`,
+        `found ${mandantLinks.length} APAS /SharedDocs/ links but none is a dated publication ` +
+        `— these look like reusable content blocks rather than announcements (${examples}). ` +
+        `If this is the landing page, publications are listed at ${where}`,
     };
   }
 
@@ -190,7 +281,7 @@ export function extractApas(html: string, pageUrl: string): ExtractResult {
   const seen = new Set<string>();
 
   for (const a of candidates) {
-    const url = new URL(a.href, pageUrl).href;
+    const url = resolve(a.href)!;
     if (seen.has(url)) continue;
 
     if (!plausibleTitle(a.text)) {
@@ -211,7 +302,7 @@ export function extractApas(html: string, pageUrl: string): ExtractResult {
     // The official document, where the entry links one. Kept out of `lead`
     // on purpose: `lead` is tokenised for clustering, and a URL shared by
     // every APAS item would make them all look like the same story.
-    const documentUrl = findDocument(html, a, pageUrl);
+    const documentUrl = isApasDocument(url) ? url : findDocument(html, a, pageUrl);
 
     seen.add(url);
     items.push({
@@ -227,15 +318,15 @@ export function extractApas(html: string, pageUrl: string): ExtractResult {
     return {
       ok: false,
       error:
-        `found ${candidates.length} /SharedDocs/ links but none carried both a headline and a date ` +
-        `— the APAS page structure has probably changed (${rejected[0] ?? "no detail"})`,
+        `found ${candidates.length} dated APAS publications but none carried both a headline ` +
+        `and a date — the listing structure has probably changed (${rejected[0] ?? "no detail"})`,
     };
   }
 
   return { ok: true, items, rejected };
 }
 
-/** A PDF linked from the same list entry, if there is one. */
+/** A document linked from the same list entry, if there is one. */
 function findDocument(html: string, a: ReturnType<typeof findAnchors>[number], pageUrl: string): string {
   for (const near of findAnchors(windowAround(html, a, 400))) {
     try {
@@ -273,5 +364,6 @@ export const apas: Extractor = {
   domain: DOMAIN,
   name: "APAS (Abschlussprüferaufsichtsstelle)",
   accepts: acceptsApasIndex,
+  indexUrls: APAS_INDEX_URLS,
   extract: extractApas,
 };

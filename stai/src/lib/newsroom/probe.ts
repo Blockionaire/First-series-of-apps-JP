@@ -196,12 +196,19 @@ export async function probeFeed(
   const extractor = deps.hint === "html_scrape" ? extractorFor(deps.domain ?? "") : null;
   if (extractor) {
     if (!extractor.accepts(finalUrl)) {
+      // Naming the right surfaces turns a true-but-useless refusal into
+      // something an operator can act on. The APAS row was registered against
+      // the site's landing page, which served 200 and linked plenty of
+      // publication-shaped URLs — none of them publications.
+      const where = extractor.indexUrls?.length
+        ? ` Publications are listed at: ${extractor.indexUrls.join(" · ")}`
+        : "";
       return blank({
         ...base,
         bytes: body.length,
         format,
         extractor: extractor.name,
-        error: `${extractor.name} does not recognise this URL as a publications index`,
+        error: `${extractor.name} does not recognise this URL as a publications index.${where}`,
       });
     }
     const out = extractor.extract(body, finalUrl);
