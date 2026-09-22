@@ -107,11 +107,11 @@ export default async function StoryPage({ params }: Props) {
           {story.source_count}
         </p>
         <ul className="mt-4 space-y-2 text-sm">
-          <li style={{ color: researchGate.ok ? "var(--ink-muted)" : "var(--gold-300, #c9a84c)" }}>
+          <li style={{ color: researchGate.ok ? "var(--ink-muted)" : "var(--color-gold-300)" }}>
             <span className="f-mono text-[0.72rem] uppercase tracking-[0.1em]">Research gate</span>{" "}
             — {researchGate.ok ? "passes" : researchGate.reason}
           </li>
-          <li style={{ color: reviewGate.ok ? "var(--ink-muted)" : "var(--gold-300, #c9a84c)" }}>
+          <li style={{ color: reviewGate.ok ? "var(--ink-muted)" : "var(--color-gold-300)" }}>
             <span className="f-mono text-[0.72rem] uppercase tracking-[0.1em]">Review gate</span> —{" "}
             {reviewGate.ok ? "passes" : reviewGate.reason}
           </li>

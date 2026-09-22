@@ -110,7 +110,7 @@ export default function DryRunCandidates({ cards }: { cards: CandidateCard[] }) 
   return (
     <div className="mt-6 space-y-5">
       {error && (
-        <p className="f-mono text-[0.75rem]" style={{ color: "var(--danger, #d88)" }}>
+        <p className="f-mono text-[0.75rem]" style={{ color: "var(--color-signal-down)" }}>
           {error}
         </p>
       )}

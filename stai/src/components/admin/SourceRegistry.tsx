@@ -264,7 +264,7 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
         <p className="f-mono mt-4 text-[0.75rem] text-gold-300">{message}</p>
       )}
       {error && (
-        <p className="f-mono mt-4 text-[0.75rem]" style={{ color: "var(--danger, #d88)" }}>
+        <p className="f-mono mt-4 text-[0.75rem]" style={{ color: "var(--color-signal-down)" }}>
           {error}
         </p>
       )}
@@ -318,10 +318,10 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                           <select
                             value={draftMethod}
                             onChange={(e) => setDraftMethod(e.target.value)}
-                            className="f-mono border bg-transparent px-2 py-1 text-[0.7rem] rule text-cream-200"
+                            className="input-stai-sm"
                           >
                             {["rss", "atom", "json_api", "html_scrape", "manual"].map((m) => (
-                              <option key={m} value={m} style={{ background: "var(--ink-bg, #14110e)" }}>
+                              <option key={m} value={m}>
                                 {m}
                               </option>
                             ))}
@@ -512,10 +512,10 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                       value={s.reviewStatus}
                       disabled={busy === s.id}
                       onChange={(e) => setReview(s.id, e.target.value)}
-                      className="f-mono border bg-transparent px-2 py-1 text-[0.7rem] rule text-cream-200"
+                      className="input-stai-sm"
                     >
                       {REVIEW_OPTIONS.map((o) => (
-                        <option key={o.id} value={o.id} style={{ background: "var(--ink-bg, #14110e)" }}>
+                        <option key={o.id} value={o.id}>
                           {o.label}
                         </option>
                       ))}

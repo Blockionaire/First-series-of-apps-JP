@@ -353,6 +353,27 @@ body {
 .input-stai:hover { border-color: var(--line-strong); }
 .input-stai:focus { border-color: var(--color-cream-400); outline: none; }
 
+/* Compact variant, for controls inside a dense table row.
+   Same token pair as .input-stai and the same reason for it: a native
+   <select> popup is drawn by the browser from the control's OWN background
+   and color, so both must be set, and both must be tokens that remap with
+   the theme. Setting a literal colour on the <option> elements instead —
+   which is what the source registry did at first — pins the popup to one
+   theme and renders it black-on-black in the other. */
+.input-stai-sm {
+  background: var(--color-navy-950);
+  border: 1px solid var(--line);
+  color: var(--color-cream-100);
+  padding: 0.25rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  border-radius: 2px;
+  transition: border-color 0.15s ease;
+}
+.input-stai-sm::placeholder { color: var(--ink-faint); }
+.input-stai-sm:hover { border-color: var(--line-strong); }
+.input-stai-sm:focus { border-color: var(--color-cream-400); outline: none; }
+
 /* Buttons */
 .btn {
   display: inline-flex;

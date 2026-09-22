@@ -52,7 +52,7 @@ export default function RunDiscovery() {
       {message && (
         <span
           className="f-mono text-[0.72rem]"
-          style={{ color: state === "error" ? "var(--danger, #d88)" : "var(--ink-muted)" }}
+          style={{ color: state === "error" ? "var(--color-signal-down)" : "var(--ink-muted)" }}
         >
           {message}
         </span>
