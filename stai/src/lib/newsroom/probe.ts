@@ -29,9 +29,10 @@
 
 import { parseFeed } from "./feed.ts";
 import { USER_AGENT } from "./fetcher.ts";
+import { extractorFor } from "./extractors/index.ts";
 
 /** What the feed turned out to be, including the cases that are not feeds. */
-export type ProbeFormat = "rss" | "atom" | "json" | "html" | "unknown";
+export type ProbeFormat = "rss" | "atom" | "json" | "html" | "extractor" | "unknown";
 
 export type Probe = {
   /** True when a feed parsed. A reachable HTML page is a successful request and a failed probe. */
@@ -52,6 +53,16 @@ export type Probe = {
   error: string;
   bytes: number;
   durationMs: number;
+  /**
+   * The extractor that read this page, when one did.
+   *
+   * Without it an operator testing an extractor-backed source cannot tell a
+   * working extractor from a page that happened to parse as a feed, and those
+   * need opposite responses.
+   */
+  extractor?: string;
+  /** Links the extractor saw and refused. A jump here is a template change. */
+  rejectedCount?: number;
 };
 
 const TIMEOUT_MS = 15_000;
@@ -107,7 +118,17 @@ function blank(over: Partial<Probe>): Probe {
  */
 export async function probeFeed(
   url: string,
-  deps: { fetch?: typeof globalThis.fetch; hint?: string } = {}
+  deps: {
+    fetch?: typeof globalThis.fetch;
+    hint?: string;
+    /**
+     * The source's registered domain, so an extractor-backed publisher is
+     * tested the way it will actually be retrieved. Testing APAS through the
+     * feed parser would report "served an HTML page" — true, useless, and not
+     * what the engine would do.
+     */
+    domain?: string;
+  } = {}
 ): Promise<Probe> {
   const started = Date.now();
   const doFetch = deps.fetch ?? globalThis.fetch;
@@ -169,6 +190,50 @@ export async function probeFeed(
   }
 
   const format = detectFormat(body, contentType);
+
+  // Extractor-backed sources are probed through their extractor, so what the
+  // operator sees is what a discovery run would get.
+  const extractor = deps.hint === "html_scrape" ? extractorFor(deps.domain ?? "") : null;
+  if (extractor) {
+    if (!extractor.accepts(finalUrl)) {
+      return blank({
+        ...base,
+        bytes: body.length,
+        format,
+        extractor: extractor.name,
+        error: `${extractor.name} does not recognise this URL as a publications index`,
+      });
+    }
+    const out = extractor.extract(body, finalUrl);
+    if (!out.ok) {
+      return blank({
+        ...base,
+        bytes: body.length,
+        format,
+        extractor: extractor.name,
+        error: out.error,
+        durationMs: elapsed(),
+      });
+    }
+    const dates = out.items.map((i) => i.publishedAt).filter((d): d is string => !!d);
+    return {
+      ...base,
+      ok: out.items.length > 0,
+      format: "extractor",
+      extractor: extractor.name,
+      rejectedCount: out.rejected.length,
+      bytes: body.length,
+      itemCount: out.items.length,
+      latestPublishedAt: dates.length
+        ? dates.reduce((a, b) => (Date.parse(b) > Date.parse(a) ? b : a))
+        : null,
+      sampleTitles: out.items.slice(0, SAMPLE).map((i) => i.title),
+      itemsWithoutDate: out.items.length - dates.length,
+      error: out.items.length === 0 ? "the extractor ran but found no publications" : "",
+      durationMs: elapsed(),
+    };
+  }
+
   const parsed = parseFeed(body, deps.hint);
 
   if (!parsed.ok) {

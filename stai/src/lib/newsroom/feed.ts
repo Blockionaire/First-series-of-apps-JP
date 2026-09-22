@@ -31,6 +31,24 @@ export type FeedItem = {
   publishedAt: string | null;
   /** A short extract. Plain text, tags stripped, never the whole document. */
   lead: string;
+  /**
+   * The official document behind the item, where the publisher links one.
+   *
+   * A regulator's announcement page is usually a wrapper around a PDF, and the
+   * PDF is the primary text — the thing phase 3's evidence packs have to cite.
+   * Recording it at discovery saves finding it again later, when the page may
+   * have moved on.
+   *
+   * Deliberately NOT folded into `lead`: `lead` is tokenised for clustering,
+   * and a URL sharing a host and path prefix with every other item from the
+   * same publisher would give them all common vocabulary and merge them.
+   *
+   * Only extractors set this today. Feeds have an `enclosure` element that
+   * could carry it, but it is used for podcast audio far more often than for
+   * documents, and reading it as a document would be wrong more than it is
+   * right.
+   */
+  documentUrl?: string;
 };
 
 export type FeedParse =
@@ -42,21 +60,54 @@ const LEAD_MAX = 600;
 
 /* ── Small XML helpers ───────────────────────────────────────────────── */
 
+/**
+ * The five XML entities, plus the Latin-1 names European publishers use.
+ *
+ * XML only requires the first five, and for a well-formed feed that would be
+ * enough. The extractors changed that: they read HTML, where `&uuml;` and
+ * `&sect;` are everywhere, and a German regulator's headline that renders as
+ * "Bekanntmachung nach &sect; 66a WPO &uuml;ber…" is not merely ugly — it is
+ * tokenised that way, so "uuml" becomes a term shared by every item from that
+ * publisher and clustering starts merging them.
+ *
+ * Bounded to the accented letters and punctuation that appear in the desk's
+ * languages rather than the full HTML5 set, which is 2,000 entries and mostly
+ * mathematical.
+ */
 const ENTITIES: Record<string, string> = {
-  amp: "&",
-  lt: "<",
-  gt: ">",
-  quot: '"',
-  apos: "'",
-  nbsp: " ",
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+  // German
+  auml: "ä", ouml: "ö", uuml: "ü", szlig: "ß",
+  // French, Dutch, Spanish, Italian, Nordic
+  agrave: "à", aacute: "á", acirc: "â", atilde: "ã", aring: "å", aelig: "æ",
+  ccedil: "ç", egrave: "è", eacute: "é", ecirc: "ê", euml: "ë",
+  igrave: "ì", iacute: "í", icirc: "î", iuml: "ï", ntilde: "ñ",
+  ograve: "ò", oacute: "ó", ocirc: "ô", otilde: "õ", oslash: "ø",
+  ugrave: "ù", uacute: "ú", ucirc: "û", yacute: "ý", yuml: "ÿ",
+  // Punctuation and symbols that appear in legal and financial copy
+  sect: "§", para: "¶", deg: "°", middot: "·", bull: "•",
+  ndash: "–", mdash: "—", lsquo: "‘", rsquo: "’",
+  ldquo: "“", rdquo: "”", hellip: "…", prime: "′", Prime: "″",
+  euro: "€", pound: "£", yen: "¥", cent: "¢", copy: "©", reg: "®", trade: "™",
+  times: "×", divide: "÷", plusmn: "±", frac12: "½", frac14: "¼", frac34: "¾",
+  laquo: "«", raquo: "»", shy: "", ensp: " ", emsp: " ", thinsp: " ",
 };
+
+/**
+ * Names whose capitalisation is meaningful, so the lower-casing lookup below
+ * must not flatten them. `&Prime;` is ″ and `&prime;` is ′.
+ */
+const CASE_SENSITIVE: Record<string, string> = { Prime: "″" };
 
 /** Resolve the entities that actually appear in feeds, and numeric escapes. */
 export function decodeEntities(s: string): string {
   return s
     .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => safeCodePoint(parseInt(hex, 16)))
     .replace(/&#(\d+);/g, (_, dec) => safeCodePoint(parseInt(dec, 10)))
-    .replace(/&([a-zA-Z]+);/g, (whole, name) => ENTITIES[name.toLowerCase()] ?? whole);
+    .replace(
+      /&([a-zA-Z][a-zA-Z0-9]*);/g,
+      (whole, name) => CASE_SENSITIVE[name] ?? ENTITIES[name.toLowerCase()] ?? whole
+    );
 }
 
 function safeCodePoint(n: number): string {

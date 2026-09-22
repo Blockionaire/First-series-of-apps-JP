@@ -1,0 +1,15 @@
+-- The official document behind a publication page.
+--
+-- A regulator's announcement is usually a wrapper around a PDF, and the PDF is
+-- the primary text — the thing phase 3's evidence packs have to cite and quote
+-- from. APAS is the case that forced this: its SharedDocs entries are a
+-- headline, a date and a link to the actual Bekanntmachung.
+--
+-- Recorded at discovery because that is when it is cheap. Finding it again
+-- later means re-fetching a page that may by then list something else, and the
+-- desk's whole evidence rule depends on being able to reach the document that
+-- was published, not the one currently featured.
+--
+-- Empty string rather than NULL, matching every other text column here, so
+-- queries never have to distinguish "no document" from "not recorded".
+ALTER TABLE newsroom_source_items ADD COLUMN document_url TEXT NOT NULL DEFAULT '';

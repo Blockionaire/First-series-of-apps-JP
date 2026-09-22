@@ -25,6 +25,7 @@
  */
 
 import { parseFeed, type FeedItem } from "./feed.ts";
+import { extractorFor } from "./extractors/index.ts";
 import type { IngestionMethod, Source } from "./sources.ts";
 
 /** Every way a fetch attempt can end. Recorded verbatim in newsroom_fetch_log. */
@@ -90,8 +91,21 @@ const TIMEOUT_MS = 15_000;
 export const USER_AGENT =
   "STAI-Newsroom/1.0 (+https://stai-ahead.com/about; audit and finance intelligence desk)";
 
-/** Which ingestion methods phase 2 can actually retrieve. */
+/** Which ingestion methods are retrievable without a per-site extractor. */
 const SUPPORTED: readonly IngestionMethod[] = ["rss", "atom", "json_api"];
+
+/**
+ * Can this source be retrieved at all?
+ *
+ * `html_scrape` is retrievable ONLY where a hand-written extractor exists for
+ * that exact domain. There is no generic fallback: a registered domain with no
+ * extractor keeps reporting `skipped_unsupported`, which is the honest answer
+ * and is visible in the registry.
+ */
+function retrievable(method: IngestionMethod, domain: string): boolean {
+  if (SUPPORTED.includes(method)) return true;
+  return method === "html_scrape" && extractorFor(domain) !== null;
+}
 
 export type DueCheck = { due: true } | { due: false; outcome: FetchOutcome; reason: string };
 
@@ -105,7 +119,7 @@ export function shouldFetch(
   source: Pick<
     Source,
     "active" | "fetch_allowed" | "ingestion_method" | "fetch_frequency" | "last_attempt_at"
-  > & { last_attempt_at?: string | null },
+  > & { last_attempt_at?: string | null; domain?: string },
   now = Date.now(),
   force = false
 ): DueCheck {
@@ -122,14 +136,17 @@ export function shouldFetch(
   if (source.ingestion_method === "manual") {
     return { due: false, outcome: "skipped_manual", reason: "entered by hand, never fetched" };
   }
-  if (!SUPPORTED.includes(source.ingestion_method)) {
-    // html_scrape is registered but not implemented in phase 2. Saying so is
+  if (!retrievable(source.ingestion_method, source.domain ?? "")) {
+    // html_scrape without an extractor for this exact publisher. Saying so is
     // better than a generic extractor that fills the Inbox with navigation
     // links and looks like it works.
     return {
       due: false,
       outcome: "skipped_unsupported",
-      reason: `${source.ingestion_method} is not implemented yet — no generic scraper is used`,
+      reason:
+        source.ingestion_method === "html_scrape"
+          ? "no extractor is written for this publisher — no generic scraper is used"
+          : `${source.ingestion_method} is not implemented yet — no generic scraper is used`,
     };
   }
 
@@ -156,17 +173,44 @@ export function shouldFetch(
  * sources to visit, so every error path here becomes a recorded outcome.
  */
 export async function fetchSource(
-  source: Pick<Source, "feed_url" | "ingestion_method" | "etag" | "last_modified_header">,
+  source: Pick<Source, "feed_url" | "ingestion_method" | "etag" | "last_modified_header"> & {
+    domain?: string;
+  },
   deps: { fetch?: typeof globalThis.fetch } = {}
 ): Promise<FetchResult> {
   const started = Date.now();
   const doFetch = deps.fetch ?? globalThis.fetch;
   const elapsed = () => Date.now() - started;
 
+  // A source retrieved by extractor rather than by feed. Resolved BEFORE the
+  // request so an extractor that refuses the URL costs no traffic.
+  const extractor = source.ingestion_method === "html_scrape" ? extractorFor(source.domain ?? "") : null;
+  if (source.ingestion_method === "html_scrape") {
+    if (!extractor) {
+      return {
+        outcome: "skipped_unsupported",
+        error: "no extractor is written for this publisher — no generic scraper is used",
+        items: [],
+        durationMs: elapsed(),
+      };
+    }
+    if (!extractor.accepts(source.feed_url)) {
+      // Pointed at a page this extractor does not understand. Refusing is the
+      // whole point: the alternative is returning whatever links are on it.
+      return {
+        outcome: "skipped_unsupported",
+        error: `${extractor.name} does not recognise ${source.feed_url} as a publications index`,
+        items: [],
+        durationMs: elapsed(),
+      };
+    }
+  }
+
   const headers: Record<string, string> = {
     "user-agent": USER_AGENT,
-    accept:
-      source.ingestion_method === "json_api"
+    accept: extractor
+      ? "text/html, application/xhtml+xml;q=0.9, */*;q=0.1"
+      : source.ingestion_method === "json_api"
         ? "application/json, application/feed+json;q=0.9, */*;q=0.1"
         : "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.1",
   };
@@ -245,6 +289,33 @@ export async function fetchSource(
       httpStatus: res.status,
       error: `${body.length} bytes received, limit is ${MAX_BYTES}`,
       items: [],
+      durationMs: elapsed(),
+    };
+  }
+
+  if (extractor) {
+    // An extractor's failure is a parse_error, the same outcome a malformed
+    // feed produces, so a broken extractor shows up in the health column
+    // beside a broken feed rather than as a quiet source.
+    const out = extractor.extract(body, res.url || source.feed_url);
+    if (!out.ok) {
+      return {
+        outcome: "parse_error",
+        httpStatus: res.status,
+        error: out.error,
+        items: [],
+        durationMs: elapsed(),
+      };
+    }
+    return {
+      outcome: out.items.length === 0 ? "empty_feed" : "ok",
+      httpStatus: res.status,
+      // Not an error, but worth carrying: a page whose rejected count jumps
+      // is a template change in progress.
+      error: out.rejected.length > 0 ? `${out.rejected.length} links rejected as not publications` : "",
+      items: out.items,
+      etag: res.headers.get("etag") ?? "",
+      lastModified: res.headers.get("last-modified") ?? "",
       durationMs: elapsed(),
     };
   }

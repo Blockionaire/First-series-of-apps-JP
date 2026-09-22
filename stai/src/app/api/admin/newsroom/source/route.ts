@@ -231,7 +231,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const probe = await probeFeed(url, { hint: source.ingestion_method });
+    const probe = await probeFeed(url, {
+      hint: source.ingestion_method,
+      domain: source.domain,
+    });
     // Recorded before returning, so the trail of what was tried survives the
     // browser tab. Failures especially: they are what stops the next person
     // repeating a dead path.

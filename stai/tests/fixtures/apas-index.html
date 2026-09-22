@@ -1,0 +1,74 @@
+<!doctype html>
+<!--
+  SYNTHETIC. This is NOT a saved copy of a real APAS page.
+
+  It was written from the documented conventions of the German federal
+  Government Site Builder — /SharedDocs/ document paths, _node.html section
+  indexes, dd.mm.yyyy dates — because the build environment has no network
+  access and apasbafa.bund.de has never been fetched by this code.
+
+  It therefore proves that the extractor implements the RULES it claims to.
+  It does not prove those rules match the live page. Replace this file with a
+  real saved page when one is available: the tests assert behaviour (a nav
+  link is refused, a dated publication is kept, a structure change is loud),
+  not this file's exact bytes, so they should survive the swap.
+
+  Deliberately messy: single-quoted and unquoted attributes, an entity in a
+  title, a session id, an undated entry, and navigation links sitting in the
+  same list as real publications — because all of those are what actually
+  breaks extractors.
+-->
+<html lang="de">
+<head><title>Bekanntmachungen</title></head>
+<body>
+<nav>
+  <a href="/APAS/DE/Home/home_node.html">Startseite</a>
+  <a href="/SharedDocs/Bekanntmachungen/DE/bekanntmachungen_node.html">Bekanntmachungen</a>
+  <a href="/APAS/DE/Service/Impressum/impressum.html">Impressum</a>
+</nav>
+
+<main>
+  <ul class="list">
+    <li>
+      <span class="date">03.03.2026</span>
+      <a href="/SharedDocs/Bekanntmachungen/DE/2026/bekanntmachung_2026_03.html">
+        Bekanntmachung nach &sect; 66a Abs. 4 WPO &uuml;ber die Anerkennung von Pr&uuml;fungsstandards
+      </a>
+      <p>Die Abschlusspr&uuml;feraufsichtsstelle gibt die Anerkennung der genannten Standards bekannt.</p>
+      <a href="/SharedDocs/Downloads/DE/2026/bekanntmachung_2026_03.pdf?__blob=publicationFile">PDF, 240 KB</a>
+    </li>
+    <li>
+      <span class='date'>17.02.2026</span>
+      <a href='/SharedDocs/Kurzmeldungen/DE/2026/inspektionsbericht_2025.html'>
+        Inspektionsbericht 2025 der Abschlusspr&uuml;feraufsichtsstelle ver&ouml;ffentlicht
+      </a>
+      <p>Der Bericht fasst die Ergebnisse der Inspektionen bei Pr&uuml;fern von Unternehmen von &ouml;ffentlichem Interesse zusammen.</p>
+    </li>
+    <li>
+      <span class="date">5.1.2026</span>
+      <a href=/SharedDocs/Kurzmeldungen/DE/2026/berufsaufsicht_massnahmen.html>
+        Ma&szlig;nahmen der Berufsaufsicht im vierten Quartal 2025
+      </a>
+    </li>
+    <li>
+      <span class="date">12. Dezember 2025</span>
+      <a href="/SharedDocs/Bekanntmachungen/DE/2025/hinweise_qualitaetssicherung.html;jsessionid=A1B2C3">
+        Hinweise zur Qualit&auml;tssicherung bei Konzernabschlusspr&uuml;fungen
+      </a>
+    </li>
+    <li>
+      <!-- No date anywhere near it: must be rejected, not dated "today". -->
+      <a href="/SharedDocs/Kurzmeldungen/DE/2025/undatierte_meldung.html">
+        Undatierte Meldung ohne jedes Datum in der Umgebung
+      </a>
+    </li>
+    <li>
+      <span class="date">01.12.2025</span>
+      <a href="/SharedDocs/Kurzmeldungen/DE/2025/weiter.html">mehr</a>
+    </li>
+  </ul>
+  <a href="https://www.bafa.de/DE/Home/home_node.html">BAFA</a>
+  <a href="/SharedDocs/Bekanntmachungen/DE/bekanntmachungen_node.html">Weiter zu den Bekanntmachungen</a>
+</main>
+</body>
+</html>

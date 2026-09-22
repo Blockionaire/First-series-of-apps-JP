@@ -319,8 +319,19 @@ export const PROPOSED_SOURCES: Proposed[] = [
     jurisdictions: ["DE"],
     topics: ["audit", "oversight"],
     ingestion_method: "html_scrape",
+    // Retrieved by the hand-written extractor in extractors/apas.ts — the
+    // first and currently only one. `html_scrape` is otherwise still skipped
+    // as unsupported; having an extractor for this exact domain is what makes
+    // the method retrievable, and that is checked per publisher.
+    //
+    // This URL is the site's own landing page and is the safest starting
+    // point, not necessarily the best index. Try
+    // /SharedDocs/Bekanntmachungen/DE/bekanntmachungen_node.html with Test
+    // source and, if it lists more, save it with Edit.
     feed_url: "https://www.apasbafa.bund.de/APAS/DE/Home/home_node.html",
-    rationale: "German audit oversight — the largest audit market in the EU.",
+    rationale:
+      "German audit oversight — the largest audit market in the EU. No RSS or API; " +
+      "read by a site-specific extractor.",
   },
   {
     name: "H3C / Haute autorité de l'audit",

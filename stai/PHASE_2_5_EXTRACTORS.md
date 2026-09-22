@@ -1,6 +1,36 @@
 # Phase 2.5 — source-specific extractors
 
-**Status:** proposed, not built. Awaiting approval.
+**Status:** the machinery is built and **APAS is the first extractor**. The six
+sources below are still awaiting Step 0 verification before any more are
+written.
+
+## What exists now
+
+`src/lib/newsroom/extractors/` holds the extractor allowlist. An `html_scrape`
+source is retrievable **only** where a hand-written extractor is registered for
+that exact domain; every other `html_scrape` row still reports
+`skipped_unsupported`, unchanged. Registering a source can never, by itself,
+cause a page to be scraped — that takes a file in that directory and a line in
+its index.
+
+| Publisher | File | Status |
+|---|---|---|
+| APAS (`apasbafa.bund.de`) | `extractors/apas.ts` | written, **selectors unverified against the live site** |
+
+The APAS extractor anchors on the Government Site Builder URL taxonomy
+(`/SharedDocs/` documents, `_node.html` section indexes) rather than on class
+names, requires a German date near each link, refuses navigation, and returns
+an **error** rather than an empty list when a page yields nothing recognisable
+— so a redesign reads as an outage rather than as a quiet news week.
+
+It was written without network access, so no APAS page has ever been fetched by
+this code. `tests/fixtures/apas-index.html` is synthetic and says so. **Run
+Test source on the APAS row before marking it retrievable**; the probe runs the
+extractor itself, so what you see is what a discovery run would get.
+
+---
+
+**Original proposal below — status: not built. Awaiting Step 0.**
 
 Twenty of the 51 registered sources publish nothing machine-readable and are
 marked `html_scrape`, which phase 2 does not implement. They report

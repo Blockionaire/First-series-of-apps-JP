@@ -71,6 +71,18 @@ export function canonicalUrl(raw: string, base?: string): string | null {
   // Stable parameter order, so two orderings of the same query match.
   u.searchParams.sort();
 
+  // Java session ids, which are path parameters rather than query ones and so
+  // survive every check above.
+  //
+  // These matter more than they look. Java-backed sites — which is most of the
+  // European public sector, including APAS and much of the Commission — append
+  // `;jsessionid=…` for any visitor without a session cookie, and a crawler is
+  // permanently in that state. Left in place, the SAME page arrives under a
+  // NEW address on every single run: the URL is identity here, so each visit
+  // would insert a fresh item, create a fresh story, and the Inbox would fill
+  // with duplicates of one announcement.
+  u.pathname = u.pathname.replace(/;jsessionid=[^/;?]*/gi, "");
+
   // One trailing slash policy, applied to paths only — "/news" and "/news/"
   // are the same page everywhere this engine looks.
   if (u.pathname.length > 1 && u.pathname.endsWith("/")) {
@@ -165,6 +177,8 @@ export type NormalisedItem = {
   publishedAt: string | null;
   contentHash: string;
   jurisdictions: string[];
+  /** The official document behind the page, where the publisher links one. */
+  documentUrl: string;
 };
 
 /**
@@ -176,7 +190,13 @@ export type NormalisedItem = {
  * clustered or read.
  */
 export async function normaliseItem(
-  item: { url: string; title: string; lead: string; publishedAt: string | null },
+  item: {
+    url: string;
+    title: string;
+    lead: string;
+    publishedAt: string | null;
+    documentUrl?: string;
+  },
   source: { feed_url: string; jurisdictions: string[] }
 ): Promise<NormalisedItem | null> {
   const url = canonicalUrl(item.url, source.feed_url);
@@ -192,7 +212,14 @@ export async function normaliseItem(
     title,
     lead,
     publishedAt: item.publishedAt,
+    // Deliberately NOT part of the fingerprint. The fingerprint decides what
+    // counts as a revision, and folding a new field into it would make every
+    // item already held look revised the first time this ships — a fleet of
+    // false "this story moved" events on one deploy.
     contentHash: await sha256Hex(contentFingerprint({ title, lead })),
     jurisdictions: inferJurisdictions(`${title} ${lead}`, source.jurisdictions),
+    // Resolved against the page it was found on, and dropped if it does not
+    // resolve: a half-stored attachment path is worse than none.
+    documentUrl: item.documentUrl ? (canonicalUrl(item.documentUrl, source.feed_url) ?? "") : "",
   };
 }
