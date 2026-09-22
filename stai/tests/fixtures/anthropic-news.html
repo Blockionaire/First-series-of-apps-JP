@@ -1,0 +1,75 @@
+<!doctype html>
+<!--
+  REPRESENTATIVE, NOT A SAVED COPY. www.anthropic.com has never been fetched
+  by this code — the build environment has no outbound network.
+
+  Shaped from what the extractor relies on: /news/<slug> entry URLs, <time
+  datetime> for dates, a visible category label per card. Deliberately
+  includes the traps: the SAME entry linked three times (hero, featured strip,
+  list row), an image-only card with no link text, an entry with no date, and
+  the site chrome — pricing, careers, docs, legal — that a markup-based
+  matcher would return as headlines.
+-->
+<html lang="en">
+<head><title>News \ Anthropic</title></head>
+<body>
+<header>
+  <a href="/">Anthropic</a>
+  <a href="/pricing">Pricing</a>
+  <a href="/careers">Careers</a>
+  <a href="https://docs.anthropic.com/">Docs</a>
+  <a href="/news">News</a>
+</header>
+
+<main>
+  <section class="hero">
+    <!-- Image-only card: no link text at all, but a real entry. -->
+    <a href="/news/claude-opus-5"><img src="/img/opus5.png" alt=""></a>
+    <div class="meta"><span>Announcements</span> <time datetime="2026-09-15">Sep 15, 2026</time></div>
+  </section>
+
+  <section class="featured">
+    <!-- Same entry again. Must not arrive twice. -->
+    <a href="/news/claude-opus-5">Introducing Claude Opus 5</a>
+    <time datetime="2026-09-15">Sep 15, 2026</time>
+  </section>
+
+  <ul>
+    <li>
+      <span class="category">Policy</span>
+      <a href="/news/eu-ai-act-code-of-practice">Our approach to the EU AI Act code of practice</a>
+      <time datetime="2026-08-28">August 28, 2026</time>
+    </li>
+    <li>
+      <span class="category">Societal Impacts</span>
+      <a href='/news/economic-index-2026'>The Anthropic Economic Index, 2026 edition</a>
+      <time datetime="2026-07-02">Jul 2, 2026</time>
+    </li>
+    <li>
+      <span class="category">Product</span>
+      <a href=/news/claude-for-financial-services>Claude for Financial Services</a>
+      <time datetime="2026-06-11">Jun 11, 2026</time>
+    </li>
+    <li>
+      <!-- No date. Still a real entry: a newsroom card may simply not show
+           one, unlike a regulator's undated notice which is a broken page. -->
+      <a href="/news/a-note-on-model-deprecations">A note on model deprecations</a>
+    </li>
+    <li>
+      <!-- Trailing slash and the same entry as above: one item, not two. -->
+      <a href="/news/a-note-on-model-deprecations/">Read more</a>
+    </li>
+    <li>
+      <!-- Not an entry: deeper than /news/<slug>. -->
+      <a href="/news/archive/2024">2024 archive</a>
+    </li>
+  </ul>
+</main>
+
+<footer>
+  <a href="/legal/privacy">Privacy Policy</a>
+  <a href="/legal/terms">Terms of Service</a>
+  <a href="/supported-countries">Supported countries</a>
+</footer>
+</body>
+</html>

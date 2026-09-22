@@ -27,16 +27,27 @@ import {
   isApasDocument,
   isApasPublication,
 } from "../src/lib/newsroom/extractors/apas.ts";
+import {
+  acceptsAnthropicIndex,
+  extractAnthropic,
+  isAnthropicNewsItem,
+} from "../src/lib/newsroom/extractors/anthropic.ts";
+import {
+  acceptsCeaobPage,
+  extractCeaob,
+  isCeaobDocument,
+  kindOf,
+} from "../src/lib/newsroom/extractors/ceaob.ts";
 import { extractorFor, EXTRACTORS } from "../src/lib/newsroom/extractors/index.ts";
 import { parseGermanDate, findAnchors } from "../src/lib/newsroom/extractors/html.ts";
 import { shouldFetch } from "../src/lib/newsroom/fetcher.ts";
-import { canonicalUrl } from "../src/lib/newsroom/normalise.ts";
+import { canonicalUrl, normaliseItem } from "../src/lib/newsroom/normalise.ts";
 
 const FIXTURE = fs.readFileSync(
   path.join(import.meta.dirname, "fixtures/apas-index.html"),
   "utf8"
 );
-const PAGE = "https://www.apasbafa.bund.de/SharedDocs/Bekanntmachungen/DE/bekanntmachungen_node.html";
+const PAGE = "https://www.apasbafa.bund.de/SharedDocs/Kurzmeldungen/APAS/DE/kurzmeldungen_node.html";
 
 /* ── German dates ───────────────────────────────────────────────────────── */
 
@@ -78,14 +89,14 @@ describe("APAS URL rules", () => {
   const P = "https://www.apasbafa.bund.de";
 
   test("a SharedDocs document page is a publication", () => {
-    assert.equal(isApasPublication(`${P}/SharedDocs/Kurzmeldungen/DE/2026/meldung.html`), true);
-    assert.equal(isApasPublication(`${P}/SharedDocs/Bekanntmachungen/DE/2026/b.html`), true);
+    assert.equal(isApasPublication(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/2026/meldung.html`), true);
+    assert.equal(isApasPublication(`${P}/SharedDocs/Bekanntmachungen/APAS/DE/2026/b.html`), true);
   });
 
   test("a _node.html section index is navigation, not a publication", () => {
     // The single most valuable rule here. These sit in the same lists as real
     // items and their titles read like plausible headlines.
-    assert.equal(isApasPublication(`${P}/SharedDocs/Bekanntmachungen/DE/bekanntmachungen_node.html`), false);
+    assert.equal(isApasPublication(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/kurzmeldungen_node.html`), false);
   });
 
   test("a session id does not disqualify a real publication", () => {
@@ -93,17 +104,17 @@ describe("APAS URL rules", () => {
     // session cookie, which a crawler permanently is. Rejecting these would
     // drop genuine Bekanntmachungen on most runs; canonicalUrl strips the id
     // so identity still collapses to one document.
-    assert.equal(isApasPublication(`${P}/SharedDocs/DE/x.html;jsessionid=ABC`), true);
+    assert.equal(isApasPublication(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/x.html;jsessionid=ABC`), true);
     assert.equal(
-      canonicalUrl(`${P}/SharedDocs/DE/x.html;jsessionid=ABC`),
-      canonicalUrl(`${P}/SharedDocs/DE/x.html`),
+      canonicalUrl(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/x.html;jsessionid=ABC`),
+      canonicalUrl(`${P}/SharedDocs/Kurzmeldungen/APAS/DE/x.html`),
       "the same page under two addresses must be one item"
     );
   });
 
   test("another domain is never an APAS publication", () => {
-    assert.equal(isApasPublication("https://www.bafa.de/SharedDocs/DE/x.html"), false);
-    assert.equal(isApasPublication("https://evil.example.com/SharedDocs/DE/x.html"), false);
+    assert.equal(isApasPublication("https://www.bafa.de/SharedDocs/Kurzmeldungen/APAS/DE/x.html"), false);
+    assert.equal(isApasPublication("https://evil.example.com/SharedDocs/Kurzmeldungen/APAS/DE/x.html"), false);
     // The near-miss a naive suffix check would wave through.
     assert.equal(isApasPublication("https://apasbafa.bund.de.evil.com/SharedDocs/x.html"), false);
   });
@@ -113,8 +124,8 @@ describe("APAS URL rules", () => {
   });
 
   test("documents are SharedDocs PDFs on the same domain", () => {
-    assert.equal(isApasDocument(`${P}/SharedDocs/Downloads/DE/2026/b.pdf`), true);
-    assert.equal(isApasDocument(`${P}/SharedDocs/Downloads/DE/2026/b.html`), false);
+    assert.equal(isApasDocument(`${P}/SharedDocs/Downloads/APAS/DE/2026/b.pdf`), true);
+    assert.equal(isApasDocument(`${P}/SharedDocs/Downloads/APAS/DE/2026/b.html`), false);
     assert.equal(isApasDocument("https://elsewhere.example/a.pdf"), false);
   });
 
@@ -122,7 +133,12 @@ describe("APAS URL rules", () => {
     assert.equal(acceptsApasIndex(PAGE), true);
     assert.equal(acceptsApasIndex(`${P}/APAS/DE/Aktuelles/aktuelles_node.html`), true);
     assert.equal(acceptsApasIndex("https://www.bafa.de/anything"), false, "another publisher");
-    assert.equal(acceptsApasIndex(`http://www.apasbafa.bund.de/SharedDocs/x.html`), false, "plain http");
+    assert.equal(
+      acceptsApasIndex(`${P}/SharedDocs/Kurzmeldungen/BAFA/DE/kurzmeldungen_node.html`),
+      false,
+      "the BAFA index on the same host is a different authority"
+    );
+    assert.equal(acceptsApasIndex(`http://www.apasbafa.bund.de/SharedDocs/Kurzmeldungen/APAS/DE/x.html`), false, "plain http");
     assert.equal(acceptsApasIndex("not a url"), false);
   });
 });
@@ -135,6 +151,24 @@ describe("extracting APAS publications", () => {
   test("it succeeds and returns only genuine publications", () => {
     assert.equal(result.ok, true, result.ok ? "" : result.error);
     assert.equal(result.items.length, 4, JSON.stringify(result.items.map((i) => i.title), null, 1));
+  });
+
+  test("BAFA content on the same host is not collected as APAS", () => {
+    // apasbafa.bund.de serves two authorities under one taxonomy, separated
+    // only by the mandant segment. Filing an export-control notice as German
+    // audit oversight is not a missed item — it is a wrong citation with a
+    // regulator's authority attached, which is the worst thing this pipeline
+    // can produce.
+    const urls = result.items.map((i) => i.url);
+    assert.ok(!urls.some((u) => /\/BAFA\//.test(u)), "a BAFA item was collected as APAS");
+    assert.ok(
+      !result.items.some((i) => /Dual-Use/i.test(i.title)),
+      "export control was filed as audit oversight"
+    );
+    assert.ok(
+      urls.every((u) => /\/SharedDocs\/[^/]+\/APAS\//.test(u)),
+      "every item must carry the APAS mandant"
+    );
   });
 
   test("navigation is not collected", () => {
@@ -178,7 +212,7 @@ describe("extracting APAS publications", () => {
 
   test("the linked official document is captured", () => {
     const withPdf = result.items.find((i) => i.url.includes("bekanntmachung_2026_03"));
-    assert.match(withPdf.documentUrl, /\/SharedDocs\/Downloads\/DE\/2026\/bekanntmachung_2026_03\.pdf/);
+    assert.match(withPdf.documentUrl, /\/SharedDocs\/Downloads\/APAS\/DE\/2026\/bekanntmachung_2026_03\.pdf/);
   });
 
   test("an entry with no document simply has none", () => {
@@ -348,5 +382,302 @@ describe("anchor parsing tolerates real-world markup", () => {
   test("nested markup inside a link becomes plain text", () => {
     const [a] = findAnchors(`<a href="/x"><span>Zwei</span> <b>W&ouml;rter</b></a>`);
     assert.equal(a.text, "Zwei Wörter");
+  });
+});
+
+/* ── Anthropic ──────────────────────────────────────────────────────────── */
+
+const ANTHROPIC = fs.readFileSync(
+  path.join(import.meta.dirname, "fixtures/anthropic-news.html"),
+  "utf8"
+);
+const NEWS = "https://www.anthropic.com/news";
+
+describe("Anthropic newsroom URL rules", () => {
+  test("/news/<slug> is an entry", () => {
+    assert.equal(isAnthropicNewsItem("https://www.anthropic.com/news/claude-opus-5"), true);
+    assert.equal(isAnthropicNewsItem("https://www.anthropic.com/news/claude-opus-5/"), true);
+    assert.equal(isAnthropicNewsItem("https://anthropic.com/en/news/claude-opus-5"), true);
+  });
+
+  test("the index itself and deeper paths are not entries", () => {
+    assert.equal(isAnthropicNewsItem("https://www.anthropic.com/news"), false);
+    assert.equal(isAnthropicNewsItem("https://www.anthropic.com/news/archive/2024"), false);
+  });
+
+  test("the rest of the site is not the newsroom", () => {
+    for (const p of ["/pricing", "/careers", "/legal/privacy", "/supported-countries", "/"]) {
+      assert.equal(isAnthropicNewsItem(`https://www.anthropic.com${p}`), false, p);
+    }
+    assert.equal(isAnthropicNewsItem("https://docs.anthropic.com/news/x"), true, "subdomains count");
+    assert.equal(isAnthropicNewsItem("https://anthropic.com.evil.com/news/x"), false, "lookalike");
+  });
+
+  test("it refuses pages that are not the news index", () => {
+    assert.equal(acceptsAnthropicIndex(NEWS), true);
+    assert.equal(acceptsAnthropicIndex("https://www.anthropic.com/news/"), true);
+    assert.equal(acceptsAnthropicIndex("https://www.anthropic.com/pricing"), false);
+    assert.equal(acceptsAnthropicIndex("https://www.anthropic.com/news/claude-opus-5"), false);
+    assert.equal(acceptsAnthropicIndex("https://example.com/news"), false);
+  });
+});
+
+describe("extracting Anthropic newsroom entries", () => {
+  const result = extractAnthropic(ANTHROPIC, NEWS);
+
+  test("it succeeds and returns only newsroom entries", () => {
+    assert.equal(result.ok, true, result.ok ? "" : result.error);
+    const urls = result.items.map((i) => i.url);
+    assert.ok(urls.every((u) => /\/news\/[^/]+$/.test(u)), JSON.stringify(urls, null, 1));
+  });
+
+  test("site chrome is not collected", () => {
+    const urls = result.items.map((i) => i.url).join(" ");
+    for (const junk of ["/pricing", "/careers", "/legal/", "docs.anthropic.com", "/news/archive"]) {
+      assert.ok(!urls.includes(junk), `${junk} was collected as a newsroom entry`);
+    }
+  });
+
+  test("one entry linked three times is one item", () => {
+    // The index links the same announcement from a hero card, a featured
+    // strip and a list row. Without dedup it would arrive three times and
+    // read as corroboration.
+    const opus = result.items.filter((i) => i.url.includes("claude-opus-5"));
+    assert.equal(opus.length, 1, "the hero, featured and list links did not collapse");
+  });
+
+  test("a trailing slash is the same entry", () => {
+    const dep = result.items.filter((i) => i.url.includes("a-note-on-model-deprecations"));
+    assert.equal(dep.length, 1);
+  });
+
+  test("dates come from the machine-readable attribute", () => {
+    const byUrl = Object.fromEntries(result.items.map((i) => [i.url, i.publishedAt]));
+    const at = (frag) => byUrl[Object.keys(byUrl).find((u) => u.includes(frag))]?.slice(0, 10);
+    assert.equal(at("claude-opus-5"), "2026-09-15");
+    assert.equal(at("eu-ai-act-code-of-practice"), "2026-08-28");
+    assert.equal(at("economic-index-2026"), "2026-07-02");
+  });
+
+  test("the category is captured where the card shows one", () => {
+    const byUrl = Object.fromEntries(result.items.map((i) => [i.url, i.category]));
+    const cat = (frag) => byUrl[Object.keys(byUrl).find((u) => u.includes(frag))];
+    assert.equal(cat("eu-ai-act-code-of-practice"), "Policy");
+    assert.equal(cat("economic-index-2026"), "Societal Impacts");
+    assert.equal(cat("claude-for-financial-services"), "Product");
+  });
+
+  test("an image-only card still yields a readable title", () => {
+    // Hero cards wrap artwork, so the anchor's text is empty while the entry
+    // is perfectly real. Dropping it would lose the biggest story on the page.
+    const opus = result.items.find((i) => i.url.includes("claude-opus-5"));
+    assert.ok(opus, "the hero entry was dropped");
+    assert.ok(opus.title.length > 5, `unusable title: "${opus.title}"`);
+  });
+
+  test("an undated entry is kept, not dated today", () => {
+    // Unlike APAS: a regulator's undated notice is a broken page, a newsroom
+    // card may simply not show a date. A null ranks low rather than wrong.
+    const dep = result.items.find((i) => i.url.includes("a-note-on-model-deprecations"));
+    assert.ok(dep, "a dateless entry was dropped");
+    assert.equal(dep.publishedAt, null, "a date was invented");
+  });
+
+  test("a changed newsroom structure is an error, not an empty week", () => {
+    const moved = ANTHROPIC.replace(/\/news\//g, "/blog/");
+    const r = extractAnthropic(moved, NEWS);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /structure has probably changed/i);
+  });
+});
+
+/* ── CEAOB ──────────────────────────────────────────────────────────────── */
+
+const CEAOB_HTML = fs.readFileSync(
+  path.join(import.meta.dirname, "fixtures/ceaob-page.html"),
+  "utf8"
+);
+const CEAOB_PAGE =
+  "https://finance.ec.europa.eu/regulation-and-supervision/expert-groups-comitology-and-other-committees/committee-european-auditing-oversight-bodies_en";
+
+describe("CEAOB scoping", () => {
+  test("only the CEAOB page on DG FISMA is eligible", () => {
+    // The host is the whole of DG FISMA. Accepting any page on it would let
+    // this be aimed at the sanctions index and return items filed under a
+    // committee that had nothing to do with them.
+    assert.equal(acceptsCeaobPage(CEAOB_PAGE), true);
+    assert.equal(acceptsCeaobPage(`${CEAOB_PAGE}/ceaob-sub-groups_en`), true, "children count");
+    assert.equal(
+      acceptsCeaobPage("https://finance.ec.europa.eu/eu-and-world/sanctions-restrictive-measures_en"),
+      false,
+      "another DG FISMA area"
+    );
+    assert.equal(acceptsCeaobPage("https://finance.ec.europa.eu/en"), false, "the section home");
+    assert.equal(acceptsCeaobPage("https://ec.europa.eu/anything"), false, "another host");
+  });
+
+  test("documents are Commission-hosted files", () => {
+    assert.equal(isCeaobDocument("https://finance.ec.europa.eu/document/download/x.pdf"), true);
+    assert.equal(isCeaobDocument("https://ec.europa.eu/a/b.docx"), true);
+    assert.equal(isCeaobDocument("https://finance.ec.europa.eu/page_en"), false);
+    assert.equal(isCeaobDocument("https://example.com/x.pdf"), false, "off-host");
+  });
+
+  test("content kinds are named from the Commission's own words", () => {
+    assert.equal(kindOf("CEAOB work programme 2026"), "Work programme");
+    assert.equal(kindOf("Conclusions of the 24th CEAOB plenary meeting"), "Plenary meeting");
+    assert.equal(kindOf("Public consultation on sustainability assurance"), "Consultation");
+    assert.equal(kindOf("CEAOB report on audit market monitoring"), "Report");
+    assert.equal(kindOf("Members and observers"), "", "no kind rather than a guess");
+  });
+});
+
+describe("extracting CEAOB publications", () => {
+  const result = extractCeaob(CEAOB_HTML, CEAOB_PAGE);
+
+  test("it succeeds and finds the official material", () => {
+    assert.equal(result.ok, true, result.ok ? "" : result.error);
+    assert.ok(result.items.length >= 4, JSON.stringify(result.items.map((i) => i.title), null, 1));
+  });
+
+  test("all four kinds of publication are recognised", () => {
+    const byKind = Object.fromEntries(result.items.map((i) => [i.category, i.title]));
+    for (const kind of ["Work programme", "Plenary meeting", "Report", "Consultation"]) {
+      assert.ok(byKind[kind], `no ${kind} was captured`);
+    }
+  });
+
+  test("documents carry their document URL", () => {
+    const wp = result.items.find((i) => i.category === "Work programme");
+    assert.match(wp.documentUrl, /ceaob-work-programme-2026\.pdf$/);
+    assert.equal(wp.url, wp.documentUrl, "for a file, the page IS the document");
+  });
+
+  test("a page publication has no invented document", () => {
+    const report = result.items.find((i) => i.category === "Report");
+    assert.ok(!report.documentUrl, "invented an attachment");
+    assert.match(report.url, /ceaob-report-audit-market-monitoring_en$/);
+  });
+
+  test("dates are captured from both attributes and prose", () => {
+    const byKind = Object.fromEntries(result.items.map((i) => [i.category, i.publishedAt]));
+    assert.equal(byKind["Work programme"].slice(0, 10), "2026-01-20", "from <time datetime>");
+    assert.equal(byKind["Plenary meeting"].slice(0, 10), "2025-11-14", "from '14 November 2025'");
+  });
+
+  test("cookie banners, legal chrome and navigation are refused", () => {
+    const urls = result.items.map((i) => i.url).join(" ");
+    for (const junk of ["cookies_en", "legal-notice", "ceaob-members_en", "/en\"", "expert-groups-comitology-and-other-committees_en"]) {
+      assert.ok(!urls.includes(junk), `${junk} was collected as a publication`);
+    }
+  });
+
+  test("an undated page naming no kind is treated as navigation", () => {
+    assert.ok(
+      !result.items.some((i) => /Members and observers/i.test(i.title)),
+      "a membership page was filed as a publication"
+    );
+  });
+
+  test("an off-host summary is not a CEAOB publication", () => {
+    assert.ok(
+      !result.items.some((i) => i.url.includes("accountancyeurope")),
+      "a third party's summary was filed as primary material"
+    );
+  });
+
+  test("a page with no Commission links at all is an error", () => {
+    const r = extractCeaob(
+      '<html><body><a href="https://example.com/a">Something</a></body></html>',
+      CEAOB_PAGE
+    );
+    assert.equal(r.ok, false);
+    assert.match(r.error, /structure has probably changed/i);
+  });
+
+  test("a page where every publication lost its date and kind is an error", () => {
+    const stripped = CEAOB_HTML
+      .replace(/<time[^>]*>[^<]*<\/time>/gi, "")
+      .replace(/<span class="date">[^<]*<\/span>/gi, "")
+      .replace(/\.pdf/gi, "_en")
+      .replace(/work programme|plenary|report|consultation|guidance|statement|sub-group/gi, "page");
+    const r = extractCeaob(stripped, CEAOB_PAGE);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /structure has probably changed/i);
+  });
+});
+
+/* ── Into the pipeline, exactly like an RSS item ────────────────────────── */
+
+describe("extractor output is an ordinary feed item", () => {
+  /**
+   * The integration claim, tested at the seam rather than by assertion.
+   *
+   * Whatever an extractor returns is handed to `normaliseItem`, the same
+   * function every RSS entry goes through. If it survives that with a
+   * canonical URL, a hash and jurisdictions, it deduplicates and clusters
+   * identically — there is no second path for scraped items to drift down.
+   */
+  const SOURCES = {
+    apas: { feed_url: PAGE, jurisdictions: ["DE"] },
+    anthropic: { feed_url: NEWS, jurisdictions: ["GLOBAL"] },
+    ceaob: { feed_url: CEAOB_PAGE, jurisdictions: ["EU"] },
+  };
+  const RESULTS = {
+    apas: extractApas(FIXTURE, PAGE),
+    anthropic: extractAnthropic(ANTHROPIC, NEWS),
+    ceaob: extractCeaob(CEAOB_HTML, CEAOB_PAGE),
+  };
+
+  for (const [name, result] of Object.entries(RESULTS)) {
+    test(`${name}: every item normalises`, async () => {
+      assert.equal(result.ok, true);
+      for (const item of result.items) {
+        const n = await normaliseItem(item, SOURCES[name]);
+        assert.ok(n, `dropped in normalisation: ${item.url}`);
+        assert.match(n.url, /^https:\/\//, "canonical URL");
+        assert.equal(n.urlHash.length, 64, "sha-256 hex");
+        assert.ok(n.title.length > 0);
+        assert.ok(n.jurisdictions.length > 0, "always filed somewhere");
+        assert.equal(typeof n.documentUrl, "string");
+        assert.equal(typeof n.category, "string");
+      }
+    });
+
+    test(`${name}: canonical URLs are unique within one page`, async () => {
+      // Deduplication keys on this. Two items sharing a canonical URL would
+      // be one document arriving twice and reading as corroboration.
+      const urls = [];
+      for (const item of result.items) {
+        const n = await normaliseItem(item, SOURCES[name]);
+        urls.push(n.url);
+      }
+      assert.equal(new Set(urls).size, urls.length, `duplicate canonical URL in ${name}`);
+    });
+
+    test(`${name}: re-reading the page yields the same canonical URLs`, async () => {
+      // Discovery re-reads every cadence. Drift here would create a second
+      // story for the same publication on every run.
+      const again = { apas: extractApas(FIXTURE, PAGE), anthropic: extractAnthropic(ANTHROPIC, NEWS), ceaob: extractCeaob(CEAOB_HTML, CEAOB_PAGE) }[name];
+      assert.deepEqual(
+        again.items.map((i) => i.url),
+        result.items.map((i) => i.url)
+      );
+    });
+  }
+
+  test("the category reaches the normalised row", async () => {
+    const ceaobItems = RESULTS.ceaob.items;
+    const wp = ceaobItems.find((i) => i.category === "Work programme");
+    const n = await normaliseItem(wp, SOURCES.ceaob);
+    assert.equal(n.category, "Work programme");
+  });
+
+  test("a category is capped, not stored unbounded", async () => {
+    const n = await normaliseItem(
+      { url: "https://x.eu/a", title: "T", lead: "", publishedAt: null, category: "x".repeat(500) },
+      { feed_url: "https://x.eu/", jurisdictions: ["EU"] }
+    );
+    assert.ok(n.category.length <= 80);
   });
 });

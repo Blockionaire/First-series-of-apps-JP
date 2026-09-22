@@ -136,8 +136,14 @@ export const PROPOSED_SOURCES: Proposed[] = [
     jurisdictions: ["EU"],
     topics: ["audit", "oversight"],
     ingestion_method: "html_scrape",
-    feed_url: "https://finance.ec.europa.eu/capital-markets-union-and-financial-markets/financial-markets/auditing_en",
-    rationale: "The committee of European audit oversight bodies. Low volume, high relevance.",
+    // Verified by the operator as returning 200. Read by a site-specific
+    // extractor scoped to this one page: the host is the whole of DG FISMA,
+    // so the extractor accepts this path and its children and nothing else.
+    feed_url:
+      "https://finance.ec.europa.eu/regulation-and-supervision/expert-groups-comitology-and-other-committees/committee-european-auditing-oversight-bodies_en",
+    rationale:
+      "The committee of European audit oversight bodies. Low volume, high relevance. " +
+      "No RSS; read by a site-specific extractor.",
   },
   {
     name: "EDPB",
@@ -324,11 +330,12 @@ export const PROPOSED_SOURCES: Proposed[] = [
     // as unsupported; having an extractor for this exact domain is what makes
     // the method retrievable, and that is checked per publisher.
     //
-    // This URL is the site's own landing page and is the safest starting
-    // point, not necessarily the best index. Try
-    // /SharedDocs/Bekanntmachungen/DE/bekanntmachungen_node.html with Test
-    // source and, if it lists more, save it with Edit.
-    feed_url: "https://www.apasbafa.bund.de/APAS/DE/Home/home_node.html",
+    // The APAS mandant's own Kurzmeldungen index. The `/APAS/` segment is
+    // load-bearing: this host also serves BAFA (export control, energy,
+    // trade) under the identical taxonomy, and the extractor refuses anything
+    // without it.
+    feed_url:
+      "https://www.apasbafa.bund.de/SharedDocs/Kurzmeldungen/APAS/DE/kurzmeldungen_node.html",
     rationale:
       "German audit oversight — the largest audit market in the EU. No RSS or API; " +
       "read by a site-specific extractor.",

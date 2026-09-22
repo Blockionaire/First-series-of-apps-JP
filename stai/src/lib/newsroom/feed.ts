@@ -49,6 +49,19 @@ export type FeedItem = {
    * right.
    */
   documentUrl?: string;
+  /**
+   * The publisher's own label for the item.
+   *
+   * Anthropic tags each newsroom entry ("Announcements", "Policy"); the
+   * Commission labels CEAOB material by kind ("Report", "Consultation",
+   * "Plenary meeting"). Both answer the same editorial question — what sort of
+   * thing is this — which a headline often does not.
+   *
+   * The publisher's word, verbatim. Mapping "Consultation" onto some internal
+   * taxonomy would be a judgement made at retrieval time, where it cannot be
+   * reviewed; the Inbox shows what the source called it.
+   */
+  category?: string;
 };
 
 export type FeedParse =

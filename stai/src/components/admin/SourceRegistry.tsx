@@ -59,6 +59,10 @@ export type ProbeResult = {
   error: string;
   bytes: number;
   durationMs: number;
+  /** Which hand-written extractor read the page, when one did. */
+  extractor?: string;
+  /** Links that extractor saw and refused. */
+  rejectedCount?: number;
 };
 
 /**
@@ -69,7 +73,13 @@ export type ProbeResult = {
  * an operator to set a value the dropdown does not offer.
  */
 function methodFor(format: string): string {
-  return format === "json" ? "json_api" : format;
+  if (format === "json") return "json_api";
+  // A page read by a hand-written extractor is registered as html_scrape —
+  // that is the method, and "html_extractor" is what happened, not a value the
+  // dropdown offers. Without this the mismatch warning would tell an operator
+  // to set something they cannot set.
+  if (format === "html_extractor") return "html_scrape";
+  return format;
 }
 
 const REVIEW_OPTIONS: { id: string; label: string }[] = [
@@ -431,11 +441,22 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                           <span
                             className={probes[s.id].ok ? "block text-cream-200" : "block text-gold-300"}
                           >
-                            {probes[s.id].ok ? "feed ok" : "not usable"} ·{" "}
+                            {probes[s.id].ok ? "usable" : "not usable"} ·{" "}
                             {probes[s.id].httpStatus ?? "no response"} · {probes[s.id].format} ·{" "}
                             {probes[s.id].itemCount} item
                             {probes[s.id].itemCount === 1 ? "" : "s"} · {probes[s.id].durationMs}ms
                           </span>
+                          {/* Which extractor read the page, and how much it
+                              refused. A jump in the rejected count is a
+                              template change in progress. */}
+                          {probes[s.id].extractor && (
+                            <span className="block">
+                              read by {probes[s.id].extractor}
+                              {typeof probes[s.id].rejectedCount === "number"
+                                ? ` · ${probes[s.id].rejectedCount} links refused as not publications`
+                                : ""}
+                            </span>
+                          )}
                           <span className="block break-all">tested {probes[s.id].url}</span>
                           {/* The final URL matters most when it differs: a feed
                               that 301s to a landing page reads as healthy

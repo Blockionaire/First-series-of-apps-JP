@@ -78,7 +78,7 @@ export function attr(attrs: string, name: string): string {
  * templates with no recognisable item container, and is tight for the same
  * reason.
  */
-const BLOCK_TAGS = ["li", "article", "tr", "dd", "section"];
+const BLOCK_TAGS = ["li", "article", "tr", "dd"];
 const MAX_BLOCK = 8000;
 
 export function windowAround(html: string, a: Anchor, radius = 600): string {
@@ -164,4 +164,89 @@ function iso(day: number, month: number, year: number): string | null {
   if (d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return null;
   if (d.getTime() > Date.now() + 2 * 86_400_000) return null;
   return d.toISOString();
+}
+
+
+/* ── Dates ───────────────────────────────────────────────────────────────
+ * Three publishers, three notations, and one rule: never hand a string to
+ * `Date.parse` and hope. It reads "01.02.2026" as an American month-first
+ * date where it accepts it at all, so a German February publication would be
+ * stored as January and rank five weeks older than it is.
+ */
+
+/**
+ * A machine-readable date, where the page offers one.
+ *
+ * `<time datetime="2026-01-15">` is the only date on a page that was written
+ * for a program rather than for a reader: no locale, no ambiguity between day
+ * and month, no "yesterday". Both Anthropic's site and the Commission's emit
+ * it, so it is tried first everywhere and the prose parsers below are the
+ * fallback rather than the plan.
+ */
+export function parseTimeAttr(block: string): string | null {
+  for (const m of block.matchAll(/<time\b[^>]*\bdatetime\s*=\s*(["'])([^"']+)\1/gi)) {
+    const iso = parseIsoish(m[2]);
+    if (iso) return iso;
+  }
+  // Schema.org markup, which Europa pages carry and which survives redesigns
+  // better than the visible furniture around it.
+  for (const m of block.matchAll(
+    /\bcontent\s*=\s*(["'])(\d{4}-\d{2}-\d{2}[^"']*)\1/gi
+  )) {
+    const iso = parseIsoish(m[2]);
+    if (iso) return iso;
+  }
+  return null;
+}
+
+/** An ISO-ish instant or plain date, bounded by the same sanity rules. */
+export function parseIsoish(raw: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw.trim());
+  if (!m) return null;
+  return iso(+m[3], +m[2], +m[1]);
+}
+
+const EN_MONTHS: Record<string, number> = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+};
+
+/**
+ * English dates, in the three shapes these publishers actually use.
+ *
+ *   "Jan 15, 2026" / "January 15, 2026"  — Anthropic's newsroom
+ *   "15 January 2026"                     — Commission pages
+ *
+ * Numeric-only forms such as 01/02/2026 are deliberately NOT read. On an EU
+ * page that is 1 February and on an American one it is 2 January, the page
+ * rarely says which, and a date that is wrong by eleven months is worse than
+ * a date that is missing — missing is visible.
+ */
+export function parseEnglishDate(raw: string): string | null {
+  const dayFirst = /\b(\d{1,2})\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})\b/.exec(raw);
+  if (dayFirst) {
+    const month = EN_MONTHS[dayFirst[2].slice(0, 3).toLowerCase()];
+    if (month) return iso(+dayFirst[1], month, +dayFirst[3]);
+  }
+  const monthFirst = /\b([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})\b/.exec(raw);
+  if (monthFirst) {
+    const month = EN_MONTHS[monthFirst[1].slice(0, 3).toLowerCase()];
+    if (month) return iso(+monthFirst[2], month, +monthFirst[3]);
+  }
+  return null;
+}
+
+/**
+ * The best date available for one entry, tried most to least reliable.
+ *
+ * `locale` picks which prose parser runs, and only that one runs: reading a
+ * German page with the English parser would turn "1.2.2026" into nothing and,
+ * worse, could match a stray "Mai 2026" as May in a numbering that meant
+ * something else. One page, one language, stated by the extractor that knows.
+ */
+export function findDate(block: string, locale: "de" | "en"): string | null {
+  return (
+    parseTimeAttr(block) ??
+    (locale === "de" ? parseGermanDate(block) : parseEnglishDate(block))
+  );
 }

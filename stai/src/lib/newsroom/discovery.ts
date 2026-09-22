@@ -215,6 +215,7 @@ async function ingest(
     lead: string;
     publishedAt: string | null;
     documentUrl?: string;
+    category?: string;
   }[]
 ): Promise<{ fresh: IngestedItem[]; revised: number[] }> {
   const stored: IngestedItem[] = [];
@@ -246,7 +247,7 @@ async function ingest(
       await sql().run(
         `UPDATE newsroom_source_items
            SET title=?, lead=?, published_at=?, content_hash=?, jurisdictions=?,
-               document_url=?,
+               document_url=?, category=?,
                revised_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
          WHERE id=?`,
         [
@@ -256,6 +257,7 @@ async function ingest(
           item.contentHash,
           JSON.stringify(item.jurisdictions),
           item.documentUrl,
+          item.category,
           held.id,
         ]
       );
@@ -266,8 +268,8 @@ async function ingest(
     const info = await sql().run(
       `INSERT INTO newsroom_source_items
          (source_id, url, canonical_url, title, lead, published_at, content_hash,
-          url_hash, jurisdictions, document_url, language, processing_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'en', 'new')`,
+          url_hash, jurisdictions, document_url, category, language, processing_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'en', 'new')`,
       [
         source.id,
         item.url,
@@ -279,6 +281,7 @@ async function ingest(
         item.urlHash,
         JSON.stringify(item.jurisdictions),
         item.documentUrl,
+        item.category,
       ]
     );
 
