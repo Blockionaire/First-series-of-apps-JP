@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { activeSubscription, PLANS } from "@/lib/billing";
+import { liveGrantFor } from "@/lib/access";
 import { sql } from "@/lib/sql";
 import { fmtDate } from "@/lib/format";
 import { PlusBadge } from "@/components/Logo";
@@ -30,6 +31,9 @@ export default async function AccountPage({
   const { welcome } = await searchParams;
 
   const sub = await activeSubscription(user.id);
+  // Only meaningful for a granted member; an admin holds access by office and
+  // has no grant row to read.
+  const grant = user.access === "granted" ? await liveGrantFor(user.id) : null;
   const savedArticles = await sql().all<{
     slug: string;
     title: string;
@@ -92,8 +96,36 @@ export default async function AccountPage({
             {user.firm ? ` · ${user.firm}` : ""}
           </p>
         </div>
-        <LogoutButton />
+        {/* The way into the back office, for the one account that has one.
+            The account icon in the header opens this page, so this is where
+            an admin looks for the desk — and hunting for /admin by typing it
+            is not a navigation design. */}
+        <div className="flex flex-wrap items-center gap-2">
+          {user.role === "admin" && (
+            <Link href="/admin" className="btn btn-primary">
+              Desk backoffice →
+            </Link>
+          )}
+          <LogoutButton />
+        </div>
       </header>
+
+      {user.role === "admin" && (
+        <nav className="mt-4 flex flex-wrap gap-2" aria-label="Back office">
+          {[
+            { href: "/admin", label: "Overview" },
+            { href: "/admin/editorial", label: "Editorial" },
+            { href: "/admin/content", label: "Content" },
+            { href: "/admin/people", label: "Register" },
+            { href: "/admin/growth", label: "Growth" },
+            { href: "/admin/settings", label: "Settings" },
+          ].map((l) => (
+            <Link key={l.href} href={l.href} className="btn btn-ghost btn-sm">
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+      )}
 
       {/* membership */}
       <section className="mt-10 border p-6 rule-strong">
@@ -102,7 +134,29 @@ export default async function AccountPage({
             <p className="f-label" style={{ color: "var(--ink-faint)" }}>
               Membership
             </p>
-            {user.plan === "plus" && sub ? (
+            {user.access === "admin" ? (
+              /* An admin has every STAI+ feature because they run the desk,
+                 not because they bought anything. Saying "STAI+ · €X/month"
+                 here would invent a charge that does not exist. */
+              <>
+                <p className="mt-1 text-lg text-cream-100">Admin — full access</p>
+                <p className="mt-1 max-w-md text-sm" style={{ color: "var(--ink-muted)" }}>
+                  Every STAI+ feature, because you run the desk. No subscription and no charge.
+                </p>
+              </>
+            ) : user.access === "granted" ? (
+              <>
+                <p className="mt-1 text-lg text-cream-100">STAI+ — complimentary</p>
+                <p className="f-mono mt-1 text-[0.68rem] tracking-[0.06em]" style={{ color: "var(--ink-faint)" }}>
+                  Given {grant ? fmtDate(grant.granted_at.slice(0, 10)) : ""}
+                  {grant?.expires_at ? ` · until ${fmtDate(grant.expires_at.slice(0, 10))}` : " · no end date"}
+                </p>
+                <p className="mt-2 max-w-md text-sm" style={{ color: "var(--ink-muted)" }}>
+                  Access was given to you rather than bought. There is no subscription, nothing to
+                  cancel, and you will never be charged for it.
+                </p>
+              </>
+            ) : user.plan === "plus" && sub ? (
               <>
                 <p className="mt-1 text-lg text-cream-100">
                   {PLANS[sub.plan]?.label ?? "STAI+"} · {PLANS[sub.plan]?.price}/{PLANS[sub.plan]?.interval}
@@ -132,13 +186,16 @@ export default async function AccountPage({
               </>
             )}
           </div>
-          {user.plan === "plus" ? (
+          {/* Only a real subscription can be cancelled. Showing the button to
+              an admin or a comped member offers to end something that does not
+              exist, and clicking it would reach payment code that is frozen. */}
+          {user.access === "paid" ? (
             <CancelSubscription founding={user.founding} />
-          ) : (
+          ) : user.access === "none" ? (
             <Link href="/plus" className="btn btn-plus premium-focus">
               Upgrade to STAI+
             </Link>
-          )}
+          ) : null}
         </div>
       </section>
 

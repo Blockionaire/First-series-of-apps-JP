@@ -13,6 +13,8 @@ import {
   filterFor,
   type Row,
 } from "@/lib/admin-datasets";
+import { allGrants, grantIsLive } from "@/lib/access";
+import AccessGrants from "@/components/admin/AccessGrants";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,8 @@ export default async function PeoplePage({
 }) {
   const user = await currentUser();
   if (!user || user.role !== "admin") redirect("/login?next=/admin/people");
+
+  const grants = await allGrants();
 
   const params = await searchParams;
   const d = dataset(params.d) ?? DATASETS[0];
@@ -178,6 +182,21 @@ export default async function PeoplePage({
           </>
         )}
       </section>
+
+      <AccessGrants
+        grants={grants.map((g) => ({
+          id: g.id,
+          email: g.email,
+          name: g.name,
+          reason: g.reason,
+          grantedBy: g.granted_by,
+          grantedAt: g.granted_at,
+          expiresAt: g.expires_at,
+          revokedAt: g.revoked_at,
+          revokedBy: g.revoked_by,
+          live: grantIsLive(g),
+        }))}
+      />
     </div>
   );
 }

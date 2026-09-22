@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { sql } from "./sql";
-import { ENTITLEMENT_SQL } from "./entitlement";
+import { ENTITLEMENT_SQL, GRANT_SQL, type AccessKind } from "./entitlement";
 
 export type User = {
   id: number;
@@ -10,7 +10,23 @@ export type User = {
   name: string;
   firm: string;
   role: string;
+  /**
+   * The one field every gate on the platform reads.
+   *
+   * Three things can set it to "plus": a confirmed payment, a complimentary
+   * grant, or being the admin. Resolving all three HERE is what makes the
+   * other two work everywhere at once — no article page, prompt gate or Ask
+   * STAI quota needed changing, because none of them ever asked why.
+   */
   plan: "free" | "plus";
+  /**
+   * Why they have it.
+   *
+   * Needed only where the difference is visible to the person: the account
+   * page must not tell an admin their subscription renews next month, or a
+   * comped friend that they are paying. Never used as a gate.
+   */
+  access: AccessKind;
   founding: boolean;
 };
 
@@ -90,13 +106,21 @@ export async function currentUser(): Promise<User | null> {
   // would otherwise keep access indefinitely. One rule (ENTITLEMENT_SQL),
   // evaluated here, governs every gate on the platform.
   const row = await sql().first<
-    Omit<User, "plan" | "founding"> & { entitled: number; founding: number }
+    Omit<User, "plan" | "access" | "founding"> & {
+      entitled: number;
+      granted: number;
+      founding: number;
+    }
   >(
     `SELECT u.id, u.email, u.name, u.firm, u.role,
               EXISTS (
                 SELECT 1 FROM subscriptions sub
                 WHERE sub.user_id = u.id AND ${ENTITLEMENT_SQL}
               ) AS entitled,
+              EXISTS (
+                SELECT 1 FROM access_grants g
+                WHERE g.user_id = u.id AND ${GRANT_SQL}
+              ) AS granted,
               EXISTS (
                 SELECT 1 FROM subscriptions sub
                 WHERE sub.user_id = u.id AND sub.plan = 'founding' AND ${ENTITLEMENT_SQL}
@@ -106,8 +130,25 @@ export async function currentUser(): Promise<User | null> {
     [token]
   );
   if (!row) return null;
-  const { entitled, ...rest } = row;
-  return { ...rest, plan: entitled ? "plus" : "free", founding: !!row.founding };
+  const { entitled, granted, ...rest } = row;
+
+  // Ordered by what is most true of the person. A paying admin is a payer
+  // first — that is a fact about money and belongs in the record — and an
+  // admin who has never paid holds access by office, not by generosity.
+  const access: AccessKind = entitled
+    ? "paid"
+    : rest.role === "admin"
+      ? "admin"
+      : granted
+        ? "granted"
+        : "none";
+
+  return {
+    ...rest,
+    access,
+    plan: access === "none" ? "free" : "plus",
+    founding: !!row.founding,
+  };
 }
 
 /** Read-only anon id — safe in server components (no cookie write). */

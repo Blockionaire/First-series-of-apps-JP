@@ -98,6 +98,17 @@ export default async function Header() {
                     middle of the chrome as if it were a nav item. The icon
                     says "your account" without competing for attention; the
                     name still reaches assistive tech through the label. */}
+                {/* One click to the back office for the account that has
+                    one. It sits before the person icon rather than replacing
+                    it: the icon still means "you", and an admin needs both. */}
+                {user.role === "admin" && (
+                  <Link
+                    href="/admin"
+                    className="f-mono px-2 py-2 text-[0.72rem] tracking-[0.14em] uppercase text-cream-400 hover:text-cream-100"
+                  >
+                    Desk
+                  </Link>
+                )}
                 <Link
                   href="/account"
                   className={HEADER_ICON_BTN}
@@ -132,7 +143,7 @@ export default async function Header() {
 
           <MobileNav
             nav={nav}
-            user={user ? { name: user.name, plus: user.plan === "plus" } : null}
+            user={user ? { name: user.name, plus: user.plan === "plus", admin: user.role === "admin" } : null}
             plusOn={plusOn}
           />
         </div>

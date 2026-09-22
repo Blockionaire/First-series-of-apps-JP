@@ -52,3 +52,31 @@ export const ENTITLEMENT_SQL = `
     AND current_period_end <= CAST(strftime('%s','now') AS INTEGER)
   )
 `;
+
+/**
+ * A live complimentary grant.
+ *
+ * The second way to be entitled, and deliberately a SEPARATE rule over a
+ * separate table rather than a forged subscription. `subscriptions` is the
+ * record of money; putting a payment that never happened into it would show a
+ * price nobody was charged on /account and would break reconciliation the day
+ * real payments are switched on.
+ *
+ * Granting free access is not a payment event and must never look like one.
+ * This module still imports nothing, so the rule stays readable from Workers,
+ * from Node and from the tests without dragging billing code behind it.
+ */
+export const GRANT_SQL = `
+  revoked_at IS NULL
+  AND (expires_at IS NULL OR expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+`;
+
+/**
+ * How someone came by their access.
+ *
+ * `plan` stays "free" | "plus" so that every existing gate on the platform —
+ * articles, prompts, the Ask STAI quota — keeps working untouched. This says
+ * WHY, which the account page needs in order to avoid telling a comped member
+ * they are paying, or an admin that their subscription renews next month.
+ */
+export type AccessKind = "paid" | "granted" | "admin" | "none";
