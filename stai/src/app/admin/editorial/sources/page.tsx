@@ -5,7 +5,8 @@ import { pageMeta } from "@/lib/seo";
 import { currentUser } from "@/lib/auth";
 import { sourcesWithHealth } from "@/lib/newsroom/store";
 import { PROPOSED_SOURCES, proposedCountByTier } from "@/lib/newsroom/proposed-sources";
-import { TIER_MEANING, type Tier } from "@/lib/newsroom/sources";
+import { TIER_MEANING, liveState, type Tier } from "@/lib/newsroom/sources";
+import { extractorFor } from "@/lib/newsroom/extractors";
 import { jurisdictionLabel } from "@/lib/newsroom/jurisdictions";
 import SourceRegistry from "@/components/admin/SourceRegistry";
 
@@ -117,6 +118,22 @@ export default async function SourcesPage() {
           lastItemsFound: s.last_items_found,
           lastItemsNew: s.last_items_new,
           consecutiveFailures: s.consecutive_failures,
+          // Whether the engine can read this source AT ALL. Computed here
+          // rather than in the browser so the extractor allowlist stays a
+          // server-side fact with one implementation — a second copy in the
+          // client would be the version that drifts.
+          supported:
+            s.ingestion_method !== "html_scrape" ||
+            extractorFor(s.domain) !== null,
+          status: liveState({
+            active: s.active,
+            fetch_allowed: s.fetch_allowed,
+            review_status: s.review_status,
+            supported:
+              s.ingestion_method !== "html_scrape" ||
+              extractorFor(s.domain) !== null,
+            health: s.health.state,
+          }),
           reviewStatus: s.review_status,
           reviewedBy: s.reviewed_by,
           reviewedAt: s.reviewed_at,

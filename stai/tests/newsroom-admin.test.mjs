@@ -807,3 +807,99 @@ describe("the review status is advisory, not a permission", { skip }, () => {
     assert.equal(status, 403);
   });
 });
+
+/* ── Scanning the registry ──────────────────────────────────────────────── */
+
+describe("the registry can be scanned and filtered", { skip }, () => {
+  const DOMAIN = "stai-status-test.invalid";
+  let sourceId;
+
+  before(async () => {
+    if (!hasBuild) return;
+    const { json } = await post({
+      action: "create",
+      name: "Status test source",
+      domain: DOMAIN,
+      source_type: "regulator",
+      authority_tier: 1,
+      jurisdictions: ["EU"],
+      topics: ["audit"],
+      ingestion_method: "rss",
+      feed_url: `https://${DOMAIN}/rss`,
+      license_notes: "",
+    });
+    sourceId = json.id;
+  });
+
+  const page = () => authed("/admin/editorial/sources").then((r) => r.text());
+
+  test("every row carries a status, and a new one is not live", async () => {
+    // Registered, never activated: nothing is wrong with it, it is just not
+    // running. Reporting that as a problem would bury the real ones.
+    const html = await page();
+    assert.match(html, /Not live/, "no dormant state rendered");
+    assert.ok(!/>Live</.test(html.split("Status test source")[1] ?? ""), "a dormant row read as live");
+  });
+
+  test("the counts are rendered and add up", async () => {
+    const html = await page();
+    const total = one("SELECT COUNT(*) n FROM newsroom_sources").n;
+    assert.match(html, new RegExp(`All ${total}\\b`), "the all-count does not match the registry");
+    // React splits text around an expression with `<!-- -->` markers in SSR,
+    // so "Showing {n} of {m}" is not contiguous in the served HTML.
+    // React splits text around an expression with `<!-- -->` markers in SSR,
+    // so "Showing {n} of {m}" is not contiguous in the served HTML.
+    assert.match(html, /Showing[\s\S]{0,30}?\d+[\s\S]{0,30}?of[\s\S]{0,30}?\d+/);
+  });
+
+  test("the header carries a filter for each column that has one", async () => {
+    const html = await page();
+    for (const label of [
+      "Filter by status",
+      "Filter by name, domain or URL",
+      "Filter by tier",
+      "Filter by jurisdiction",
+      "Filter by method",
+      "Filter by review status",
+    ]) {
+      assert.ok(html.includes(label), `no ${label} control`);
+    }
+  });
+
+  test("a live source reads as live", async () => {
+    // Activated, permitted, and given a successful fetch. The state the whole
+    // column exists to make findable.
+    await post({ action: "set_flag", id: sourceId, field: "active", value: true });
+    await post({ action: "set_flag", id: sourceId, field: "fetch_allowed", value: true });
+    exec(
+      "UPDATE newsroom_sources SET last_success_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
+      [sourceId]
+    );
+    const html = await page();
+    const row = html.split("Status test source")[0] ?? "";
+    assert.match(row.slice(-2000), /Live/, "an active, permitted, healthy source did not read as live");
+  });
+
+  test("a failing source reads as broken, not live", async () => {
+    exec("UPDATE newsroom_sources SET consecutive_failures=9 WHERE id=?", [sourceId]);
+    const html = await page();
+    assert.match(html, /Broken/, "a failing source did not read as broken");
+  });
+
+  test("withdrawing the source returns it to not live", async () => {
+    exec("UPDATE newsroom_sources SET consecutive_failures=0 WHERE id=?", [sourceId]);
+    await post({ action: "set_flag", id: sourceId, field: "active", value: false });
+    const html = await page();
+    const row = html.split("Status test source")[0] ?? "";
+    assert.match(row.slice(-2000), /Not live/, "a switched-off source still read as live");
+  });
+
+  test("the status is a word as well as a colour", async () => {
+    // Roughly one man in twelve cannot tell the green from the red, and this
+    // table's whole job is at-a-glance triage.
+    const html = await page();
+    for (const word of ["Live", "Broken", "Waiting", "Not live"]) {
+      assert.ok(html.includes(word), `${word} is not written anywhere`);
+    }
+  });
+});

@@ -42,7 +42,70 @@ export type RegistryRow = {
   reviewedBy: string;
   reviewedAt: string | null;
   reviewNote: string;
+  /** False when the engine has no way to read this source at all. */
+  supported: boolean;
+  /** Derived server-side by `liveState`. See the dot below. */
+  status: string;
 };
+
+/**
+ * What the dot means.
+ *
+ * Computed by `liveState` in lib/newsroom/sources.ts and passed in, NOT
+ * recomputed here. The filter below selects on the same value, so the dot and
+ * the filter cannot disagree — a filter that hides a row the dot calls live is
+ * worse than no filter, because it is believed.
+ */
+const STATUS_STYLE: Record<string, { dot: string; label: string; title: string }> = {
+  live: {
+    dot: "var(--color-signal-up)",
+    label: "Live",
+    title: "On, permitted and retrieving successfully",
+  },
+  waiting: {
+    dot: "var(--color-gold-300)",
+    label: "Waiting",
+    title: "On and permitted, but nothing retrieved yet",
+  },
+  broken: {
+    dot: "var(--color-signal-down)",
+    label: "Broken",
+    title: "On and permitted, but failing — this one needs you",
+  },
+  dormant: {
+    dot: "var(--color-navy-600)",
+    label: "Not live",
+    title: "Switched off or retrieval not permitted — nothing is wrong, it is just not running",
+  },
+  excluded: {
+    dot: "var(--color-navy-600)",
+    label: "Do not use",
+    title: "Examined and rejected",
+  },
+};
+
+function StatusDot({ status }: { status: string }) {
+  const s = STATUS_STYLE[status] ?? STATUS_STYLE.dormant;
+  return (
+    <span className="flex items-center gap-2 whitespace-nowrap" title={s.title}>
+      <span
+        aria-hidden="true"
+        className="inline-block h-2 w-2 shrink-0 rounded-full"
+        style={{
+          background: s.dot,
+          // A ring only on the live one. It is the state being scanned for,
+          // and on a table of fifty rows a flat dot of any colour reads as
+          // decoration until something makes one of them the signal.
+          boxShadow: status === "live" ? `0 0 0 3px color-mix(in srgb, ${s.dot} 25%, transparent)` : "none",
+        }}
+      />
+      {/* The word, not only the colour. Roughly one man in twelve cannot tell
+          the green from the red, and this table's whole job is at-a-glance
+          triage. */}
+      <span className="f-mono text-[0.7rem]">{s.label}</span>
+    </span>
+  );
+}
 
 /** What the feed tester found. Mirrors `Probe` in lib/newsroom/probe.ts. */
 export type ProbeResult = {
@@ -128,6 +191,60 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
   const [busy, setBusy] = useState<number | "load" | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  /* ── Filtering ────────────────────────────────────────────────────────
+   * Client-side, over rows already in hand. Fifty-odd rows is nothing to
+   * filter in the browser, and a round trip per keystroke would make the
+   * search box feel broken for no gain. It also means filtering never costs a
+   * database read while somebody is working through the list.
+   *
+   * Deliberately NOT in the URL. An operator switching a source on wants the
+   * page to refresh in place with their filter intact; putting it in the query
+   * string would work too, but router.refresh() already preserves component
+   * state and the simpler thing is the one with fewer ways to be wrong.
+   */
+  const [q, setQ] = useState("");
+  const [fStatus, setFStatus] = useState("");
+  const [fTier, setFTier] = useState("");
+  const [fMethod, setFMethod] = useState("");
+  const [fReview, setFReview] = useState("");
+  const [fJurisdiction, setFJurisdiction] = useState("");
+
+  const jurisdictionOptions = [
+    ...new Set(sources.flatMap((s) => s.jurisdictions)),
+  ].sort();
+
+  const visible = sources.filter((s) => {
+    if (fStatus && s.status !== fStatus) return false;
+    if (fTier && String(s.tier) !== fTier) return false;
+    if (fMethod && s.ingestion !== fMethod) return false;
+    if (fReview && s.reviewStatus !== fReview) return false;
+    if (fJurisdiction && !s.jurisdictions.includes(fJurisdiction)) return false;
+    if (q.trim()) {
+      // Name, domain and the feed URL together: an operator hunting a broken
+      // source usually has the URL in front of them, not the display name.
+      const hay = `${s.name} ${s.domain} ${s.feedUrl}`.toLowerCase();
+      if (!hay.includes(q.trim().toLowerCase())) return false;
+    }
+    return true;
+  });
+
+  const filtered = Boolean(q.trim() || fStatus || fTier || fMethod || fReview || fJurisdiction);
+  function clearFilters() {
+    setQ("");
+    setFStatus("");
+    setFTier("");
+    setFMethod("");
+    setFReview("");
+    setFJurisdiction("");
+  }
+
+  /** Counts across EVERY row, not the filtered view — a tally that changed as
+   *  you filtered would be useless for deciding what to filter to. */
+  const tally = sources.reduce<Record<string, number>>((acc, s) => {
+    acc[s.status] = (acc[s.status] ?? 0) + 1;
+    return acc;
+  }, {});
 
   async function post(body: Record<string, unknown>) {
     const res = await fetch("/api/admin/newsroom/source", {
@@ -280,10 +397,59 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
       )}
 
       {sources.length > 0 && (
-        <div className="mt-6 overflow-x-auto">
+        <>
+          {/* The three questions this page gets asked, as one click each.
+              Counted over every row rather than the filtered view: a tally
+              that changed as you filtered could not tell you what to filter
+              to. */}
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            {[
+              { id: "", label: `All ${sources.length}` },
+              { id: "live", label: `Live ${tally.live ?? 0}` },
+              { id: "broken", label: `Broken ${tally.broken ?? 0}` },
+              { id: "waiting", label: `Waiting ${tally.waiting ?? 0}` },
+              { id: "dormant", label: `Not live ${tally.dormant ?? 0}` },
+              { id: "excluded", label: `Do not use ${tally.excluded ?? 0}` },
+            ].map((chip) => (
+              <button
+                key={chip.id || "all"}
+                type="button"
+                onClick={() => setFStatus(chip.id)}
+                className={fStatus === chip.id ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}
+              >
+                {chip.id && (
+                  <span
+                    aria-hidden="true"
+                    className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
+                    style={{ background: STATUS_STYLE[chip.id]?.dot }}
+                  />
+                )}
+                {chip.label}
+              </button>
+            ))}
+          </div>
+
+          <p className="f-mono mt-3 text-[0.72rem]" style={{ color: "var(--ink-faint)" }}>
+            Showing {visible.length} of {sources.length}
+            {filtered && (
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="underline underline-offset-4 hover:text-cream-100"
+                >
+                  clear filters
+                </button>
+              </>
+            )}
+          </p>
+
+        <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-[0.82rem]">
             <thead>
               <tr className="f-label border-b rule" style={{ color: "var(--ink-faint)" }}>
+                <th className="py-2 pr-4">Status</th>
                 <th className="py-2 pr-4">Source</th>
                 <th className="py-2 pr-4">Tier</th>
                 <th className="py-2 pr-4">Jurisdiction</th>
@@ -294,10 +460,131 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                 <th className="py-2 pr-4">Active</th>
                 <th className="py-2">Health</th>
               </tr>
+              {/* The filter row, under the labels it filters. Each control
+                  sits in its own column so there is no legend to read — the
+                  thing above the box says what the box narrows. */}
+              <tr className="border-b rule align-top">
+                <th className="py-2 pr-4">
+                  <select
+                    aria-label="Filter by status"
+                    value={fStatus}
+                    onChange={(e) => setFStatus(e.target.value)}
+                    className="input-stai-sm w-full"
+                  >
+                    <option value="">Any</option>
+                    {["live", "waiting", "broken", "dormant", "excluded"].map((v) => (
+                      <option key={v} value={v}>
+                        {STATUS_STYLE[v].label}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+                <th className="py-2 pr-4">
+                  <input
+                    type="search"
+                    aria-label="Filter by name, domain or URL"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="name, domain or URL"
+                    className="input-stai-sm w-full"
+                  />
+                </th>
+                <th className="py-2 pr-4">
+                  <select
+                    aria-label="Filter by tier"
+                    value={fTier}
+                    onChange={(e) => setFTier(e.target.value)}
+                    // The Tier column is one character wide, so `w-full`
+                    // collapsed this to a sliver with its own label clipped.
+                    // A minimum wide enough for "Any" plus the chevron.
+                    className="input-stai-sm w-full min-w-[4.5rem]"
+                  >
+                    <option value="">Any</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                  </select>
+                </th>
+                <th className="py-2 pr-4">
+                  <select
+                    aria-label="Filter by jurisdiction"
+                    value={fJurisdiction}
+                    onChange={(e) => setFJurisdiction(e.target.value)}
+                    className="input-stai-sm w-full"
+                  >
+                    <option value="">Any</option>
+                    {jurisdictionOptions.map((j) => (
+                      <option key={j} value={j}>
+                        {j}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+                <th className="py-2 pr-4">
+                  <select
+                    aria-label="Filter by method"
+                    value={fMethod}
+                    onChange={(e) => setFMethod(e.target.value)}
+                    className="input-stai-sm w-full"
+                  >
+                    <option value="">Any</option>
+                    {["rss", "atom", "json_api", "html_scrape", "manual"].map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+                <th className="py-2 pr-4" />
+                <th className="py-2 pr-4">
+                  <select
+                    aria-label="Filter by review status"
+                    value={fReview}
+                    onChange={(e) => setFReview(e.target.value)}
+                    className="input-stai-sm w-full"
+                  >
+                    <option value="">Any</option>
+                    {REVIEW_OPTIONS.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+                <th className="py-2 pr-4" />
+                <th className="py-2 pr-4" />
+                <th className="py-2" />
+              </tr>
             </thead>
             <tbody>
-              {sources.map((s) => (
+              {visible.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="py-8 text-center text-sm" style={{ color: "var(--ink-muted)" }}>
+                    No source matches those filters.{" "}
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="underline underline-offset-4 hover:text-cream-100"
+                    >
+                      Clear them
+                    </button>
+                    .
+                  </td>
+                </tr>
+              )}
+              {visible.map((s) => (
                 <tr key={s.id} className="border-b rule align-top">
+                  <td className="py-2 pr-4">
+                    <StatusDot status={s.status} />
+                    {/* Why it is not live, where the reason is not the health
+                        column's business. An html_scrape row with no extractor
+                        reads as permitted and healthy and will never fetch. */}
+                    {!s.supported && (
+                      <span className="f-mono mt-1 block text-[0.65rem] text-gold-300">
+                        no extractor
+                      </span>
+                    )}
+                  </td>
                   <td className="py-2 pr-4">
                     <span className="text-cream-200">{s.name}</span>
                     <span className="f-mono block text-[0.7rem]" style={{ color: "var(--ink-faint)" }}>
@@ -617,6 +904,7 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   );

@@ -396,3 +396,71 @@ export function sourceHealth(
   }
   return { state: "ok", detail: "" };
 }
+
+/* ── Is this source actually live? ───────────────────────────────────────
+ * `sourceHealth` answers "is retrieval working". This answers the question an
+ * operator scanning fifty rows is really asking: is this one doing its job,
+ * does it need me, or is it simply off?
+ *
+ * Derived, never stored. A stored flag would drift the moment somebody
+ * flipped a switch, and the whole value here is that one glance is TRUE.
+ */
+
+export const LIVE_STATES = ["live", "waiting", "broken", "dormant", "excluded"] as const;
+export type LiveState = (typeof LIVE_STATES)[number];
+
+export const LIVE_LABEL: Record<LiveState, string> = {
+  live: "Live",
+  waiting: "Waiting",
+  broken: "Broken",
+  dormant: "Not live",
+  excluded: "Do not use",
+};
+
+export const LIVE_MEANING: Record<LiveState, string> = {
+  live: "on, permitted and retrieving successfully",
+  waiting: "on and permitted, but nothing retrieved yet",
+  broken: "on and permitted, but failing — this one needs you",
+  dormant: "switched off or retrieval not permitted — nothing is wrong, it is just not running",
+  excluded: "examined and rejected",
+};
+
+/**
+ * What one row is really doing.
+ *
+ * ── Why the dot reports reality, not intent ─────────────────────────────
+ * `review_status` is advisory and deliberately cannot start a fetch, so it is
+ * NOT part of this. A source that is on, permitted and retrieving is live
+ * whether or not anyone ticked a dropdown — and showing it as anything else
+ * would hide the fact that something was switched on without being reviewed,
+ * which is exactly the situation worth seeing.
+ *
+ * The one exception is `do_not_use`, which already withdraws both permissions
+ * when it is set; it appears here so a rejected row reads as a decision rather
+ * than as an ordinary dormant one.
+ *
+ * ── Order matters ───────────────────────────────────────────────────────
+ * Dormant is checked before health, because a source that is switched off is
+ * not broken — it is off. Reporting "never fetched" for forty-eight dormant
+ * rows would bury the two that genuinely need attention, which is the bug
+ * `sourcesWithHealth` already guards against for the health column.
+ */
+export function liveState(s: {
+  active: boolean;
+  fetch_allowed: boolean;
+  review_status?: string;
+  /** False when the method cannot be retrieved at all — html_scrape with no extractor. */
+  supported?: boolean;
+  health: HealthState;
+}): LiveState {
+  if (s.review_status === "do_not_use") return "excluded";
+  if (!s.active || !s.fetch_allowed) return "dormant";
+
+  // On and permitted, but the engine has no way to read it. This never
+  // resolves on its own, so it is broken rather than waiting.
+  if (s.supported === false) return "broken";
+
+  if (s.health === "failing" || s.health === "blocked") return "broken";
+  if (s.health === "never_fetched" || s.health === "silent") return "waiting";
+  return "live";
+}
