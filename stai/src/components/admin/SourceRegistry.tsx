@@ -33,7 +33,52 @@ export type RegistryRow = {
   lastItemsFound: number;
   lastItemsNew: number;
   consecutiveFailures: number;
+  /* ── Human review (phase 2.5) ─────────────────────────────────────────
+   * Where a person has got to with this source. Advisory — `fetchAllowed`
+   * remains the permission — so these are shown next to the switches rather
+   * than as one of them.
+   */
+  reviewStatus: string;
+  reviewedBy: string;
+  reviewedAt: string | null;
+  reviewNote: string;
 };
+
+/** What the feed tester found. Mirrors `Probe` in lib/newsroom/probe.ts. */
+export type ProbeResult = {
+  ok: boolean;
+  httpStatus: number | null;
+  finalUrl: string;
+  redirected: boolean;
+  contentType: string;
+  format: string;
+  itemCount: number;
+  latestPublishedAt: string | null;
+  sampleTitles: string[];
+  itemsWithoutDate: number;
+  error: string;
+  bytes: number;
+  durationMs: number;
+};
+
+/**
+ * The registry's word for what the prober detected.
+ *
+ * `parseFeed` says "json"; the registry's ingestion method is "json_api". One
+ * mapping, so the mismatch warning compares like with like rather than telling
+ * an operator to set a value the dropdown does not offer.
+ */
+function methodFor(format: string): string {
+  return format === "json" ? "json_api" : format;
+}
+
+const REVIEW_OPTIONS: { id: string; label: string }[] = [
+  { id: "unreviewed", label: "Unreviewed" },
+  { id: "feed_verified", label: "Feed verified" },
+  { id: "retrieval_approved", label: "Retrieval approved" },
+  { id: "needs_fix", label: "Needs fix" },
+  { id: "do_not_use", label: "Do not use" },
+];
 
 type Props = {
   sources: RegistryRow[];
@@ -113,21 +158,69 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
    */
   const [editing, setEditing] = useState<number | null>(null);
   const [draftUrl, setDraftUrl] = useState("");
+  const [draftMethod, setDraftMethod] = useState("");
 
   async function saveFeedUrl(id: number) {
     setBusy(id);
     setError("");
     setMessage("");
     try {
-      const json = await post({ action: "set_feed_url", id, feed_url: draftUrl });
+      const json = await post({
+        action: "set_feed_url",
+        id,
+        feed_url: draftUrl,
+        ingestion_method: draftMethod,
+      });
       setEditing(null);
       setDraftUrl("");
+      setDraftMethod("");
       setMessage(
-        `Feed URL updated to ${json.feed_url}. Retrieval permission was reset — re-check the new address before ticking Permitted.`
+        `Feed URL updated to ${json.feed_url} (${json.ingestion_method}). Retrieval permission was reset — re-check the new address before ticking Permitted.`
       );
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not update the feed URL");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /**
+   * Look before approving.
+   *
+   * The result is held in component state and never refreshes the page: an
+   * operator comparing three candidate paths for one body needs the previous
+   * answer still on screen while they try the next.
+   */
+  const [probes, setProbes] = useState<Record<number, ProbeResult & { url: string }>>({});
+  const [testUrl, setTestUrl] = useState<Record<number, string>>({});
+
+  async function testSource(id: number) {
+    setBusy(id);
+    setError("");
+    setMessage("");
+    try {
+      const json = await post({ action: "test_source", id, url: testUrl[id] ?? "" });
+      setProbes((p) => ({ ...p, [id]: { ...json.probe, url: json.url } }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not test that feed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function setReview(id: number, status: string) {
+    setBusy(id);
+    setError("");
+    setMessage("");
+    try {
+      await post({ action: "set_review", id, status });
+      if (status === "do_not_use") {
+        setMessage("Marked do not use — the source was switched off and retrieval withdrawn.");
+      }
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not record that review");
     } finally {
       setBusy(null);
     }
@@ -186,6 +279,7 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                 <th className="py-2 pr-4">Jurisdiction</th>
                 <th className="py-2 pr-4">Method</th>
                 <th className="py-2 pr-4">Every</th>
+                <th className="py-2 pr-4">Review</th>
                 <th className="py-2 pr-4">Retrievable</th>
                 <th className="py-2 pr-4">Active</th>
                 <th className="py-2">Health</th>
@@ -216,7 +310,22 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                           placeholder="https://…"
                           className="f-mono w-full border bg-transparent px-2 py-1 text-[0.72rem] rule text-cream-100"
                         />
-                        <span className="mt-1 flex flex-wrap gap-2">
+                        <span className="mt-1 flex flex-wrap items-center gap-2">
+                          {/* The method travels with the address. Finding a
+                              real feed for a source registered as html_scrape
+                              is the common case here, and saving the URL alone
+                              would leave it skipped as unsupported. */}
+                          <select
+                            value={draftMethod}
+                            onChange={(e) => setDraftMethod(e.target.value)}
+                            className="f-mono border bg-transparent px-2 py-1 text-[0.7rem] rule text-cream-200"
+                          >
+                            {["rss", "atom", "json_api", "html_scrape", "manual"].map((m) => (
+                              <option key={m} value={m} style={{ background: "var(--ink-bg, #14110e)" }}>
+                                {m}
+                              </option>
+                            ))}
+                          </select>
                           <button
                             type="button"
                             disabled={busy === s.id || !draftUrl.trim()}
@@ -230,6 +339,7 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                             onClick={() => {
                               setEditing(null);
                               setDraftUrl("");
+                              setDraftMethod("");
                             }}
                             className="btn btn-ghost btn-sm"
                           >
@@ -268,6 +378,7 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                               onClick={() => {
                                 setEditing(s.id);
                                 setDraftUrl(s.feedUrl);
+                                setDraftMethod(s.ingestion);
                               }}
                               className="f-mono whitespace-nowrap text-[0.68rem] text-cream-400 underline underline-offset-4 hover:text-cream-100"
                             >
@@ -286,6 +397,101 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                       </span>
                     )}
 
+                    {/* Test, and the candidate-URL box beside it.
+                        Testing runs on a source that is off and unapproved
+                        on purpose — deciding whether a URL is worth approving
+                        is exactly what happens before approving it. The box
+                        accepts a path to try without committing it; it must
+                        still belong to this source's domain, which is what
+                        keeps this a feed tester rather than an open fetcher. */}
+                    <span className="mt-2 block">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={busy === s.id}
+                          onClick={() => testSource(s.id)}
+                          className="btn btn-ghost btn-sm"
+                        >
+                          {busy === s.id ? "Testing…" : "Test source"}
+                        </button>
+                        <input
+                          type="url"
+                          value={testUrl[s.id] ?? ""}
+                          onChange={(e) => setTestUrl((t) => ({ ...t, [s.id]: e.target.value }))}
+                          placeholder={`try another path on ${s.domain}`}
+                          className="f-mono min-w-0 flex-1 border bg-transparent px-2 py-1 text-[0.68rem] rule text-cream-100"
+                        />
+                      </span>
+
+                      {probes[s.id] && (
+                        <span
+                          className="f-mono mt-2 block border p-2 text-[0.68rem] leading-relaxed rule"
+                          style={{ color: "var(--ink-faint)" }}
+                        >
+                          <span
+                            className={probes[s.id].ok ? "block text-cream-200" : "block text-gold-300"}
+                          >
+                            {probes[s.id].ok ? "feed ok" : "not usable"} ·{" "}
+                            {probes[s.id].httpStatus ?? "no response"} · {probes[s.id].format} ·{" "}
+                            {probes[s.id].itemCount} item
+                            {probes[s.id].itemCount === 1 ? "" : "s"} · {probes[s.id].durationMs}ms
+                          </span>
+                          <span className="block break-all">tested {probes[s.id].url}</span>
+                          {/* The final URL matters most when it differs: a feed
+                              that 301s to a landing page reads as healthy
+                              until you see where it ended up. */}
+                          {probes[s.id].redirected && (
+                            <span className="block break-all text-gold-300">
+                              redirected to {probes[s.id].finalUrl}
+                            </span>
+                          )}
+                          {probes[s.id].contentType && (
+                            <span className="block">served as {probes[s.id].contentType}</span>
+                          )}
+                          {probes[s.id].latestPublishedAt ? (
+                            <span className="block">
+                              newest item {probes[s.id].latestPublishedAt!.slice(0, 16).replace("T", " ")}
+                            </span>
+                          ) : (
+                            probes[s.id].itemCount > 0 && (
+                              <span className="block text-gold-300">
+                                no parseable dates — items would never rank as recent
+                              </span>
+                            )
+                          )}
+                          {probes[s.id].itemsWithoutDate > 0 && probes[s.id].latestPublishedAt && (
+                            <span className="block text-gold-300">
+                              {probes[s.id].itemsWithoutDate} of {probes[s.id].itemCount} items carry no date
+                            </span>
+                          )}
+                          {probes[s.id].sampleTitles.map((t, i) => (
+                            <span key={i} className="block truncate text-cream-400">
+                              · {t}
+                            </span>
+                          ))}
+                          {probes[s.id].error && (
+                            <span className="block text-gold-300">{probes[s.id].error}</span>
+                          )}
+                          {/* The dead end this tool would otherwise walk you
+                              into: a real feed found on a row registered as
+                              html_scrape is still skipped as unsupported, so
+                              the source would be verified, approved, active
+                              and never fetched. */}
+                          {probes[s.id].ok &&
+                            methodFor(probes[s.id].format) !== s.ingestion && (
+                              <span className="block text-gold-300">
+                                registered as {s.ingestion} — Edit and set it to{" "}
+                                {methodFor(probes[s.id].format)}, or the engine will keep skipping
+                                this source as unsupported
+                              </span>
+                            )}
+                          <span className="block">
+                            Nothing was ingested. This does not grant retrieval.
+                          </span>
+                        </span>
+                      )}
+                    </span>
+
                     {s.licenseNotes && (
                       <span className="mt-1 block text-[0.72rem] text-gold-300">{s.licenseNotes}</span>
                     )}
@@ -294,6 +500,37 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                   <td className="py-2 pr-4 text-cream-400">{s.jurisdictions.join(", ")}</td>
                   <td className="f-mono py-2 pr-4 text-[0.72rem] text-cream-400">{s.ingestion}</td>
                   <td className="f-mono py-2 pr-4 tabular-nums text-cream-400">{s.frequency}m</td>
+
+                  {/* Where a person has got to. Deliberately NOT a permission:
+                      choosing "Retrieval approved" records that somebody read
+                      the terms, and the switch to its right is still what
+                      starts a fetch. The one exception is "Do not use", which
+                      withdraws both permissions, because a row examined and
+                      rejected must not keep fetching. */}
+                  <td className="py-2 pr-4">
+                    <select
+                      value={s.reviewStatus}
+                      disabled={busy === s.id}
+                      onChange={(e) => setReview(s.id, e.target.value)}
+                      className="f-mono border bg-transparent px-2 py-1 text-[0.7rem] rule text-cream-200"
+                    >
+                      {REVIEW_OPTIONS.map((o) => (
+                        <option key={o.id} value={o.id} style={{ background: "var(--ink-bg, #14110e)" }}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    {s.reviewedBy && (
+                      <span className="f-mono mt-1 block text-[0.65rem]" style={{ color: "var(--ink-faint)" }}>
+                        {s.reviewedBy}
+                        {s.reviewedAt ? ` · ${s.reviewedAt.slice(0, 10)}` : ""}
+                      </span>
+                    )}
+                    {s.reviewNote && (
+                      <span className="mt-1 block text-[0.68rem] text-gold-300">{s.reviewNote}</span>
+                    )}
+                  </td>
+
                   <td className="py-2 pr-4">
                     <button
                       type="button"

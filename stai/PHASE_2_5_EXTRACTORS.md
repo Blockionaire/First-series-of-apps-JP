@@ -61,22 +61,77 @@ right shape, and also why hand-written extractors are affordable here.
 **Do this first, for all six.** An extractor written for a site that publishes
 an undocumented Atom feed is pure waste, and feed URLs are often unlinked.
 
-This repository has never had internet access, so the `html_scrape` marks are
-*assumptions from the site's public structure*, not verified findings. For each
-domain, check in this order:
+This repository has never had internet access — the environment's network
+policy answers `403` to every outbound host — so the `html_scrape` marks are
+*assumptions from each site's public structure*, not verified findings. **None
+of the URLs below has been fetched from this codebase.** They are candidates to
+try, ranked by how likely each is to exist, and the point of listing them is
+that trying one now costs a click.
 
-1. `<link rel="alternate" type="application/rss+xml">` in the page source;
-2. the conventional paths — `/feed`, `/rss`, `/rss.xml`, `/atom.xml`,
-   `/feed.xml`, `/news/feed`;
-3. whether the news listing is rendered from a JSON endpoint the page already
-   calls (open the network tab — several institutional sites are a static
-   shell over a JSON API, which is far more stable than their HTML);
-4. whether an official aggregator carries it. EUR-Lex covers much of the
-   Commission; IFAC's feed sometimes carries IAASB and IESBA announcements,
-   which would settle two of the six at once.
+### The instrument: `Test source`
 
-**Anything found this way is a registry edit, not an extractor.** Change
-`ingestion_method` and `feed_url` and it starts working immediately.
+`/admin/editorial/sources` has a **Test source** button on every row, added for
+exactly this. It makes one request without ingesting anything and reports the
+HTTP status, the final URL after redirects, the content type, the detected
+format, the item count, the newest publication date and the first three item
+titles.
+
+It works on a source that is **off and unapproved** — deciding whether a URL is
+worth approving has to be possible before approving it — and it grants nothing:
+no retrieval permission, no activation, no stored items. The box beside it
+takes a candidate path to try without committing it, and every attempt is kept
+in `newsroom_source_probes`, so the sequence of what did not work survives the
+browser tab.
+
+The URL must belong to the row's registered domain. That is the containment:
+the furthest the tester can be aimed is a different path on a publisher already
+in the registry.
+
+### The order to check in
+
+1. **View source on the news page** and look for
+   `<link rel="alternate" type="application/rss+xml">`. This is still the most
+   reliable single answer and takes ten seconds.
+2. **Try the conventional paths** with Test source. Table below.
+3. **Open the network tab on the news listing.** Several institutional sites
+   are a static shell over a JSON endpoint, which is more stable than their
+   HTML and needs no extractor at all — register it as `json_api`.
+4. **Check whether an aggregator already carries it.** IFAC's feed has
+   historically carried IAASB and IESBA announcements, which would settle two
+   of the six at once. EUR-Lex covers much of the Commission.
+
+### Candidate paths to try, per source
+
+Ranked most to least likely. Stop at the first that returns a feed with items.
+
+| Source | Registered now | Try, in order |
+|---|---|---|
+| **IAASB** | `https://www.iaasb.org/news-events` | `/feed`, `/rss.xml`, `/news-events/rss`, `/news-events/feed` — then check IFAC's own feed, since IAASB sits under IFAC and its announcements have historically appeared there |
+| **IESBA** | `https://www.ethicsboard.org/news-events` | Same shapes as IAASB — the two sites share a platform, so whatever works for one very likely works for the other. Check IFAC's feed for the same reason |
+| **EFRAG** | `https://www.efrag.org/en/news-and-calendar` | `/en/news-and-calendar/rss`, `/rss`, `/feed`; then the network tab — the news-and-calendar page is the most likely of the six to be a JSON-backed shell |
+| **European AI Office** | `https://digital-strategy.ec.europa.eu/en/policies/ai-office` | The Commission's digital-strategy site publishes per-section RSS: try `/en/news/rss.xml` and the `?f[0]=` filtered variants the news page's own RSS icon points at. Most likely of the six to already have a real feed |
+| **CEAOB** | `https://finance.ec.europa.eu/.../auditing_en` | Same platform family as the AI Office — look for the site's news RSS and a topic filter. If none, this is genuinely low volume and `manual` is a defensible answer |
+| **NBA** | `https://www.nba.nl/nieuws/` | `/rss`, `/nieuws/rss`, `/feed`, `/nieuws/rss.xml` — Dutch association sites on common CMSs usually expose one |
+
+### When you find one
+
+**It is a registry edit, not an extractor.** Use **Edit** on the row and set
+*both* the feed URL and the retrieval method in the same save. Saving the URL
+alone on an `html_scrape` row leaves the source skipped as `skipped_unsupported`
+on every run — verified, approved, activated and silently never fetched — which
+is why the method sits in the edit form next to the URL, and why Test source
+warns when the detected format and the registered method disagree.
+
+Then: set **Review** to `Feed verified`, check robots.txt and the site's terms,
+and only then tick **Retrievable**.
+
+### Report back before any extractor is written
+
+Which of the six have feeds decides how much of this phase exists at all. If
+the AI Office and CEAOB both turn out to have Commission RSS, and IFAC carries
+IAASB and IESBA, then four of six are registry edits and the extractor work is
+EFRAG and NBA only — a much smaller and much better outcome than the plan
+below.
 
 Budget half a day. Realistically one to three of the six will turn out to have
 a feed.

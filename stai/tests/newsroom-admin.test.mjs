@@ -379,6 +379,49 @@ describe("correcting a moved feed URL", { skip }, () => {
     assert.equal(after.feed_url, "https://www.afm.nl/en/sector/actueel/rss");
   });
 
+  test("the retrieval method travels with the address", async () => {
+    // The dead end the feed tester would otherwise walk an operator into.
+    // A source registered as html_scrape whose real feed is then found is
+    // still skipped as unsupported however correct its URL is, so it would
+    // be verified, approved, activated — and silently never fetched.
+    const iaasb = () => one("SELECT * FROM newsroom_sources WHERE domain='iaasb.org'");
+    const before = iaasb();
+    assert.equal(before.ingestion_method, "html_scrape", "registered without a known feed");
+
+    const { status, json } = await post({
+      action: "set_feed_url",
+      id: before.id,
+      feed_url: "https://www.iaasb.org/feed.xml",
+      ingestion_method: "rss",
+    });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.equal(iaasb().ingestion_method, "rss");
+    assert.equal(json.ingestion_method, "rss");
+  });
+
+  test("an unknown retrieval method is refused, not stored", async () => {
+    const iaasb = () => one("SELECT * FROM newsroom_sources WHERE domain='iaasb.org'");
+    const { status, json } = await post({
+      action: "set_feed_url",
+      id: iaasb().id,
+      feed_url: "https://www.iaasb.org/feed.xml",
+      ingestion_method: "telepathy",
+    });
+    assert.equal(status, 400);
+    assert.match(json.error, /ingestion method/i);
+    assert.equal(iaasb().ingestion_method, "rss", "the previous method stands");
+  });
+
+  test("omitting the method keeps the one already registered", async () => {
+    const iaasb = () => one("SELECT * FROM newsroom_sources WHERE domain='iaasb.org'");
+    await post({
+      action: "set_feed_url",
+      id: iaasb().id,
+      feed_url: "https://www.iaasb.org/news-events/feed",
+    });
+    assert.equal(iaasb().ingestion_method, "rss", "unchanged, not reset to a default");
+  });
+
   test("changing the URL revokes retrieval permission", async () => {
     // The whole premise of the two-switch gate: permission was granted for a
     // SPECIFIC address whose robots.txt and terms a human checked. A new
@@ -558,5 +601,209 @@ describe("phase 1 adds nothing readers can see", { skip }, () => {
   test("the manual content editor is untouched and still reachable", async () => {
     assert.equal((await authed("/admin/content")).status, 200);
     assert.equal((await authed("/admin/content/new")).status, 200);
+  });
+});
+
+/* ── Phase 2.5: the feed tester and the review status ───────────────────── */
+
+describe("the feed tester", { skip }, () => {
+  /**
+   * A domain that can never resolve.
+   *
+   * RFC 2606 reserves `.invalid` precisely for this. Pointing the probe at a
+   * real publisher would make the suite both flaky and rude — it would send
+   * traffic to a regulator every time anyone runs the tests — and the parsing
+   * path is covered without a network in tests/discovery.test.mjs. What is
+   * being defended here is the HTTP boundary: who may call this, what it may
+   * be aimed at, and what it must not touch.
+   */
+  const DOMAIN = "stai-probe-test.invalid";
+  let sourceId;
+
+  before(async () => {
+    if (!hasBuild) return;
+    const { json } = await post({
+      action: "create",
+      name: "Probe test source",
+      domain: DOMAIN,
+      source_type: "regulator",
+      authority_tier: 1,
+      jurisdictions: ["EU"],
+      topics: ["audit"],
+      ingestion_method: "rss",
+      feed_url: `https://${DOMAIN}/rss`,
+      license_notes: "",
+    });
+    sourceId = json.id;
+  });
+
+  const source = () => one("SELECT * FROM newsroom_sources WHERE id=?", [sourceId]);
+  const probeRows = () =>
+    query("SELECT * FROM newsroom_source_probes WHERE source_id=? ORDER BY id", [sourceId]);
+
+  test("the source starts off and unapproved, as everything does", () => {
+    assert.equal(source().active, 0);
+    assert.equal(source().fetch_allowed, 0);
+  });
+
+  test("a source that is off and unapproved can still be tested", async () => {
+    // The whole point: deciding whether a URL is worth approving has to be
+    // possible before approving it.
+    const { status, json } = await post({ action: "test_source", id: sourceId });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.equal(json.ok, true);
+    assert.equal(json.probe.ok, false, "the domain cannot resolve");
+    assert.equal(json.probe.httpStatus, null);
+    assert.ok(json.probe.error, "and it says why rather than throwing");
+  });
+
+  test("testing grants nothing", () => {
+    const s = source();
+    assert.equal(s.active, 0, "still off");
+    assert.equal(s.fetch_allowed, 0, "still unapproved");
+    assert.equal(s.etag, "", "no conditional-GET validator was stored");
+    assert.equal(s.last_outcome, "", "the source's health record is untouched");
+  });
+
+  test("testing ingests nothing", () => {
+    // A probe that created a source item would have quietly become an
+    // ingestion path around the permission gate.
+    const items = one("SELECT COUNT(*) n FROM newsroom_source_items WHERE source_id=?", [sourceId]);
+    const stories = one("SELECT COUNT(*) n FROM newsroom_stories");
+    assert.equal(items.n, 0);
+    assert.equal(stories.n, 0);
+  });
+
+  test("every attempt is recorded, including the failure", () => {
+    const rows = probeRows();
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].url, `https://${DOMAIN}/rss`);
+    assert.equal(rows[0].ok, 0);
+    assert.match(rows[0].actor, /@/, "attributed to the admin who ran it");
+  });
+
+  test("a candidate path on the same domain may be tried", async () => {
+    const { status, json } = await post({
+      action: "test_source",
+      id: sourceId,
+      url: `https://${DOMAIN}/news/feed.xml`,
+    });
+    assert.equal(status, 200);
+    assert.equal(json.url, `https://${DOMAIN}/news/feed.xml`);
+    // Trying a candidate must not commit it.
+    assert.equal(source().feed_url, `https://${DOMAIN}/rss`, "the stored feed URL is unchanged");
+    assert.equal(probeRows().length, 2, "and the sequence of attempts is kept");
+  });
+
+  test("it cannot be aimed at another origin", async () => {
+    const before = probeRows().length;
+    for (const url of [
+      "https://evil.example.com/x",
+      "http://169.254.169.254/latest/meta-data/",
+      "https://127.0.0.1/admin",
+      `http://${DOMAIN}/rss`,
+    ]) {
+      const { status, json } = await post({ action: "test_source", id: sourceId, url });
+      assert.equal(status, 400, `${url} should be refused`);
+      assert.match(json.error, new RegExp(DOMAIN));
+    }
+    assert.equal(probeRows().length, before, "refused before any request was made");
+  });
+
+  test("it is admin-only", async () => {
+    const { status } = await post({ action: "test_source", id: sourceId }, false);
+    assert.equal(status, 403);
+  });
+
+  test("an unknown source is a 404, not a fetch", async () => {
+    const { status } = await post({ action: "test_source", id: 999999 });
+    assert.equal(status, 404);
+  });
+});
+
+describe("the review status is advisory, not a permission", { skip }, () => {
+  const DOMAIN = "stai-review-test.invalid";
+  let sourceId;
+
+  before(async () => {
+    if (!hasBuild) return;
+    const { json } = await post({
+      action: "create",
+      name: "Review test source",
+      domain: DOMAIN,
+      source_type: "standard_setter",
+      authority_tier: 1,
+      jurisdictions: ["EU"],
+      topics: ["audit"],
+      ingestion_method: "rss",
+      feed_url: `https://${DOMAIN}/rss`,
+      license_notes: "",
+    });
+    sourceId = json.id;
+  });
+
+  const source = () => one("SELECT * FROM newsroom_sources WHERE id=?", [sourceId]);
+
+  test("a new source is unreviewed", () => {
+    assert.equal(source().review_status, "unreviewed");
+  });
+
+  test("a status records who decided it and when", async () => {
+    const { status } = await post({
+      action: "set_review",
+      id: sourceId,
+      status: "feed_verified",
+      note: "/rss serves atom, 25 items",
+    });
+    assert.equal(status, 200);
+    const s = source();
+    assert.equal(s.review_status, "feed_verified");
+    assert.match(s.reviewed_by, /@/);
+    assert.ok(s.reviewed_at, "and when");
+    assert.match(s.review_note, /25 items/);
+  });
+
+  test("'retrieval approved' does NOT grant retrieval", async () => {
+    // The point of the whole two-switch design. A reviewer recording that they
+    // read the terms must not be the act that starts outbound requests.
+    await post({ action: "set_review", id: sourceId, status: "retrieval_approved" });
+    const s = source();
+    assert.equal(s.review_status, "retrieval_approved");
+    assert.equal(s.fetch_allowed, 0, "permission is still a separate, deliberate click");
+    assert.equal(s.active, 0);
+  });
+
+  test("'do not use' withdraws both permissions", async () => {
+    // The one direction a status may move a permission, and it is the
+    // restrictive one: a source examined and rejected must not keep fetching.
+    await post({ action: "set_flag", id: sourceId, field: "active", value: true });
+    await post({ action: "set_flag", id: sourceId, field: "fetch_allowed", value: true });
+    assert.equal(source().active, 1, "set up: the source is live");
+    assert.equal(source().fetch_allowed, 1);
+
+    await post({ action: "set_review", id: sourceId, status: "do_not_use" });
+    const s = source();
+    assert.equal(s.review_status, "do_not_use");
+    assert.equal(s.active, 0, "switched off");
+    assert.equal(s.fetch_allowed, 0, "and retrieval withdrawn");
+  });
+
+  test("an unknown status is refused rather than stored", async () => {
+    const { status, json } = await post({
+      action: "set_review",
+      id: sourceId,
+      status: "probably_fine",
+    });
+    assert.equal(status, 400);
+    assert.match(json.error, /Unknown review status/);
+    assert.equal(source().review_status, "do_not_use", "the previous status stands");
+  });
+
+  test("it is admin-only", async () => {
+    const { status } = await post(
+      { action: "set_review", id: sourceId, status: "unreviewed" },
+      false
+    );
+    assert.equal(status, 403);
   });
 });

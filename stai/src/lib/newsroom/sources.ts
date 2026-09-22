@@ -120,7 +120,62 @@ export type Source = {
   /** Conditional-GET validators, so most polls cost a bodyless 304. */
   etag: string;
   last_modified_header: string;
+
+  /* ── Human review (phase 2.5) ─────────────────────────────────────────
+   * What a person concluded, which is not what the engine may do. Nothing in
+   * the fetch path reads any of these — see REVIEW_STATUSES below.
+   */
+  review_status: ReviewStatus;
+  reviewed_by: string;
+  reviewed_at: string | null;
+  review_note: string;
 };
+
+/**
+ * How far a human has got with a source.
+ *
+ * ── Advisory, and that is the design ────────────────────────────────────
+ * `shouldFetch` reads `active` and `fetch_allowed` and nothing else. It is
+ * deliberately blind to this field, including to `retrieval_approved`, because
+ * a reviewer recording a conclusion in a dropdown must not be the act that
+ * starts retrieval. Permission stays a separate, deliberate switch — if
+ * choosing a status turned fetching on, the two-switch design would be one
+ * switch with extra words.
+ *
+ * `needs_fix` and `do_not_use` are kept apart on purpose. The first is a queue
+ * to work through; the second is a decision already taken. Collapsing them
+ * loses the distinction between "nobody has fixed this yet" and "we looked and
+ * the answer is no", and the second is the one that stops being re-litigated
+ * every time somebody scans the registry.
+ */
+export const REVIEW_STATUSES = [
+  "unreviewed",
+  "feed_verified",
+  "retrieval_approved",
+  "needs_fix",
+  "do_not_use",
+] as const;
+export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
+
+export const REVIEW_LABEL: Record<ReviewStatus, string> = {
+  unreviewed: "Unreviewed",
+  feed_verified: "Feed verified",
+  retrieval_approved: "Retrieval approved",
+  needs_fix: "Needs fix",
+  do_not_use: "Do not use",
+};
+
+export const REVIEW_MEANING: Record<ReviewStatus, string> = {
+  unreviewed: "nobody has looked at this yet",
+  feed_verified: "the URL serves a real feed with real items",
+  retrieval_approved: "robots.txt and the site's terms were read and permit fetching",
+  needs_fix: "something is wrong and worth fixing — usually a moved feed",
+  do_not_use: "examined and rejected",
+};
+
+export function isReviewStatus(v: string): v is ReviewStatus {
+  return (REVIEW_STATUSES as readonly string[]).includes(v);
+}
 
 /** The per-tier default cadence, in minutes (masterplan §5). */
 export const DEFAULT_FREQUENCY: Record<Tier, number> = {
@@ -189,6 +244,31 @@ export type SourceFields = Pick<
 export type SourceCheck = { ok: true; value: SourceFields } | { ok: false; error: string };
 
 /**
+ * Does this URL belong to that registered domain?
+ *
+ * One implementation, used by two callers with different jobs: `validateSource`
+ * enforces it when a feed URL is stored, and the feed tester enforces it before
+ * making a request. Two copies of a containment check drift, and the copy that
+ * drifts is never the one anybody is looking at.
+ *
+ * https only, host must equal the registered domain or be a subdomain of it.
+ * That is what keeps the tester a feed tester: the furthest an admin can aim it
+ * is a different path on a publisher already in the registry, not at a cloud
+ * metadata endpoint or an internal address.
+ */
+export function feedUrlBelongsTo(url: string, domain: string): boolean {
+  if (!/^https:\/\//i.test(url)) return false;
+  const want = domain.trim().toLowerCase().replace(/^www\./, "");
+  if (!want) return false;
+  try {
+    const host = new URL(url).host.toLowerCase().replace(/^www\./, "");
+    return host === want || host.endsWith(`.${want}`);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Validate a registry entry.
  *
  * Rejects rather than repairs. A source silently corrected to Tier 2 because
@@ -229,16 +309,18 @@ export function validateSource(input: SourceInput): SourceCheck {
     if (!/^https:\/\//i.test(feed_url)) {
       return { ok: false, error: "Feed URL must be an https URL" };
     }
-    try {
-      const host = new URL(feed_url).host.toLowerCase().replace(/^www\./, "");
-      // The feed has to belong to the source it is registered under, or the
-      // tier means nothing: a Tier-1 row pointing at a blog would launder that
-      // blog's claims as authoritative.
-      if (host !== domain && !host.endsWith(`.${domain}`)) {
-        return { ok: false, error: `Feed host ${host} does not belong to ${domain}` };
+    // The feed has to belong to the source it is registered under, or the tier
+    // means nothing: a Tier-1 row pointing at a blog would launder that blog's
+    // claims as authoritative. The same rule contains the feed tester, which is
+    // why it lives in one function rather than two copies.
+    if (!feedUrlBelongsTo(feed_url, domain)) {
+      let host = "";
+      try {
+        host = new URL(feed_url).host.toLowerCase().replace(/^www\./, "");
+      } catch {
+        return { ok: false, error: "Feed URL could not be parsed" };
       }
-    } catch {
-      return { ok: false, error: "Feed URL could not be parsed" };
+      return { ok: false, error: `Feed host ${host} does not belong to ${domain}` };
     }
   }
 

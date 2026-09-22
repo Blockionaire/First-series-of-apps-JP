@@ -4,13 +4,16 @@ import { guard, WINDOW } from "@/lib/ratelimit";
 import {
   allSources,
   createSource,
+  recordProbe,
   setSourceActive,
   setSourceFetchAllowed,
+  setSourceReviewStatus,
   sourceById,
   updateSourceFeedUrl,
 } from "@/lib/newsroom/store";
 import { proposedAsSourceCreates } from "@/lib/newsroom/proposed-sources";
-import { validateSource } from "@/lib/newsroom/sources";
+import { feedUrlBelongsTo, isReviewStatus, validateSource } from "@/lib/newsroom/sources";
+import { probeFeed } from "@/lib/newsroom/probe";
 
 /**
  * The source registry's write path.
@@ -29,13 +32,21 @@ import { validateSource } from "@/lib/newsroom/sources";
  *   set_feed_url  — corrects a moved feed. Validated by the same function that
  *                   guards registration, and it RESETS retrieval permission,
  *                   because permission was granted for the old address.
+ *   set_review    — records what a human concluded. Advisory: it is not read
+ *                   by the fetcher, and it cannot grant retrieval.
+ *   test_source   — the ONE action here that makes an outbound request. See
+ *                   the note on it below.
  *   create        — registers one hand-entered source, validated.
  *
- * Nothing here fetches anything. Correcting a URL does not test it; the next
- * discovery run does, and reports what it found.
+ * Apart from `test_source`, nothing here fetches anything. Correcting a URL
+ * does not test it; the next discovery run does, and reports what it found.
  */
 
 export async function POST(req: NextRequest) {
+  // A single shared budget for every action on this route, sized for a person
+  // working through a fifty-row registry. `test_source` makes outbound
+  // requests, so it also carries a tighter limit of its own below: this one
+  // stops the route being hammered, that one stops us hammering a publisher.
   const blocked = await guard(req, "admin-newsroom-source", 120, WINDOW.hour);
   if (blocked) return blocked;
 
@@ -113,6 +124,12 @@ export async function POST(req: NextRequest) {
     // source's own existing fields. That is what keeps the rules identical:
     // https only, and the feed must belong to the registered domain, so a
     // correction cannot quietly repoint a Tier-1 row at somebody's blog.
+    // The retrieval method travels with the address. A source registered as
+    // `html_scrape` whose real feed has now been found would otherwise keep
+    // being skipped as unsupported however correct its URL is — verified,
+    // approved, active and silently never fetched.
+    const ingestion_method = String(b.ingestion_method ?? "").trim() || source.ingestion_method;
+
     const check = validateSource({
       name: source.name,
       domain: source.domain,
@@ -120,7 +137,7 @@ export async function POST(req: NextRequest) {
       authority_tier: source.authority_tier,
       jurisdictions: source.jurisdictions,
       topics: source.topics,
-      ingestion_method: source.ingestion_method,
+      ingestion_method,
       feed_url,
       fetch_frequency: source.fetch_frequency,
       license_notes: source.license_notes,
@@ -128,8 +145,99 @@ export async function POST(req: NextRequest) {
     });
     if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
 
-    await updateSourceFeedUrl({ id, feedUrl: check.value.feed_url, actor: user.email });
-    return NextResponse.json({ ok: true, feed_url: check.value.feed_url });
+    await updateSourceFeedUrl({
+      id,
+      feedUrl: check.value.feed_url,
+      ingestionMethod: check.value.ingestion_method,
+      actor: user.email,
+    });
+    return NextResponse.json({
+      ok: true,
+      feed_url: check.value.feed_url,
+      ingestion_method: check.value.ingestion_method,
+    });
+  }
+
+  if (action === "set_review") {
+    const id = Number(b.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return NextResponse.json({ error: "A source id is required" }, { status: 400 });
+    }
+    const status = String(b.status ?? "");
+    if (!isReviewStatus(status)) {
+      return NextResponse.json({ error: `Unknown review status: ${status}` }, { status: 400 });
+    }
+    if (!(await sourceById(id))) {
+      return NextResponse.json({ error: "No such source" }, { status: 404 });
+    }
+    await setSourceReviewStatus({
+      id,
+      status,
+      note: String(b.note ?? ""),
+      actor: user.email,
+    });
+    return NextResponse.json({ ok: true, status });
+  }
+
+  /**
+   * Look at a candidate feed once, without approving anything.
+   *
+   * ── Why this may run on a source that is off ────────────────────────
+   * The registry asks an operator to decide whether a URL is worth approving,
+   * and until now the only way to find out was to approve it. This inverts
+   * that: one request, initiated by a named admin, nothing ingested, nothing
+   * stored but the diagnosis. That is much closer to opening the link in a
+   * browser tab — which is what the operator would otherwise do — than to
+   * crawling, so it does not require `active` or `fetch_allowed`.
+   *
+   * ── Why it is not a request-forgery hole ────────────────────────────
+   * The URL is not free text. It must belong to the registered source's own
+   * domain, by the same `feedUrlBelongsTo` rule that governs what may be
+   * STORED as a feed URL. So the furthest an admin can aim this is a different
+   * path on a publisher already in the registry — not at an internal address,
+   * a cloud metadata endpoint, or another origin's cookies. An admin who
+   * wanted to reach a new domain would have to register it first, which is
+   * itself a recorded act.
+   *
+   * ── Why it is rate-limited separately ───────────────────────────────
+   * Every call here hits a real publisher's server. Twenty an hour is enough
+   * to work through a registry by hand and nowhere near enough to be a nuisance
+   * to a regulator whose goodwill this whole project depends on.
+   */
+  if (action === "test_source") {
+    const id = Number(b.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return NextResponse.json({ error: "A source id is required" }, { status: 400 });
+    }
+    const source = await sourceById(id);
+    if (!source) return NextResponse.json({ error: "No such source" }, { status: 404 });
+
+    const throttled = await guard(req, "admin-newsroom-probe", 20, WINDOW.hour);
+    if (throttled) return throttled;
+
+    // Defaults to what is registered, so the common case is one click. A
+    // candidate URL may be supplied to try a path before committing to it.
+    const url = String(b.url ?? "").trim() || source.feed_url;
+    if (!url) {
+      return NextResponse.json(
+        { error: "This source has no feed URL — enter one to test" },
+        { status: 400 }
+      );
+    }
+    if (!feedUrlBelongsTo(url, source.domain)) {
+      return NextResponse.json(
+        { error: `A test URL must be https and belong to ${source.domain}` },
+        { status: 400 }
+      );
+    }
+
+    const probe = await probeFeed(url, { hint: source.ingestion_method });
+    // Recorded before returning, so the trail of what was tried survives the
+    // browser tab. Failures especially: they are what stops the next person
+    // repeating a dead path.
+    await recordProbe({ sourceId: id, url, actor: user.email, probe });
+
+    return NextResponse.json({ ok: true, url, probe });
   }
 
   if (action === "create") {

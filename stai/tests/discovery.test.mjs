@@ -35,6 +35,8 @@ import {
   scoreStory,
 } from "../src/lib/newsroom/relevance.ts";
 import { shouldFetch, FAILURE_OUTCOMES, SKIP_OUTCOMES } from "../src/lib/newsroom/fetcher.ts";
+import { probeFeed, detectFormat } from "../src/lib/newsroom/probe.ts";
+import { feedUrlBelongsTo } from "../src/lib/newsroom/sources.ts";
 import { idempotencyKey, dayKey } from "../src/lib/newsroom/run-keys.ts";
 
 /* ── Feeds ──────────────────────────────────────────────────────────────── */
@@ -844,5 +846,159 @@ describe("idempotency", () => {
 
   test("the cap's day is UTC, so it does not move with the reviewer", () => {
     assert.equal(dayKey(new Date("2026-09-21T23:30:00Z")), "2026-09-21");
+  });
+});
+
+/* ── The feed tester (phase 2.5) ────────────────────────────────────────── */
+
+describe("probing a candidate feed", () => {
+  /** A stub server in one function. `init` may set status, headers and body. */
+  const serve = (init) => async (url) => {
+    const { status = 200, headers = {}, body = "", finalUrl = url } = init(url) ?? {};
+    const res = new Response(status === 204 || status === 304 ? null : body, {
+      status,
+      headers: { "content-type": "application/rss+xml", ...headers },
+    });
+    // Response.url is read-only and empty on a constructed Response; the
+    // redirect case is the whole reason finalUrl is reported, so it has to be
+    // settable here.
+    Object.defineProperty(res, "url", { value: finalUrl });
+    return res;
+  };
+
+  const FEED = `<?xml version="1.0"?><rss version="2.0"><channel>
+    <item><title>EFRAG issues draft ESRS guidance</title><link>https://efrag.org/a</link>
+      <pubDate>Mon, 21 Sep 2026 09:00:00 GMT</pubDate></item>
+    <item><title>Second</title><link>https://efrag.org/b</link>
+      <pubDate>Fri, 18 Sep 2026 09:00:00 GMT</pubDate></item>
+    <item><title>Third</title><link>https://efrag.org/c</link>
+      <pubDate>Wed, 16 Sep 2026 09:00:00 GMT</pubDate></item>
+    <item><title>Fourth</title><link>https://efrag.org/d</link></item>
+  </channel></rss>`;
+
+  test("a working feed is described, not ingested", async () => {
+    const p = await probeFeed("https://efrag.org/rss", { fetch: serve(() => ({ body: FEED })) });
+    assert.equal(p.ok, true);
+    assert.equal(p.httpStatus, 200);
+    assert.equal(p.format, "rss");
+    assert.equal(p.itemCount, 4);
+    // The NEWEST date across the items, not the first item's.
+    assert.equal(p.latestPublishedAt, "2026-09-21T09:00:00.000Z");
+    assert.equal(p.sampleTitles.length, 3, "three titles, enough to recognise the feed");
+    assert.match(p.sampleTitles[0], /EFRAG/);
+    assert.equal(p.itemsWithoutDate, 1, "the undated item is counted, not hidden");
+    assert.equal(p.error, "");
+  });
+
+  test("an HTML landing page is named as one, whatever the header says", async () => {
+    // The commonest real failure in this registry: the feed moved and the
+    // server answers 200 with a page, still labelled application/xml.
+    const p = await probeFeed("https://efrag.org/rss", {
+      fetch: serve(() => ({ body: "<!doctype html><html><body>Not found</body></html>" })),
+    });
+    assert.equal(p.ok, false);
+    assert.equal(p.httpStatus, 200, "the request succeeded — that is the trap");
+    assert.equal(p.format, "html");
+    assert.match(p.error, /HTML page/);
+  });
+
+  test("a redirect is reported with where it ended up", async () => {
+    const p = await probeFeed("https://efrag.org/rss", {
+      fetch: serve(() => ({ body: FEED, finalUrl: "https://efrag.org/news/feed.xml" })),
+    });
+    assert.equal(p.redirected, true);
+    assert.equal(p.finalUrl, "https://efrag.org/news/feed.xml");
+  });
+
+  test("the same URL back is not called a redirect", async () => {
+    const p = await probeFeed("https://efrag.org/rss", { fetch: serve(() => ({ body: FEED })) });
+    assert.equal(p.redirected, false);
+  });
+
+  test("an HTTP error keeps its status and reports no items", async () => {
+    const p = await probeFeed("https://efrag.org/rss", {
+      fetch: serve(() => ({ status: 404, body: "gone" })),
+    });
+    assert.equal(p.ok, false);
+    assert.equal(p.httpStatus, 404);
+    assert.equal(p.itemCount, 0);
+    assert.match(p.error, /404/);
+  });
+
+  test("a feed that parses to nothing is a failure, and says which", async () => {
+    const p = await probeFeed("https://efrag.org/rss", {
+      fetch: serve(() => ({ body: `<?xml version="1.0"?><rss><channel></channel></rss>` })),
+    });
+    assert.equal(p.ok, false, "an empty feed is not worth approving");
+    assert.equal(p.httpStatus, 200);
+    assert.match(p.error, /no items/);
+  });
+
+  test("a network failure is a result, never a throw", async () => {
+    const p = await probeFeed("https://efrag.org/rss", {
+      fetch: async () => {
+        throw new Error("ECONNREFUSED");
+      },
+    });
+    assert.equal(p.ok, false);
+    assert.equal(p.httpStatus, null);
+    assert.match(p.error, /ECONNREFUSED/);
+  });
+
+  test("the probe never sends conditional headers", async () => {
+    // A 304 is the right answer to a polling crawler and useless to a person
+    // asking what is at an address.
+    let sent = {};
+    await probeFeed("https://efrag.org/rss", {
+      fetch: async (_u, init) => {
+        sent = init.headers;
+        return new Response(FEED, { status: 200, headers: { "content-type": "text/xml" } });
+      },
+    });
+    assert.equal(sent["if-none-match"], undefined);
+    assert.equal(sent["if-modified-since"], undefined);
+    assert.match(sent["user-agent"], /STAI-Newsroom/, "still identifies itself honestly");
+  });
+
+  test("format detection reads the body, not the content type", () => {
+    assert.equal(detectFormat("<!doctype html><html>", "application/xml"), "html");
+    assert.equal(detectFormat('{"items":[]}', "text/html"), "json");
+    assert.equal(detectFormat('<?xml version="1.0"?><feed xmlns="...">', ""), "atom");
+    assert.equal(detectFormat('<?xml version="1.0"?><rss version="2.0">', ""), "rss");
+    assert.equal(detectFormat("", ""), "unknown");
+  });
+});
+
+describe("the feed tester cannot be aimed off-domain", () => {
+  /* This is the containment, so it is tested as such rather than as
+   * validation. Everything below is a URL an admin could type into the box. */
+  test("a URL on the registered domain is allowed", () => {
+    assert.equal(feedUrlBelongsTo("https://www.efrag.org/news/rss", "efrag.org"), true);
+    assert.equal(feedUrlBelongsTo("https://efrag.org/rss", "www.efrag.org"), true);
+    assert.equal(feedUrlBelongsTo("https://feeds.efrag.org/x", "efrag.org"), true, "subdomains");
+  });
+
+  test("another origin is refused", () => {
+    assert.equal(feedUrlBelongsTo("https://evil.example.com/x", "efrag.org"), false);
+    // The near-miss that a naive endsWith check would wave through.
+    assert.equal(feedUrlBelongsTo("https://notefrag.org/x", "efrag.org"), false);
+    assert.equal(feedUrlBelongsTo("https://efrag.org.evil.com/x", "efrag.org"), false);
+  });
+
+  test("internal and metadata addresses are refused", () => {
+    assert.equal(feedUrlBelongsTo("http://169.254.169.254/latest/meta-data/", "efrag.org"), false);
+    assert.equal(feedUrlBelongsTo("https://127.0.0.1/admin", "efrag.org"), false);
+    assert.equal(feedUrlBelongsTo("https://localhost/", "efrag.org"), false);
+  });
+
+  test("non-https schemes are refused", () => {
+    assert.equal(feedUrlBelongsTo("http://efrag.org/rss", "efrag.org"), false, "plain http");
+    assert.equal(feedUrlBelongsTo("file:///etc/passwd", "efrag.org"), false);
+    assert.equal(feedUrlBelongsTo("javascript:alert(1)", "efrag.org"), false);
+    assert.equal(feedUrlBelongsTo("not a url", "efrag.org"), false);
+  });
+
+  test("an empty domain never matches anything", () => {
+    assert.equal(feedUrlBelongsTo("https://anything.com/x", ""), false);
   });
 });

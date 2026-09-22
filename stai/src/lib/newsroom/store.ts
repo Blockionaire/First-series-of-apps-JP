@@ -25,14 +25,17 @@ import {
 } from "./state.ts";
 import {
   DEFAULT_FREQUENCY,
+  isReviewStatus,
   sourceHealth,
   type Health,
   type IngestionMethod,
   type Retention,
+  type ReviewStatus,
   type Source,
   type SourceType,
   type Tier,
 } from "./sources.ts";
+import type { Probe } from "./probe.ts";
 
 // ─── Sources ──────────────────────────────────────────────────────────────
 
@@ -54,6 +57,10 @@ function rowToSource(r: SourceRow): Source {
     topics: safeArray(r.topics),
     fetch_allowed: !!r.fetch_allowed,
     active: !!r.active,
+    // A row written before migration 0006, or by hand, has no status. Reading
+    // it as "unreviewed" is the safe direction: it says nobody has looked,
+    // which for an unknown row is true.
+    review_status: isReviewStatus(r.review_status) ? r.review_status : "unreviewed",
   };
 }
 
@@ -690,11 +697,23 @@ export async function discoverySummary(): Promise<{
 export async function updateSourceFeedUrl(input: {
   id: number;
   feedUrl: string;
+  /**
+   * The retrieval method for the NEW address.
+   *
+   * Corrected alongside the URL because the two are one fact. A source
+   * registered as `html_scrape` whose feed is then found still reads as
+   * unsupported to `shouldFetch`, so saving the working URL without this
+   * leaves a source that has been verified, approved, activated — and is
+   * silently skipped on every run. Changing the address is exactly the moment
+   * the method can change.
+   */
+  ingestionMethod: string;
   actor: string;
 }): Promise<void> {
   await sql().run(
     `UPDATE newsroom_sources SET
        feed_url = ?,
+       ingestion_method = ?,
        fetch_allowed = 0,
        etag = '',
        last_modified_header = '',
@@ -704,7 +723,7 @@ export async function updateSourceFeedUrl(input: {
        consecutive_failures = 0,
        updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
      WHERE id = ?`,
-    [input.feedUrl, input.id]
+    [input.feedUrl, input.ingestionMethod, input.id]
   );
 
   // The conditional-GET validators and the health record belong to the OLD
@@ -713,6 +732,113 @@ export async function updateSourceFeedUrl(input: {
   await sql().run(
     `INSERT INTO newsroom_fetch_log (source_id, outcome, error, items_found, items_new)
      VALUES (?, 'skipped_not_due', ?, 0, 0)`,
-    [input.id, `feed URL changed by ${input.actor} — retrieval permission reset`]
+    [
+      input.id,
+      `feed URL changed by ${input.actor} to a ${input.ingestionMethod} source — retrieval permission reset`,
+    ]
+  );
+}
+
+/* ── Human review (phase 2.5) ─────────────────────────────────────────── */
+
+/**
+ * Record what a person concluded about a source.
+ *
+ * Writes the conclusion and, for `do_not_use`, withdraws the permissions —
+ * the one place a status touches them, and it only ever moves in the
+ * restrictive direction. A row marked "do not use" that keeps fetching is a
+ * contradiction the registry should not be able to hold, and the reviewer
+ * saying so is unambiguous.
+ *
+ * Nothing else here changes `active` or `fetch_allowed`. In particular
+ * `retrieval_approved` does NOT grant retrieval: it records that somebody read
+ * the terms. Turning the permission on stays a separate, deliberate click, so
+ * the thing that starts outbound requests is always the switch labelled as
+ * doing that.
+ */
+export async function setSourceReviewStatus(input: {
+  id: number;
+  status: ReviewStatus;
+  note: string;
+  actor: string;
+}): Promise<void> {
+  await sql().run(
+    `UPDATE newsroom_sources SET
+       review_status = ?,
+       review_note = ?,
+       reviewed_by = ?,
+       reviewed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+     WHERE id = ?`,
+    [input.status, input.note.slice(0, 500), input.actor, input.id]
+  );
+
+  if (input.status === "do_not_use") {
+    await sql().run(
+      "UPDATE newsroom_sources SET active = 0, fetch_allowed = 0 WHERE id = ?",
+      [input.id]
+    );
+  }
+}
+
+export type ProbeRecord = {
+  id: number;
+  source_id: number;
+  url: string;
+  final_url: string;
+  actor: string;
+  ok: number;
+  http_status: number | null;
+  content_type: string;
+  format: string;
+  item_count: number;
+  latest_published_at: string | null;
+  sample_titles: string;
+  error: string;
+  duration_ms: number;
+  created_at: string;
+};
+
+/**
+ * Keep what the feed tester found, including the failures.
+ *
+ * The failures are the useful part. Finding a working feed for a body that
+ * does not advertise one means trying several paths, and the sequence of what
+ * did not work is what stops the next person repeating it.
+ */
+export async function recordProbe(input: {
+  sourceId: number;
+  url: string;
+  actor: string;
+  probe: Probe;
+}): Promise<void> {
+  const p = input.probe;
+  await sql().run(
+    `INSERT INTO newsroom_source_probes
+       (source_id, url, final_url, actor, ok, http_status, content_type, format,
+        item_count, latest_published_at, sample_titles, error, duration_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      input.sourceId,
+      input.url,
+      p.finalUrl,
+      input.actor,
+      p.ok ? 1 : 0,
+      p.httpStatus,
+      p.contentType.slice(0, 200),
+      p.format,
+      p.itemCount,
+      p.latestPublishedAt,
+      JSON.stringify(p.sampleTitles.map((t) => t.slice(0, 300))),
+      p.error.slice(0, 500),
+      p.durationMs,
+    ]
+  );
+}
+
+export async function recentProbes(sourceId: number, n = 5): Promise<ProbeRecord[]> {
+  return sql().all<ProbeRecord>(
+    "SELECT * FROM newsroom_source_probes WHERE source_id=? ORDER BY created_at DESC, id DESC LIMIT ?",
+    [sourceId, n]
   );
 }

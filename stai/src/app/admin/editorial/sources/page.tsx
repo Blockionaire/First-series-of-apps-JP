@@ -53,6 +53,21 @@ export default async function SourcesPage() {
             is fetched until it is both <span className="text-cream-200">active</span> and marked{" "}
             <span className="text-cream-200">retrievable</span>.
           </p>
+          {/* The distinction that matters most on this page, said once and
+              plainly: the Review column is a record of what a person decided,
+              the switches are what the engine may do. They are next to each
+              other precisely so they can be read as separate. */}
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+            <span className="text-cream-200">Review</span> records how far you have got with a
+            source and changes nothing the engine does — even{" "}
+            <span className="f-mono text-[0.85em]">Retrieval approved</span> does not grant
+            retrieval, because the switch that starts outbound requests should be the one labelled
+            as doing that. The exception is{" "}
+            <span className="f-mono text-[0.85em]">Do not use</span>, which switches the source off
+            and withdraws retrieval. <span className="text-cream-200">Test source</span> makes one
+            request without ingesting anything, so you can see what a URL serves before approving
+            it.
+          </p>
         </div>
         <Link href="/admin/editorial" className="btn btn-ghost btn-sm">
           Editorial
@@ -102,6 +117,10 @@ export default async function SourcesPage() {
           lastItemsFound: s.last_items_found,
           lastItemsNew: s.last_items_new,
           consecutiveFailures: s.consecutive_failures,
+          reviewStatus: s.review_status,
+          reviewedBy: s.reviewed_by,
+          reviewedAt: s.reviewed_at,
+          reviewNote: s.review_note,
         }))}
         proposedCount={PROPOSED_SOURCES.length}
         alreadyLoaded={sources.length > 0}
