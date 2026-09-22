@@ -43,11 +43,13 @@ import { probeFeed } from "@/lib/newsroom/probe";
  */
 
 export async function POST(req: NextRequest) {
-  // A single shared budget for every action on this route, sized for a person
-  // working through a fifty-row registry. `test_source` makes outbound
-  // requests, so it also carries a tighter limit of its own below: this one
-  // stops the route being hammered, that one stops us hammering a publisher.
-  const blocked = await guard(req, "admin-newsroom-source", 120, WINDOW.hour);
+  // Unauthenticated burst protection, keyed on the caller's IP because at this
+  // point we do not yet know who they are. It has to sit ABOVE the per-admin
+  // probe budget below, not compete with it: verifying a registry means a
+  // hundred Test source calls interleaved with the flag, review and URL edits
+  // that follow each one, and a shared 120 would refuse the work at roughly
+  // the halfway mark while the probe counter still showed headroom.
+  const blocked = await guard(req, "admin-newsroom-source", 400, WINDOW.hour);
   if (blocked) return blocked;
 
   const user = await currentUser();
@@ -200,9 +202,19 @@ export async function POST(req: NextRequest) {
    * itself a recorded act.
    *
    * ── Why it is rate-limited separately ───────────────────────────────
-   * Every call here hits a real publisher's server. Twenty an hour is enough
-   * to work through a registry by hand and nowhere near enough to be a nuisance
-   * to a regulator whose goodwill this whole project depends on.
+   * Every call here hits a real publisher's server, so this budget exists to
+   * protect THEM, not us. A hundred an hour is what verifying a fifty-source
+   * registry actually costs — several candidate paths per source, plus the
+   * re-tests after a URL is corrected — and is still nowhere near enough to be
+   * a nuisance to a regulator whose goodwill this project depends on. Spread
+   * across fifty domains it is two requests each.
+   *
+   * Counted per ADMIN ACCOUNT rather than per IP. The note at the top of
+   * lib/ratelimit.ts is about corporate NAT: an operator working from a firm's
+   * gateway should not share a verification budget with everyone else behind
+   * that address. Safe here because the admin check above has already run —
+   * keying on identity before authenticating would key on something the caller
+   * chooses, which is not a limit at all.
    */
   if (action === "test_source") {
     const id = Number(b.id);
@@ -212,7 +224,7 @@ export async function POST(req: NextRequest) {
     const source = await sourceById(id);
     if (!source) return NextResponse.json({ error: "No such source" }, { status: 404 });
 
-    const throttled = await guard(req, "admin-newsroom-probe", 20, WINDOW.hour);
+    const throttled = await guard(req, "admin-newsroom-probe", 100, WINDOW.hour, user.email);
     if (throttled) return throttled;
 
     // Defaults to what is registered, so the common case is one click. A
