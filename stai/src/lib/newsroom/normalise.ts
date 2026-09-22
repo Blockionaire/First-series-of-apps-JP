@@ -179,6 +179,8 @@ export type NormalisedItem = {
   jurisdictions: string[];
   /** The official document behind the page, where the publisher links one. */
   documentUrl: string;
+  /** The publisher's own label for the item, verbatim. */
+  category: string;
 };
 
 /**
@@ -196,6 +198,7 @@ export async function normaliseItem(
     lead: string;
     publishedAt: string | null;
     documentUrl?: string;
+    category?: string;
   },
   source: { feed_url: string; jurisdictions: string[] }
 ): Promise<NormalisedItem | null> {
@@ -221,5 +224,6 @@ export async function normaliseItem(
     // Resolved against the page it was found on, and dropped if it does not
     // resolve: a half-stored attachment path is worse than none.
     documentUrl: item.documentUrl ? (canonicalUrl(item.documentUrl, source.feed_url) ?? "") : "",
+    category: (item.category ?? "").trim().slice(0, 80),
   };
 }

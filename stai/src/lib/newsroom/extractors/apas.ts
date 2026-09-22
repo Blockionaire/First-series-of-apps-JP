@@ -36,7 +36,7 @@
 
 import type { FeedItem } from "../feed.ts";
 import type { Extractor, ExtractResult } from "./types.ts";
-import { findAnchors, parseGermanDate, windowAround } from "./html.ts";
+import { findAnchors, findDate, windowAround } from "./html.ts";
 
 const DOMAIN = "apasbafa.bund.de";
 
@@ -59,10 +59,31 @@ export function acceptsApasIndex(url: string): boolean {
   if (host !== DOMAIN && !host.endsWith(`.${DOMAIN}`)) return false;
 
   const path = u.pathname;
-  // Either a SharedDocs section index, or one of the site's own listing pages
-  // under /APAS/ that aggregates them.
-  return /\/SharedDocs\//i.test(path) || /\/APAS\/[A-Z]{2}\//i.test(path);
+  // A SharedDocs index for the APAS mandant, or one of the site's own /APAS/
+  // listing pages. Both name APAS explicitly — see MANDANT below for why that
+  // segment is the whole of the distinction on this host.
+  return MANDANT.test(path) || /\/APAS\/[A-Z]{2}\//i.test(path);
 }
+
+/**
+ * The APAS mandant segment.
+ *
+ * ── The bug this fixes ──────────────────────────────────────────────────
+ * `apasbafa.bund.de` serves TWO authorities. BAFA is the federal office for
+ * economic affairs and export control; APAS is the audit oversight body that
+ * sits inside it. Their content shares the host and the Government Site
+ * Builder taxonomy, and is separated only by this path segment:
+ *
+ *   /SharedDocs/Kurzmeldungen/APAS/DE/…   audit oversight
+ *   /SharedDocs/Kurzmeldungen/BAFA/DE/…   export control, energy, trade
+ *
+ * Matching `/SharedDocs/` alone — which this extractor did first — would file
+ * dual-use export licensing notices as Tier-1 German audit-oversight primary
+ * sources. That is not a missed item; it is a wrong citation with a
+ * regulator's authority attached to it, which is the single worst failure
+ * this pipeline can produce.
+ */
+const MANDANT = /\/SharedDocs\/[^/]+\/APAS\//i;
 
 /**
  * Is this href a published APAS document rather than a part of the furniture?
@@ -89,7 +110,7 @@ export function isApasPublication(url: string): boolean {
   // drop real Bekanntmachungen on most runs. `canonicalUrl` removes it for
   // identity; this only has to see past it.
   const path = u.pathname.replace(/;jsessionid=[^/;?]*/gi, "");
-  if (!/\/SharedDocs\//i.test(path)) return false;
+  if (!MANDANT.test(path)) return false;
   if (/_node\.html?$/i.test(path)) return false;
 
   return /\.html?$/i.test(path);
@@ -105,7 +126,7 @@ export function isApasDocument(url: string): boolean {
   }
   const host = u.host.toLowerCase().replace(/^www\./, "");
   if (host !== DOMAIN && !host.endsWith(`.${DOMAIN}`)) return false;
-  return /\/SharedDocs\//i.test(u.pathname) && /\.pdf$/i.test(u.pathname);
+  return MANDANT.test(u.pathname) && /\.pdf$/i.test(u.pathname);
 }
 
 /**
@@ -159,7 +180,7 @@ export function extractApas(html: string, pageUrl: string): ExtractResult {
     return {
       ok: false,
       error:
-        `found ${anchors.length} links but none under /SharedDocs/ — ` +
+        `found ${anchors.length} links but none under /SharedDocs/…/APAS/ — ` +
         `the APAS page structure has probably changed, or this is not a publications index`,
     };
   }
@@ -178,7 +199,7 @@ export function extractApas(html: string, pageUrl: string): ExtractResult {
     }
 
     const context = windowAround(html, a);
-    const publishedAt = parseGermanDate(context);
+    const publishedAt = findDate(context, "de");
     if (!publishedAt) {
       // A regulator's publication without a date cannot be ranked for recency
       // or judged by the freshness gate, and guessing "today" would make every

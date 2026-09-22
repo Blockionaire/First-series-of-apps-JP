@@ -32,7 +32,7 @@ import { USER_AGENT } from "./fetcher.ts";
 import { extractorFor } from "./extractors/index.ts";
 
 /** What the feed turned out to be, including the cases that are not feeds. */
-export type ProbeFormat = "rss" | "atom" | "json" | "html" | "extractor" | "unknown";
+export type ProbeFormat = "rss" | "atom" | "json" | "html" | "html_extractor" | "unknown";
 
 export type Probe = {
   /** True when a feed parsed. A reachable HTML page is a successful request and a failed probe. */
@@ -219,7 +219,7 @@ export async function probeFeed(
     return {
       ...base,
       ok: out.items.length > 0,
-      format: "extractor",
+      format: "html_extractor",
       extractor: extractor.name,
       rejectedCount: out.rejected.length,
       bytes: body.length,
