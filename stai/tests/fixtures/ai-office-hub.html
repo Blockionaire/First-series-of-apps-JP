@@ -1,0 +1,137 @@
+<!doctype html>
+<!--
+  REPRESENTATIVE, NOT A SAVED COPY. digital-strategy.ec.europa.eu has never
+  been fetched by this code — the build environment has no outbound network.
+  The /en/news/ and /en/library/ path kinds are the Commission's documented
+  Drupal structure, not observation.
+
+  This fixture exists mainly to test ONE thing: that unrelated DG CONNECT
+  content does not get filed under the AI Office. The host carries the whole
+  of the Commission's digital policy estate, so the page below deliberately
+  mixes:
+
+    · genuine AI Office updates — AI Act, GPAI code of practice, AI Board;
+    · genuine Commission news that has nothing to do with the AI Office —
+      gigabit connectivity, submarine cables, digital skills, and a funding
+      announcement that says "AI" outright. Every one is a real /en/news/
+      address with a real date and a plausible headline, and the ONLY thing
+      separating them from the items above is the subject;
+    · the hub's own policy pages, which are navigation;
+    · an AI-related item with no date, which is dropped.
+
+  If the subject list ever loosens to the bare word "AI", the connectivity
+  item below starts arriving as an AI Act primary source. That is what the
+  test asserts against.
+-->
+<html lang="en">
+<head><title>European AI Office | Shaping Europe's digital future</title></head>
+<body>
+<nav>
+  <a href="/en">Home</a>
+  <a href="/en/policies">Policies</a>
+  <a href="/en/news">News</a>
+  <a href="/en/library">Library</a>
+</nav>
+
+<main>
+  <h1>European AI Office</h1>
+  <p>
+    The European AI Office is the Commission's centre of AI expertise and the
+    body enforcing the rules on general-purpose AI models under the AI Act.
+  </p>
+
+  <!-- The hub's own pages. Navigation, and excluded by name. -->
+  <ul class="policy-nav">
+    <li><a href="/en/policies/ai-office">European AI Office</a></li>
+    <li><a href="/en/policies/regulatory-framework-ai">Regulatory framework for AI</a></li>
+  </ul>
+
+  <h2>Latest updates</h2>
+  <ul class="updates">
+    <li>
+      <span class="type">News article</span>
+      <time datetime="2026-09-10">10 September 2026</time>
+      <a href="/en/news/commission-publishes-guidelines-general-purpose-ai-models">
+        Commission publishes guidelines on general-purpose AI model obligations
+      </a>
+      <a href="/en/library/guidelines-gpai-obligations/gpai-guidelines.pdf">Guidelines (PDF)</a>
+    </li>
+
+    <li>
+      <span class="type">Publication</span>
+      <time datetime="2026-07-22">22 July 2026</time>
+      <a href="/en/library/code-practice-general-purpose-ai">
+        Code of Practice for general-purpose AI models — final text
+      </a>
+    </li>
+
+    <li>
+      <span class="type">News article</span>
+      <time datetime="2026-06-30">30 June 2026</time>
+      <a href="/en/news/first-meeting-ai-board-scientific-panel">
+        AI Board holds first meeting with the scientific panel of independent experts
+      </a>
+    </li>
+
+    <li>
+      <!-- AI Office subject, no date. Dropped. -->
+      <a href="/en/news/ai-act-service-desk-opens-for-questions">
+        AI Act service desk opens for questions from providers
+      </a>
+    </li>
+  </ul>
+
+  <h2>More from Shaping Europe's digital future</h2>
+  <ul class="cross-promotion">
+    <!-- REAL Commission news. Real addresses, real dates, real headlines, and
+         nothing to do with the AI Office. This is the material a domain-keyed
+         extractor would file as AI Act primary sources. -->
+    <li>
+      <time datetime="2026-09-12">12 September 2026</time>
+      <a href="/en/news/gigabit-infrastructure-act-enters-application">
+        Gigabit Infrastructure Act enters into application across the Union
+      </a>
+    </li>
+    <li>
+      <time datetime="2026-09-05">5 September 2026</time>
+      <a href="/en/news/commission-invests-submarine-cable-connectivity">
+        Commission invests EUR 420 million in submarine cable connectivity
+      </a>
+    </li>
+    <li>
+      <time datetime="2026-08-19">19 August 2026</time>
+      <a href="/en/library/digital-skills-indicator-2026">
+        Digital Skills Indicator 2026
+      </a>
+    </li>
+    <li>
+      <time datetime="2026-08-01">1 August 2026</time>
+      <a href="/en/news/media-pluralism-monitor-published">
+        Media Pluralism Monitor 2026 published
+      </a>
+    </li>
+    <!-- THE DISCRIMINATING CASE. A genuine Digital Europe Programme funding
+         announcement from another unit that says "AI" in so many words. It is
+         not AI Office business, and the only thing keeping it out is that the
+         subject list holds specific phrases rather than the bare word.
+
+         Without an item like this the fixture cannot tell a scoped extractor
+         from a loose one: admitting /\bAI\b/ to the list changed nothing and
+         broke no test until this entry existed. -->
+    <li>
+      <time datetime="2026-07-15">15 July 2026</time>
+      <a href="/en/news/digital-europe-funds-ai-skills-training-smes">
+        Digital Europe Programme funds AI skills training for small businesses
+      </a>
+    </li>
+  </ul>
+
+  <a href="https://ec.europa.eu/commission/presscorner/home/en">Press corner</a>
+</main>
+
+<footer>
+  <a href="/en/legal-notice">Legal notice</a>
+  <p>© European Union, 2026</p>
+</footer>
+</body>
+</html>

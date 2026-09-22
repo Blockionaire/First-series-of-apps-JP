@@ -1,0 +1,138 @@
+<!doctype html>
+<!--
+  REPRESENTATIVE, NOT A SAVED COPY. enisa.europa.eu has never been fetched by
+  this code — the build environment has no outbound network. The /news/<slug>
+  shape is inferred from the index URL the operator supplied, not observed.
+
+  Built to carry the things a news index actually gets wrong, so the rules
+  that handle them are load-bearing rather than decorative:
+
+    · THE SAME STORY TWICE. The lead appears once as a featured panel and
+      once in the list below, with different link text and a tracking query
+      on one of them. Only the canonical URL collapses them.
+    · FILTERS AND PAGINATION as query strings on /news itself — the things
+      that look like links and are controls.
+    · OTHER SECTIONS on the same host: /topics/, /publications/, /about/.
+      All genuine ENISA pages, none of them news items.
+    · AN UNDATED ENTRY, which is dropped rather than dated today.
+    · A DEEPER PATH under /news, which is a section and not an entry.
+-->
+<html lang="en">
+<head><title>News — ENISA</title></head>
+<body>
+<nav>
+  <a href="/">Home</a>
+  <a href="/topics">Topics</a>
+  <a href="/publications">Publications</a>
+  <a href="/about-enisa">About ENISA</a>
+  <a href="/news">News</a>
+</nav>
+
+<main>
+  <h1>News</h1>
+
+  <!-- The featured panel: the same story as the first list row below. -->
+  <section class="featured">
+    <article>
+      <span class="tag">Press Release</span>
+      <time datetime="2026-09-15">15 September 2026</time>
+      <a href="/news/enisa-publishes-nis2-technical-implementation-guidance?utm_source=homepage">
+        ENISA publishes technical implementation guidance for NIS2
+      </a>
+      <p>
+        The guidance maps the security measures in the NIS2 implementing act to
+        established standards and is aimed at entities in scope across the Union.
+      </p>
+    </article>
+  </section>
+
+  <ul class="news-list">
+    <li>
+      <span class="tag">Press Release</span>
+      <time datetime="2026-09-15">15 September 2026</time>
+      <a href="/news/enisa-publishes-nis2-technical-implementation-guidance">
+        ENISA publishes technical implementation guidance for NIS2
+      </a>
+      <p>
+        The guidance maps the security measures in the NIS2 implementing act to
+        established standards and is aimed at entities in scope across the Union.
+      </p>
+      <a href="/publications/nis2-technical-implementation-guidance/@@download/fullReport.pdf">Download (PDF, 2.1 MB)</a>
+    </li>
+
+    <li>
+      <span class="tag">Report</span>
+      <time datetime="2026-08-28">28 August 2026</time>
+      <a href="/news/threat-landscape-2026-published">
+        ENISA Threat Landscape 2026 records a sharp rise in supply-chain intrusions
+      </a>
+      <p>
+        The annual report analyses incidents reported between July 2025 and June 2026
+        and identifies the prime threats facing EU sectors.
+      </p>
+    </li>
+
+    <li>
+      <span class="tag">News Item</span>
+      <time datetime="2026-07-09">9 July 2026</time>
+      <a href="/news/eucc-scheme-first-certificates-issued">
+        First certificates issued under the EUCC cybersecurity certification scheme
+      </a>
+      <p>
+        National certification authorities have issued the first certificates under the
+        scheme adopted in the implementing regulation.
+      </p>
+    </li>
+
+    <li>
+      <!-- No date anywhere in the entry. Dropped, not dated today: an undated
+           item cannot be ranked for recency, and guessing would put it at the
+           top of the Inbox on every poll. -->
+      <a href="/news/undated-entry-with-no-date-in-the-card">
+        An entry whose card carries no date at all
+      </a>
+      <p>This is a real link to a real story and it is still not publishable.</p>
+    </li>
+
+    <li>
+      <!-- A section under /news, not an entry. -->
+      <time datetime="2026-06-01">1 June 2026</time>
+      <a href="/news/press-releases/archive">Press release archive</a>
+    </li>
+
+    <li>
+      <!-- Genuine ENISA content on the same host, and not a news item. -->
+      <time datetime="2026-05-20">20 May 2026</time>
+      <a href="/publications/artificial-intelligence-and-cybersecurity-research">
+        Artificial Intelligence and Cybersecurity Research
+      </a>
+    </li>
+
+    <li>
+      <time datetime="2026-05-02">2 May 2026</time>
+      <a href="/topics/incident-response">Incident response</a>
+    </li>
+  </ul>
+
+  <!-- Filters and pagination: controls on the index, not stories. -->
+  <div class="filters">
+    <a href="/news?topic=nis2">NIS2</a>
+    <a href="/news?topic=certification">Certification</a>
+    <a href="/news?year=2025">2025</a>
+  </div>
+  <nav class="pager">
+    <a href="/news?page=2">2</a>
+    <a href="/news?page=3">3</a>
+    <a href="/news?page=2">Next</a>
+  </nav>
+
+  <!-- Another agency's site. Never in scope, whatever it links to. -->
+  <a href="https://www.europol.europa.eu/media-press/newsroom">Europol newsroom</a>
+</main>
+
+<footer>
+  <p>© European Union Agency for Cybersecurity</p>
+  <a href="/privacy-policy">Privacy policy</a>
+</footer>
+</body>
+</html>

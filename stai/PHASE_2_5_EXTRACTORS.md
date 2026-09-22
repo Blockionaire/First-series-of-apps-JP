@@ -1,8 +1,9 @@
 # Phase 2.5 — source-specific extractors
 
-**Status:** the machinery is built and **three extractors are written** — APAS,
-Anthropic and CEAOB. The remaining sources in the original proposal below are
-still awaiting Step 0 verification before any more are written.
+**Status:** the machinery is built and **six extractors are written** — APAS,
+Anthropic, CEAOB, ENISA, the European AI Office and COSO. The remaining sources
+in the original proposal below are still awaiting Step 0 verification before
+any more are written.
 
 ## What exists now
 
@@ -18,11 +19,44 @@ its index.
 | APAS (`apasbafa.bund.de`) | `extractors/apas.ts` | index confirmed live; **detail-page selectors unverified** |
 | Anthropic (`anthropic.com/news`) | `extractors/anthropic.ts` | written, **unverified against the live site** |
 | CEAOB (`finance.ec.europa.eu`) | `extractors/ceaob.ts` | written, **unverified against the live site** |
+| ENISA (`enisa.europa.eu/news`) | `extractors/enisa.ts` | written, **unverified against the live site** |
+| European AI Office (`digital-strategy.ec.europa.eu`) | `extractors/ai-office.ts` | written, **unverified against the live site** |
+| COSO (`coso.org/news`) | `extractors/coso.ts` | written, **unverified against the live site** |
 
-All three anchor on URL taxonomy rather than class names, refuse navigation,
+All six anchor on URL taxonomy rather than class names, refuse navigation,
 and return an **error** rather than an empty list when a page yields nothing
 recognisable — so a redesign reads as an outage rather than as a quiet news
-week.
+week. When one refuses, it **names the path shapes it actually found**, so a
+wrong guess costs one round trip rather than three. That is the APAS lesson,
+generalised.
+
+### Two registered URLs changed
+
+| Source | Was | Now | Why |
+|---|---|---|---|
+| ENISA | `…/news-items/news-wires/RSS` (rss) | `…/news` (html_scrape) | A Plone-era feed address predating the site redesign. **This is a deliberate re-registration, not a silent fallback** — the standing rule that a feed beats a scraper still holds, and if a working feed is found it should replace this. |
+| COSO | `/guidance` | `/news` | `/guidance` is a catalogue of evergreen framework landings, not a stream. An extractor reading it would report the same items every poll, dated by whatever sat nearby. |
+
+`load_proposal` skips domains already in the registry, so **rows registered
+from an earlier version of the seed keep their stored URL and method** — an
+existing ENISA or COSO row has to be corrected with **Edit**.
+
+### The AI Office is scoped by subject, not by domain
+
+`digital-strategy.ec.europa.eu` is the whole of DG CONNECT: broadband, digital
+skills, media pluralism, submarine cables. The AI Office page is a **hub**, so
+a link becomes an item only if it meets all three of:
+
+1. a Digital Strategy **update** address — `/en/news/…` or `/en/library/…`
+   (not `/policies/…`, which is an evergreen description);
+2. it names a **specific** AI Office subject — "AI Act", "AI Office", "GPAI",
+   "general-purpose AI", "code of practice" and so on. The bare word **"AI" is
+   deliberately excluded**: it appears across this host in other units' work,
+   and admitting it turns a scoped extractor into a subject-matter guess;
+3. it carries a date.
+
+The fixture carries a real Digital Europe funding announcement that says "AI"
+in so many words, so the subject list is under test rather than assumed.
 
 ### APAS is two-phase, and why
 

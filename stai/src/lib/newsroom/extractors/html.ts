@@ -117,7 +117,15 @@ export function enclosingBlock(html: string, a: Anchor): string | null {
         break;
       }
     }
-    if (to <= a.end) continue; // closed before the anchor: not an enclosure
+    // Closed BEFORE the anchor ends: not an enclosure. `<` and not `<=`,
+    // because a container that closes exactly where the anchor ends —
+    // `</a></li>` with no whitespace between, which is what a minified or
+    // tightly-written template emits — does contain it. With `<=` that block
+    // was discarded and the search fell back to the character radius, which
+    // then swept in the neighbouring entry's date: the exact bleed this
+    // function exists to prevent, reappearing only on templates that happen
+    // not to pretty-print.
+    if (to < a.end) continue;
     if (to - from > MAX_BLOCK) continue; // a page wrapper, not an entry
 
     if (!best || to - from < best.to - best.from) best = { from, to };
@@ -148,6 +156,68 @@ export function enclosingBlock(html: string, a: Anchor): string | null {
  */
 export function stripComments(html: string): string {
   return html.replace(/<!--[\s\S]*?-->/g, " ");
+}
+
+/**
+ * Fill an item's empty optional fields from a second sighting of it.
+ *
+ * News indexes show their lead story twice: once as a feature panel and once
+ * in the list. The two cards are not identical — the panel is usually the
+ * poorer of the two, carrying the headline and the date but not the teaser
+ * and not the link to the published document.
+ *
+ * Deduplicating by canonical URL keeps whichever came first in the markup,
+ * which is the panel, so the PDF quietly disappears from the one story most
+ * likely to matter. `documentUrl` is the primary text an evidence pack has to
+ * cite, so losing it is not cosmetic.
+ *
+ * This fills the gaps and nothing else: a field already set is never
+ * overwritten, so the first card still decides the title, the date and
+ * anything else it actually carried. Mechanical — it merges what two sightings
+ * said, and decides nothing about what an item is.
+ */
+export function enrich<T extends Record<string, unknown>>(existing: T, extra: T): void {
+  for (const key of ["lead", "category", "documentUrl"] as const) {
+    const have = existing[key];
+    const found = extra[key];
+    if ((have === undefined || have === "") && typeof found === "string" && found !== "") {
+      (existing as Record<string, unknown>)[key] = found;
+    }
+  }
+}
+
+/**
+ * The distinct path shapes among a set of URLs, for a failure message.
+ *
+ * Mechanical, and it decides nothing — but it is the difference between one
+ * round trip and three when an extractor meets a site it does not recognise.
+ * "Found 40 links and none is a news item" is true and leaves the operator
+ * with nowhere to go. "…the paths here are /news/, /publications/, /topics/"
+ * tells them, and me, exactly which rule is wrong.
+ *
+ * That lesson cost two live tests on APAS. Every extractor here now reports
+ * what it saw when it refuses.
+ */
+export function pathShapes(urls: string[], limit = 6): string {
+  const seen = new Map<string, number>();
+  for (const raw of urls) {
+    let path: string;
+    try {
+      path = new URL(raw).pathname;
+    } catch {
+      continue;
+    }
+    // The first two segments: enough to tell /en/news/ from /en/library/,
+    // short enough that fifty article slugs collapse to one entry.
+    const parts = path.split("/").filter(Boolean).slice(0, 2);
+    const shape = parts.length ? `/${parts.join("/")}/` : "/";
+    seen.set(shape, (seen.get(shape) ?? 0) + 1);
+  }
+  return [...seen.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([shape, n]) => `${shape} (${n})`)
+    .join(", ");
 }
 
 /**

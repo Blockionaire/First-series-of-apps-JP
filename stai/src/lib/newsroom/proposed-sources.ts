@@ -92,8 +92,16 @@ export const PROPOSED_SOURCES: Proposed[] = [
     jurisdictions: ["EU"],
     topics: ["ai", "regulation"],
     ingestion_method: "html_scrape",
+    // A HUB, not a listing: a description of the office with links out to the
+    // updates. The extractor is scoped to it and to nothing else on
+    // digital-strategy.ec.europa.eu, which carries the whole of DG CONNECT —
+    // broadband, digital skills, media, connectivity. A link becomes an item
+    // only if it is a Digital Strategy content address, names a specific AI
+    // Office subject, and carries a date.
     feed_url: "https://digital-strategy.ec.europa.eu/en/policies/ai-office",
-    rationale: "Guidance and codes of practice under the AI Act. No usable feed — needs scraping.",
+    rationale:
+      "Guidance and codes of practice under the AI Act. No usable feed; read by a " +
+      "site-specific extractor scoped to the AI Office hub.",
   },
   {
     name: "ESMA",
@@ -163,9 +171,24 @@ export const PROPOSED_SOURCES: Proposed[] = [
     authority_tier: 1,
     jurisdictions: ["EU"],
     topics: ["cybersecurity", "data"],
-    ingestion_method: "rss",
-    feed_url: "https://www.enisa.europa.eu/media/news-items/news-wires/RSS",
-    rationale: "NIS2 and cyber guidance that lands in IT-audit scope.",
+    // Re-registered from RSS to the news index at the operator's instruction.
+    //
+    // Worth saying plainly, because the standing rule here is that a feed
+    // beats a scraper and nothing may silently fall back from one to the
+    // other: this is a deliberate re-registration, not a fallback. The RSS
+    // address this replaced — /media/news-items/news-wires/RSS — is a
+    // Plone-era path that predates the site's redesign. If a working feed is
+    // ever found, it should replace this again.
+    //
+    // A row already registered from an earlier version of this file keeps its
+    // stored feed_url and method — `load_proposal` skips domains it already
+    // has — so an existing ENISA row has to be corrected with Edit in the
+    // registry.
+    ingestion_method: "html_scrape",
+    feed_url: "https://www.enisa.europa.eu/news",
+    rationale:
+      "NIS2 and cyber guidance that lands in IT-audit scope. Read by a " +
+      "site-specific extractor over the news index.",
   },
 
   // ─── Tier 1 · Standard setters ─────────────────────────────────────────
@@ -243,8 +266,20 @@ export const PROPOSED_SOURCES: Proposed[] = [
     jurisdictions: ["GLOBAL"],
     topics: ["internal control", "risk"],
     ingestion_method: "html_scrape",
-    feed_url: "https://www.coso.org/guidance",
-    rationale: "The control framework every ICFR conversation rests on, including its AI guidance.",
+    // Moved from /guidance to /news.
+    //
+    // /guidance is a catalogue of frameworks: evergreen landing pages that
+    // exist indefinitely. An extractor reading it would report the same items
+    // on every poll and date them by whatever sat nearby. /news is a stream —
+    // things appear, carry a date, and stop being new — which is the only
+    // shape discovery can do anything with.
+    //
+    // An existing COSO row keeps its stored feed_url and has to be corrected
+    // with Edit in the registry.
+    feed_url: "https://www.coso.org/news",
+    rationale:
+      "The control framework every ICFR conversation rests on, including its AI guidance. " +
+      "No feed; read by a site-specific extractor over the news index.",
   },
   {
     name: "NIST",

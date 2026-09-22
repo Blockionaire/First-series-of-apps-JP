@@ -48,6 +48,24 @@ import {
   isCeaobDocument,
   kindOf,
 } from "../src/lib/newsroom/extractors/ceaob.ts";
+import {
+  acceptsEnisaIndex,
+  enisaCategory,
+  extractEnisa,
+  isEnisaNewsItem,
+} from "../src/lib/newsroom/extractors/enisa.ts";
+import {
+  acceptsAiOfficePage,
+  contentKind,
+  extractAiOffice,
+  namesAiSubject,
+} from "../src/lib/newsroom/extractors/ai-office.ts";
+import {
+  acceptsCosoIndex,
+  cosoCategory,
+  extractCoso,
+  isCosoNewsItem,
+} from "../src/lib/newsroom/extractors/coso.ts";
 import { extractorFor, EXTRACTORS } from "../src/lib/newsroom/extractors/index.ts";
 import { parseGermanDate, findAnchors } from "../src/lib/newsroom/extractors/html.ts";
 import { shouldFetch } from "../src/lib/newsroom/fetcher.ts";
@@ -91,6 +109,13 @@ const VB_PAGES = {
   // 23 is deliberately absent: a live index routinely links a page that has
   // been withdrawn, and one 404 must not cost the other four.
 };
+
+const ENISA_HTML = fixture("enisa-news.html");
+const ENISA_URL = "https://www.enisa.europa.eu/news";
+const AI_OFFICE_HTML = fixture("ai-office-hub.html");
+const AI_OFFICE_URL = "https://digital-strategy.ec.europa.eu/en/policies/ai-office";
+const COSO_HTML = fixture("coso-news.html");
+const COSO_URL = "https://www.coso.org/news";
 
 /**
  * A fetch that serves the detail fixtures and records what was asked for.
@@ -746,6 +771,393 @@ describe("hydrating the Verlautbarungen index end to end", () => {
   });
 });
 
+/* ── ENISA ──────────────────────────────────────────────────────────────── */
+
+describe("ENISA URL rules", () => {
+  test("only the news index is an eligible surface", () => {
+    assert.equal(acceptsEnisaIndex("https://www.enisa.europa.eu/news"), true);
+    assert.equal(acceptsEnisaIndex("https://www.enisa.europa.eu/news/"), true);
+    assert.equal(acceptsEnisaIndex("https://www.enisa.europa.eu/en/news"), true);
+    // Other sections of a genuine ENISA site are not the news index.
+    assert.equal(acceptsEnisaIndex("https://www.enisa.europa.eu/publications"), false);
+    assert.equal(acceptsEnisaIndex("https://www.enisa.europa.eu/"), false);
+    assert.equal(acceptsEnisaIndex("https://www.enisa.europa.eu/topics/nis2"), false);
+    // Another agency entirely.
+    assert.equal(acceptsEnisaIndex("https://www.europol.europa.eu/news"), false);
+  });
+
+  test("an entry is one slug under /news, and nothing else", () => {
+    assert.equal(isEnisaNewsItem("https://www.enisa.europa.eu/news/threat-landscape-2026"), true);
+    assert.equal(isEnisaNewsItem("https://www.enisa.europa.eu/news"), false, "the index itself");
+    assert.equal(
+      isEnisaNewsItem("https://www.enisa.europa.eu/news/press-releases/archive"),
+      false,
+      "a section under news is not an entry"
+    );
+    assert.equal(
+      isEnisaNewsItem("https://www.enisa.europa.eu/publications/ai-and-cybersecurity"),
+      false
+    );
+  });
+
+  test("a tracking query does not make a second story", () => {
+    // The identity is the slug. This is what collapses the featured panel and
+    // the list row for one story into one item.
+    assert.equal(
+      isEnisaNewsItem("https://www.enisa.europa.eu/news/x-y-z?utm_source=homepage"),
+      true
+    );
+  });
+
+  test("the category is read, and absent rather than guessed", () => {
+    assert.equal(enisaCategory("<span>Press Release</span> ENISA publishes"), "Press Release");
+    assert.equal(enisaCategory("<span>Report</span> Threat Landscape"), "Report");
+    assert.equal(enisaCategory("nothing recognisable here"), "");
+  });
+});
+
+describe("extracting ENISA news", () => {
+  const result = extractEnisa(ENISA_HTML, ENISA_URL);
+
+  test("it returns the genuine news items and nothing else", () => {
+    assert.equal(result.ok, true, result.ok ? "" : result.error);
+    assert.deepEqual(
+      result.items.map((i) => new URL(i.url).pathname),
+      [
+        "/news/enisa-publishes-nis2-technical-implementation-guidance",
+        "/news/threat-landscape-2026-published",
+        "/news/eucc-scheme-first-certificates-issued",
+      ]
+    );
+  });
+
+  test("the featured panel and the list row are one item", () => {
+    // The commonest duplicate on a page like this: the same story twice, once
+    // with a tracking query. Two rows in the Inbox for one publication is a
+    // story that looks corroborated by a second source and is not.
+    const lead = result.items.filter((i) => i.url.includes("nis2-technical-implementation"));
+    assert.equal(lead.length, 1);
+    assert.ok(!lead[0].url.includes("?"), "the canonical URL still carries the query");
+  });
+
+  test("filters and pagination are not stories", () => {
+    const urls = result.items.map((i) => i.url).join(" ");
+    for (const control of ["?page=", "?topic=", "?year="]) {
+      assert.ok(!urls.includes(control), `a control was collected: ${control}`);
+    }
+  });
+
+  test("other sections of the same site are not news", () => {
+    const urls = result.items.map((i) => i.url).join(" ");
+    for (const section of ["/publications/", "/topics/", "/about-enisa", "/privacy-policy"]) {
+      assert.ok(!urls.includes(section), `${section} was collected as news`);
+    }
+  });
+
+  test("another agency's newsroom is never in scope", () => {
+    assert.ok(!result.items.some((i) => i.url.includes("europol")));
+  });
+
+  test("an undated entry is dropped, not dated today", () => {
+    assert.ok(
+      !result.items.some((i) => i.url.includes("undated-entry")),
+      "an undated item would rank as breaking news on every poll"
+    );
+    assert.match(result.rejected.join("\n"), /undated-entry[^\n]*no date/);
+  });
+
+  test("dates, categories and teasers come off the right card", () => {
+    const [nis2, threat, eucc] = result.items;
+    assert.equal(nis2.publishedAt.slice(0, 10), "2026-09-15");
+    assert.equal(nis2.category, "Press Release");
+    assert.match(nis2.lead, /NIS2 implementing act/);
+    assert.match(nis2.documentUrl, /fullReport\.pdf$/);
+
+    assert.equal(threat.publishedAt.slice(0, 10), "2026-08-28");
+    assert.equal(threat.category, "Report");
+    // The neighbour's PDF must not travel: only the first card links one.
+    assert.equal(threat.documentUrl, undefined, "a neighbouring card's document bled across");
+
+    assert.equal(eucc.publishedAt.slice(0, 10), "2026-07-09");
+  });
+
+  test("a page with no /news/<slug> links says what it found instead", () => {
+    // The refusal that turns a wrong guess into one round trip. If ENISA
+    // files news somewhere else, the error names the shapes actually present.
+    const moved = ENISA_HTML.replace(/\/news\//g, "/newsroom/");
+    const r = extractEnisa(moved, ENISA_URL);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /none matches \/news\/<slug>/);
+    assert.match(r.error, /\/newsroom\//, `the shapes should be named: ${r.error}`);
+  });
+
+  test("an index that lost its dates is an outage, not a quiet week", () => {
+    const undated = ENISA_HTML.replace(/<time[^>]*>[^<]*<\/time>/gi, "");
+    const r = extractEnisa(undated, ENISA_URL);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /index structure has probably changed/i);
+  });
+
+  test("a page with no links at all is an error", () => {
+    const r = extractEnisa("<html><body><p>Maintenance</p></body></html>", ENISA_URL);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /no links/i);
+  });
+});
+
+/* ── European AI Office ─────────────────────────────────────────────────── */
+
+describe("AI Office scoping", () => {
+  test("only the AI Office hub on Digital Strategy is eligible", () => {
+    assert.equal(acceptsAiOfficePage(AI_OFFICE_URL), true);
+    assert.equal(
+      acceptsAiOfficePage("https://digital-strategy.ec.europa.eu/en/policies/ai-office/faq"),
+      true
+    );
+    // The host is the whole of DG CONNECT. Every one of these is a real page
+    // on it and none is the AI Office.
+    for (const other of [
+      "https://digital-strategy.ec.europa.eu/en/policies/broadband-connectivity",
+      "https://digital-strategy.ec.europa.eu/en/news/gigabit-act",
+      "https://digital-strategy.ec.europa.eu/en",
+    ]) {
+      assert.equal(acceptsAiOfficePage(other), false, other);
+    }
+  });
+
+  test("only news and library addresses are updates", () => {
+    assert.equal(contentKind("/en/news/commission-publishes-guidelines"), "News");
+    assert.equal(contentKind("/en/library/code-practice-gpai"), "Publication");
+    // Evergreen descriptions. They never stop existing, so they would arrive
+    // on every poll dated by whatever sat nearest them in the markup.
+    assert.equal(contentKind("/en/policies/regulatory-framework-ai"), null);
+    assert.equal(contentKind("/en/factpages/ai-in-europe"), null);
+    assert.equal(contentKind("/en/news"), null, "the index is not an item");
+  });
+
+  test("the subject list is specific, and excludes the bare word AI", () => {
+    assert.equal(namesAiSubject("Guidelines on general-purpose AI models"), true);
+    assert.equal(namesAiSubject("The AI Act service desk"), true);
+    assert.equal(namesAiSubject("AI Board holds first meeting"), true);
+    // The thing the list exists to keep out: other units' work that merely
+    // mentions artificial intelligence in passing.
+    assert.equal(namesAiSubject("Gigabit Infrastructure Act enters application"), false);
+    assert.equal(namesAiSubject("Digital Skills Indicator 2026"), false);
+  });
+});
+
+describe("extracting AI Office updates", () => {
+  const result = extractAiOffice(AI_OFFICE_HTML, AI_OFFICE_URL);
+
+  test("it returns the AI Office updates", () => {
+    assert.equal(result.ok, true, result.ok ? "" : result.error);
+    assert.deepEqual(
+      result.items.map((i) => new URL(i.url).pathname),
+      [
+        "/en/news/commission-publishes-guidelines-general-purpose-ai-models",
+        "/en/library/code-practice-general-purpose-ai",
+        "/en/news/first-meeting-ai-board-scientific-panel",
+      ]
+    );
+  });
+
+  test("unrelated Commission content is not filed under the AI Office", () => {
+    // The whole reason this extractor is scoped the way it is. Every one of
+    // these is a real /en/news/ or /en/library/ address with a real date and
+    // a plausible headline — the only thing separating them is the subject.
+    const urls = result.items.map((i) => i.url).join(" ");
+    for (const unrelated of [
+      "gigabit-infrastructure-act",
+      "submarine-cable",
+      "digital-skills-indicator",
+      "media-pluralism-monitor",
+      // The one that actually tests the subject list. A genuine funding
+      // announcement from another unit that says "AI" in so many words: only
+      // a list of SPECIFIC phrases keeps it out, and admitting the bare word
+      // broke no test at all until this case existed.
+      "ai-skills-training-smes",
+    ]) {
+      assert.ok(!urls.includes(unrelated), `${unrelated} was filed as an AI Office source`);
+    }
+  });
+
+  test("the bare word AI is not an AI Office subject", () => {
+    // Stated directly as well as through the fixture, because this is the
+    // single rule keeping other directorates' work out of a Tier-1 slot.
+    assert.equal(
+      namesAiSubject("Digital Europe Programme funds AI skills training for small businesses"),
+      false
+    );
+    assert.equal(namesAiSubject("Our AI strategy for Europe"), false);
+    // And the specific phrases still match.
+    assert.equal(namesAiSubject("obligations for general-purpose AI models"), true);
+  });
+
+  test("the hub cannot return itself or its policy furniture", () => {
+    const urls = result.items.map((i) => i.url).join(" ");
+    assert.ok(!urls.includes("/policies/"), "a policy page was collected as an update");
+  });
+
+  test("an undated AI Office item is dropped", () => {
+    assert.ok(!result.items.some((i) => i.url.includes("ai-act-service-desk")));
+    assert.match(result.rejected.join("\n"), /ai-act-service-desk[^\n]*no date/);
+  });
+
+  test("category and document come from the entry", () => {
+    const [guidelines, code] = result.items;
+    assert.equal(guidelines.category, "News");
+    assert.equal(guidelines.publishedAt.slice(0, 10), "2026-09-10");
+    assert.match(guidelines.documentUrl, /gpai-guidelines\.pdf$/);
+    assert.equal(code.category, "Publication");
+    assert.equal(code.publishedAt.slice(0, 10), "2026-07-22");
+  });
+
+  test("a hub that stops linking AI updates says so specifically", () => {
+    // Distinguished from "nothing recognisable at all": only one of those
+    // means the subject list needs a phrase adding.
+    const stripped = AI_OFFICE_HTML.replace(/<ul class="updates">[\s\S]*?<\/ul>/i, "");
+    const r = extractAiOffice(stripped, AI_OFFICE_URL);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /none names an AI Office subject/i);
+  });
+
+  test("a page with no Digital Strategy content links names the shapes", () => {
+    const moved = AI_OFFICE_HTML.replace(/\/en\/news\//g, "/en/stories/").replace(
+      /\/en\/library\//g,
+      "/en/docs/"
+    );
+    const r = extractAiOffice(moved, AI_OFFICE_URL);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /none is a news or library address/i);
+    assert.match(r.error, /\/en\/stories\/|\/en\/docs\//, r.error);
+  });
+});
+
+/* ── COSO ───────────────────────────────────────────────────────────────── */
+
+describe("COSO URL rules", () => {
+  test("only the news index is an eligible surface", () => {
+    assert.equal(acceptsCosoIndex(COSO_URL), true);
+    assert.equal(acceptsCosoIndex("https://www.coso.org/news/"), true);
+    // The page the source used to point at: a catalogue of evergreen
+    // frameworks, not a stream.
+    assert.equal(acceptsCosoIndex("https://www.coso.org/guidance"), false);
+    assert.equal(acceptsCosoIndex("https://www.coso.org/"), false);
+  });
+
+  test("guidance landing pages are never news items", () => {
+    assert.equal(
+      isCosoNewsItem("https://www.coso.org/guidance/internal-control-integrated-framework"),
+      false
+    );
+    assert.equal(isCosoNewsItem("https://www.coso.org/store/erm-framework-pdf"), false);
+    assert.equal(isCosoNewsItem("https://www.coso.org/news/coso-names-new-board-chair"), true);
+    assert.equal(isCosoNewsItem("https://www.coso.org/news"), false, "the index itself");
+  });
+
+  test("the category is read, and absent rather than guessed", () => {
+    assert.equal(cosoCategory("<span>Press Release</span> COSO releases"), "Press release");
+    assert.equal(cosoCategory("a research study of fraud risk"), "Research");
+    assert.equal(cosoCategory("nothing recognisable"), "");
+  });
+});
+
+describe("extracting COSO news", () => {
+  const result = extractCoso(COSO_HTML, COSO_URL);
+
+  test("it returns the genuine releases and nothing else", () => {
+    assert.equal(result.ok, true, result.ok ? "" : result.error);
+    assert.deepEqual(
+      result.items.map((i) => new URL(i.url).pathname),
+      [
+        "/news/coso-releases-ai-internal-control-supplement",
+        "/news/fraud-risk-management-study-published",
+        "/news/coso-names-new-board-chair",
+      ]
+    );
+  });
+
+  test("the framework a release announces does not arrive as a second item", () => {
+    // The specific failure the old /guidance URL would have produced: an
+    // evergreen landing page collected beside the announcement, carrying the
+    // announcement's date, on every poll and again at the next release.
+    const urls = result.items.map((i) => i.url).join(" ");
+    assert.ok(!urls.includes("/guidance/"), "a guidance landing page was collected");
+    assert.ok(!urls.includes("/store/"), "a store page was collected");
+  });
+
+  test("the feature panel and the list row are one item", () => {
+    const lead = result.items.filter((i) => i.url.includes("ai-internal-control-supplement"));
+    assert.equal(lead.length, 1);
+    assert.ok(!lead[0].url.includes("utm_campaign"));
+  });
+
+  test("an undated release is dropped", () => {
+    assert.ok(!result.items.some((i) => i.url.includes("entry-with-no-date")));
+    assert.match(result.rejected.join("\n"), /entry-with-no-date[^\n]*no date/);
+  });
+
+  test("dates, categories, teasers and documents come off the right card", () => {
+    const [supplement, study, chair] = result.items;
+    assert.equal(supplement.publishedAt.slice(0, 10), "2026-09-09");
+    assert.equal(supplement.category, "Press release");
+    assert.match(supplement.lead, /five components/);
+    assert.match(supplement.documentUrl, /coso-ai-supplement-2026\.pdf$/);
+
+    assert.equal(study.publishedAt.slice(0, 10), "2026-07-21");
+    assert.equal(study.category, "Research");
+    assert.equal(study.documentUrl, undefined, "a neighbouring card's document bled across");
+
+    assert.equal(chair.publishedAt.slice(0, 10), "2026-05-14");
+  });
+
+  test("another body's newsroom is never in scope", () => {
+    assert.ok(!result.items.some((i) => i.url.includes("aicpa")));
+  });
+
+  test("a page with no /news/<slug> links says what it found instead", () => {
+    const moved = COSO_HTML.replace(/\/news\//g, "/press/");
+    const r = extractCoso(moved, COSO_URL);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /none matches \/news\/<slug>/);
+    assert.match(r.error, /\/press\//, r.error);
+  });
+
+  test("an index that lost its dates is an outage, not a quiet week", () => {
+    const undated = COSO_HTML.replace(/<span class="date">[^<]*<\/span>/gi, "");
+    const r = extractCoso(undated, COSO_URL);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /index structure has probably changed/i);
+  });
+});
+
+/* ── The block boundary these three depend on ───────────────────────────── */
+
+describe("an entry's date comes from its own block", () => {
+  test("a container that closes right after the link still encloses it", () => {
+    // Found while building the AI Office fixture. `</a></li>` with no
+    // whitespace between made `enclosingBlock` reject its own block on an
+    // off-by-one, so the search fell back to a character radius and swept in
+    // the NEXT entry's date. Pretty-printed templates hid it; minified ones
+    // would not have.
+    const html =
+      '<ul>' +
+      '<li><a href="/news/undated-one">An entry with no date of its own</a></li>' +
+      '<li><time datetime="2026-09-10">10 September 2026</time>' +
+      '<a href="/news/dated-one">An entry that does carry a date</a></li>' +
+      '</ul>';
+    const r = extractCoso(html, COSO_URL);
+    // The undated entry must not borrow the dated one's date.
+    if (r.ok) {
+      assert.ok(
+        !r.items.some((i) => i.url.includes("undated-one")),
+        "an undated entry took its neighbour's date"
+      );
+    }
+    assert.match(r.ok ? r.rejected.join("\n") : r.error, /undated-one|no date/i);
+  });
+});
+
 /* ── Comments are not content ───────────────────────────────────────────── */
 
 describe("commented-out markup is not read as a page", () => {
@@ -1164,11 +1576,17 @@ describe("extractor output is an ordinary feed item", () => {
     apas: { feed_url: PAGE, jurisdictions: ["DE"] },
     anthropic: { feed_url: NEWS, jurisdictions: ["GLOBAL"] },
     ceaob: { feed_url: CEAOB_PAGE, jurisdictions: ["EU"] },
+    enisa: { feed_url: ENISA_URL, jurisdictions: ["EU"] },
+    aiOffice: { feed_url: AI_OFFICE_URL, jurisdictions: ["EU"] },
+    coso: { feed_url: COSO_URL, jurisdictions: ["GLOBAL"] },
   };
   const RESULTS = {
     apas: extractApas(FIXTURE, PAGE),
     anthropic: extractAnthropic(ANTHROPIC, NEWS),
     ceaob: extractCeaob(CEAOB_HTML, CEAOB_PAGE),
+    enisa: extractEnisa(ENISA_HTML, ENISA_URL),
+    aiOffice: extractAiOffice(AI_OFFICE_HTML, AI_OFFICE_URL),
+    coso: extractCoso(COSO_HTML, COSO_URL),
   };
 
   for (const [name, result] of Object.entries(RESULTS)) {
@@ -1200,7 +1618,14 @@ describe("extractor output is an ordinary feed item", () => {
     test(`${name}: re-reading the page yields the same canonical URLs`, async () => {
       // Discovery re-reads every cadence. Drift here would create a second
       // story for the same publication on every run.
-      const again = { apas: extractApas(FIXTURE, PAGE), anthropic: extractAnthropic(ANTHROPIC, NEWS), ceaob: extractCeaob(CEAOB_HTML, CEAOB_PAGE) }[name];
+      const again = {
+        apas: extractApas(FIXTURE, PAGE),
+        anthropic: extractAnthropic(ANTHROPIC, NEWS),
+        ceaob: extractCeaob(CEAOB_HTML, CEAOB_PAGE),
+        enisa: extractEnisa(ENISA_HTML, ENISA_URL),
+        aiOffice: extractAiOffice(AI_OFFICE_HTML, AI_OFFICE_URL),
+        coso: extractCoso(COSO_HTML, COSO_URL),
+      }[name];
       assert.deepEqual(
         again.items.map((i) => i.url),
         result.items.map((i) => i.url)

@@ -15,15 +15,18 @@
  * the desk cannot otherwise reach, not that their page looked parseable.
  */
 
+import { aiOffice } from "./ai-office.ts";
 import { anthropic } from "./anthropic.ts";
 import { apas } from "./apas.ts";
 import { ceaob } from "./ceaob.ts";
+import { coso } from "./coso.ts";
+import { enisa } from "./enisa.ts";
 import type { Extractor } from "./types.ts";
 
 export type { Extractor, ExtractResult } from "./types.ts";
 
 /** Every publisher with a hand-written extractor. */
-export const EXTRACTORS: readonly Extractor[] = [apas, anthropic, ceaob];
+export const EXTRACTORS: readonly Extractor[] = [apas, anthropic, ceaob, enisa, aiOffice, coso];
 
 /**
  * The extractor for a registered domain, or null.
