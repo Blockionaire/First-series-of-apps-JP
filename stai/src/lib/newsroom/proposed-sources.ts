@@ -334,9 +334,23 @@ export const PROPOSED_SOURCES: Proposed[] = [
     authority_tier: 1,
     jurisdictions: ["UK"],
     topics: ["audit", "oversight", "reporting"],
-    ingestion_method: "rss",
-    feed_url: "https://www.frc.org.uk/news-and-events/rss/",
-    rationale: "UK audit regulator. Its AI-in-audit guidance is the most developed in Europe.",
+    // Re-registered from RSS to the news index: the operator reports the feed
+    // at /news-and-events/rss/ is obsolete.
+    //
+    // Said plainly because the standing rule is that a feed beats a scraper
+    // and nothing may silently fall back from one to the other: this is a
+    // deliberate re-registration after a feed was found dead, not a fallback
+    // the code chose. If the FRC publishes a working feed again it should
+    // replace this.
+    //
+    // An existing FRC row keeps its stored feed_url and method —
+    // `load_proposal` skips domains it already has — so it has to be
+    // corrected with Edit in the registry.
+    ingestion_method: "html_scrape",
+    feed_url: "https://www.frc.org.uk/news-and-events/news/",
+    rationale:
+      "UK audit regulator. Its AI-in-audit guidance is the most developed in Europe. " +
+      "Feed obsolete; read by a site-specific extractor over the news index.",
   },
   {
     name: "ICAEW",
@@ -385,15 +399,34 @@ export const PROPOSED_SOURCES: Proposed[] = [
       "read by a site-specific extractor.",
   },
   {
-    name: "H3C / Haute autorité de l'audit",
-    domain: "h3c.org",
+    // Replaces the H3C row entirely. The Haut Conseil du Commissariat aux
+    // Comptes was reconstituted as the Haute Autorité de l'Audit, and both the
+    // name and the DOMAIN changed.
+    //
+    // The domain is the registry's identity for a source, so this cannot be an
+    // edit: `load_proposal` inserts H2A as a new row on a fresh registry, and
+    // an EXISTING registry keeps its h3c.org row untouched beside it. Retiring
+    // that row is a deliberate act and belongs to a person — mark it
+    // `Do not use` in the review column, which switches it off and withdraws
+    // retrieval, and add H2A with the Add source form.
+    //
+    // On the method: an official feed was asked for first and could not be
+    // tried here, because this build environment has no outbound network. A
+    // guessed feed URL in this file would read as a checked fact, so the row
+    // is registered against the news surface and the extractor refuses a feed
+    // body loudly, telling the operator to switch the method to `rss`. The
+    // priority order is intact; only the check is deferred to someone who can
+    // make a request.
+    name: "H2A — Haute Autorité de l'Audit",
+    domain: "h2a-france.org",
     source_type: "regulator",
     authority_tier: 1,
     jurisdictions: ["FR"],
     topics: ["audit", "oversight"],
     ingestion_method: "html_scrape",
-    feed_url: "https://www.h3c.org/actualites",
-    rationale: "French audit oversight, including its CSRD assurance positions.",
+    feed_url: "https://www.h2a-france.org/actualites/",
+    rationale:
+      "French audit oversight, including its CSRD assurance positions. Successor to H3C.",
   },
 
   // ─── Tier 1 · Vendors, for product fact ────────────────────────────────

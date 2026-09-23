@@ -66,8 +66,26 @@ import {
   extractCoso,
   isCosoNewsItem,
 } from "../src/lib/newsroom/extractors/coso.ts";
+import {
+  acceptsFrcIndex,
+  extractFrc,
+  frcCategory,
+  isFrcNewsItem,
+} from "../src/lib/newsroom/extractors/frc.ts";
+import {
+  acceptsH2aPage,
+  extractH2a,
+  h2aCategory,
+  isH2aPublication,
+  looksLikeFeed,
+} from "../src/lib/newsroom/extractors/h2a.ts";
 import { extractorFor, EXTRACTORS } from "../src/lib/newsroom/extractors/index.ts";
-import { parseGermanDate, findAnchors } from "../src/lib/newsroom/extractors/html.ts";
+import {
+  findAnchors,
+  findDate,
+  parseFrenchDate,
+  parseGermanDate,
+} from "../src/lib/newsroom/extractors/html.ts";
 import { shouldFetch } from "../src/lib/newsroom/fetcher.ts";
 import { canonicalUrl, normaliseItem } from "../src/lib/newsroom/normalise.ts";
 
@@ -116,6 +134,10 @@ const AI_OFFICE_HTML = fixture("ai-office-hub.html");
 const AI_OFFICE_URL = "https://digital-strategy.ec.europa.eu/en/policies/ai-office";
 const COSO_HTML = fixture("coso-news.html");
 const COSO_URL = "https://www.coso.org/news";
+const FRC_HTML = fixture("frc-news.html");
+const FRC_URL = "https://www.frc.org.uk/news-and-events/news/";
+const H2A_HTML = fixture("h2a-actualites.html");
+const H2A_URL = "https://www.h2a-france.org/actualites/";
 
 /**
  * A fetch that serves the detail fixtures and records what was asked for.
@@ -1158,6 +1180,333 @@ describe("an entry's date comes from its own block", () => {
   });
 });
 
+/* ── French dates ───────────────────────────────────────────────────────── */
+
+describe("French dates", () => {
+  test("the written form, with and without the ordinal", () => {
+    assert.equal(parseFrenchDate("15 septembre 2026").slice(0, 10), "2026-09-15");
+    // French writes the first of the month as an ordinal and no other day.
+    assert.equal(parseFrenchDate("1er juillet 2026").slice(0, 10), "2026-07-01");
+    assert.equal(parseFrenchDate("Publié le 3 février 2026").slice(0, 10), "2026-02-03");
+    assert.equal(parseFrenchDate("12 août 2025").slice(0, 10), "2025-08-12");
+  });
+
+  test("accents are optional, because a CMS may strip them", () => {
+    assert.equal(parseFrenchDate("3 fevrier 2026").slice(0, 10), "2026-02-03");
+    assert.equal(parseFrenchDate("12 aout 2025").slice(0, 10), "2025-08-12");
+  });
+
+  test("the numeric form is read day-first", () => {
+    // Accepted here where the English parser refuses it. The English refusal
+    // is about ambiguity — 01/02 is 1 February on an EU page and 2 January on
+    // an American one — and on a French authority's French-language page that
+    // ambiguity does not exist.
+    assert.equal(parseFrenchDate("04/06/2026").slice(0, 10), "2026-06-04");
+    assert.equal(parseFrenchDate("15/09/2026").slice(0, 10), "2026-09-15");
+  });
+
+  test("an impossible date is refused rather than rolled over", () => {
+    assert.equal(parseFrenchDate("31/02/2026"), null);
+    assert.equal(parseFrenchDate("30 février 2026"), null);
+  });
+
+  test("one page gets one parser", () => {
+    // German and French both spell May "mai", which is exactly the overlap
+    // that makes running every parser over every page a bad idea.
+    assert.equal(findDate("15 mars 2026", "fr").slice(0, 10), "2026-03-15");
+    assert.equal(findDate("15 mars 2026", "de"), null, "the German parser must not read French");
+    assert.equal(findDate("15.03.2026", "fr"), null, "nor the French parser German");
+  });
+
+  test("a machine-readable date still wins", () => {
+    assert.equal(
+      findDate('<time datetime="2026-05-04">4 mai 2026</time>', "fr").slice(0, 10),
+      "2026-05-04"
+    );
+  });
+});
+
+/* ── FRC ────────────────────────────────────────────────────────────────── */
+
+describe("FRC URL rules", () => {
+  test("only the news index is an eligible surface", () => {
+    assert.equal(acceptsFrcIndex(FRC_URL), true);
+    assert.equal(acceptsFrcIndex("https://www.frc.org.uk/news-and-events/news"), true);
+    // Genuine FRC sections that are not the news index.
+    assert.equal(acceptsFrcIndex("https://www.frc.org.uk/news-and-events/events/"), false);
+    assert.equal(acceptsFrcIndex("https://www.frc.org.uk/news-and-events/"), false);
+    assert.equal(acceptsFrcIndex("https://www.frc.org.uk/"), false);
+  });
+
+  test("both item shapes this CMS emits are recognised", () => {
+    // Flat and dated. The rule covers each without guessing which is in use.
+    assert.equal(
+      isFrcNewsItem("https://www.frc.org.uk/news-and-events/news/frc-publishes-guidance/"),
+      true
+    );
+    assert.equal(
+      isFrcNewsItem("https://www.frc.org.uk/news-and-events/news/2026/08/audit-quality/"),
+      true
+    );
+  });
+
+  test("the index, events and pagination are not entries", () => {
+    for (const not of [
+      "https://www.frc.org.uk/news-and-events/news/",
+      "https://www.frc.org.uk/news-and-events/events/frc-annual-conference-2026/",
+      "https://www.frc.org.uk/news-and-events/news/page/2/",
+      "https://www.frc.org.uk/library/standards-and-codes/",
+    ]) {
+      assert.equal(isFrcNewsItem(not), false, not);
+    }
+  });
+
+  test("a published file is an attachment, not an item", () => {
+    assert.equal(
+      isFrcNewsItem("https://www.frc.org.uk/news-and-events/news/ai-guidance-2026.pdf"),
+      false
+    );
+  });
+
+  test("the type is read, and absent rather than guessed", () => {
+    assert.equal(frcCategory('<span class="type">Press release</span> FRC publishes'), "Press release");
+    assert.equal(frcCategory('<span class="type">Podcast</span> episode 12'), "Podcast");
+    assert.equal(frcCategory("nothing recognisable at all"), "");
+  });
+});
+
+describe("extracting FRC news", () => {
+  const result = extractFrc(FRC_HTML, FRC_URL);
+
+  test("it returns the genuine news and publications", () => {
+    assert.equal(result.ok, true, result.ok ? "" : result.error);
+    assert.deepEqual(
+      result.items.map((i) => new URL(i.url).pathname),
+      [
+        "/news-and-events/news/frc-publishes-guidance-on-use-of-ai-in-audit",
+        "/news-and-events/news/2026/08/audit-quality-inspection-results-2026",
+        "/news-and-events/news/consultation-on-revisions-to-isa-uk-315",
+      ]
+    );
+  });
+
+  test("a podcast at a news address is not a citable document", () => {
+    // The exclusion no URL rule can make: same path shape, real date, real
+    // headline, and nothing a regulatory claim can quote.
+    const urls = result.items.map((i) => i.url).join(" ");
+    assert.ok(!urls.includes("podcast-episode-12"), "a podcast was collected");
+    assert.match(result.rejected.join("\n"), /podcast-episode-12[^\n]*podcast, not a document/);
+  });
+
+  test("a video is excluded the same way", () => {
+    const urls = result.items.map((i) => i.url).join(" ");
+    assert.ok(!urls.includes("watch-our-webinar"), "a video was collected");
+    assert.match(result.rejected.join("\n"), /watch-our-webinar[^\n]*video, not a document/);
+  });
+
+  test("events, filters and pagination are not stories", () => {
+    const urls = result.items.map((i) => i.url).join(" ");
+    for (const control of ["/events/", "?type=", "?year=", "?page=", "/news/page/"]) {
+      assert.ok(!urls.includes(control), `a control was collected: ${control}`);
+    }
+  });
+
+  test("the featured card and the list row are one item, and keep the PDF", () => {
+    // The panel carries no document; the list row does. Deduplication keeps
+    // the first sighting, so without enrichment the guidance PDF is lost from
+    // the one story the page chose to lead with.
+    const lead = result.items.filter((i) => i.url.includes("guidance-on-use-of-ai"));
+    assert.equal(lead.length, 1);
+    assert.ok(!lead[0].url.includes("utm_source"));
+    assert.match(lead[0].documentUrl, /ai-in-audit-guidance-2026\.pdf$/);
+  });
+
+  test("an undated entry is dropped, not dated today", () => {
+    assert.ok(!result.items.some((i) => i.url.includes("entry-with-no-date")));
+    assert.match(result.rejected.join("\n"), /entry-with-no-date[^\n]*no date/);
+  });
+
+  test("dates, categories and standfirsts come off the right card", () => {
+    const [guidance, inspection, consultation] = result.items;
+    assert.equal(guidance.publishedAt.slice(0, 10), "2026-09-11");
+    assert.equal(guidance.category, "Press release");
+    assert.match(guidance.lead, /expectations for audit firms/);
+
+    assert.equal(inspection.publishedAt.slice(0, 10), "2026-08-04");
+    assert.equal(inspection.category, "Publication");
+    assert.equal(inspection.documentUrl, undefined, "a neighbouring card's PDF bled across");
+
+    assert.equal(consultation.publishedAt.slice(0, 10), "2026-06-23");
+    assert.equal(consultation.category, "Consultation");
+  });
+
+  test("a page with no news links says what it found instead", () => {
+    const moved = FRC_HTML.replace(/\/news-and-events\/news\//g, "/newsroom/");
+    const r = extractFrc(moved, FRC_URL);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /none is under \/news-and-events\/news\//);
+    assert.match(r.error, /\/newsroom\//, r.error);
+  });
+
+  test("an index that lost its dates is an outage, not a quiet week", () => {
+    const undated = FRC_HTML.replace(/<time[^>]*>[^<]*<\/time>/gi, "");
+    const r = extractFrc(undated, FRC_URL);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /index structure has probably changed/i);
+  });
+});
+
+/* ── H2A ────────────────────────────────────────────────────────────────── */
+
+describe("H2A URL rules", () => {
+  test("the publication sections are eligible surfaces", () => {
+    assert.equal(acceptsH2aPage(H2A_URL), true);
+    assert.equal(acceptsH2aPage("https://www.h2a-france.org/publications/"), true);
+    assert.equal(acceptsH2aPage("https://www.h2a-france.org/communiques/"), true);
+    // The institution's own pages are not a publication listing.
+    assert.equal(acceptsH2aPage("https://www.h2a-france.org/qui-sommes-nous/"), false);
+    assert.equal(acceptsH2aPage("https://www.h2a-france.org/"), false);
+    // And the predecessor's domain is a different source entirely.
+    assert.equal(acceptsH2aPage("https://www.h3c.org/actualites"), false);
+  });
+
+  test("a publication is one level under a section", () => {
+    assert.equal(
+      isH2aPublication("https://www.h2a-france.org/actualites/decisions-mai-2026/"),
+      true
+    );
+    assert.equal(
+      isH2aPublication("https://www.h2a-france.org/actualites/"),
+      false,
+      "the section index itself"
+    );
+    assert.equal(isH2aPublication("https://www.h2a-france.org/actualites/page/2/"), false);
+    assert.equal(isH2aPublication("https://www.h2a-france.org/nous-rejoindre/offres/"), false);
+  });
+
+  test("a published file is an attachment, not an item", () => {
+    // Found in the first run: the PDF a card links was collected a second
+    // time, titled with the link text that pointed at it.
+    assert.equal(
+      isH2aPublication("https://www.h2a-france.org/publications/position-csrd-2026.pdf"),
+      false
+    );
+  });
+
+  test("the French category is read, accents and all", () => {
+    // `\b` in JavaScript does not see accented letters, so /\bcommuniqué\b/
+    // matches nothing at all. Half this vocabulary is accented.
+    assert.equal(h2aCategory('<span class="type">Communiqué</span> la H2A publie'), "Communiqué");
+    assert.equal(h2aCategory("Décisions de la formation restreinte"), "Décision");
+    assert.equal(h2aCategory("une étude sur la profession"), "Rapport");
+    assert.equal(h2aCategory("rien de reconnaissable ici"), "");
+  });
+
+  test("a feed body is recognised and sent back to the feed parser", () => {
+    // The feed-first instruction, enforced where it can be. A feed beats an
+    // extractor, and the useful answer is an instruction rather than a parse
+    // failure.
+    assert.equal(looksLikeFeed('<?xml version="1.0"?><rss version="2.0"><channel>'), true);
+    assert.equal(looksLikeFeed('<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">'), true);
+    assert.equal(looksLikeFeed("<!doctype html><html><body>"), false);
+
+    const r = extractH2a('<?xml version="1.0"?><rss version="2.0"><channel><title>H2A</title></channel></rss>', H2A_URL);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /set this source's method to `rss`/);
+  });
+});
+
+describe("extracting H2A publications", () => {
+  const result = extractH2a(H2A_HTML, H2A_URL);
+
+  test("it returns the genuine publications", () => {
+    assert.equal(result.ok, true, result.ok ? "" : result.error);
+    assert.deepEqual(
+      result.items.map((i) => new URL(i.url).pathname),
+      [
+        "/communiques/h2a-publie-sa-position-sur-l-assurance-csrd",
+        "/publications/rapport-annuel-2025",
+        "/actualites/decisions-de-la-formation-restreinte-mai-2026",
+      ]
+    );
+  });
+
+  test("French dates parse in all three forms the site mixes", () => {
+    const [communique, rapport, decision] = result.items;
+    assert.equal(communique.publishedAt.slice(0, 10), "2026-09-15", "15 septembre 2026");
+    assert.equal(rapport.publishedAt.slice(0, 10), "2026-07-01", "the ordinal 1er juillet");
+    assert.equal(decision.publishedAt.slice(0, 10), "2026-06-04", "numeric 04/06/2026, day first");
+  });
+
+  test("categories are the authority's own words", () => {
+    assert.deepEqual(
+      result.items.map((i) => i.category),
+      ["Communiqué", "Rapport", "Décision"]
+    );
+  });
+
+  test("archive chrome and institutional pages are not publications", () => {
+    const urls = result.items.map((i) => i.url).join(" ");
+    for (const chrome of [
+      "/actualites/page/",
+      "/qui-sommes-nous/",
+      "/nous-rejoindre/",
+      "/mentions-legales/",
+    ]) {
+      assert.ok(!urls.includes(chrome), `${chrome} was collected`);
+    }
+    // The section index linked as "Toutes les actualités" is not an item.
+    assert.ok(!result.items.some((i) => new URL(i.url).pathname === "/actualites"));
+  });
+
+  test("the highlighted card and the list row are one item, and keep the PDF", () => {
+    const lead = result.items.filter((i) => i.url.includes("assurance-csrd"));
+    assert.equal(lead.length, 1);
+    assert.ok(!lead[0].url.includes("utm_source"));
+    assert.match(lead[0].documentUrl, /position-assurance-csrd-2026\.pdf$/);
+  });
+
+  test("the PDF is not also an item in its own right", () => {
+    assert.ok(
+      !result.items.some((i) => i.url.endsWith(".pdf")),
+      "a linked document was collected as a publication"
+    );
+    assert.ok(
+      !result.items.some((i) => /^T[ée]l[ée]charger/i.test(i.title)),
+      "a download link's text became a headline"
+    );
+  });
+
+  test("an undated card is dropped", () => {
+    assert.ok(!result.items.some((i) => i.url.includes("sans-date")));
+    assert.match(result.rejected.join("\n"), /sans-date[^\n]*no date/);
+  });
+
+  test("another body's newsroom is never in scope", () => {
+    assert.ok(!result.items.some((i) => i.url.includes("cncc.fr")));
+  });
+
+  test("a page with no publication links says what it found instead", () => {
+    const moved = H2A_HTML
+      .replace(/\/actualites\//g, "/nouvelles/")
+      .replace(/\/publications\//g, "/documents/")
+      .replace(/\/communiques\//g, "/presse/");
+    const r = extractH2a(moved, H2A_URL);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /none is under a publication section/);
+    assert.match(r.error, /\/nouvelles\/|\/documents\/|\/presse\//, r.error);
+  });
+
+  test("a listing that lost its dates is an outage, not a quiet week", () => {
+    const undated = H2A_HTML
+      .replace(/<time[^>]*>[^<]*<\/time>/gi, "")
+      .replace(/<span class="date">[^<]*<\/span>/gi, "");
+    const r = extractH2a(undated, H2A_URL);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /listing structure has probably changed/i);
+  });
+});
+
 /* ── Comments are not content ───────────────────────────────────────────── */
 
 describe("commented-out markup is not read as a page", () => {
@@ -1579,6 +1928,8 @@ describe("extractor output is an ordinary feed item", () => {
     enisa: { feed_url: ENISA_URL, jurisdictions: ["EU"] },
     aiOffice: { feed_url: AI_OFFICE_URL, jurisdictions: ["EU"] },
     coso: { feed_url: COSO_URL, jurisdictions: ["GLOBAL"] },
+    frc: { feed_url: FRC_URL, jurisdictions: ["UK"] },
+    h2a: { feed_url: H2A_URL, jurisdictions: ["FR"] },
   };
   const RESULTS = {
     apas: extractApas(FIXTURE, PAGE),
@@ -1587,6 +1938,8 @@ describe("extractor output is an ordinary feed item", () => {
     enisa: extractEnisa(ENISA_HTML, ENISA_URL),
     aiOffice: extractAiOffice(AI_OFFICE_HTML, AI_OFFICE_URL),
     coso: extractCoso(COSO_HTML, COSO_URL),
+    frc: extractFrc(FRC_HTML, FRC_URL),
+    h2a: extractH2a(H2A_HTML, H2A_URL),
   };
 
   for (const [name, result] of Object.entries(RESULTS)) {
@@ -1625,6 +1978,8 @@ describe("extractor output is an ordinary feed item", () => {
         enisa: extractEnisa(ENISA_HTML, ENISA_URL),
         aiOffice: extractAiOffice(AI_OFFICE_HTML, AI_OFFICE_URL),
         coso: extractCoso(COSO_HTML, COSO_URL),
+        frc: extractFrc(FRC_HTML, FRC_URL),
+        h2a: extractH2a(H2A_HTML, H2A_URL),
       }[name];
       assert.deepEqual(
         again.items.map((i) => i.url),

@@ -405,6 +405,39 @@ export function parseEnglishDate(raw: string): string | null {
   return null;
 }
 
+const FR_MONTHS: Record<string, number> = {
+  janvier: 1, "février": 2, fevrier: 2, mars: 3, avril: 4, mai: 5, juin: 6,
+  juillet: 7, "août": 8, aout: 8, septembre: 9, octobre: 10,
+  novembre: 11, "décembre": 12, decembre: 12,
+};
+
+/**
+ * French dates: "15 septembre 2026", "1er septembre 2026", "15/09/2026".
+ *
+ * Two notes on what is accepted here and not elsewhere.
+ *
+ * `1er` — French writes the first of the month as an ordinal and no other day,
+ * so the suffix is matched rather than the general `\d+(st|nd|rd|th)` an
+ * English parser would need.
+ *
+ * The numeric form IS read, where `parseEnglishDate` deliberately refuses it.
+ * The English refusal is about ambiguity: "01/02/2026" is 1 February on an EU
+ * page and 2 January on an American one, and the page rarely says which. On a
+ * French-language page from a French authority there is no such ambiguity —
+ * day-first is the only convention in use — so the reason for refusing does
+ * not apply. The extractor states the locale, which is what makes this safe.
+ */
+export function parseFrenchDate(raw: string): string | null {
+  const written = /\b(\d{1,2})\s*(?:er)?\s+([A-Za-zÀ-ÿ]+)\s+(\d{4})\b/.exec(raw);
+  if (written) {
+    const month = FR_MONTHS[written[2].toLowerCase()];
+    if (month) return iso(+written[1], month, +written[3]);
+  }
+  const numeric = /\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/.exec(raw);
+  if (numeric) return iso(+numeric[1], +numeric[2], +numeric[3]);
+  return null;
+}
+
 /**
  * The best date available for one entry, tried most to least reliable.
  *
@@ -412,10 +445,14 @@ export function parseEnglishDate(raw: string): string | null {
  * German page with the English parser would turn "1.2.2026" into nothing and,
  * worse, could match a stray "Mai 2026" as May in a numbering that meant
  * something else. One page, one language, stated by the extractor that knows.
+ *
+ * French and German share "mai", which is exactly the kind of overlap that
+ * makes running every parser over every page a bad idea.
  */
-export function findDate(block: string, locale: "de" | "en"): string | null {
-  return (
-    parseTimeAttr(block) ??
-    (locale === "de" ? parseGermanDate(block) : parseEnglishDate(block))
-  );
+export function findDate(block: string, locale: "de" | "en" | "fr"): string | null {
+  const machine = parseTimeAttr(block);
+  if (machine) return machine;
+  if (locale === "de") return parseGermanDate(block);
+  if (locale === "fr") return parseFrenchDate(block);
+  return parseEnglishDate(block);
 }

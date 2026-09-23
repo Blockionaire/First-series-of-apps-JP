@@ -21,12 +21,23 @@ import { apas } from "./apas.ts";
 import { ceaob } from "./ceaob.ts";
 import { coso } from "./coso.ts";
 import { enisa } from "./enisa.ts";
+import { frc } from "./frc.ts";
+import { h2a } from "./h2a.ts";
 import type { Extractor } from "./types.ts";
 
 export type { Extractor, ExtractResult } from "./types.ts";
 
 /** Every publisher with a hand-written extractor. */
-export const EXTRACTORS: readonly Extractor[] = [apas, anthropic, ceaob, enisa, aiOffice, coso];
+export const EXTRACTORS: readonly Extractor[] = [
+  apas,
+  anthropic,
+  ceaob,
+  enisa,
+  aiOffice,
+  coso,
+  frc,
+  h2a,
+];
 
 /**
  * The extractor for a registered domain, or null.

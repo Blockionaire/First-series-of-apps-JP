@@ -1,0 +1,124 @@
+<!doctype html>
+<!--
+  REPRESENTATIVE, NOT A SAVED COPY. h2a-france.org has never been fetched by
+  this code — the build environment has no outbound network. The section names
+  are the conventions a French public authority's site uses and the shape the
+  predecessor site (h3c.org/actualites) used, not observation.
+
+  What this fixture is for, beyond the obvious:
+
+    · FRENCH DATES in the three forms these sites mix — "15 septembre 2026",
+      the ordinal "1er juillet 2026", and numeric "04/06/2026". German and
+      French both spell May "mai", which is exactly why the extractor states
+      its locale instead of trying every parser.
+    · ARCHIVE CHROME: a link to the archive index and a year page, both real
+      and neither a publication.
+    · THE SAME COMMUNIQUÉ TWICE — a highlighted card and a list row, one with
+      a tracking query, and only the list row carries the PDF.
+    · UNRELATED SITE CONTENT: the institution's own description pages, its
+      recruitment notice and its legal pages, all on the same host.
+    · AN UNDATED CARD, dropped rather than dated today.
+-->
+<html lang="fr">
+<head><title>Actualités | H2A — Haute Autorité de l'Audit</title></head>
+<body>
+<nav>
+  <a href="/">Accueil</a>
+  <a href="/qui-sommes-nous/">Qui sommes-nous</a>
+  <a href="/actualites/">Actualités</a>
+  <a href="/publications/">Publications</a>
+  <a href="/nous-rejoindre/">Nous rejoindre</a>
+</nav>
+
+<main>
+  <h1>Actualités</h1>
+
+  <!-- Le communiqué à la une, repris plus bas dans la liste. -->
+  <section class="mise-en-avant">
+    <article>
+      <span class="type">Communiqué</span>
+      <time datetime="2026-09-15">15 septembre 2026</time>
+      <a href="/communiques/h2a-publie-sa-position-sur-l-assurance-csrd/?utm_source=accueil">
+        La H2A publie sa position sur l'assurance des informations de durabilité
+      </a>
+      <p>
+        La Haute Autorité précise les diligences attendues des commissaires aux comptes
+        au titre de la mission d'assurance prévue par la directive CSRD.
+      </p>
+    </article>
+  </section>
+
+  <ul class="liste-actualites">
+    <li>
+      <span class="type">Communiqué</span>
+      <time datetime="2026-09-15">15 septembre 2026</time>
+      <a href="/communiques/h2a-publie-sa-position-sur-l-assurance-csrd/">
+        La H2A publie sa position sur l'assurance des informations de durabilité
+      </a>
+      <p>
+        La Haute Autorité précise les diligences attendues des commissaires aux comptes
+        au titre de la mission d'assurance prévue par la directive CSRD.
+      </p>
+      <a href="/publications/position-assurance-csrd-2026.pdf">Télécharger (PDF, 480 Ko)</a>
+    </li>
+
+    <li>
+      <!-- La forme ordinale : "1er". -->
+      <span class="type">Rapport</span>
+      <time datetime="2026-07-01">1er juillet 2026</time>
+      <a href="/publications/rapport-annuel-2025/">
+        Rapport annuel 2025 de la Haute Autorité de l'Audit
+      </a>
+      <p>
+        Le rapport présente le bilan des contrôles conduits auprès des commissaires aux
+        comptes et l'activité de la formation restreinte.
+      </p>
+    </li>
+
+    <li>
+      <!-- La forme numérique, sans <time>. -->
+      <span class="type">Décision</span>
+      <span class="date">04/06/2026</span>
+      <a href="/actualites/decisions-de-la-formation-restreinte-mai-2026/">
+        Décisions de la formation restreinte rendues en mai 2026
+      </a>
+    </li>
+
+    <li>
+      <!-- Sans date. Écartée plutôt que datée d'aujourd'hui. -->
+      <a href="/actualites/publication-sans-date-sur-la-carte/">
+        Une actualité dont la carte ne porte aucune date
+      </a>
+      <p>Un lien réel, un titre réel, et toujours pas publiable sans date.</p>
+    </li>
+
+    <!-- Chrome d'archives : l'index et une page d'année. -->
+    <li>
+      <time datetime="2026-01-05">5 janvier 2026</time>
+      <a href="/actualites/">Toutes les actualités</a>
+    </li>
+    <li>
+      <time datetime="2026-01-05">5 janvier 2026</time>
+      <a href="/actualites/page/2/">2</a>
+    </li>
+
+    <!-- Contenu institutionnel, sur le même hôte et hors périmètre. -->
+    <li>
+      <time datetime="2026-02-10">10 février 2026</time>
+      <a href="/qui-sommes-nous/missions-et-organisation/">Missions et organisation</a>
+    </li>
+    <li>
+      <time datetime="2026-02-10">10 février 2026</time>
+      <a href="/nous-rejoindre/offres-d-emploi/">Offres d'emploi</a>
+    </li>
+  </ul>
+
+  <a href="https://www.cncc.fr/actualites">Compagnie nationale des commissaires aux comptes</a>
+</main>
+
+<footer>
+  <a href="/mentions-legales/">Mentions légales</a>
+  <p>© Haute Autorité de l'Audit, 2026</p>
+</footer>
+</body>
+</html>

@@ -1,9 +1,9 @@
 # Phase 2.5 — source-specific extractors
 
-**Status:** the machinery is built and **six extractors are written** — APAS,
-Anthropic, CEAOB, ENISA, the European AI Office and COSO. The remaining sources
-in the original proposal below are still awaiting Step 0 verification before
-any more are written.
+**Status:** the machinery is built and **eight extractors are written** — APAS,
+Anthropic, CEAOB, ENISA, the European AI Office, COSO, the FRC and H2A. The
+remaining sources in the original proposal below are still awaiting Step 0
+verification before any more are written.
 
 ## What exists now
 
@@ -22,8 +22,10 @@ its index.
 | ENISA (`enisa.europa.eu/news`) | `extractors/enisa.ts` | written, **unverified against the live site** |
 | European AI Office (`digital-strategy.ec.europa.eu`) | `extractors/ai-office.ts` | written, **unverified against the live site** |
 | COSO (`coso.org/news`) | `extractors/coso.ts` | written, **unverified against the live site** |
+| FRC (`frc.org.uk/news-and-events/news/`) | `extractors/frc.ts` | written, **unverified against the live site** |
+| H2A (`h2a-france.org`) | `extractors/h2a.ts` | written, **unverified; no feed checked** |
 
-All six anchor on URL taxonomy rather than class names, refuse navigation,
+All eight anchor on URL taxonomy rather than class names, refuse navigation,
 and return an **error** rather than an empty list when a page yields nothing
 recognisable — so a redesign reads as an outage rather than as a quiet news
 week. When one refuses, it **names the path shapes it actually found**, so a
@@ -34,12 +36,45 @@ generalised.
 
 | Source | Was | Now | Why |
 |---|---|---|---|
-| ENISA | `…/news-items/news-wires/RSS` (rss) | `…/news` (html_scrape) | A Plone-era feed address predating the site redesign. **This is a deliberate re-registration, not a silent fallback** — the standing rule that a feed beats a scraper still holds, and if a working feed is found it should replace this. |
+| ENISA | `…/news-items/news-wires/RSS` (rss) | `…/news` (html_scrape) | A Plone-era feed address predating the site redesign. |
 | COSO | `/guidance` | `/news` | `/guidance` is a catalogue of evergreen framework landings, not a stream. An extractor reading it would report the same items every poll, dated by whatever sat nearby. |
+| FRC | `/news-and-events/rss/` (rss) | `/news-and-events/news/` (html_scrape) | Feed obsolete, per the operator. |
+| H3C → **H2A** | `h3c.org` | `h2a-france.org` | The Haut Conseil was reconstituted as the Haute Autorité de l'Audit. **The domain changed, so this is a different row, not an edit.** |
+
+Every one of these is a **deliberate re-registration, not a silent fallback**.
+The standing rule that a feed beats a scraper still holds: where a feed was
+dropped it was because it was reported dead, and if a working one turns up it
+should replace the extractor.
 
 `load_proposal` skips domains already in the registry, so **rows registered
 from an earlier version of the seed keep their stored URL and method** — an
-existing ENISA or COSO row has to be corrected with **Edit**.
+existing ENISA, COSO or FRC row has to be corrected with **Edit**.
+
+**H3C needs retiring by hand.** A domain is the registry's identity for a
+source, so H2A cannot be reached by editing the H3C row: mark H3C
+`Do not use` in the Review column — which switches it off and withdraws
+retrieval — and add H2A with the **Add a source** form.
+
+### H2A: the feed was asked for first and could not be tried
+
+The instruction was to prefer an official feed and fall back to an extractor
+only if the feed is not usable. This build environment has no outbound network,
+so **no h2a-france.org URL has been fetched and no feed has been confirmed to
+exist**. A guessed feed URL in the seed would read as a checked fact.
+
+So the row is registered against the news surface, and the question is handed
+to whoever has a network, in the place they will meet it: `extractH2a`
+recognises an RSS or Atom body and **refuses it with an instruction** — *"set
+this source's method to `rss` and test again"*. Point the row at a candidate
+feed with **Test source**; if one exists, that is what it will say.
+
+### FRC: podcasts and videos need a rule a URL cannot make
+
+The FRC lists recordings **in** the news stream, at news addresses, with only a
+type label to mark them. A recording is not text a regulatory claim can cite,
+so `MEDIA_KINDS` is checked against the entry's own category. The fixture
+carries a podcast and a video at news addresses; removing the rule lets both
+through.
 
 ### The AI Office is scoped by subject, not by domain
 
