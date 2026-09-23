@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
-import { track, isEventKind, pruneOldEvents } from "@/lib/analytics";
+import { track, isEventKind } from "@/lib/analytics";
 import { isTrackablePath } from "@/lib/analytics-paths";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
@@ -45,10 +45,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Retention is not this request's job: it runs on the schedule (see
+  // lib/newsroom/scheduled.ts) and at Node server start, never on a visitor.
   await track(kind, { path, label: String(body.label ?? "").slice(0, 200), visitor });
-
-  // Cheap opportunistic retention sweep, roughly once per thousand events.
-  if (Math.random() < 0.001) await pruneOldEvents();
 
   return NextResponse.json({ ok: true });
 }

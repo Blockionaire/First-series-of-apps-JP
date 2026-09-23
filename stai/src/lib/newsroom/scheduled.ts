@@ -30,6 +30,7 @@
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { registerD1Sql, type D1Database } from "../sql-d1";
+import { pruneOldEvents } from "../analytics";
 import { isEnabled } from "../site-config";
 import { runDiscovery, type DiscoveryResult } from "./discovery.ts";
 
@@ -97,6 +98,14 @@ export type ScheduledOutcome =
 export async function runScheduledDiscovery(env: CronEnv): Promise<ScheduledOutcome> {
   cronEnv = env;
   installDriver();
+
+  // Analytics retention (12 months, as the privacy notice states). It used to
+  // run inside /api/track for one visitor in a thousand, who waited for a
+  // DELETE across the events table (CODE_AUDIT.md, P3). Here it runs on the
+  // schedule instead, before the discovery switch is read, because retention
+  // must hold whether or not discovery is on. One indexed DELETE; best effort,
+  // never throws.
+  await pruneOldEvents();
 
   try {
     if (!(await isEnabled("discovery"))) {
