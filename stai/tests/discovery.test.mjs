@@ -144,6 +144,56 @@ describe("feed parsing", () => {
     assert.equal(parseFeedDate("2140-01-01"), null, "so is a date far in the future");
     assert.equal(parseFeedDate("2026-09-21T09:00:00Z"), "2026-09-21T09:00:00.000Z");
   });
+
+  test("a date materially in the future is dropped — the HTML extractors' rule", () => {
+    // Before, anything up to the end of NEXT year passed: an item dated two
+    // months ahead outranked everything on recency until it arrived.
+    const now = Date.parse("2026-09-23T12:00:00Z");
+    assert.equal(parseFeedDate("Mon, 23 Nov 2026 09:00:00 GMT", now), null, "two months ahead");
+    assert.equal(parseFeedDate("2026-09-26T12:00:01Z", now), null, "just over two days ahead");
+    assert.equal(parseFeedDate("2026-12-31", now), null, "later this year");
+    // A timezone's worth ahead is a publisher east of UTC, not a bug.
+    assert.equal(parseFeedDate("Thu, 24 Sep 2026 01:30:00 +0200", now), "2026-09-23T23:30:00.000Z");
+    assert.equal(parseFeedDate("2026-09-25T11:59:59Z", now), "2026-09-25T11:59:59.000Z", "inside two days");
+  });
+
+  test("feed and HTML dates share one bound, so a publisher is held to one rule", async () => {
+    const { parseIsoish } = await import("../src/lib/newsroom/extractors/html.ts");
+    const ahead = new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10);
+    const soon = new Date(Date.now() + 1 * 86_400_000).toISOString().slice(0, 10);
+    assert.equal(parseFeedDate(ahead), null);
+    assert.equal(parseIsoish(ahead), null);
+    assert.ok(parseFeedDate(soon));
+    assert.ok(parseIsoish(soon));
+  });
+
+  test("a numeric date with the year last is ambiguous and dropped, not guessed", () => {
+    // 02/01/2026 is 2 January in Brussels and 1 February in New York;
+    // Date.parse silently picks New York.
+    const now = Date.parse("2026-09-23T12:00:00Z");
+    for (const raw of ["02/01/2026", "02-01-2026", "02.01.2026", "2/1/2026", "02/01/26", "02/01/2026 09:00", "Fri, 02/01/2026"]) {
+      assert.equal(parseFeedDate(raw, now), null, raw);
+    }
+    // Year first is not ambiguous, and neither is a written month.
+    assert.equal(parseFeedDate("2026-01-02", now), "2026-01-02T00:00:00.000Z");
+    assert.equal(parseFeedDate("Fri, 02 Jan 2026 09:00:00 GMT", now), "2026-01-02T09:00:00.000Z");
+  });
+
+  test("a feed's items keep their dates or lose them — never gain a wrong one", () => {
+    const now = new Date();
+    const past = new Date(now.getTime() - 86_400_000).toUTCString();
+    const r = parseFeed(`<?xml version="1.0"?><rss version="2.0"><channel>
+      <item><title>Dated properly</title><link>https://x.eu/a</link><pubDate>${past}</pubDate></item>
+      <item><title>Ambiguous</title><link>https://x.eu/b</link><pubDate>02/01/2026</pubDate></item>
+      <item><title>From the future</title><link>https://x.eu/c</link><pubDate>${new Date(now.getTime() + 30 * 86_400_000).toUTCString()}</pubDate></item>
+    </channel></rss>`);
+    assert.ok(r.ok);
+    assert.deepEqual(r.items.map((i) => [i.title, !!i.publishedAt]), [
+      ["Dated properly", true],
+      ["Ambiguous", false],
+      ["From the future", false],
+    ]);
+  });
 });
 
 /* ── Normalisation ──────────────────────────────────────────────────────── */

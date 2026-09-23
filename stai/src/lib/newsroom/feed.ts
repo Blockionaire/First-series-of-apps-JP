@@ -163,25 +163,55 @@ function blocks(xml: string, tag: string): string[] {
 /* ── Dates ───────────────────────────────────────────────────────────── */
 
 /**
+ * How far ahead of now a publication date may sit before it is a bug rather
+ * than a timezone. A regulator in UTC+2 publishing just after midnight is a
+ * few hours "ahead"; an item dated next month is an embargo placeholder or a
+ * typo, and would otherwise outrank everything on recency for weeks.
+ */
+export const MAX_FUTURE_MS = 2 * 86_400_000;
+
+/**
+ * Is this instant believable as a publication date?
+ *
+ * One rule for every date the newsroom reads — feeds here, HTML extractors in
+ * extractors/html.ts — so a feed and a page from the same publisher cannot be
+ * held to different standards. Before 1995 is a templating placeholder
+ * (1970 is the usual one); more than two days ahead is not yet published.
+ */
+export function plausiblePublished(t: number, now = Date.now()): boolean {
+  if (!Number.isFinite(t)) return false;
+  return new Date(t).getUTCFullYear() >= 1995 && t <= now + MAX_FUTURE_MS;
+}
+
+/**
+ * A numeric date with the year last: 02/01/2026, 2.1.2026, 02-01-26.
+ *
+ * Day-first in Europe, month-first in America, and the feed rarely says
+ * which. `Date.parse` reads it month-first where it reads it at all, so an EU
+ * publisher's 2 January became 1 February. RSS and Atom both require a
+ * written-out or ISO date, so a feed using this form is already outside its
+ * format; the date is dropped rather than guessed.
+ */
+const NUMERIC_YEAR_LAST = /\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b/;
+
+/**
  * A feed date as an ISO instant, or null.
  *
  * RFC 822 (RSS) and RFC 3339 (Atom) are both handled by Date.parse in every
  * runtime this ships to. What matters more is the rejection: a date that does
- * not parse becomes null rather than "now". Defaulting to the retrieval time
- * would make every item from a broken feed look like breaking news, and
- * recency is a ranking input.
+ * not parse, cannot be read without guessing the day/month order, or is not
+ * believable (`plausiblePublished`) becomes null rather than "now".
+ * Defaulting to the retrieval time would make every item from a broken feed
+ * look like breaking news, and recency is a ranking input. A null date ranks
+ * low, and is visible as missing.
  */
-export function parseFeedDate(raw: string): string | null {
+export function parseFeedDate(raw: string, now = Date.now()): string | null {
   const s = raw.trim();
   if (!s) return null;
+  if (NUMERIC_YEAR_LAST.test(s)) return null;
   const t = Date.parse(s);
-  if (!Number.isFinite(t)) return null;
-  const iso = new Date(t).toISOString();
-  // A feed claiming something was published in 1970 or in 2140 is a broken
-  // feed. Both extremes appear in the wild, usually from a templating bug.
-  const year = Number(iso.slice(0, 4));
-  if (year < 1995 || year > new Date().getUTCFullYear() + 2) return null;
-  return iso;
+  if (!plausiblePublished(t, now)) return null;
+  return new Date(t).toISOString();
 }
 
 /* ── Formats ─────────────────────────────────────────────────────────── */

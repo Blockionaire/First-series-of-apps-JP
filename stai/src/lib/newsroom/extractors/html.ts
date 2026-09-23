@@ -13,7 +13,7 @@
  * refuses to have.
  */
 
-import { decodeEntities, plainText } from "../feed.ts";
+import { decodeEntities, plainText, plausiblePublished } from "../feed.ts";
 
 export type Anchor = {
   /** The href exactly as written, unresolved. */
@@ -325,13 +325,12 @@ export function parseGermanDate(raw: string): string | null {
 
 function iso(day: number, month: number, year: number): string | null {
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  // Guards the same bugs parseFeedDate guards: a templating placeholder that
-  // renders as 01.01.1970, and a date far enough ahead to be a typo.
-  if (year < 1995 || year > new Date().getUTCFullYear() + 2) return null;
   const d = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
   // Rejects 31.02: the Date constructor rolls over rather than failing.
   if (d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return null;
-  if (d.getTime() > Date.now() + 2 * 86_400_000) return null;
+  // The same bound as feeds (feed.ts): a templating placeholder that renders
+  // as 01.01.1970, or a date more than two days ahead.
+  if (!plausiblePublished(d.getTime())) return null;
   return d.toISOString();
 }
 
