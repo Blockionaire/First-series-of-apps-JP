@@ -126,6 +126,50 @@ describe("D1 migrations", () => {
   });
 });
 
+describe("access paths are index seeks, not scans (migration 0011)", () => {
+  // On D1 every row a scan reads is billed, so "fast enough on a small table"
+  // is not the bar. Each case is the query as the application issues it, and
+  // the assertion is on the plan: the named index is used, the table is not
+  // scanned. Dropping an index, or rewriting the query so it cannot use one,
+  // fails here rather than on a bill.
+  const plan = (d, sql, params = []) =>
+    d.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...params).map((r) => r.detail).join(" | ");
+
+  test("which story holds an item", () => {
+    const { d, cleanup } = freshDb();
+    const p = plan(d, "SELECT story_id FROM newsroom_story_sources WHERE source_item_id=?", [1]);
+    assert.match(p, /idx_story_sources_item/, p);
+    assert.doesNotMatch(p, /SCAN newsroom_story_sources/, p);
+    cleanup();
+  });
+
+  test("purging expired sessions on sign-in", () => {
+    const { d, cleanup } = freshDb();
+    const p = plan(d, "DELETE FROM sessions WHERE expires_at <= datetime('now')");
+    assert.match(p, /idx_sessions_expires/, p);
+    assert.doesNotMatch(p, /SCAN sessions/, p);
+    cleanup();
+  });
+
+  test("entitlement on every signed-in request", async () => {
+    const { ENTITLEMENT_SQL, GRANT_SQL } = await import("../src/lib/entitlement.ts");
+    const { d, cleanup } = freshDb();
+    // The currentUser() query, verbatim in shape.
+    const p = plan(
+      d,
+      `SELECT u.id,
+              EXISTS (SELECT 1 FROM subscriptions sub WHERE sub.user_id = u.id AND ${ENTITLEMENT_SQL}) AS entitled,
+              EXISTS (SELECT 1 FROM access_grants g WHERE g.user_id = u.id AND ${GRANT_SQL}) AS granted
+       FROM sessions s JOIN users u ON u.id = s.user_id
+       WHERE s.token=? AND s.expires_at > datetime('now')`,
+      ["t"]
+    );
+    assert.match(p, /idx_subscriptions_user/, p);
+    assert.doesNotMatch(p, /SCAN sub\b/, p);
+    cleanup();
+  });
+});
+
 describe("retiring H3C and registering H2A", () => {
   // Migration 0010 is the first migration in this project that touches DATA
   // rather than schema, so what it may do is worth pinning down: it removes
