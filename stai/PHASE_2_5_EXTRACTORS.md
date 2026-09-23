@@ -50,10 +50,23 @@ should replace the extractor.
 from an earlier version of the seed keep their stored URL and method** — an
 existing ENISA, COSO or FRC row has to be corrected with **Edit**.
 
-**H3C needs retiring by hand.** A domain is the registry's identity for a
-source, so H2A cannot be reached by editing the H3C row: mark H3C
-`Do not use` in the Review column — which switches it off and withdraws
-retrieval — and add H2A with the **Add a source** form.
+**H3C → H2A is done by `migrations/0010_h3c_to_h2a.sql`**, which runs on the
+next `npm run cf:deploy`. It switches H3C off, withdraws its retrieval
+permission and marks it `Do not use`; then registers H2A **inactive and not
+retrievable**, exactly as `load_proposal` would. Registering a source has
+never implied permission to read it, and a migration is not the place to start
+— turning H2A on is still a person's act, in the registry, and still records
+who did it.
+
+It is the first migration here that touches data rather than schema, so what
+it may do is deliberately narrow: it removes capability from one row and adds
+a dormant one, and it is a no-op on a registry that has no H3C or already has
+H2A. An H2A row added by hand first is left completely alone, including its
+URL and any permission granted to it.
+
+Nothing stops you doing it in the registry UI instead, in two clicks — the
+migration writes the same columns `setSourceReviewStatus` and `createSource`
+write, so a row retired either way is indistinguishable afterwards.
 
 ### H2A: the feed was asked for first and could not be tried
 
