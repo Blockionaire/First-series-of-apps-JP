@@ -232,7 +232,7 @@ Everything is queryable:
 
 | Table | Holds |
 |---|---|
-| `newsroom_pipeline_runs` | One row per run, idempotency key, status, error |
+| `newsroom_pipeline_runs` | One row per invocation (never reused), status `running` / `succeeded` / `failed` / `abandoned`, error |
 | `newsroom_fetch_log` | Every fetch attempt, **including every skip and why** |
 | `newsroom_pipeline_events` | Every story creation, join and revision, with the run that caused it |
 | `newsroom_source_items` | Every item, with canonical URL, both hashes, jurisdictions, retrieval time |
@@ -325,7 +325,8 @@ a time; 15-second timeout and 4 MB body limit per request; **no retries within
 a run** (the next run is the retry); one run at a time (a second caller gets
 "another discovery run is in progress", HTTP 409 from the button); a run that
 dies releases its lease after the time budget plus five minutes and is
-recorded as failed ("abandoned").
+recorded as `abandoned`. Every invocation has its own run row, so a later run
+never rewrites an earlier run's status or error.
 
 **Measured on Paid settings** (real `runDiscovery`, migrated schema, RSS
 sources with 20 items; CPU is JavaScript only — D1 work happens outside the

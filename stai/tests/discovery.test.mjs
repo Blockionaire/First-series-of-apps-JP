@@ -833,17 +833,15 @@ describe("what may be fetched", () => {
 /* ── Run identity ───────────────────────────────────────────────────────── */
 
 describe("idempotency", () => {
-  test("two firings in the same hour are the same run", () => {
-    const a = idempotencyKey("discovery", new Date("2026-09-21T09:00:10Z"));
-    const b = idempotencyKey("discovery", new Date("2026-09-21T09:59:50Z"));
-    assert.equal(a, b);
+  test("two firings in the same hour are two runs", () => {
+    // Overlap is the lease's job; the key identifies one invocation. An
+    // hourly key let a retry re-arm, and overwrite, a failed run (M2).
+    const at = new Date("2026-09-21T09:00:10Z");
+    assert.notEqual(idempotencyKey("discovery", at), idempotencyKey("discovery", at));
   });
 
-  test("the next hour is a different run", () => {
-    assert.notEqual(
-      idempotencyKey("discovery", new Date("2026-09-21T09:30:00Z")),
-      idempotencyKey("discovery", new Date("2026-09-21T10:30:00Z"))
-    );
+  test("the key names the workflow and the moment, so it reads in the Inbox", () => {
+    assert.equal(idempotencyKey("discovery", new Date("2026-09-21T09:30:00Z"), "ab12cd34"), "discovery:2026-09-21T09:30:00.000Z:ab12cd34");
   });
 
   test("the cap's day is UTC, so it does not move with the reviewer", () => {

@@ -142,7 +142,7 @@ export default async function DryRunPage({ searchParams }: Props) {
       <p className="f-mono mt-3 text-[0.72rem]" style={{ color: "var(--ink-faint)" }}>
         Daily research cap {cap}
         {summary.lastRunAt && ` · last run ${summary.lastRunAt.slice(0, 16).replace("T", " ")}`}
-        {runs.length > 0 && ` · ${runs.filter((r) => r.status === "failed").length} of the last ${runs.length} runs failed`}
+        {runs.length > 0 && ` · ${runs.filter((r) => r.status === "failed" || r.status === "abandoned").length} of the last ${runs.length} runs failed or were abandoned`}
         {tally.length > 0 && ` · ${tally.map((t) => `${t.verdict.replace(/_/g, " ")} ${t.n}`).join(", ")}`}
       </p>
 

@@ -8,17 +8,25 @@
  */
 
 /**
- * The run's identity, bucketed to the hour.
+ * The run's identity: one per invocation, never shared.
  *
- * `newsroom_pipeline_runs.idempotency_key` is UNIQUE, so two firings that
- * produce the same key share one row instead of racing to create two. The
- * hour is the right bucket: a cron retry seconds after the first attempt, or
- * an operator pressing "run now" during a scheduled run, are the same run.
- * Bucketing to the minute would make those two separate runs and lose the
- * protection exactly when it is needed.
+ * `newsroom_pipeline_runs.idempotency_key` is UNIQUE. It used to be bucketed
+ * to the hour so that a retry "reused the row" — which in practice meant a
+ * second run in the same hour re-armed the first run's row and overwrote its
+ * status and error. A run that failed at 09:05 and was re-run at 09:20 left
+ * one row saying "succeeded" (CODE_AUDIT.md M2). Overlap is now the lease's
+ * job (discovery.ts, claimRun), not the key's, so every invocation gets its
+ * own row and a failure stays on the record.
+ *
+ * The timestamp keeps keys sortable and readable in the Inbox; the random
+ * suffix makes two invocations in the same millisecond distinct.
  */
-export function idempotencyKey(workflow: string, at = new Date()): string {
-  return `${workflow}:${at.toISOString().slice(0, 13)}`;
+export function idempotencyKey(
+  workflow: string,
+  at = new Date(),
+  nonce: string = globalThis.crypto.randomUUID().slice(0, 8)
+): string {
+  return `${workflow}:${at.toISOString()}:${nonce}`;
 }
 
 /**

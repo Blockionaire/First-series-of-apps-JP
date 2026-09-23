@@ -60,15 +60,16 @@
  * — the cron firing during a manual run, or the button pressed twice — gets
  * `DiscoveryBusyError` and does nothing. A run whose invocation was killed
  * never records a finish; once its lease is older than the time budget plus
- * five minutes it is marked failed ("abandoned") and stops blocking.
+ * five minutes it is marked `abandoned` and stops blocking. Every invocation
+ * has its own run row, so a later run never rewrites an earlier one's outcome.
  *
  * ── Idempotency ─────────────────────────────────────────────────────────
  * Cron fires, workers retry, and an operator presses the manual button twice.
  * Three mechanisms make that safe, and they are the reason this can run every
  * thirty minutes without accumulating junk:
  *
- *   · `newsroom_pipeline_runs.idempotency_key` is unique per (workflow, hour
- *     bucket), so a duplicate run within the same bucket reuses the row;
+ *   · the run lease above: a duplicate firing while a run is in progress
+ *     is refused, and each invocation that does run has its own record;
  *   · ingestion keys on the canonical URL, so re-reading a feed that still
  *     lists the same twenty entries inserts nothing;
  *   · clustering looks the item up by canonical URL first, so an item that
@@ -148,17 +149,18 @@ export class DiscoveryBusyError extends Error {
 /**
  * Claim the run, or refuse.
  *
- * Two statements, and the second is the lock: it inserts (or, within the same
- * hour's key, re-arms) a `running` row ONLY if no discovery run is running, and
- * returns the row it claimed. Nothing returned means someone else holds it.
- * D1 serialises writes, so two callers cannot both see "none running".
+ * Two statements, and the second is the lock: it inserts a new `running` row
+ * ONLY if no discovery run is running, and returns the row it claimed.
+ * Nothing returned means someone else holds it. D1 serialises writes, so two
+ * callers cannot both see "none running". The row is always new — the key is
+ * unique per invocation — so no earlier run's record is ever reused.
  */
 async function claimRun(workflow: string, at: Date, leaseMs: number): Promise<number> {
   // A run whose invocation died never recorded a finish. Past its lease it is
-  // recorded as failed rather than left to block every run after it.
+  // recorded as abandoned rather than left to block every run after it.
   await sql().run(
     `UPDATE newsroom_pipeline_runs
-        SET status='failed', finished_at=${NOW_SQL},
+        SET status='abandoned', finished_at=${NOW_SQL},
             error='abandoned: no finish was recorded within the run lease'
       WHERE workflow=? AND status='running' AND started_at < ?`,
     [workflow, new Date(Date.now() - leaseMs).toISOString()]
@@ -167,8 +169,6 @@ async function claimRun(workflow: string, at: Date, leaseMs: number): Promise<nu
     `INSERT INTO newsroom_pipeline_runs (workflow, idempotency_key, status)
      SELECT ?, ?, 'running'
       WHERE NOT EXISTS (SELECT 1 FROM newsroom_pipeline_runs WHERE workflow = ? AND status = 'running')
-     ON CONFLICT(idempotency_key) DO UPDATE SET
-       status = 'running', started_at = ${NOW_SQL}, finished_at = NULL, error = NULL
      RETURNING id`,
     [workflow, idempotencyKey(workflow, at), workflow]
   );

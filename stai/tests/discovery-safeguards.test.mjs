@@ -309,9 +309,10 @@ describe("one run at a time", () => {
 
     const r = await runDiscovery({ fetch: recordingFetch(), force: true });
     assert.ok(r.runId > 0, "the new run proceeded");
-    const dead = d.prepare("SELECT status, error FROM newsroom_pipeline_runs WHERE idempotency_key='discovery:dead'").get();
-    assert.equal(dead.status, "failed");
+    const dead = d.prepare("SELECT status, error, finished_at FROM newsroom_pipeline_runs WHERE idempotency_key='discovery:dead'").get();
+    assert.equal(dead.status, "abandoned", "a killed run is told apart from one that failed on its own");
     assert.match(dead.error, /abandoned/);
+    assert.ok(dead.finished_at, "and is closed");
   });
 
   test("a recent run still in progress is NOT treated as stale", async () => {
@@ -323,6 +324,77 @@ describe("one run at a time", () => {
     ).run(new Date(Date.now() - 60_000).toISOString());
     await assert.rejects(runDiscovery({ fetch: recordingFetch(), force: true }), DiscoveryBusyError);
     assert.equal(d.prepare("SELECT status FROM newsroom_pipeline_runs WHERE idempotency_key='discovery:live'").get().status, "running");
+  });
+});
+
+describe("every invocation has its own run record (CODE_AUDIT.md M2)", () => {
+  const runs = (d) => d.prepare("SELECT id, idempotency_key, status, error FROM newsroom_pipeline_runs ORDER BY id").all();
+
+  test("three runs in the same minute are three rows", async () => {
+    const d = freshDb();
+    addSources(d, 1);
+    const now = Date.now();
+    const ids = [];
+    for (let i = 0; i < 3; i++) ids.push((await runDiscovery({ fetch: recordingFetch(), force: true, now: now + i * 1000 })).runId);
+    assert.equal(new Set(ids).size, 3, "each run was given its own id");
+    const rows = runs(d);
+    assert.equal(rows.length, 3);
+    assert.equal(new Set(rows.map((r) => r.idempotency_key)).size, 3, "and its own key");
+    assert.ok(rows.every((r) => r.status === "succeeded"));
+  });
+
+  test("a later run never overwrites a failed earlier run", async () => {
+    const d = freshDb();
+    addSources(d, 1);
+    // Break the run's final write so it fails the way a real one would: after
+    // fetching, inside the flush, with the transaction rolled back.
+    d.exec("ALTER TABLE newsroom_pipeline_events RENAME TO events_away");
+    await assert.rejects(runDiscovery({ fetch: recordingFetch(), force: true }));
+    d.exec("ALTER TABLE events_away RENAME TO newsroom_pipeline_events");
+    const [failed] = runs(d);
+    assert.equal(failed.status, "failed");
+    assert.match(failed.error, /newsroom_pipeline_events/);
+
+    // Minutes later, same hour: the retry succeeds in a row of its own.
+    const retry = await runDiscovery({ fetch: recordingFetch(), force: true });
+    const after = runs(d);
+    assert.equal(after.length, 2);
+    assert.deepEqual(after[0], failed, "the failure is still on the record, unchanged");
+    assert.equal(after[1].id, retry.runId);
+    assert.equal(after[1].status, "succeeded");
+  });
+
+  test("a refused run leaves no record and changes none", async () => {
+    const d = freshDb();
+    addSources(d, 1);
+    d.prepare(
+      `INSERT INTO newsroom_pipeline_runs (workflow, idempotency_key, status, started_at)
+       VALUES ('discovery', 'discovery:live', 'running', ?)`
+    ).run(new Date(Date.now() - 60_000).toISOString());
+    const before = runs(d);
+    await assert.rejects(runDiscovery({ fetch: recordingFetch(), force: true }), DiscoveryBusyError);
+    assert.deepEqual(runs(d), before);
+  });
+
+  test("only runs past their lease are abandoned; finished runs are never touched", async () => {
+    const d = freshDb();
+    addSources(d, 1);
+    const old = new Date(Date.now() - 3 * 3600e3).toISOString();
+    const ins = d.prepare(
+      `INSERT INTO newsroom_pipeline_runs (workflow, idempotency_key, status, started_at, finished_at, error)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    );
+    ins.run("discovery", "discovery:old-failed", "failed", old, old, "HTTP 500 everywhere");
+    ins.run("discovery", "discovery:old-ok", "succeeded", old, old, "");
+    ins.run("discovery", "discovery:old-dead", "running", old, null, null);
+    ins.run("research", "research:old-running", "running", old, null, null);
+    await runDiscovery({ fetch: recordingFetch(), force: true });
+    const by = Object.fromEntries(runs(d).map((r) => [r.idempotency_key, r]));
+    assert.equal(by["discovery:old-failed"].status, "failed");
+    assert.equal(by["discovery:old-failed"].error, "HTTP 500 everywhere");
+    assert.equal(by["discovery:old-ok"].status, "succeeded");
+    assert.equal(by["discovery:old-dead"].status, "abandoned");
+    assert.equal(by["research:old-running"].status, "running", "another workflow's lease is not discovery's to break");
   });
 });
 

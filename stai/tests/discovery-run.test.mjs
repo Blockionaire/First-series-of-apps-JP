@@ -440,14 +440,14 @@ describe("deduplication", { skip }, () => {
     assert.equal(one("SELECT COUNT(*) n FROM newsroom_stories").n, before);
   });
 
-  test("repeated runs inside the hour share one run row", () => {
-    // Idempotency: a cron retry, or an operator pressing the button during a
-    // scheduled run, is the same run.
-    const keys = query(
-      "SELECT idempotency_key, COUNT(*) n FROM newsroom_pipeline_runs WHERE workflow='discovery' GROUP BY idempotency_key"
-    );
-    for (const k of keys) assert.equal(k.n, 1, `${k.idempotency_key} must be unique`);
-    assert.equal(keys.length, 1, "three runs in the same hour are one run");
+  test("repeated runs inside the hour each have their own run row", () => {
+    // A retry is a new run with its own outcome; it never rewrites the
+    // record of the one before it (CODE_AUDIT.md M2). Overlap is refused by
+    // the run lease instead.
+    const rows = query("SELECT idempotency_key, status FROM newsroom_pipeline_runs WHERE workflow='discovery'");
+    assert.equal(new Set(rows.map((r) => r.idempotency_key)).size, rows.length, "keys are unique");
+    assert.ok(rows.length >= 3, `three runs, ${rows.length} rows`);
+    assert.ok(rows.every((r) => r.status === "succeeded"));
   });
 });
 
