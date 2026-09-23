@@ -1,10 +1,13 @@
 /**
- * A discovery run fits inside one Workers Free invocation, with room to spare.
+ * A discovery run stays at ~9–22 D1 queries, whatever the platform allows.
  *
- * Cloudflare Workers Free allows 50 D1 queries per invocation. The scheduled
- * run is one invocation, and it used to issue about ten queries per new item
- * and three per open story on every run: ten sources with twenty items each
- * took ~2,000 queries, a quiet run ~1,000 (CODE_AUDIT.md, H2).
+ * The scheduled run is one invocation. It used to issue about ten queries per
+ * new item and three per open story on every run: ten sources with twenty
+ * items each took ~2,000 queries, a quiet run ~1,000 (CODE_AUDIT.md, H2).
+ * STAI now runs on Workers Paid, which allows 1,000 per invocation; the
+ * budgets below were set for Workers Free (50) and are kept deliberately —
+ * a run that suddenly needs fifty times its usual budget is a regression to
+ * catch, not headroom to use.
  *
  * This drives the REAL `runDiscovery` against a database built from the real
  * migrations, through a driver that counts every statement — each statement
@@ -16,9 +19,8 @@
  *   · the whole proposed registry (50 fetchable sources) on its first run,
  *     and quiet afterwards with hundreds of open stories.
  *
- * Budgets sit well below 50, because the scheduled invocation spends two more
- * queries before discovery starts (the settings read and analytics retention)
- * and a limit is not a target.
+ * The scheduled invocation spends two more queries before discovery starts
+ * (the settings read and analytics retention).
  */
 import { test, describe, before } from "node:test";
 import assert from "node:assert/strict";
@@ -42,8 +44,8 @@ register(
     `)
 );
 
-/** The Workers Free ceiling, and the budgets held well under it. */
-const FREE_PLAN_LIMIT = 50;
+/** Workers Paid: D1 queries per invocation. The budgets are held far below it. */
+const PLATFORM_LIMIT = 1000;
 /**
  * Measured when this was written: quiet 11, ordinary 18–19, the full registry's
  * first run (1,000 items) 20. The budgets leave room for the scheduled
@@ -144,12 +146,12 @@ async function measure(counter, run) {
 function within(queries, budget, label) {
   if (process.env.SHOW_BUDGET) console.log(`[budget] ${label}: ${queries}`);
   assert.ok(
-    queries <= budget && queries < FREE_PLAN_LIMIT,
-    `${label}: ${queries} D1 queries — budget ${budget}, Workers Free limit ${FREE_PLAN_LIMIT}`
+    queries <= budget && queries < PLATFORM_LIMIT,
+    `${label}: ${queries} D1 queries — budget ${budget} (platform limit ${PLATFORM_LIMIT})`
   );
 }
 
-describe("discovery query budget (Workers Free: 50 per invocation)", () => {
+describe("discovery query budget (~9–22 per run; Workers Paid allows 1,000)", () => {
   test("several sources publishing at once: 10 sources × 20 new items", async () => {
     const { d, counter } = countingDb();
     addSources(d, 10);

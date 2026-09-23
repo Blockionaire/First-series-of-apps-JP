@@ -257,3 +257,46 @@ noisiest source. Both take effect on the next run.
 
 **A publisher objects:** switch that source's **Retrievable** off. It stops
 being contacted immediately, and the row stays with its history intact.
+
+## 9. Capacity on Workers Paid
+
+STAI runs on Cloudflare Workers Paid: 1,000 D1 queries and 10,000
+subrequests per invocation, and far more CPU than Free. Discovery does not
+spend that allowance. It is held to what it needs, so that a run that
+suddenly needs far more reads as a fault rather than as load.
+
+**Per run, whatever the registry size:** 9–21 D1 queries (+2 in the scheduled
+handler: the settings read and analytics retention). The count does not grow
+with the number of items; `tests/discovery-budget.test.mjs` fails if it does.
+
+**Limits an operator can change in site settings** (all hold work back to the
+next run rather than dropping it; held-back sources log `skipped_budget`):
+
+| Setting | Default | What it bounds |
+|---|---|---|
+| `newsroom.max_sources_per_run` | 60 | Sources fetched per run, least recently attempted first. One request each. |
+| `newsroom.max_detail_fetches_per_run` | 60 | Publication pages opened behind indexes, across the run. Each extractor also has its own cap (APAS: 30). |
+| `newsroom.max_run_seconds` | 300 | Nothing new is started after this; a run overruns it by at most one request timeout (15 s). |
+
+Fixed, not configurable: one outbound request at a time; a 15-second timeout
+and 4 MB body limit per request; **no retries within a run** (the next run is
+the retry); one run at a time (a second caller gets "another discovery run is
+in progress", HTTP 409 from the button); a run that dies without finishing
+releases its lease after the time budget plus five minutes and is recorded as
+failed ("abandoned").
+
+**Measured** (real `runDiscovery`, migrated schema, RSS sources with 20 items,
+defaults above; CPU is JavaScript only — D1 work happens outside the Worker):
+
+| Active sources | D1 queries | Outbound requests | CPU, steady state | CPU, first run |
+|---|---|---|---|---|
+| 15 | 13–19 | 15 (+ ≤60 detail pages) | 60–85 ms | ~0.4 s (300 new items) |
+| 50 | 13–20 | 50 (+ ≤60) | 170–190 ms | ~1.7 s (1,000 new items) |
+| 100 | 19–21 | 60 per run, 40 deferred (+ ≤60) | 210–260 ms | ~1.9 s (1,200 new items) |
+
+At 100 sources the default of 60 sources per run is what binds: a tier-1 source
+due every 30 minutes may wait one extra run. Raise the setting if that matters;
+the query count does not change with it.
+
+Discovery ships **off**. Nothing above runs until **Newsroom discovery
+(scheduled)** is switched on in site settings.
