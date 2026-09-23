@@ -87,6 +87,7 @@ import { fetchSource, shouldFetch, FAILURE_OUTCOMES, type FetchOutcome, type Fet
 import { normaliseItem, type NormalisedItem } from "./normalise.ts";
 import {
   buildCandidates,
+  houseTerms,
   clusterTitle,
   findCluster,
   WINDOW_DAYS,
@@ -245,6 +246,12 @@ type ModelMember = MemberRow & {
   source_type: string;
   jurisdictions: string;
 };
+
+/**
+ * A source that issues what it announces: a Tier-1 regulator or standard
+ * setter. The same definition the recount uses for a "primary source".
+ */
+const isIssuer = (tier: number, type: string) => tier === 1 && (type === "regulator" || type === "standard_setter");
 
 const orderKey = (m: { published_at: string | null; retrieved_at: string }) => m.published_at ?? m.retrieved_at;
 
@@ -534,7 +541,7 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
         // as that story's representative, so this ORDER BY is load-bearing.
         const memberRows = await sql().all<ModelMember & { url_hash: string }>(
           `SELECT ss.story_id, i.canonical_url, i.title, i.lead, i.published_at, i.retrieved_at,
-                  i.url_hash, i.jurisdictions, s.authority_tier AS tier, s.source_type
+                  i.url_hash, i.jurisdictions, s.authority_tier AS tier, s.source_type, i.source_id
              FROM newsroom_story_sources ss
              JOIN newsroom_source_items i ON i.id = ss.source_item_id
              JOIN newsroom_sources s ON s.id = i.source_id
@@ -542,7 +549,7 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
             ORDER BY COALESCE(i.published_at, i.retrieved_at) ASC`,
           [JSON.stringify(storyRows.map((s) => s.id))]
         );
-        for (const m of memberRows) members.push({ ...m, urlHash: m.url_hash });
+        for (const m of memberRows) members.push({ ...m, urlHash: m.url_hash, issuer: isIssuer(m.tier, m.source_type) });
       }
     }
 
@@ -633,6 +640,9 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
       }
 
       const { result } = f;
+      // This publisher's house language, from the feed just read (cluster.ts).
+      const house = houseTerms(f.items);
+      const issuer = isIssuer(source.authority_tier, source.source_type);
 
       // ── Ingest ──
       // The canonical URL is identity: it answers both "did this source
@@ -750,7 +760,15 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
       // this same run created.
       for (const item of fresh) {
         const match = findCluster(
-          { url: item.url, title: item.title, lead: item.lead, publishedAt: item.publishedAt },
+          {
+            url: item.url,
+            title: item.title,
+            lead: item.lead,
+            publishedAt: item.publishedAt,
+            sourceId: source.id,
+            issuer,
+            boilerplate: house,
+          },
           openCandidates(),
           now
         );
@@ -768,6 +786,8 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
           urlHash: item.urlHash,
           tier: source.authority_tier,
           source_type: source.source_type,
+          source_id: source.id,
+          issuer,
           jurisdictions: String(stored.jurisdictions),
         };
 

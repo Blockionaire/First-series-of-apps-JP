@@ -16,12 +16,38 @@
  * ── Three signals, in order of confidence ───────────────────────────────
  *   1. Same canonical URL. Two registered sources syndicating one press
  *      release. Certain — this is identity, not similarity.
- *   2. Shared rare terms. The real work. A regulation's name, a standard's
- *      number and a body's acronym are exactly the terms that are rare across
- *      the corpus and common within one story.
- *   3. Shared entities. Capitalised names and standard references, which
- *      survive rewriting: every outlet covering an IAASB exposure draft says
- *      "IAASB", whatever else they change.
+ *   2. Shared rare terms, TITLE FIRST. The real work. A regulation's name, a
+ *      standard's number and the thing that happened are in the headline;
+ *      the lead adds a little, and only after the publisher's own house
+ *      language has been taken out of it.
+ *   3. Shared names in the headline. Capitalised names and standard
+ *      references, which survive rewriting: every outlet covering an IAASB
+ *      exposure draft says "IAASB", whatever else they change.
+ *
+ * ── Why house language is removed (CODE_AUDIT.md H3) ────────────────────
+ * Every EBA item opens "The European Banking Authority (EBA) today published
+ * … As part of its mandate to contribute to a single rulebook …". Measured
+ * with the lead weighed like the title, ten unrelated EBA publications — a
+ * stress test, a crypto consultation, an AML peer review — became ONE story,
+ * because the only thing they shared was the publisher's boilerplate, and at
+ * a cold start nothing marked it as common. Three rules now make that
+ * impossible, each sufficient on its own for the EBA case:
+ *
+ *   · `houseTerms`: a word in most of one source's own feed is that
+ *     publisher's house language, and does not count when that source's items
+ *     are compared;
+ *   · the score is 80% headline, measured in BOTH directions, so a lead can
+ *     lift a headline match but cannot make one;
+ *   · two items from the SAME publisher are one development only if their
+ *     headlines say so — a publisher does not announce one thing twice at
+ *     different addresses (a correction at the same address is a revision,
+ *     handled before clustering).
+ *
+ * And one rule for a neighbouring false merge: two DIFFERENT issuing
+ * authorities announcing their own acts are two developments, even on one
+ * topic — the EBA consulting on MiCA reporting standards and ESMA finalising
+ * MiCA white-paper standards share a vocabulary and nothing else. A genuine
+ * joint publication carries near-identical headlines at both, and passes.
  *
  * ── The window ──────────────────────────────────────────────────────────
  * Seven days. Long enough that a Friday announcement and Monday's analysis
@@ -96,6 +122,12 @@ export type ClusterCandidate = {
    */
   tokens: string[];
   entities: string[];
+  /** The representative's headline tokens. Derived from `title` when absent. */
+  titleTokens?: string[];
+  /** Sources of the story's members, for the same-publisher rule. */
+  sourceIds?: number[];
+  /** Members' sources that are issuing authorities (see `ClusterInput.issuer`). */
+  issuerIds?: number[];
   /** The representative's publication instant, for the proximity check. */
   publishedAt?: string | null;
   lastSeenAt: string;
@@ -106,6 +138,15 @@ export type ClusterInput = {
   title: string;
   lead: string;
   publishedAt?: string | null;
+  /** The registered source the item came from. */
+  sourceId?: number;
+  /** That source's house language (see `houseTerms`): ignored in this item. */
+  boilerplate?: ReadonlySet<string>;
+  /**
+   * The source issues what it announces: a Tier-1 regulator or standard
+   * setter, speaking about its own act rather than covering someone else's.
+   */
+  issuer?: boolean;
 };
 
 export type Match = {
@@ -132,6 +173,47 @@ function weightedOverlap(a: string[], b: string[], df: Map<string, number>, docs
 
 /** Above this, two items are the same development. */
 export const MATCH_THRESHOLD = 0.42;
+
+/** Share of the score that comes from the headline; the rest from the lead. */
+export const TITLE_WEIGHT = 0.8;
+
+/**
+ * Headline similarity two items from the SAME source need before they can be
+ * one story. A publisher's follow-up to its own announcement repeats the
+ * subject in the headline; a different announcement does not.
+ */
+export const SAME_SOURCE_TITLE_MIN = 0.5;
+
+/**
+ * Headline similarity an issuing authority's item needs to join a story that
+ * a DIFFERENT issuing authority started. Joint publications clear it easily;
+ * two regulators' separate acts on one topic do not.
+ */
+export const OTHER_ISSUER_TITLE_MIN = 0.6;
+
+/**
+ * A source's house language: the words in at least 60% of its own items.
+ *
+ * Computed from the feed a run has just read, so it needs no history and
+ * works from the very first run. Four items minimum — below that, "most of
+ * the feed" is too few documents to tell house style from coincidence, and
+ * the other rules (headline weighting, the same-publisher rule) carry it.
+ */
+export const HOUSE_SHARE = 0.6;
+export const HOUSE_MIN_ITEMS = 4;
+
+export function houseTerms(items: { title: string; lead: string }[]): Set<string> {
+  const house = new Set<string>();
+  if (items.length < HOUSE_MIN_ITEMS) return house;
+  const counts = new Map<string, number>();
+  for (const it of items) {
+    for (const t of new Set(tokenize(`${it.title} ${it.lead}`))) counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+  for (const [t, n] of counts) if (n / items.length >= HOUSE_SHARE) house.add(t);
+  return house;
+}
+
+const NO_TERMS: ReadonlySet<string> = new Set();
 
 /** Days a story stays open to new members. */
 export const WINDOW_DAYS = 7;
@@ -185,8 +267,18 @@ export function findCluster(
     }
   }
 
-  const itemTokens = tokenize(`${item.title} ${item.lead}`);
-  const itemEntities = entities(`${item.title} ${item.lead}`);
+  // The item's own words, without its publisher's house language. The
+  // headline's words are kept apart from the lead's: they carry the score.
+  const house = item.boilerplate ?? NO_TERMS;
+  const titleTokens = [...new Set(tokenize(item.title))].filter((t) => !house.has(t));
+  const titleSet = new Set(titleTokens);
+  const leadTokens = [...new Set(tokenize(item.lead))].filter((t) => !house.has(t) && !titleSet.has(t));
+  const itemAll = [...titleTokens, ...leadTokens];
+  // Names in the headline only, and not the publisher's own name: "EBA" in an
+  // EBA item says who is speaking, not what about.
+  const itemEntities = entities(item.title).filter(
+    (e) => !tokenize(e).every((t) => house.has(t))
+  );
 
   // Document frequency across the open window, so weighting reflects what is
   // actually common in the current news cycle rather than in general English.
@@ -210,7 +302,35 @@ export function findCluster(
       if (apart > SAME_DEVELOPMENT_DAYS * 86_400_000) continue;
     }
 
-    const lexical = weightedOverlap(itemTokens, c.tokens, df, open.length);
+    // Headline similarity, both ways: the item's headline words found in the
+    // story, and the story's headline words found in the item. One direction
+    // alone lets a short headline ("EBA update") match anything wordy.
+    const candidateTitle = c.titleTokens ?? tokenize(c.title);
+    const titleSim =
+      titleTokens.length === 0
+        ? 0
+        : (weightedOverlap(titleTokens, c.tokens, df, open.length) +
+            weightedOverlap(candidateTitle, itemAll, df, open.length)) /
+          2;
+
+    // Same publisher, different address: one development only if the
+    // headlines agree.
+    const samePublisher =
+      item.sourceId !== undefined &&
+      (c.sourceIds?.length ?? 0) > 0 &&
+      c.sourceIds!.every((id) => id === item.sourceId);
+    if (samePublisher && titleSim < SAME_SOURCE_TITLE_MIN) continue;
+
+    // A different authority's own act, unless the headlines say "joint".
+    const otherIssuer =
+      item.issuer === true &&
+      item.sourceId !== undefined &&
+      (c.issuerIds?.length ?? 0) > 0 &&
+      !c.issuerIds!.includes(item.sourceId);
+    if (otherIssuer && titleSim < OTHER_ISSUER_TITLE_MIN) continue;
+
+    const leadSim = weightedOverlap(leadTokens, c.tokens, df, open.length);
+    const lexical = TITLE_WEIGHT * titleSim + (1 - TITLE_WEIGHT) * leadSim;
 
     const sharedEntities = itemEntities.filter((e) => c.entities.includes(e));
     // Entities are corroboration, not proof: "EUROPEAN COMMISSION" appears in
@@ -222,7 +342,7 @@ export function findCluster(
     if (score < MATCH_THRESHOLD) continue;
     if (best && score <= best.score) continue;
 
-    const parts = [`${Math.round(lexical * 100)}% weighted term overlap`];
+    const parts = [`${Math.round(titleSim * 100)}% headline overlap`];
     if (sharedEntities.length > 0) {
       parts.push(`shares ${sharedEntities.slice(0, 4).join(", ")}`);
     }
@@ -242,6 +362,10 @@ export type MemberRow = {
   lead: string;
   published_at: string | null;
   retrieved_at: string;
+  /** The member's source, for the same-publisher rule. */
+  source_id?: number;
+  /** The member's source is an issuing authority (see `ClusterInput.issuer`). */
+  issuer?: boolean;
 };
 
 /**
@@ -259,15 +383,27 @@ export type MemberRow = {
 export function buildCandidates(stories: StoryRow[], members: MemberRow[]): ClusterCandidate[] {
   const byStory = new Map<
     number,
-    { urls: string[]; repText: string | null; repPublished: string | null }
+    {
+      urls: string[];
+      repText: string | null;
+      repTitle: string | null;
+      repPublished: string | null;
+      sources: Set<number>;
+      issuers: Set<number>;
+    }
   >();
   for (const m of members) {
-    const entry = byStory.get(m.story_id) ?? { urls: [], repText: null, repPublished: null };
+    const entry =
+      byStory.get(m.story_id) ??
+      { urls: [], repText: null, repTitle: null, repPublished: null, sources: new Set<number>(), issuers: new Set<number>() };
     // Every URL, for the identity check — a story matches on any member's
     // address, even though it matches on only one member's text.
     entry.urls.push(m.canonical_url);
+    if (m.source_id !== undefined) entry.sources.add(m.source_id);
+    if (m.source_id !== undefined && m.issuer) entry.issuers.add(m.source_id);
     if (entry.repText === null) {
       entry.repText = `${m.title} ${m.lead}`;
+      entry.repTitle = m.title;
       entry.repPublished = m.published_at;
     }
     byStory.set(m.story_id, entry);
@@ -282,6 +418,9 @@ export function buildCandidates(stories: StoryRow[], members: MemberRow[]): Clus
       urls: entry?.urls ?? [],
       tokens: tokenize(text),
       entities: entities(text),
+      titleTokens: tokenize(entry?.repTitle ?? s.canonical_title),
+      sourceIds: entry && entry.sources.size > 0 ? [...entry.sources] : undefined,
+      issuerIds: entry && entry.issuers.size > 0 ? [...entry.issuers] : undefined,
       publishedAt: entry?.repPublished ?? null,
       lastSeenAt: s.last_seen_at,
     };
