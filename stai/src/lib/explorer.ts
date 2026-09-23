@@ -1,4 +1,4 @@
-import type { Article } from "./content";
+import type { ArticleSummary } from "./content";
 
 /**
  * The subset of an article the Radar explorer renders.
@@ -22,7 +22,7 @@ export type ExplorerItem = {
   dek: string;
 };
 
-export function toExplorerItems(articles: Article[]): ExplorerItem[] {
+export function toExplorerItems(articles: ArticleSummary[]): ExplorerItem[] {
   return articles.map((a) => ({
     slug: a.slug,
     title: a.title,

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
@@ -97,7 +98,19 @@ export async function endSession() {
   jar.delete(SESSION_COOKIE);
 }
 
-export async function currentUser(): Promise<User | null> {
+/**
+ * The signed-in reader, or null — asked once per request.
+ *
+ * The Header asks, and so does the page under it; on a signed-in page that was
+ * the same three-subquery lookup twice (CODE_AUDIT.md, H1). `cache` scopes the
+ * answer to one server render. Route handlers are not renders: there React
+ * does not memoise, so a handler that starts or ends a session and then asks
+ * again still sees the new state. The rule itself is unchanged — this only
+ * stops the same question being put to the database twice.
+ */
+export const currentUser = cache(readCurrentUser);
+
+async function readCurrentUser(): Promise<User | null> {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;

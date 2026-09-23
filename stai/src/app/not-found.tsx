@@ -4,7 +4,7 @@ import { allArticles } from "@/lib/content";
 export const dynamic = "force-dynamic";
 
 export default async function NotFound() {
-  const latest = (await allArticles()).slice(0, 4);
+  const latest = await allArticles(4);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">

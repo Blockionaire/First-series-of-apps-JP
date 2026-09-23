@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getSetting } from "./settings";
 import { sql } from "./sql";
 
@@ -36,6 +37,17 @@ export type Article = {
    */
   updated_at: string | null;
 };
+
+/**
+ * An article without its body — what every list, card and feed needs.
+ *
+ * The body is the whole Markdown of the piece and the only large column in the
+ * row. Lists used to `SELECT *` and then show a title, a dek and a date, so
+ * every home page view read every published body to render six cards
+ * (CODE_AUDIT.md, P1). Only the article page and the search index read bodies,
+ * and they ask for them explicitly.
+ */
+export type ArticleSummary = Omit<Article, "body_md">;
 
 export type Prompt = {
   id: number;
@@ -96,6 +108,12 @@ export type Signal = {
 
 /** A row as SQLite returns it: JSON columns are text, booleans are 0/1. */
 type ArticleRow = Omit<Article, "tags" | "premium"> & { tags: string; premium: number };
+type ArticleSummaryRow = Omit<ArticleRow, "body_md">;
+
+/** Every column an ArticleSummary carries, and nothing else. */
+const SUMMARY_COLUMNS =
+  "id, slug, title, dek, category, tags, author, author_role, published_at, " +
+  "reading_min, featured, urgency, premium, kind, updated_at";
 type PromptRow = Omit<Prompt, "variables" | "premium"> & { variables: string; premium: number };
 
 /**
@@ -118,7 +136,9 @@ export function jsonArray(raw: string, where: string): string[] {
   return [];
 }
 
-function rowToArticle(r: ArticleRow): Article {
+function rowToArticle(r: ArticleRow): Article;
+function rowToArticle(r: ArticleSummaryRow): ArticleSummary;
+function rowToArticle(r: ArticleSummaryRow): ArticleSummary {
   return { ...r, tags: jsonArray(r.tags, `articles.tags for "${r.slug}"`), premium: !!r.premium };
 }
 
@@ -130,11 +150,26 @@ function rowToPrompt(r: PromptRow): Prompt {
   };
 }
 
-export async function allArticles(): Promise<Article[]> {
+/** Published articles, newest first, without bodies. `limit` for callers that show a few. */
+export async function allArticles(limit?: number): Promise<ArticleSummary[]> {
+  const rows = await sql().all<ArticleSummaryRow>(
+    `SELECT ${SUMMARY_COLUMNS} FROM articles WHERE status='published'
+     ORDER BY published_at DESC, id DESC${limit === undefined ? "" : " LIMIT ?"}`,
+    limit === undefined ? [] : [limit]
+  );
+  return rows.map(rowToArticle);
+}
+
+/**
+ * Published articles WITH their bodies, for the one reader that needs every
+ * body at once: the Ask STAI search index, which rebuilds only when the corpus
+ * fingerprint changes.
+ */
+export async function allArticlesWithBodies(): Promise<Article[]> {
   const rows = await sql().all<ArticleRow>(
     "SELECT * FROM articles WHERE status='published' ORDER BY published_at DESC, id DESC"
   );
-  return rows.map(rowToArticle);
+  return rows.map((r) => rowToArticle(r));
 }
 
 /** The two sections. `news` is the default every existing piece carries. */
@@ -144,32 +179,38 @@ export const isArticleKind = (v: string): v is ArticleKind =>
   (ARTICLE_KINDS as readonly string[]).includes(v);
 
 /** One section's published pieces, newest first. */
-export async function articlesByKind(kind: ArticleKind): Promise<Article[]> {
-  const rows = await sql().all<ArticleRow>(
-    "SELECT * FROM articles WHERE status='published' AND kind=? ORDER BY published_at DESC, id DESC",
+export async function articlesByKind(kind: ArticleKind): Promise<ArticleSummary[]> {
+  const rows = await sql().all<ArticleSummaryRow>(
+    `SELECT ${SUMMARY_COLUMNS} FROM articles WHERE status='published' AND kind=? ORDER BY published_at DESC, id DESC`,
     [kind]
   );
   return rows.map(rowToArticle);
 }
 
-export async function articleBySlug(slug: string): Promise<Article | null> {
+/**
+ * One published article, with its body.
+ *
+ * Memoised per request: the page's `generateMetadata` and the page itself both
+ * ask for the same slug, and without this each asked the database separately.
+ */
+export const articleBySlug = cache(async (slug: string): Promise<Article | null> => {
   const r = await sql().first<ArticleRow>(
     "SELECT * FROM articles WHERE slug=? AND status='published'",
     [slug]
   );
   return r ? rowToArticle(r) : null;
-}
+});
 
-export async function featuredArticles(): Promise<Article[]> {
-  const rows = await sql().all<ArticleRow>(
-    "SELECT * FROM articles WHERE featured > 0 AND status='published' ORDER BY featured ASC"
+export async function featuredArticles(): Promise<ArticleSummary[]> {
+  const rows = await sql().all<ArticleSummaryRow>(
+    `SELECT ${SUMMARY_COLUMNS} FROM articles WHERE featured > 0 AND status='published' ORDER BY featured ASC`
   );
   return rows.map(rowToArticle);
 }
 
-export async function relatedArticles(article: Article, limit = 3): Promise<Article[]> {
-  const rows = await sql().all<ArticleRow>(
-    "SELECT * FROM articles WHERE id != ? AND status='published' ORDER BY (category = ?) DESC, published_at DESC LIMIT ?",
+export async function relatedArticles(article: ArticleSummary, limit = 3): Promise<ArticleSummary[]> {
+  const rows = await sql().all<ArticleSummaryRow>(
+    `SELECT ${SUMMARY_COLUMNS} FROM articles WHERE id != ? AND status='published' ORDER BY (category = ?) DESC, published_at DESC LIMIT ?`,
     [article.id, article.category, limit]
   );
   return rows.map(rowToArticle);
@@ -190,13 +231,14 @@ export async function allPrompts(): Promise<Prompt[]> {
   return rows.map(rowToPrompt);
 }
 
-export async function promptBySlug(slug: string): Promise<Prompt | null> {
+/** One published prompt. Memoised per request for the same reason as articleBySlug. */
+export const promptBySlug = cache(async (slug: string): Promise<Prompt | null> => {
   const r = await sql().first<PromptRow>(
     "SELECT * FROM prompts WHERE slug=? AND status='published'",
     [slug]
   );
   return r ? rowToPrompt(r) : null;
-}
+});
 
 export async function bumpPromptUses(id: number): Promise<void> {
   await sql().run("UPDATE prompts SET uses = uses + 1 WHERE id=?", [id]);

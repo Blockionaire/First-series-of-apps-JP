@@ -1,4 +1,9 @@
-import { getSetting } from "./settings";
+import { settingsSnapshot } from "./settings";
+
+/** One setting from this request's snapshot; null when the row does not exist. */
+async function readSetting(key: string): Promise<string | null> {
+  return (await settingsSnapshot()).get(key) ?? null;
+}
 
 /**
  * What the operator can change without a deploy.
@@ -14,7 +19,7 @@ import { getSetting } from "./settings";
  * failed write never blanks a headline, and the defaults stay readable as
  * documentation of what the page is supposed to say.
  *
- * ── Why a registry rather than scattered getSetting() calls ──────────────
+ * ── Why a registry rather than scattered per-key reads ───────────────────
  * The admin screen, the navigation filter, the route guards, the sitemap and
  * the feed all need to agree on what exists and what it is called. A single
  * list means adding a switch is one entry, and it is impossible to ship a
@@ -74,18 +79,28 @@ export function toggle(id: string): Toggle | undefined {
   return TOGGLES.find((t) => t.id === id);
 }
 
+function enabledIn(snapshot: ReadonlyMap<string, string>, t: Toggle): boolean {
+  const v = snapshot.get(toggleKey(t.id));
+  return v === undefined ? t.on : v === "1";
+}
+
 /** Current state of one switch. Unset means the shipped default. */
 export async function isEnabled(id: string): Promise<boolean> {
   const t = toggle(id);
   if (!t) return false;
-  const v = await getSetting(toggleKey(id));
-  return v === null ? t.on : v === "1";
+  return enabledIn(await settingsSnapshot(), t);
 }
 
-/** Every switch at once — one pass for the nav, the sitemap and the admin. */
+/**
+ * Every switch at once — one pass for the nav, the sitemap and the admin.
+ *
+ * Takes ONE snapshot and reads every switch from it, rather than calling
+ * isEnabled per switch: outside a render (the sitemap route, a route handler)
+ * React does not memoise, and thirteen isEnabled calls would be thirteen reads.
+ */
 export async function enabledMap(): Promise<Record<string, boolean>> {
-  const entries = await Promise.all(TOGGLES.map(async (t) => [t.id, await isEnabled(t.id)] as const));
-  return Object.fromEntries(entries);
+  const snapshot = await settingsSnapshot();
+  return Object.fromEntries(TOGGLES.map((t) => [t.id, enabledIn(snapshot, t)]));
 }
 
 /** The switch guarding a path, if any. Longest match wins so /news/x is covered by /news. */
@@ -110,18 +125,22 @@ export const HOME_FIELDS: TextField[] = [
   { key: "home.cta2.href", label: "Secondary button link", fallback: "/ai-act" },
 ];
 
-/** Reads one field, falling back to what the site shipped with. */
-export async function text(key: string): Promise<string> {
+function textIn(snapshot: ReadonlyMap<string, string>, key: string): string {
   const field = HOME_FIELDS.find((f) => f.key === key);
-  const v = await getSetting(key);
-  const value = v === null ? field?.fallback ?? "" : v;
+  const v = snapshot.get(key);
+  const value = v === undefined ? field?.fallback ?? "" : v;
   return value.trim();
 }
 
-/** Every homepage field in one pass, so the page makes one round of reads. */
+/** Reads one field, falling back to what the site shipped with. */
+export async function text(key: string): Promise<string> {
+  return textIn(await settingsSnapshot(), key);
+}
+
+/** Every homepage field from one snapshot, so the page makes one read. */
 export async function homeCopy(): Promise<Record<string, string>> {
-  const entries = await Promise.all(HOME_FIELDS.map(async (f) => [f.key, await text(f.key)] as const));
-  return Object.fromEntries(entries);
+  const snapshot = await settingsSnapshot();
+  return Object.fromEntries(HOME_FIELDS.map((f) => [f.key, textIn(snapshot, f.key)]));
 }
 
 /* ── Reader limits ────────────────────────────────────────────────────── */
@@ -208,7 +227,7 @@ export const LIMIT_FIELDS: LimitField[] = [
 export async function limit(key: string): Promise<number> {
   const field = LIMIT_FIELDS.find((f) => f.key === key);
   if (!field) return 0;
-  const raw = await getSetting(key);
+  const raw = await readSetting(key);
   if (raw === null) return field.fallback;
   const n = Number.parseInt(raw, 10);
   if (!Number.isFinite(n)) return field.fallback;

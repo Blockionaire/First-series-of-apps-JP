@@ -17,7 +17,7 @@ function esc(s: string) {
  * a legacy checkbox.
  */
 export async function GET() {
-  const articles = (await allArticles()).slice(0, 30);
+  const articles = await allArticles(30);
   const updated = articles[0]?.published_at ?? new Date().toISOString().slice(0, 10);
 
   const items = articles

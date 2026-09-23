@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Article } from "@/lib/content";
+import type { ArticleSummary } from "@/lib/content";
 import { fmtDate } from "@/lib/format";
 import { PlusBadge } from "@/components/Logo";
 
@@ -11,7 +11,7 @@ export function CategoryTag({ category }: { category: string }) {
   );
 }
 
-export function Byline({ a }: { a: Article }) {
+export function Byline({ a }: { a: ArticleSummary }) {
   return (
     <p className="f-mono text-[0.65rem] tracking-[0.1em] uppercase" style={{ color: "var(--ink-faint)" }}>
       {a.author} · <time dateTime={a.published_at}>{fmtDate(a.published_at)}</time> · {a.reading_min} min
@@ -20,7 +20,7 @@ export function Byline({ a }: { a: Article }) {
 }
 
 /** Lead story — the front page's anchor. */
-export function LeadCard({ a }: { a: Article }) {
+export function LeadCard({ a }: { a: ArticleSummary }) {
   return (
     <article className="group relative">
       <Link href={`/briefing/${a.slug}`} className="block focus-visible:outline-offset-4">
@@ -47,7 +47,7 @@ export function LeadCard({ a }: { a: Article }) {
 }
 
 /** Numbered secondary card for front-page grid and lists. */
-export function IndexCard({ a, num }: { a: Article; num: string }) {
+export function IndexCard({ a, num }: { a: ArticleSummary; num: string }) {
   return (
     <article className="group border-t pt-4 rule">
       <Link href={`/briefing/${a.slug}`} className="block">
@@ -71,7 +71,7 @@ export function IndexCard({ a, num }: { a: Article; num: string }) {
 }
 
 /** Compact row for "latest" rails. */
-export function RowCard({ a }: { a: Article }) {
+export function RowCard({ a }: { a: ArticleSummary }) {
   return (
     <article className="group border-b py-3 rule">
       <Link href={`/briefing/${a.slug}`} className="flex items-baseline gap-4">

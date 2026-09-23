@@ -35,7 +35,7 @@ export default async function Home() {
   const featured = await featuredArticles();
   const lead = featured[0];
   const secondary = featured.slice(1, 4);
-  const latest = (await allArticles()).slice(0, 6);
+  const latest = await allArticles(6);
   const prompts = await allPrompts();
   const teaserPrompts = prompts
     .filter((p) => !p.premium)
