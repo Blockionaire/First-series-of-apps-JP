@@ -779,6 +779,32 @@ describe("hydrating the Verlautbarungen index end to end", () => {
     );
   });
 
+  test("a host that merely ENDS in the publisher's domain is never requested", async () => {
+    // `evilapasbafa.bund.de` ends with `apasbafa.bund.de` but is not it or a
+    // subdomain of it. The rule is "equal, or ends with a DOT and the domain";
+    // dropping the dot passes the off-domain test above and still fails this.
+    const fetchFn = detailFetch();
+    const { result } = await hydrate(
+      apas,
+      {
+        ok: true,
+        items: [],
+        rejected: [],
+        pending: [
+          { url: "https://evilapasbafa.bund.de/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_1.html" },
+          { url: "https://www.apasbafa.bund.de/SharedDocs/Downloads/APAS/DE/vb_verlautbarung_26.html" },
+        ],
+      },
+      { fetch: fetchFn }
+    );
+    assert.equal(fetchFn.asked.length, 1, `requested: ${fetchFn.asked.join(", ")}`);
+    assert.match(fetchFn.asked[0], /^https:\/\/www\.apasbafa\.bund\.de\//);
+    assert.match(
+      result.rejected.join("\n"),
+      /evilapasbafa\.bund\.de[^\n]* — outside apasbafa\.bund\.de, not opened/
+    );
+  });
+
   test("hydrate is a no-op for an extractor that reads one page", async () => {
     let called = 0;
     const counted = async () => {
@@ -1616,6 +1642,17 @@ describe("nothing can scrape a publisher nobody wrote an extractor for", () => {
     assert.equal(extractorFor("efrag.org"), null);
     assert.equal(extractorFor("apasbafa.bund.de.evil.com"), null, "suffix lookalike");
     assert.equal(extractorFor(""), null);
+  });
+
+  test("a domain that merely ends in a registered one is not covered", () => {
+    // Prefix lookalikes: each ends with a registered domain without being it or
+    // a subdomain of it. A match on `endsWith(domain)` without the dot would
+    // hand one of these an extractor — and with it, permission to scrape.
+    for (const e of EXTRACTORS) {
+      assert.equal(extractorFor(`evil${e.domain}`), null, `evil${e.domain} must not resolve`);
+      assert.equal(extractorFor(`x-${e.domain}`), null, `x-${e.domain} must not resolve`);
+      assert.ok(extractorFor(`news.${e.domain}`), `a real subdomain of ${e.domain} still resolves`);
+    }
   });
 
   test("every registered extractor refuses at least one URL", () => {
