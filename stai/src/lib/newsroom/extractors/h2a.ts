@@ -31,15 +31,30 @@
  * nothing here silently prefers scraping to a feed.
  *
  * ── What counts as an item ──────────────────────────────────────────────
- * A positive rule: a path under one of the publication sections — actualités,
- * publications, communiqués — with a further segment. Plus a date, plus a
- * headline.
+ * A positive rule: a path under the publication hub with a further segment,
+ * plus a date, plus a headline.
  *
- * ── Unverified ──────────────────────────────────────────────────────────
- * No page on this host has been fetched by this code. The section names are
- * the conventions a French public authority's site uses and the shape the
- * predecessor site used (`h3c.org/actualites`), not observation. If they are
- * wrong, the refusal names the path shapes the page actually carries.
+ * ── The hub is verified; the shape under it is not ──────────────────────
+ * The operator has confirmed the official publication hub:
+ *
+ *     https://h2a-france.org/publications-et-actualites/
+ *
+ * That replaced a guess — `/actualites/`, inferred from the predecessor site
+ * at `h3c.org/actualites`. The correction is worth recording, because it says
+ * something about the rest of the guesswork: H2A files publications and news
+ * together under ONE combined section, which is not the arrangement the old
+ * site used and not the one a French institutional site usually uses. Every
+ * other section name inferred from that convention — `/communiques/`,
+ * `/espace-presse/`, `/doctrine/` — was inferred the same way and has now
+ * been removed rather than kept as harmless-looking spare capacity. A list
+ * of plausible paths that nobody has seen is not a safety net; it is several
+ * more chances to be confidently wrong.
+ *
+ * So there is one section, and it is the one somebody looked at. What has
+ * still NOT been seen is the shape of an item UNDER it: this assumes
+ * `/publications-et-actualites/<slug>`. If H2A files detail pages elsewhere,
+ * the refusal below names the path shapes the hub actually links, which makes
+ * that a single round trip to correct.
  */
 
 import type { FeedItem } from "../feed.ts";
@@ -56,24 +71,17 @@ import {
 const DOMAIN = "h2a-france.org";
 
 /**
- * The sections H2A publishes under.
+ * The publication hub, as confirmed by the operator.
  *
- * Accented and unaccented spellings both, because a CMS may slugify either
- * way and the difference is invisible to a reader.
+ * One section, because one section is what was verified. The accented
+ * spelling is accepted alongside it only because a CMS may or may not
+ * slugify the accent away and that difference is invisible to a reader —
+ * not as a guess about a second section.
  */
-const SECTIONS = [
-  "actualites",
-  "actualités",
-  "publications",
-  "communiques",
-  "communiqués",
-  "communiques-de-presse",
-  "espace-presse",
-  "doctrine",
-];
+const HUB = "publications-et-actualites";
 
 const SECTION_RE = new RegExp(
-  `^(?:/[a-z]{2}(?:-[a-z]{2})?)?/(?:${SECTIONS.join("|")})(?:/|$)`,
+  `^(?:/[a-z]{2}(?:-[a-z]{2})?)?/(?:publications-et-actualit[ée]s)(?:/|$)`,
   "i"
 );
 
@@ -313,9 +321,9 @@ export function extractH2a(raw: string, pageUrl: string): ExtractResult {
     return {
       ok: false,
       error:
-        `found ${onHost.length} links on ${DOMAIN} but none is under a publication section ` +
-        `(${SECTIONS.slice(0, 4).join(", ")}…) — the paths here are ${pathShapes(onHost)}. ` +
-        `If publications live under a different path, that is the rule to correct`,
+        `found ${onHost.length} links on ${DOMAIN} but none is under /${HUB}/ — ` +
+        `the paths here are ${pathShapes(onHost)}. The hub address is confirmed, so ` +
+        `this means detail pages live somewhere else, and that is the rule to correct`,
     };
   }
 
@@ -352,6 +360,7 @@ export const h2a: Extractor = {
   domain: DOMAIN,
   name: "H2A (Haute Autorité de l'Audit)",
   accepts: acceptsH2aPage,
-  indexUrls: [`https://www.${DOMAIN}/actualites/`, `https://www.${DOMAIN}/publications/`],
+  // The confirmed hub, written as the operator verified it — no `www.`.
+  indexUrls: [`https://${DOMAIN}/${HUB}/`],
   extract: extractH2a,
 };

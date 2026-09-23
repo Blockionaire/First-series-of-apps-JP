@@ -23,7 +23,7 @@ its index.
 | European AI Office (`digital-strategy.ec.europa.eu`) | `extractors/ai-office.ts` | written, **unverified against the live site** |
 | COSO (`coso.org/news`) | `extractors/coso.ts` | written, **unverified against the live site** |
 | FRC (`frc.org.uk/news-and-events/news/`) | `extractors/frc.ts` | written, **unverified against the live site** |
-| H2A (`h2a-france.org`) | `extractors/h2a.ts` | written, **unverified; no feed checked** |
+| H2A (`h2a-france.org/publications-et-actualites/`) | `extractors/h2a.ts` | **hub verified**; item shape under it unverified; no feed checked |
 
 All eight anchor on URL taxonomy rather than class names, refuse navigation,
 and return an **error** rather than an empty list when a page yields nothing
@@ -67,6 +67,27 @@ URL and any permission granted to it.
 Nothing stops you doing it in the registry UI instead, in two clicks — the
 migration writes the same columns `setSourceReviewStatus` and `createSource`
 write, so a row retired either way is indistinguishable afterwards.
+
+### H2A: the hub is verified, the shape under it is not
+
+The operator confirmed the official publication hub:
+`https://h2a-france.org/publications-et-actualites/`. That replaced a guess
+(`/actualites/`, inferred from the predecessor site at `h3c.org`), and the
+correction says something about the rest of the guesswork — **H2A files
+publications and news together under one combined section**, which is neither
+what the old site did nor what a French institutional site usually does.
+
+So the other inferred section names (`/communiques/`, `/espace-presse/`,
+`/doctrine/`) were **removed rather than kept as spare capacity**. A list of
+plausible paths nobody has seen is not a safety net; it is several more
+chances to be confidently wrong. One section, and it is the one somebody
+looked at.
+
+Still unseen: the shape of an item **under** the hub. The extractor assumes
+`/publications-et-actualites/<slug>`. If that is wrong, the refusal says so
+specifically — it names the path shapes the hub actually links and states that
+the hub address is confirmed, so the diagnosis points at the item rule rather
+than at the surface.
 
 ### H2A: the feed was asked for first and could not be tried
 

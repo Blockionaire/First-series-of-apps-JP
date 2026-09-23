@@ -26,11 +26,27 @@
 -- Turning H2A on is still a person's job, in the registry, and it still
 -- records who did it.
 --
+-- ── It is a SUCCESSION, not a seeding ───────────────────────────────────
+-- The insert below fires only where an h3c.org row exists. That is not
+-- defensive coding; it is the difference between the two things a migration
+-- could be doing here, and only one of them is allowed.
+--
+-- `tests/newsroom-admin.test.mjs` asserts that the registry starts empty —
+-- "nothing is seeded behind your back". The registry's whole premise is that
+-- a named person chose each source, through `load_proposal` or the Add form,
+-- and a migration that quietly put a row in a fresh database would be the
+-- first thing to break that. It is also unnecessary: H2A is in
+-- proposed-sources.ts, so a registry loading the proposal for the first time
+-- gets it that way, chosen rather than planted.
+--
+-- So this does one job: where H3C was registered, its successor takes its
+-- place. Nowhere else.
+--
 -- ── Idempotent by construction ──────────────────────────────────────────
--- Migrations are applied once, but a registry that never loaded the proposal
--- has no H3C row, and one where the operator already added H2A by hand has
--- the new row. Both cases are no-ops below rather than errors: the UPDATE
--- matches nothing, and the INSERT is guarded by NOT EXISTS.
+-- A registry that never loaded the proposal has no H3C row, and one where
+-- the operator already added H2A by hand has the new row. Both are no-ops
+-- rather than errors: the UPDATE matches nothing, and the INSERT is guarded
+-- on both conditions.
 
 -- ── 1. Retire H3C ───────────────────────────────────────────────────────
 -- The same three columns `setSourceReviewStatus` writes for `do_not_use`,
@@ -57,11 +73,17 @@ WHERE domain = 'h3c.org';
 -- this historical row keeps the value it was registered with, which is the
 -- correct behaviour for a migration.
 --
--- The feed_url is the news surface, and it is a CONVENTION rather than an
--- observed address — nothing in this build has ever reached h2a-france.org.
--- The extractor refuses a feed body with an instruction to switch the method
--- to `rss`, so pointing Test source at a candidate feed is how that question
--- gets answered.
+-- The feed_url is the official publication hub, VERIFIED by the operator. An
+-- earlier draft of this migration carried a guess — `/actualites/`, inferred
+-- from the predecessor site — and it was wrong: H2A files publications and
+-- news together under one combined section. The guess never reached a
+-- database, which is the only reason this is a correction rather than a
+-- second migration.
+--
+-- Still open, and not for a migration to decide: whether H2A publishes a
+-- feed. Nothing in this build has ever reached the host. The extractor
+-- refuses a feed body with an instruction to switch the method to `rss`, so
+-- pointing Test source at a candidate feed is how that gets answered.
 INSERT INTO newsroom_sources
   (name, domain, source_type, authority_tier, jurisdictions, topics,
    ingestion_method, feed_url, fetch_frequency, fetch_allowed,
@@ -74,12 +96,14 @@ SELECT
   '["FR"]',
   '["audit","oversight"]',
   'html_scrape',
-  'https://www.h2a-france.org/actualites/',
+  'https://h2a-france.org/publications-et-actualites/',
   30,
   0,
   '',
   'indefinite',
   0,
   'unreviewed',
-  'Registered by migration 0010 as the successor to H3C. Inactive and not retrievable: verify the URL with Test source before switching it on.'
-WHERE NOT EXISTS (SELECT 1 FROM newsroom_sources WHERE domain = 'h2a-france.org');
+  'Registered by migration 0010 as the successor to H3C. The hub address is confirmed; the item shape under it is not. Inactive and not retrievable — run Test source before switching it on.'
+WHERE NOT EXISTS (SELECT 1 FROM newsroom_sources WHERE domain = 'h2a-france.org')
+  -- Only where there is something to succeed. See "It is a SUCCESSION" above.
+  AND EXISTS (SELECT 1 FROM newsroom_sources WHERE domain = 'h3c.org');

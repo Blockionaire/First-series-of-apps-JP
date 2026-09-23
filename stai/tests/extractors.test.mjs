@@ -136,8 +136,9 @@ const COSO_HTML = fixture("coso-news.html");
 const COSO_URL = "https://www.coso.org/news";
 const FRC_HTML = fixture("frc-news.html");
 const FRC_URL = "https://www.frc.org.uk/news-and-events/news/";
-const H2A_HTML = fixture("h2a-actualites.html");
-const H2A_URL = "https://www.h2a-france.org/actualites/";
+const H2A_HTML = fixture("h2a-publications-et-actualites.html");
+// The hub the operator verified. No `www.` — as given.
+const H2A_URL = "https://h2a-france.org/publications-et-actualites/";
 
 /**
  * A fetch that serves the detail fixtures and records what was asked for.
@@ -1359,36 +1360,55 @@ describe("extracting FRC news", () => {
 /* ── H2A ────────────────────────────────────────────────────────────────── */
 
 describe("H2A URL rules", () => {
-  test("the publication sections are eligible surfaces", () => {
+  test("the verified hub is the eligible surface, with or without www", () => {
     assert.equal(acceptsH2aPage(H2A_URL), true);
-    assert.equal(acceptsH2aPage("https://www.h2a-france.org/publications/"), true);
-    assert.equal(acceptsH2aPage("https://www.h2a-france.org/communiques/"), true);
+    assert.equal(acceptsH2aPage("https://www.h2a-france.org/publications-et-actualites/"), true);
     // The institution's own pages are not a publication listing.
-    assert.equal(acceptsH2aPage("https://www.h2a-france.org/qui-sommes-nous/"), false);
-    assert.equal(acceptsH2aPage("https://www.h2a-france.org/"), false);
+    assert.equal(acceptsH2aPage("https://h2a-france.org/qui-sommes-nous/"), false);
+    assert.equal(acceptsH2aPage("https://h2a-france.org/"), false);
     // And the predecessor's domain is a different source entirely.
     assert.equal(acceptsH2aPage("https://www.h3c.org/actualites"), false);
   });
 
-  test("a publication is one level under a section", () => {
+  test("sections inferred from the old site are NOT accepted", () => {
+    // `/actualites/` and `/publications/` were guesses, taken from the
+    // predecessor at h3c.org and from what a French institutional site
+    // usually does. H2A does neither: it files both under one combined
+    // section. Keeping the guesses around as spare capacity would be several
+    // more chances to be confidently wrong, so they went.
+    for (const guessed of [
+      "https://h2a-france.org/actualites/",
+      "https://h2a-france.org/publications/",
+      "https://h2a-france.org/communiques/",
+      "https://h2a-france.org/espace-presse/",
+    ]) {
+      assert.equal(acceptsH2aPage(guessed), false, guessed);
+      assert.equal(isH2aPublication(`${guessed}une-entree/`), false, guessed);
+    }
+  });
+
+  test("a publication is one level under the hub", () => {
     assert.equal(
-      isH2aPublication("https://www.h2a-france.org/actualites/decisions-mai-2026/"),
+      isH2aPublication("https://h2a-france.org/publications-et-actualites/decisions-mai-2026/"),
       true
     );
     assert.equal(
-      isH2aPublication("https://www.h2a-france.org/actualites/"),
+      isH2aPublication("https://h2a-france.org/publications-et-actualites/"),
       false,
-      "the section index itself"
+      "the hub itself"
     );
-    assert.equal(isH2aPublication("https://www.h2a-france.org/actualites/page/2/"), false);
-    assert.equal(isH2aPublication("https://www.h2a-france.org/nous-rejoindre/offres/"), false);
+    assert.equal(
+      isH2aPublication("https://h2a-france.org/publications-et-actualites/page/2/"),
+      false
+    );
+    assert.equal(isH2aPublication("https://h2a-france.org/nous-rejoindre/offres/"), false);
   });
 
   test("a published file is an attachment, not an item", () => {
     // Found in the first run: the PDF a card links was collected a second
     // time, titled with the link text that pointed at it.
     assert.equal(
-      isH2aPublication("https://www.h2a-france.org/publications/position-csrd-2026.pdf"),
+      isH2aPublication("https://h2a-france.org/publications-et-actualites/position-csrd-2026.pdf"),
       false
     );
   });
@@ -1424,9 +1444,9 @@ describe("extracting H2A publications", () => {
     assert.deepEqual(
       result.items.map((i) => new URL(i.url).pathname),
       [
-        "/communiques/h2a-publie-sa-position-sur-l-assurance-csrd",
-        "/publications/rapport-annuel-2025",
-        "/actualites/decisions-de-la-formation-restreinte-mai-2026",
+        "/publications-et-actualites/h2a-publie-sa-position-sur-l-assurance-csrd",
+        "/publications-et-actualites/rapport-annuel-2025",
+        "/publications-et-actualites/decisions-de-la-formation-restreinte-mai-2026",
       ]
     );
   });
@@ -1448,15 +1468,18 @@ describe("extracting H2A publications", () => {
   test("archive chrome and institutional pages are not publications", () => {
     const urls = result.items.map((i) => i.url).join(" ");
     for (const chrome of [
-      "/actualites/page/",
+      "/publications-et-actualites/page/",
       "/qui-sommes-nous/",
       "/nous-rejoindre/",
       "/mentions-legales/",
+      // The section that was guessed before the hub was verified. It is still
+      // linked in the fixture, and must now collect nothing.
+      "/actualites/ancienne-section",
     ]) {
       assert.ok(!urls.includes(chrome), `${chrome} was collected`);
     }
-    // The section index linked as "Toutes les actualités" is not an item.
-    assert.ok(!result.items.some((i) => new URL(i.url).pathname === "/actualites"));
+    // The hub linking itself is not an item.
+    assert.ok(!result.items.some((i) => new URL(i.url).pathname === "/publications-et-actualites"));
   });
 
   test("the highlighted card and the list row are one item, and keep the PDF", () => {
@@ -1487,14 +1510,14 @@ describe("extracting H2A publications", () => {
   });
 
   test("a page with no publication links says what it found instead", () => {
-    const moved = H2A_HTML
-      .replace(/\/actualites\//g, "/nouvelles/")
-      .replace(/\/publications\//g, "/documents/")
-      .replace(/\/communiques\//g, "/presse/");
+    const moved = H2A_HTML.replace(/\/publications-et-actualites\//g, "/nouvelles/");
     const r = extractH2a(moved, H2A_URL);
     assert.equal(r.ok, false);
-    assert.match(r.error, /none is under a publication section/);
-    assert.match(r.error, /\/nouvelles\/|\/documents\/|\/presse\//, r.error);
+    assert.match(r.error, /none is under \/publications-et-actualites\//);
+    assert.match(r.error, /\/nouvelles\//, r.error);
+    // The hub address is confirmed, so the diagnosis is specific: it is the
+    // item shape below it that is wrong, not the surface.
+    assert.match(r.error, /hub address is confirmed/i);
   });
 
   test("a listing that lost its dates is an outage, not a quiet week", () => {

@@ -424,7 +424,10 @@ export const PROPOSED_SOURCES: Proposed[] = [
     jurisdictions: ["FR"],
     topics: ["audit", "oversight"],
     ingestion_method: "html_scrape",
-    feed_url: "https://www.h2a-france.org/actualites/",
+    // The official publication hub, verified by the operator. It replaced a
+    // guess (`/actualites/`, inferred from the predecessor site) — H2A files
+    // publications and news together under one combined section.
+    feed_url: "https://h2a-france.org/publications-et-actualites/",
     rationale:
       "French audit oversight, including its CSRD assurance positions. Successor to H3C.",
   },

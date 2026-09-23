@@ -205,7 +205,10 @@ describe("retiring H3C and registering H2A", () => {
     assert.equal(h2a.authority_tier, 1);
     assert.equal(h2a.jurisdictions, '["FR"]');
     assert.equal(h2a.ingestion_method, "html_scrape");
-    assert.match(h2a.feed_url, /^https:\/\/www\.h2a-france\.org\//);
+    // The verified hub, exactly as the operator gave it — no `www.`, and the
+    // one combined section rather than the `/actualites/` that was guessed
+    // from the predecessor site.
+    assert.equal(h2a.feed_url, "https://h2a-france.org/publications-et-actualites/");
     // The Tier 1 defaults, matching DEFAULT_FREQUENCY and DEFAULT_RETENTION.
     assert.equal(h2a.fetch_frequency, 30);
     assert.equal(h2a.snapshot_retention, "indefinite");
@@ -213,11 +216,41 @@ describe("retiring H3C and registering H2A", () => {
     r.cleanup();
   });
 
-  test("a registry that never loaded the proposal still gets H2A", () => {
+  test("a registry that never loaded the proposal is left completely empty", () => {
+    // The invariant this migration nearly broke, and that newsroom-admin
+    // states outright: the registry starts empty, nothing is seeded behind
+    // your back. A source appears because a named person chose it — through
+    // load_proposal or the Add form — and a migration quietly planting one in
+    // a fresh database would be the first exception to that.
+    //
+    // It costs nothing, either: H2A is in proposed-sources.ts, so a first
+    // load_proposal registers it anyway, chosen rather than planted.
     const r = registry([]);
     r.run();
-    assert.ok(r.row("h2a-france.org"));
-    assert.equal(r.row("h3c.org"), undefined, "nothing to retire, and no error");
+    assert.equal(
+      count(r.d, "SELECT COUNT(*) n FROM newsroom_sources"),
+      0,
+      "a migration must not put a source in an empty registry"
+    );
+    r.cleanup();
+  });
+
+  test("it inserts H2A only where there was an H3C to succeed", () => {
+    // A registry with sources but no H3C — already retired by hand, say —
+    // gets nothing. This migration performs a succession; it does not seed.
+    const r = registry([
+      {
+        name: "Some other source",
+        domain: "example-regulator.eu",
+        feed_url: "https://example-regulator.eu/feed.xml",
+        fetch_allowed: 1,
+        active: 1,
+        review_status: "retrieval_approved",
+      },
+    ]);
+    r.run();
+    assert.equal(r.row("h2a-france.org"), undefined);
+    assert.equal(count(r.d, "SELECT COUNT(*) n FROM newsroom_sources"), 1);
     r.cleanup();
   });
 
@@ -226,10 +259,11 @@ describe("retiring H3C and registering H2A", () => {
     // decisions — the URL they chose, the permission they granted — are not
     // the migration's to overwrite.
     const r = registry([
+      H3C,
       {
         name: "H2A by hand",
         domain: "h2a-france.org",
-        feed_url: "https://www.h2a-france.org/publications/",
+        feed_url: "https://h2a-france.org/une-autre-adresse/",
         fetch_allowed: 1,
         active: 1,
         review_status: "retrieval_approved",
@@ -238,6 +272,11 @@ describe("retiring H3C and registering H2A", () => {
     r.run();
     const h2a = r.row("h2a-france.org");
     assert.equal(h2a.name, "H2A by hand");
+    assert.equal(
+      h2a.feed_url,
+      "https://h2a-france.org/une-autre-adresse/",
+      "an operator's own URL must survive, even where the migration disagrees"
+    );
     assert.equal(h2a.active, 1, "an operator's own activation must survive");
     assert.equal(h2a.fetch_allowed, 1);
     assert.equal(h2a.review_status, "retrieval_approved");
@@ -271,12 +310,12 @@ describe("retiring H3C and registering H2A", () => {
     r.cleanup();
   });
 
-  test("nothing in the registry is left active after it runs on a fresh database", () => {
+  test("a fresh database has no sources at all after every migration", () => {
     const { d, cleanup } = freshDb();
     assert.equal(
-      count(d, "SELECT COUNT(*) n FROM newsroom_sources WHERE active=1 OR fetch_allowed=1"),
+      count(d, "SELECT COUNT(*) n FROM newsroom_sources"),
       0,
-      "a migration must never leave a source able to fetch"
+      "migrations must not register sources; load_proposal and the Add form do that"
     );
     cleanup();
   });
