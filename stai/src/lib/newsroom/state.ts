@@ -100,15 +100,6 @@ export function canTransition(from: StoryState, to: StoryState): boolean {
   return TRANSITIONS[from].includes(to);
 }
 
-/** States a story can sit in indefinitely without anything being wrong. */
-export const RESTING_STATES: readonly StoryState[] = [
-  "DISCOVERED",
-  "REJECTED",
-  "NEEDS_REVIEW",
-  "LIVE",
-  "UPDATE_PROPOSED",
-];
-
 /** States that mean a stage failed and a human has to decide what happens. */
 export const FAILURE_STATES: readonly StoryState[] = [
   "RESEARCH_FAILED",
@@ -117,10 +108,6 @@ export const FAILURE_STATES: readonly StoryState[] = [
   "EDITORIAL_FAILED",
   "PUBLISH_FAILED",
 ];
-
-export function isFailureState(s: StoryState): boolean {
-  return FAILURE_STATES.includes(s);
-}
 
 /**
  * States where work is in flight.

@@ -117,7 +117,7 @@ seconds.
 | `manual` | 1 | never fetched, by design |
 
 So **30 of 51 are retrievable today**. The twenty `html_scrape` rows — IAASB,
-IESBA, EFRAG, IIA, COSO, ISO, the AI Office, CEAOB, APAS, H3C, NBA, SSRN, the
+IESBA, EFRAG, IIA, COSO, ISO, the AI Office, CEAOB, APAS, H3C (since succeeded by H2A), NBA, SSRN, the
 AAA journal and the firm insight pages — publish nothing machine-readable.
 **Phase 2 does not implement scraping.** They report `skipped_unsupported` and
 fetch nothing.

@@ -57,10 +57,6 @@ export function indexNowKey(): string | null {
   return /^[A-Za-z0-9-]{8,128}$/.test(raw) ? raw : null;
 }
 
-export function indexNowConfigured(): boolean {
-  return indexNowKey() !== null;
-}
-
 export type IndexNowResult =
   | { ok: true; submitted: string[]; status: number }
   | { ok: false; reason: string };

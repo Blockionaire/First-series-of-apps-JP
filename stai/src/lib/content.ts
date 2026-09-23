@@ -244,6 +244,4 @@ export async function foundingStatus(): Promise<{
   };
 }
 
-/** EU AI Act enforcement moment — the deadline the whole platform orients around. */
-export const ENFORCEMENT_ISO = "2026-08-02T00:00:00+02:00";
 export const EARLY_BIRD_END_ISO = "2026-08-31T23:59:59+02:00";

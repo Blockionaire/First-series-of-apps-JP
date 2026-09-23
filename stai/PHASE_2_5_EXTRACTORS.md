@@ -215,6 +215,9 @@ right shape, and also why hand-written extractors are affordable here.
 
 ### Deliberately not in scope
 
+This was the scope when phase 2.5 began. COSO, APAS and H2A (H3C's successor)
+have since been given extractors — see the table at the top.
+
 - **COSO, ISO, IIA** — global frameworks, useful context, rarely time-critical.
 - **SSRN, AAA journal** — research feeds; the Research Note format can wait.
 - **APAS (DE), H3C (FR)** — national oversight, valuable but lower volume than

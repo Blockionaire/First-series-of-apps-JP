@@ -251,14 +251,6 @@ export async function stateCounts(): Promise<Record<StoryState, number>> {
   return counts;
 }
 
-export async function storiesInState(state: StoryState, limit = 50): Promise<Story[]> {
-  const rows = await sql().all<StoryRow>(
-    "SELECT * FROM newsroom_stories WHERE state=? ORDER BY state_entered_at DESC LIMIT ?",
-    [state, limit]
-  );
-  return rows.map(rowToStory);
-}
-
 export async function recentStories(limit = 50): Promise<Story[]> {
   const rows = await sql().all<StoryRow>(
     "SELECT * FROM newsroom_stories ORDER BY last_seen_at DESC LIMIT ?",
@@ -436,34 +428,6 @@ export { DEFAULT_FREQUENCY };
 
 // ─── Discovery (phase 2) ──────────────────────────────────────────────────
 
-export type FetchLogRow = {
-  id: number;
-  source_id: number;
-  run_id: number | null;
-  started_at: string;
-  duration_ms: number | null;
-  outcome: string;
-  http_status: number | null;
-  error: string;
-  items_found: number;
-  items_new: number;
-};
-
-/** The most recent attempt against each source, for the health panel. */
-export async function recentFetches(limitRows = 60): Promise<FetchLogRow[]> {
-  return sql().all<FetchLogRow>(
-    "SELECT * FROM newsroom_fetch_log ORDER BY id DESC LIMIT ?",
-    [limitRows]
-  );
-}
-
-export async function fetchesForSource(sourceId: number, limitRows = 20): Promise<FetchLogRow[]> {
-  return sql().all<FetchLogRow>(
-    "SELECT * FROM newsroom_fetch_log WHERE source_id=? ORDER BY id DESC LIMIT ?",
-    [sourceId, limitRows]
-  );
-}
-
 export type DiscoveryRun = {
   id: number;
   workflow: string;
@@ -591,17 +555,6 @@ export function isFeedbackVerdict(v: string): v is FeedbackVerdict {
   return (FEEDBACK_VERDICTS as readonly string[]).includes(v);
 }
 
-export type Feedback = {
-  id: number;
-  story_id: number;
-  verdict: string;
-  note: string;
-  reviewer: string;
-  scored: number | null;
-  would_research: number;
-  created_at: string;
-};
-
 /**
  * Record a human's verdict on a selection.
  *
@@ -633,24 +586,12 @@ export async function recordDiscoveryFeedback(input: {
   );
 }
 
-export async function feedbackForStory(storyId: number): Promise<Feedback[]> {
-  return sql().all<Feedback>(
-    "SELECT * FROM newsroom_discovery_feedback WHERE story_id=? ORDER BY id DESC",
-    [storyId]
-  );
-}
-
 export type FeedbackTally = { verdict: string; n: number };
 
 export async function feedbackTally(): Promise<FeedbackTally[]> {
   return sql().all<FeedbackTally>(
     "SELECT verdict, COUNT(*) n FROM newsroom_discovery_feedback GROUP BY verdict ORDER BY n DESC"
   );
-}
-
-export async function discoveryFeedbackCount(): Promise<number> {
-  const row = await sql().first<{ n: number }>("SELECT COUNT(*) n FROM newsroom_discovery_feedback");
-  return row?.n ?? 0;
 }
 
 /** Counts for the dry-run header. */
@@ -781,24 +722,6 @@ export async function setSourceReviewStatus(input: {
   }
 }
 
-export type ProbeRecord = {
-  id: number;
-  source_id: number;
-  url: string;
-  final_url: string;
-  actor: string;
-  ok: number;
-  http_status: number | null;
-  content_type: string;
-  format: string;
-  item_count: number;
-  latest_published_at: string | null;
-  sample_titles: string;
-  error: string;
-  duration_ms: number;
-  created_at: string;
-};
-
 /**
  * Keep what the feed tester found, including the failures.
  *
@@ -836,9 +759,3 @@ export async function recordProbe(input: {
   );
 }
 
-export async function recentProbes(sourceId: number, n = 5): Promise<ProbeRecord[]> {
-  return sql().all<ProbeRecord>(
-    "SELECT * FROM newsroom_source_probes WHERE source_id=? ORDER BY created_at DESC, id DESC LIMIT ?",
-    [sourceId, n]
-  );
-}

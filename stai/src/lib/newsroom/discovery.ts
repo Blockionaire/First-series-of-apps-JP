@@ -41,7 +41,7 @@ import {
   type StoryRow,
 } from "./cluster.ts";
 import { applyCap, firstFailure, gatesPassed, runGates, scoreStory, type Candidate, type GateResult } from "./relevance.ts";
-import { allSources, moveStory, type Story } from "./store.ts";
+import { allSources, type Story } from "./store.ts";
 import type { Source } from "./sources.ts";
 import { dayKey, idempotencyKey } from "./run-keys.ts";
 
@@ -712,13 +712,3 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
     throw e;
   }
 }
-
-/**
- * Deliberately unused in phase 2, and exported so the boundary is testable.
- *
- * `moveStory` is how a story changes state. Discovery never calls it to move
- * anything past DISCOVERED: qualifying for research is recorded as a flag on
- * the row, not as a state change, precisely because nothing may actually
- * enter research until phase 3.
- */
-export const stateChangesAreNotDiscoverysJob = moveStory;

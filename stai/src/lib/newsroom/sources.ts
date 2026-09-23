@@ -157,22 +157,6 @@ export const REVIEW_STATUSES = [
 ] as const;
 export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
 
-export const REVIEW_LABEL: Record<ReviewStatus, string> = {
-  unreviewed: "Unreviewed",
-  feed_verified: "Feed verified",
-  retrieval_approved: "Retrieval approved",
-  needs_fix: "Needs fix",
-  do_not_use: "Do not use",
-};
-
-export const REVIEW_MEANING: Record<ReviewStatus, string> = {
-  unreviewed: "nobody has looked at this yet",
-  feed_verified: "the URL serves a real feed with real items",
-  retrieval_approved: "robots.txt and the site's terms were read and permit fetching",
-  needs_fix: "something is wrong and worth fixing — usually a moved feed",
-  do_not_use: "examined and rejected",
-};
-
 export function isReviewStatus(v: string): v is ReviewStatus {
   return (REVIEW_STATUSES as readonly string[]).includes(v);
 }
@@ -408,22 +392,6 @@ export function sourceHealth(
 
 export const LIVE_STATES = ["live", "waiting", "broken", "dormant", "excluded"] as const;
 export type LiveState = (typeof LIVE_STATES)[number];
-
-export const LIVE_LABEL: Record<LiveState, string> = {
-  live: "Live",
-  waiting: "Waiting",
-  broken: "Broken",
-  dormant: "Not live",
-  excluded: "Do not use",
-};
-
-export const LIVE_MEANING: Record<LiveState, string> = {
-  live: "on, permitted and retrieving successfully",
-  waiting: "on and permitted, but nothing retrieved yet",
-  broken: "on and permitted, but failing — this one needs you",
-  dormant: "switched off or retrieval not permitted — nothing is wrong, it is just not running",
-  excluded: "examined and rejected",
-};
 
 /**
  * What one row is really doing.

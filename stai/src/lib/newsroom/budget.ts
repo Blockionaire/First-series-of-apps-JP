@@ -77,10 +77,6 @@ export const PIPELINE_STAGES = [
 ] as const;
 export type PipelineStage = (typeof PIPELINE_STAGES)[number];
 
-export function isPipelineStage(v: string): v is PipelineStage {
-  return (PIPELINE_STAGES as readonly string[]).includes(v);
-}
-
 /** Absolute ceiling on what one story may cost end to end. */
 export const STORY_CEILING_CENTS: Cents = Object.values(STAGE_CEILINGS).reduce((a, b) => a + b, 0);
 

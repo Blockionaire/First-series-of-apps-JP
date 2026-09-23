@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AUTHORS, authorBySlug } from "@/lib/authors";
+import { authorBySlug } from "@/lib/authors";
 import { allArticles } from "@/lib/content";
 import { pageMeta, abs, breadcrumbSchema } from "@/lib/seo";
 import JsonLd from "@/components/JsonLd";
@@ -11,10 +11,6 @@ import { PlusBadge } from "@/components/Logo";
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }> };
-
-export function generateStaticParams() {
-  return AUTHORS.map((a) => ({ slug: a.slug }));
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
