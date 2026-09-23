@@ -321,7 +321,10 @@ exceed, on Paid too; held-back sources log `skipped_budget` and stay due):
 | `newsroom.max_run_seconds` | 300 | 840 | Nothing new starts after this; a run overruns it by at most one 15-second timeout. Under the 15-minute cron limit. |
 
 **Fixed in code:** 200 items read per source per run; one outbound request at
-a time; 15-second timeout and 4 MB body limit per request; **no retries within
+a time; 15-second timeout and 4 MB body limit per request; redirects followed
+by hand, at most five, and only to https addresses inside the source's
+registered domain — a redirect elsewhere is not requested and is logged
+`off_domain_redirect` (feed fetch, Test source and detail pages alike); **no retries within
 a run** (the next run is the retry); one run at a time (a second caller gets
 "another discovery run is in progress", HTTP 409 from the button); a run that
 dies releases its lease after the time budget plus five minutes and is

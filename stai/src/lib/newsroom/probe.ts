@@ -31,6 +31,7 @@ import { parseFeed } from "./feed.ts";
 import { USER_AGENT } from "./fetcher.ts";
 import { extractorFor } from "./extractors/index.ts";
 import { hydrate } from "./extractors/hydrate.ts";
+import { containedFetch } from "./contained-fetch.ts";
 
 /** What the feed turned out to be, including the cases that are not feeds. */
 export type ProbeFormat = "rss" | "atom" | "json" | "html" | "html_extractor" | "unknown";
@@ -154,18 +155,35 @@ export async function probeFeed(
   const elapsed = () => Date.now() - started;
 
   let res: Response;
+  let finalUrl: string;
   try {
-    res = await doFetch(url, {
-      headers: {
-        "user-agent": USER_AGENT,
-        // Broad on purpose. The engine's fetcher advertises what it wants;
-        // a diagnostic wants to see whatever the server actually serves,
-        // including the HTML page that is the answer we are looking for.
-        accept: "application/rss+xml, application/atom+xml, application/xml;q=0.9, application/json;q=0.9, text/xml;q=0.8, */*;q=0.5",
+    const got = await containedFetch(
+      doFetch,
+      url,
+      {
+        headers: {
+          "user-agent": USER_AGENT,
+          // Broad on purpose. The engine's fetcher advertises what it wants;
+          // a diagnostic wants to see whatever the server actually serves,
+          // including the HTML page that is the answer we are looking for.
+          accept: "application/rss+xml, application/atom+xml, application/xml;q=0.9, application/json;q=0.9, text/xml;q=0.8, */*;q=0.5",
+        },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
       },
-      redirect: "follow",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+      deps.domain
+    );
+    if (!got.ok) {
+      // Reported with where it was sent: "the feed moved to another host" is
+      // a real finding, and the operator decides whether to follow it.
+      return blank({
+        finalUrl: got.kind === "off_domain" ? got.location : "",
+        redirected: got.hops > 0,
+        error: got.error,
+        durationMs: elapsed(),
+      });
+    }
+    res = got.res;
+    finalUrl = got.finalUrl;
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     const timedOut =
@@ -177,9 +195,8 @@ export async function probeFeed(
   }
 
   const contentType = res.headers.get("content-type") ?? "";
-  // `res.url` is where the chain ended. Reported even on failure: a 404 at a
+  // Where the (contained) chain ended. Reported even on failure: a 404 at a
   // redirected address is a different diagnosis from a 404 at the one typed.
-  const finalUrl = res.url || url;
   const base = {
     httpStatus: res.status,
     finalUrl,

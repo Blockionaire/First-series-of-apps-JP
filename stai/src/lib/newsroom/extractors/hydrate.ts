@@ -39,6 +39,8 @@
 
 import type { FeedItem } from "../feed.ts";
 import type { ExtractResult, Extractor } from "./types.ts";
+import { containedFetch } from "../contained-fetch.ts";
+import { feedUrlBelongsTo } from "../sources.ts";
 
 const TIMEOUT_MS = 15_000;
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -128,7 +130,7 @@ export async function hydrate(
     // that the request goes to the publisher this extractor is registered for
     // — that is the property that makes following a link one level deep safe,
     // and it holds even for a future extractor whose own checks are wrong.
-    if (!sameRegisteredDomain(p.url, extractor.domain)) {
+    if (!feedUrlBelongsTo(p.url, extractor.domain)) {
       rejected.push(`${p.url} — outside ${extractor.domain}, not opened`);
       continue;
     }
@@ -137,7 +139,7 @@ export async function hydrate(
     // publications a month; opening twenty connections at once to save four
     // seconds on a job that runs on a cron is the kind of politeness failure
     // that ends in a block, and a block costs the source entirely.
-    const body = await readPage(doFetch, p.url, deps.userAgent);
+    const body = await readPage(doFetch, p.url, extractor.domain, deps.userAgent);
     fetched += 1;
 
     if (!body.ok) {
@@ -184,33 +186,34 @@ export async function hydrate(
   };
 }
 
-/** Same registered domain, or a subdomain of it. */
-function sameRegisteredDomain(url: string, domain: string): boolean {
-  try {
-    const host = new URL(url).host.toLowerCase().replace(/^www\./, "");
-    return host === domain || host.endsWith(`.${domain}`);
-  } catch {
-    return false;
-  }
-}
-
 type Page = { ok: true; text: string; finalUrl: string } | { ok: false; error: string };
 
 async function readPage(
   doFetch: typeof globalThis.fetch,
   url: string,
+  domain: string,
   userAgent?: string
 ): Promise<Page> {
   let res: Response;
+  let finalUrl: string;
   try {
-    res = await doFetch(url, {
-      headers: {
-        accept: "text/html, application/xhtml+xml;q=0.9, */*;q=0.1",
-        ...(userAgent ? { "user-agent": userAgent } : {}),
+    // The link was checked against the domain above; the redirects it may
+    // answer with are checked here, hop by hop.
+    const got = await containedFetch(
+      doFetch,
+      url,
+      {
+        headers: {
+          accept: "text/html, application/xhtml+xml;q=0.9, */*;q=0.1",
+          ...(userAgent ? { "user-agent": userAgent } : {}),
+        },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
       },
-      redirect: "follow",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+      domain
+    );
+    if (!got.ok) return { ok: false, error: got.error };
+    res = got.res;
+    finalUrl = got.finalUrl;
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     const timedOut = e instanceof Error && (e.name === "TimeoutError" || /timeout|abort/i.test(message));
@@ -228,5 +231,5 @@ async function readPage(
   if (text.length > MAX_BYTES) {
     return { ok: false, error: `${text.length} bytes, limit is ${MAX_BYTES}` };
   }
-  return { ok: true, text, finalUrl: res.url || url };
+  return { ok: true, text, finalUrl };
 }

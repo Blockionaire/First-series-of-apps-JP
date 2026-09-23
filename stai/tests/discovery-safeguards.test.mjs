@@ -327,6 +327,30 @@ describe("one run at a time", () => {
   });
 });
 
+describe("an off-domain redirect is never ingested under the source's tier", () => {
+  test("the run records the redirect against the source and stores nothing from it", async () => {
+    const d = freshDb();
+    addSources(d, 1); // src0.example, Tier 1 regulator
+    const asked = [];
+    const fetch = async (url, init) => {
+      asked.push(url);
+      if (url === "https://src0.example/feed.xml") {
+        return new Response(null, { status: 301, headers: { location: "https://elsewhere.example/feed.xml" } });
+      }
+      return recordingFetch()(url, init);
+    };
+    const r = await runDiscovery({ fetch, force: true });
+    assert.deepEqual(asked, ["https://src0.example/feed.xml"], "the other host was never contacted");
+    assert.equal(d.prepare("SELECT COUNT(*) n FROM newsroom_source_items").get().n, 0);
+    const [log] = outcomes(d, r.runId);
+    assert.equal(log.outcome, "off_domain_redirect");
+    assert.match(log.error, /elsewhere\.example.*outside src0\.example/);
+    const src = d.prepare("SELECT consecutive_failures, last_outcome FROM newsroom_sources").get();
+    assert.equal(src.last_outcome, "off_domain_redirect");
+    assert.equal(src.consecutive_failures, 1, "it counts against the source's health");
+  });
+});
+
 describe("every invocation has its own run record (CODE_AUDIT.md M2)", () => {
   const runs = (d) => d.prepare("SELECT id, idempotency_key, status, error FROM newsroom_pipeline_runs ORDER BY id").all();
 

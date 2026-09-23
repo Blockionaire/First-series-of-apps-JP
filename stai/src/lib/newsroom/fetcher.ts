@@ -27,6 +27,7 @@
 import { parseFeed, type FeedItem } from "./feed.ts";
 import { extractorFor } from "./extractors/index.ts";
 import { hydrate } from "./extractors/hydrate.ts";
+import { containedFetch } from "./contained-fetch.ts";
 import type { IngestionMethod, Source } from "./sources.ts";
 
 /** Every way a fetch attempt can end. Recorded verbatim in newsroom_fetch_log. */
@@ -39,6 +40,9 @@ export const FETCH_OUTCOMES = [
   "timeout",
   "parse_error",
   "too_large",
+  // Redirected outside the registered domain (or into a redirect loop). The
+  // content there is not the registered publisher's and is never ingested.
+  "off_domain_redirect",
   "skipped_inactive",
   "skipped_not_permitted",
   "skipped_not_due",
@@ -66,6 +70,7 @@ export const FAILURE_OUTCOMES: readonly FetchOutcome[] = [
   "timeout",
   "parse_error",
   "too_large",
+  "off_domain_redirect",
 ];
 
 export type FetchResult = {
@@ -232,12 +237,19 @@ export async function fetchSource(
   if (source.last_modified_header) headers["if-modified-since"] = source.last_modified_header;
 
   let res: Response;
+  let finalUrl: string;
   try {
-    res = await doFetch(source.feed_url, {
-      headers,
-      redirect: "follow",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+    const got = await containedFetch(
+      doFetch,
+      source.feed_url,
+      { headers, signal: AbortSignal.timeout(TIMEOUT_MS) },
+      source.domain
+    );
+    if (!got.ok) {
+      return { outcome: "off_domain_redirect", error: got.error, items: [], durationMs: elapsed() };
+    }
+    res = got.res;
+    finalUrl = got.finalUrl;
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     const timedOut = e instanceof Error && (e.name === "TimeoutError" || /timeout|abort/i.test(message));
@@ -309,7 +321,7 @@ export async function fetchSource(
     // An extractor's failure is a parse_error, the same outcome a malformed
     // feed produces, so a broken extractor shows up in the health column
     // beside a broken feed rather than as a quiet source.
-    const extracted = extractor.extract(body, res.url || source.feed_url);
+    const extracted = extractor.extract(body, finalUrl);
     // Publications whose title and date live behind the link, opened one
     // level deep and bounded by the extractor's own cap. Runs unconditionally
     // because it is a no-op for every extractor that reads a single page.
