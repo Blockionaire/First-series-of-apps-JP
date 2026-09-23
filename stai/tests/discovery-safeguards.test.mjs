@@ -19,6 +19,8 @@ import { test, describe, before } from "node:test";
 import assert from "node:assert/strict";
 import { register } from "node:module";
 import Database from "better-sqlite3";
+import fs from "node:fs";
+import path from "node:path";
 
 register(
   "data:text/javascript," +
@@ -37,7 +39,10 @@ register(
 );
 
 let registerSqlDriver, MIGRATIONS, runDiscovery, DiscoveryBusyError, hydrate, isEnabled, TOGGLES;
+let workersPlan, scheduledDiscoveryAllowed, FREE_MANUAL_PROFILE, LIMIT_FIELDS;
 before(async () => {
+  ({ workersPlan, scheduledDiscoveryAllowed, FREE_MANUAL_PROFILE } = await import("../src/lib/newsroom/plan.ts"));
+  ({ LIMIT_FIELDS } = await import("../src/lib/site-config.ts"));
   ({ registerSqlDriver } = await import("../src/lib/sql.ts"));
   ({ MIGRATIONS } = await import("../src/lib/schema/sql.generated.ts"));
   ({ runDiscovery, DiscoveryBusyError } = await import("../src/lib/newsroom/discovery.ts"));
@@ -92,6 +97,30 @@ function recordingFetch({ delayMs = 0, status = 200, gate = null } = {}) {
       `<?xml version="1.0"?><rss version="2.0"><channel><title>x</title><item><title>Notice from ${host} on audit oversight</title><link>https://${host}/n/1</link><pubDate>${new Date(Date.now() - 3600e3).toUTCString()}</pubDate><description>${host} ${host.length} audit guidance update</description></item></channel></rss>`,
       { status: 200, headers: { "content-type": "application/rss+xml" } }
     );
+  };
+  fn.asked = asked;
+  return fn;
+}
+
+/** An APAS source: a Verlautbarungen index whose publications are opened one level deep. */
+const FIXTURES = path.join(import.meta.dirname, "fixtures");
+const APAS_INDEX = "https://www.apasbafa.bund.de/SharedDocs/Kurzmeldungen/APAS/DE/kurzmeldungen_node.html";
+function addApas(d) {
+  d.prepare(`INSERT INTO newsroom_sources
+    (name, domain, source_type, authority_tier, jurisdictions, topics, ingestion_method, feed_url,
+     fetch_frequency, fetch_allowed, license_notes, snapshot_retention, active)
+    VALUES ('APAS', 'apasbafa.bund.de', 'regulator', 1, '["DE"]', '[]', 'html_scrape', ?, 30, 1, '', 'indefinite', 1)`).run(APAS_INDEX);
+}
+function apasFetch() {
+  const asked = [];
+  const fn = async (url) => {
+    asked.push(url);
+    if (url === APAS_INDEX) return new Response(fs.readFileSync(path.join(FIXTURES, "apas-verlautbarungen.html"), "utf8"), { status: 200 });
+    const n = new URL(url).pathname.match(/vb_verlautbarung_(\d+)\.html/)?.[1];
+    const file = n && path.join(FIXTURES, `apas-vb-${n}.html`);
+    return file && fs.existsSync(file)
+      ? new Response(fs.readFileSync(file, "utf8"), { status: 200 })
+      : new Response("not found", { status: 404 });
   };
   fn.asked = asked;
   return fn;
@@ -294,5 +323,111 @@ describe("one run at a time", () => {
     ).run(new Date(Date.now() - 60_000).toISOString());
     await assert.rejects(runDiscovery({ fetch: recordingFetch(), force: true }), DiscoveryBusyError);
     assert.equal(d.prepare("SELECT status FROM newsroom_pipeline_runs WHERE idempotency_key='discovery:live'").get().status, "running");
+  });
+});
+
+describe("the run's detail-page allowance reaches the extractor", () => {
+  test("with no limit binding, every listed publication page is opened", async () => {
+    const d = freshDb();
+    addApas(d);
+    const f = apasFetch();
+    await runDiscovery({ fetch: f, force: true });
+    assert.equal(f.asked.filter((u) => u !== APAS_INDEX).length, 5, "the index lists five publication pages");
+  });
+
+  test("the setting lowers it for the whole run", async () => {
+    const d = freshDb();
+    addApas(d);
+    setLimit(d, "newsroom.max_detail_fetches_per_run", 2);
+    const f = apasFetch();
+    await runDiscovery({ fetch: f, force: true });
+    assert.equal(f.asked.filter((u) => u !== APAS_INDEX).length, 2);
+  });
+});
+
+describe("Workers plan: Free until it is set to Paid", () => {
+  test("which plan a deployment is on", () => {
+    assert.equal(workersPlan({}), "node", "the Node target has no Workers limits");
+    assert.equal(workersPlan({ STAI_RUNTIME: "workers" }), "free", "unset counts as Free — the safe mistake");
+    assert.equal(workersPlan({ STAI_RUNTIME: "workers", STAI_WORKERS_PLAN: "free" }), "free");
+    assert.equal(workersPlan({ STAI_RUNTIME: "workers", STAI_WORKERS_PLAN: " Paid " }), "paid");
+    assert.equal(workersPlan({ STAI_RUNTIME: "workers", STAI_WORKERS_PLAN: "enterprise" }), "free", "anything unrecognised is Free");
+  });
+
+  test("scheduled discovery is not allowed on Free", () => {
+    assert.equal(scheduledDiscoveryAllowed("free"), false);
+    assert.equal(scheduledDiscoveryAllowed("paid"), true);
+    assert.equal(scheduledDiscoveryAllowed("node"), true);
+  });
+
+  test("the Free profile fits Free's ceilings with room to spare", () => {
+    // Outbound requests: sources + detail pages. D1: a run's own 9–21 queries.
+    assert.ok(FREE_MANUAL_PROFILE.maxSources + FREE_MANUAL_PROFILE.maxDetailFetches <= 25, "under half of 50 subrequests");
+    assert.ok(FREE_MANUAL_PROFILE.maxRunSeconds <= 30);
+  });
+
+  test("a manual run on Free takes at most the profile's sources, whatever the setting says", async () => {
+    const d = freshDb();
+    addSources(d, 8);
+    setLimit(d, "newsroom.max_sources_per_run", 60);
+    const f = recordingFetch();
+    const r = await runDiscovery({ fetch: f, force: true, plan: "free" });
+    assert.equal(f.asked.length, FREE_MANUAL_PROFILE.maxSources);
+    const held = outcomes(d, r.runId).filter((o) => o.outcome === "skipped_budget");
+    assert.equal(held.length, 8 - FREE_MANUAL_PROFILE.maxSources);
+    assert.match(held[0].error, /Workers Free profile/);
+  });
+
+  test("on Paid the same run takes every due source", async () => {
+    const d = freshDb();
+    addSources(d, 8);
+    const f = recordingFetch();
+    await runDiscovery({ fetch: f, force: true, plan: "paid" });
+    assert.equal(f.asked.length, 8);
+  });
+
+  test("the scheduled handler refuses on Free and says why", () => {
+    // scheduled.ts imports the OpenNext runtime, so it is checked as source:
+    // the refusal must come before runDiscovery, and it must use the plan.
+    const code = fs
+      .readFileSync(path.join(import.meta.dirname, "../src/lib/newsroom/scheduled.ts"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+    const refuse = code.indexOf("if (!scheduledDiscoveryAllowed(plan))");
+    const run = code.indexOf("await runDiscovery(");
+    assert.ok(refuse > 0 && run > refuse, "the plan check precedes the run");
+    assert.match(code, /return \{ ran: false, reason: SCHEDULED_NEEDS_PAID \}/);
+  });
+});
+
+describe("hard caps hold on Paid too", () => {
+  test("no setting can raise a run past its hard maximum", () => {
+    const cap = (key) => LIMIT_FIELDS.find((f) => f.key === key).max;
+    assert.ok(cap("newsroom.max_sources_per_run") <= 200);
+    assert.ok(cap("newsroom.max_detail_fetches_per_run") <= 300);
+    assert.ok(cap("newsroom.max_run_seconds") < 900, "under the 15-minute cron wall clock");
+  });
+
+  test("an absurd stored value is clamped, not obeyed", async () => {
+    const d = freshDb();
+    addSources(d, 3);
+    setLimit(d, "newsroom.max_sources_per_run", 1_000_000);
+    const { limits } = await import("../src/lib/site-config.ts");
+    const v = await limits(["newsroom.max_sources_per_run"]);
+    assert.equal(v["newsroom.max_sources_per_run"], 200);
+  });
+
+  test("a feed listing thousands of entries is read only to the per-source ceiling", async () => {
+    const d = freshDb();
+    addSources(d, 1);
+    const huge = async () => {
+      let x = "";
+      for (let i = 0; i < 1500; i++) {
+        x += `<item><title>Archive entry ${i} on audit topic zq${i}q</title><link>https://src0.example/a/${i}</link><pubDate>${new Date(Date.now() - (i + 1) * 60_000).toUTCString()}</pubDate><description>entry zq${i}x zq${i}y oversight</description></item>`;
+      }
+      return new Response(`<?xml version="1.0"?><rss version="2.0"><channel><title>x</title>${x}</channel></rss>`, { status: 200, headers: { "content-type": "application/rss+xml" } });
+    };
+    const r = await runDiscovery({ fetch: huge, force: true });
+    assert.equal(r.itemsIngested, 200);
   });
 });

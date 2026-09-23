@@ -33,8 +33,9 @@ import { registerD1Sql, type D1Database } from "../sql-d1";
 import { pruneOldEvents } from "../analytics";
 import { isEnabled } from "../site-config";
 import { runDiscovery, type DiscoveryResult } from "./discovery.ts";
+import { SCHEDULED_NEEDS_PAID, scheduledDiscoveryAllowed, workersPlan } from "./plan.ts";
 
-export type CronEnv = { DB?: D1Database };
+export type CronEnv = { DB?: D1Database; STAI_RUNTIME?: string; STAI_WORKERS_PLAN?: string };
 
 /**
  * The environment of the most recent scheduled invocation.
@@ -121,10 +122,21 @@ export async function runScheduledDiscovery(env: CronEnv): Promise<ScheduledOutc
   }
 
   try {
+    // Scheduled discovery is a Workers Paid feature. On Free it does not start
+    // even when switched on: the vars the cron was given win, and a deploy
+    // that never set the plan counts as Free.
+    const plan = workersPlan({
+      STAI_RUNTIME: env.STAI_RUNTIME ?? process.env.STAI_RUNTIME,
+      STAI_WORKERS_PLAN: env.STAI_WORKERS_PLAN ?? process.env.STAI_WORKERS_PLAN,
+    });
+    if (!scheduledDiscoveryAllowed(plan)) {
+      return { ran: false, reason: SCHEDULED_NEEDS_PAID };
+    }
+
     // No `force`: the per-source cadence is what keeps this polite. The
     // trigger fires every thirty minutes; most sources are not due on most
     // firings, and that is the intent.
-    const result = await runDiscovery();
+    const result = await runDiscovery({ plan });
     return { ran: true, result };
   } catch (e) {
     return { ran: false, reason: e instanceof Error ? e.message : String(e) };

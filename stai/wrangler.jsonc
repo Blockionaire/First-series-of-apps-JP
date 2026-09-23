@@ -89,6 +89,13 @@
     // than a misconfiguration.
     "STAI_RUNTIME": "workers",
 
+    // Which Workers plan this account is on: "free" or "paid". Unset counts as
+    // free. On free, scheduled discovery does not start even if switched on,
+    // and a manual run is clamped to a few sources (src/lib/newsroom/plan.ts).
+    // Change to "paid" only AFTER the account has been upgraded, then deploy;
+    // DISCOVERY.md §9 has the full order.
+    "STAI_WORKERS_PLAN": "free",
+
     // The public origin. Canonical URLs, OG image URLs and every sitemap entry
     // are built from this by src/lib/seo.ts.
     //

@@ -4,10 +4,11 @@
  * The scheduled run is one invocation. It used to issue about ten queries per
  * new item and three per open story on every run: ten sources with twenty
  * items each took ~2,000 queries, a quiet run ~1,000 (CODE_AUDIT.md, H2).
- * STAI now runs on Workers Paid, which allows 1,000 per invocation; the
- * budgets below were set for Workers Free (50) and are kept deliberately —
- * a run that suddenly needs fifty times its usual budget is a regression to
- * catch, not headroom to use.
+ * The newsroom is designed for Workers Paid, which allows 1,000 per
+ * invocation (STAI is on Workers Free, 50, until it upgrades). The budgets
+ * below fit Free and are kept after the upgrade deliberately — a run that
+ * suddenly needs fifty times its usual budget is a regression to catch, not
+ * headroom to use.
  *
  * This drives the REAL `runDiscovery` against a database built from the real
  * migrations, through a driver that counts every statement — each statement
@@ -44,8 +45,11 @@ register(
     `)
 );
 
-/** Workers Paid: D1 queries per invocation. The budgets are held far below it. */
-const PLATFORM_LIMIT = 1000;
+/**
+ * D1 queries per invocation on the plan STAI is on today: Workers Free (50).
+ * Paid allows 1,000; the budgets below are kept either way.
+ */
+const PLATFORM_LIMIT = 50;
 /**
  * Measured when this was written: quiet 11, ordinary 18–19, the full registry's
  * first run (1,000 items) 20. The budgets leave room for the scheduled

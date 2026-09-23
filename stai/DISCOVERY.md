@@ -258,35 +258,78 @@ noisiest source. Both take effect on the next run.
 **A publisher objects:** switch that source's **Retrievable** off. It stops
 being contacted immediately, and the row stays with its history intact.
 
-## 9. Capacity on Workers Paid
+## 9. Workers plan and capacity
 
-STAI runs on Cloudflare Workers Paid: 1,000 D1 queries and 10,000
-subrequests per invocation, and far more CPU than Free. Discovery does not
-spend that allowance. It is held to what it needs, so that a run that
-suddenly needs far more reads as a fault rather than as load.
+The newsroom is designed for **Cloudflare Workers Paid** (1,000 D1 queries and
+10,000 subrequests per invocation, and far more CPU). STAI currently runs on
+**Workers Free** (50 queries, 50 subrequests, ~10 ms CPU) and will upgrade
+before discovery or the Intelligence Engine runs at meaningful scale. The code
+is not redesigned around Free; instead the deployment declares its plan and
+the risky features stay closed until it says Paid.
 
-**Per run, whatever the registry size:** 9–21 D1 queries (+2 in the scheduled
-handler: the settings read and analytics retention). The count does not grow
-with the number of items; `tests/discovery-budget.test.mjs` fails if it does.
+### The plan switch
 
-**Limits an operator can change in site settings** (all hold work back to the
-next run rather than dropping it; held-back sources log `skipped_budget`):
+`STAI_WORKERS_PLAN` in `wrangler.jsonc` — `"free"` today. Unset counts as
+free. What it changes (`src/lib/newsroom/plan.ts`):
 
-| Setting | Default | What it bounds |
+| | On `free` | On `paid` |
 |---|---|---|
-| `newsroom.max_sources_per_run` | 60 | Sources fetched per run, least recently attempted first. One request each. |
-| `newsroom.max_detail_fetches_per_run` | 60 | Publication pages opened behind indexes, across the run. Each extractor also has its own cap (APAS: 30). |
-| `newsroom.max_run_seconds` | 300 | Nothing new is started after this; a run overruns it by at most one request timeout (15 s). |
+| Scheduled discovery | **Does not start**, even if switched on; logs why | Runs when switched on |
+| Manual "Run discovery now" | Clamped to **3 sources, 10 detail pages, 30 s** per click | Governed by the settings below |
+| Everything else | Unchanged | Unchanged |
 
-Fixed, not configurable: one outbound request at a time; a 15-second timeout
-and 4 MB body limit per request; **no retries within a run** (the next run is
-the retry); one run at a time (a second caller gets "another discovery run is
-in progress", HTTP 409 from the button); a run that dies without finishing
-releases its lease after the time budget plus five minutes and is recorded as
-failed ("abandoned").
+On Free a manual run of up to three sources stays well inside 50 queries and
+50 subrequests. Its CPU cannot be guaranteed under 10 ms; if the platform stops
+it, nothing is half-written (a run writes everything in one transaction) and
+its lease is released after the time budget plus five minutes. A stopped run
+shows as failed in the Inbox; it does not damage anything.
 
-**Measured** (real `runDiscovery`, migrated schema, RSS sources with 20 items,
-defaults above; CPU is JavaScript only — D1 work happens outside the Worker):
+### Do not enable before upgrading to Workers Paid
+
+- **Newsroom discovery (scheduled)** — the switch. The code refuses it on Free
+  anyway; do not rely on that alone.
+- **Registry-wide coverage** — activating many sources in the expectation that
+  they will all be read. On Free only manual runs happen, three sources at a
+  time.
+- **Phase 3 / the Intelligence Engine** — research, evidence packs, drafting.
+  Not started, and not to be started on Free.
+- Raising the discovery limits below — pointless on Free (the profile clamps
+  them) and misleading about what will happen after the upgrade.
+
+### Upgrading, in this order
+
+1. Upgrade the Cloudflare account to Workers Paid.
+2. Set `"STAI_WORKERS_PLAN": "paid"` in `wrangler.jsonc`, commit, deploy.
+3. Check `/api/health`, then run discovery manually once with a few sources.
+4. Only then switch **Newsroom discovery (scheduled)** on in site settings.
+
+### What one run may spend, on any plan
+
+Discovery never spends the platform's allowance just because it exists; a run
+that suddenly needs far more reads as a fault rather than as load.
+
+**D1 queries:** 9–21 per run (+2 in the scheduled handler), whatever the
+registry size. `tests/discovery-budget.test.mjs` fails if that grows.
+
+**Operator limits** (site settings; each has a HARD maximum the form cannot
+exceed, on Paid too; held-back sources log `skipped_budget` and stay due):
+
+| Setting | Default | Hard max | What it bounds |
+|---|---|---|---|
+| `newsroom.max_sources_per_run` | 60 | 200 | Sources fetched per run, least recently attempted first. One request each. |
+| `newsroom.max_detail_fetches_per_run` | 60 | 300 | Publication pages opened behind indexes, across the run. Each extractor also has its own cap (APAS: 30). |
+| `newsroom.max_run_seconds` | 300 | 840 | Nothing new starts after this; a run overruns it by at most one 15-second timeout. Under the 15-minute cron limit. |
+
+**Fixed in code:** 200 items read per source per run; one outbound request at
+a time; 15-second timeout and 4 MB body limit per request; **no retries within
+a run** (the next run is the retry); one run at a time (a second caller gets
+"another discovery run is in progress", HTTP 409 from the button); a run that
+dies releases its lease after the time budget plus five minutes and is
+recorded as failed ("abandoned").
+
+**Measured on Paid settings** (real `runDiscovery`, migrated schema, RSS
+sources with 20 items; CPU is JavaScript only — D1 work happens outside the
+Worker):
 
 | Active sources | D1 queries | Outbound requests | CPU, steady state | CPU, first run |
 |---|---|---|---|---|
@@ -299,4 +342,4 @@ due every 30 minutes may wait one extra run. Raise the setting if that matters;
 the query count does not change with it.
 
 Discovery ships **off**. Nothing above runs until **Newsroom discovery
-(scheduled)** is switched on in site settings.
+(scheduled)** is switched on in site settings — after the upgrade.

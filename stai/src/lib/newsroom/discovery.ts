@@ -98,6 +98,7 @@ import { applyCap, firstFailure, gatesPassed, runGates, scoreStory, type Candida
 import { allSources, type Story } from "./store.ts";
 import type { Source } from "./sources.ts";
 import { dayKey, idempotencyKey } from "./run-keys.ts";
+import { FREE_MANUAL_PROFILE, workersPlan, type WorkersPlan } from "./plan.ts";
 
 export type SourceRunSummary = {
   sourceId: number;
@@ -369,7 +370,19 @@ export type DiscoveryOptions = {
   now?: number;
   /** Injected for tests; overrides `newsroom.max_run_seconds`. */
   runBudgetMs?: number;
+  /** Injected for tests; defaults to the deployment's plan (see plan.ts). */
+  plan?: WorkersPlan;
 };
+
+/**
+ * Items read from one source in one run — a fixed ceiling, not a setting.
+ *
+ * Real feeds list 10–100 entries. A "feed" listing thousands is an archive or
+ * a misconfiguration, and taking all of it would turn one source into most of
+ * the run's CPU and write volume. Feeds list newest first; the rest is simply
+ * not read this run.
+ */
+const MAX_ITEMS_PER_SOURCE = 200;
 
 /** Lease = time budget + this. A started source can overrun the budget by one timeout. */
 const LEASE_MARGIN_MS = 5 * 60_000;
@@ -387,7 +400,13 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
     "newsroom.max_detail_fetches_per_run",
     "newsroom.max_run_seconds",
   ] as const);
-  const runBudgetMs = options.runBudgetMs ?? lim["newsroom.max_run_seconds"] * 1000;
+  // On Workers Free a (manual) run is clamped to a profile that fits Free's
+  // 50-query and 50-subrequest ceilings; on Paid and on Node the settings rule.
+  const plan = options.plan ?? workersPlan();
+  const free = plan === "free";
+  const runBudgetMs =
+    options.runBudgetMs ??
+    Math.min(lim["newsroom.max_run_seconds"], free ? FREE_MANUAL_PROFILE.maxRunSeconds : Infinity) * 1000;
   const deadline = Date.now() + runBudgetMs;
 
   const runId = await claimRun("discovery", at, runBudgetMs + LEASE_MARGIN_MS);
@@ -409,14 +428,18 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
     // the registry instead of starving whatever sorts last.
     const decisions = sources.map((source) => ({ source, decision: shouldFetch(source, now, options.force) }));
     const due = decisions.filter((d) => d.decision.due).map((d) => d.source);
-    const maxSources = lim["newsroom.max_sources_per_run"];
+    const maxSources = Math.min(lim["newsroom.max_sources_per_run"], free ? FREE_MANUAL_PROFILE.maxSources : Infinity);
     const chosen = new Set(
       (due.length <= maxSources
         ? due
         : [...due].sort((a, b) => ((a.last_attempt_at ?? "") < (b.last_attempt_at ?? "") ? -1 : (a.last_attempt_at ?? "") > (b.last_attempt_at ?? "") ? 1 : 0)).slice(0, maxSources)
       ).map((s) => s.id)
     );
-    let detailBudget = lim["newsroom.max_detail_fetches_per_run"];
+    let detailBudget = Math.min(
+      lim["newsroom.max_detail_fetches_per_run"],
+      free ? FREE_MANUAL_PROFILE.maxDetailFetches : Infinity
+    );
+    const profile = free ? " (Workers Free profile)" : "";
 
     // Network first, database later: every due source is fetched (in registry
     // order, one at a time, as before) and normalised before anything is
@@ -430,14 +453,14 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
       if (!chosen.has(source.id)) {
         fetched.push({
           source,
-          skip: { outcome: "skipped_budget", reason: `run limit of ${maxSources} sources reached — still due, taken next run` },
+          skip: { outcome: "skipped_budget", reason: `run limit of ${maxSources} sources${profile} reached — still due, taken next run` },
         });
         continue;
       }
       if (Date.now() >= deadline) {
         fetched.push({
           source,
-          skip: { outcome: "skipped_budget", reason: `run time budget of ${Math.round(runBudgetMs / 1000)}s reached — still due, taken next run` },
+          skip: { outcome: "skipped_budget", reason: `run time budget of ${Math.round(runBudgetMs / 1000)}s${profile} reached — still due, taken next run` },
         });
         continue;
       }
@@ -445,7 +468,7 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
       detailBudget = Math.max(0, detailBudget - (result.detailFetches ?? 0));
       const items: NormalisedItem[] = [];
       if (result.outcome === "ok") {
-        for (const raw of result.items) {
+        for (const raw of result.items.slice(0, MAX_ITEMS_PER_SOURCE)) {
           const item = await normaliseItem(raw, source);
           if (item) items.push(item);
         }

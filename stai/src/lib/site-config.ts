@@ -222,13 +222,18 @@ export const LIMIT_FIELDS: LimitField[] = [
    * suddenly doing ten times the work is a fault to notice, not a load to
    * absorb. A source a limit holds back is logged as `skipped_budget` and is
    * still due next run — nothing is dropped.
+   *
+   * `max` is a HARD cap: the admin form cannot store more, and the reader
+   * clamps whatever is in the table. It holds on Paid too — no setting can
+   * turn discovery into a runaway. On Workers Free a manual run is clamped
+   * further still (src/lib/newsroom/plan.ts).
    */
   {
     key: "newsroom.max_sources_per_run",
     label: "Discovery — sources fetched per run",
     fallback: 60,
     min: 1,
-    max: 500,
+    max: 200,
     help: "At most this many due sources are fetched in one run; the least recently attempted go first and the rest wait for the next run. One outbound request each.",
   },
   {
@@ -236,7 +241,7 @@ export const LIMIT_FIELDS: LimitField[] = [
     label: "Discovery — detail pages fetched per run",
     fallback: 60,
     min: 0,
-    max: 1000,
+    max: 300,
     help: "Across all sources in one run, the most publication pages opened behind an index (each extractor also has its own smaller cap). One outbound request each.",
   },
   {

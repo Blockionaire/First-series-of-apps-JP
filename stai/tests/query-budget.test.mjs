@@ -1,10 +1,10 @@
 /**
  * Every page view costs a handful of D1 queries.
  *
- * A page view is one Worker invocation. Workers Paid allows 1,000 D1 queries
- * per invocation, but each query is still a billed round trip on the page's
- * critical path, so the budgets below — set when STAI ran on Workers Free
- * (50) — are kept. Before Stage 2 a public page made 29–53: the Header and the
+ * A page view is one Worker invocation: Workers Free allows 50 D1 queries per
+ * invocation, Paid 1,000. Each query is a billed round trip on the page's
+ * critical path, so the budgets below fit Free comfortably and are kept after
+ * the upgrade. Before Stage 2 a public page made 29–53: the Header and the
  * Footer each read the 13 page switches one key at a time, the homepage read
  * eight copy fields the same way, and nothing was shared within a request
  * (CODE_AUDIT.md, H1). The target now is ~3–6 for a public page.
@@ -30,8 +30,11 @@ const STANDALONE = path.join(ROOT, ".next/standalone/server.js");
 const hasBuild = fs.existsSync(STANDALONE);
 const skip = !hasBuild && "needs `npm run build` first";
 
-/** Workers Paid: D1 queries per invocation. The budgets are held far below it. */
-const PLATFORM_LIMIT = 1000;
+/**
+ * D1 queries per invocation on the plan STAI is on today: Workers Free (50).
+ * Paid allows 1,000; the budgets below are kept either way.
+ */
+const PLATFORM_LIMIT = 50;
 const PUBLIC_BUDGET = 6;
 const SIGNED_IN_BUDGET = 8;
 /** Admin screens are one reader's tool, not traffic — but still one invocation. */
