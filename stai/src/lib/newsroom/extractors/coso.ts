@@ -13,9 +13,11 @@
  * happened to sit nearby. The operator has moved the source to `/news`, which
  * is a stream — items appear, carry a date, and stop being new.
  *
- * Guidance landing pages are now excluded by name as well as by rule, because
- * a news page that links to the frameworks it announces is exactly where they
- * would otherwise come back in.
+ * That matters more than it sounds, because a release announcing a framework
+ * links straight to that framework's landing page — so the news index is
+ * exactly where the evergreen pages would come back in. They are kept out by
+ * the SHAPE of a news address rather than by a list of sections; see
+ * `isCosoNewsItem` for why the list that was there had to go.
  *
  * ── What counts as an item ──────────────────────────────────────────────
  * A positive rule: a same-host page whose first path segment is `news`, with
