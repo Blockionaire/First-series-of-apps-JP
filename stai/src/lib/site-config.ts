@@ -214,6 +214,39 @@ export const LIMIT_FIELDS: LimitField[] = [
     max: 20,
     help: "Upper end of the daily publishing target. Expected to move to 5 after the dry run if the quality KPIs hold.",
   },
+
+  /* ── Discovery safety limits ────────────────────────────────────────────
+   * What one discovery run may spend. The platform allows far more (Workers
+   * Paid: 1,000 D1 queries, 10,000 subrequests, minutes of CPU per
+   * invocation); these are deliberately much lower, because a run that is
+   * suddenly doing ten times the work is a fault to notice, not a load to
+   * absorb. A source a limit holds back is logged as `skipped_budget` and is
+   * still due next run — nothing is dropped.
+   */
+  {
+    key: "newsroom.max_sources_per_run",
+    label: "Discovery — sources fetched per run",
+    fallback: 60,
+    min: 1,
+    max: 500,
+    help: "At most this many due sources are fetched in one run; the least recently attempted go first and the rest wait for the next run. One outbound request each.",
+  },
+  {
+    key: "newsroom.max_detail_fetches_per_run",
+    label: "Discovery — detail pages fetched per run",
+    fallback: 60,
+    min: 0,
+    max: 1000,
+    help: "Across all sources in one run, the most publication pages opened behind an index (each extractor also has its own smaller cap). One outbound request each.",
+  },
+  {
+    key: "newsroom.max_run_seconds",
+    label: "Discovery — time budget per run (seconds)",
+    fallback: 300,
+    min: 30,
+    max: 840,
+    help: "No new source or detail page is started after this. Keeps a run well inside the scheduled handler's limits even if every source is slow; what is left is picked up next run.",
+  },
 ];
 
 /**
@@ -232,6 +265,29 @@ export async function limit(key: string): Promise<number> {
   const n = Number.parseInt(raw, 10);
   if (!Number.isFinite(n)) return field.fallback;
   return Math.min(Math.max(n, field.min), field.max);
+}
+
+/**
+ * Several limits from ONE settings read.
+ *
+ * `limit()` reads a snapshot per call; outside a render (the cron, a route
+ * handler) each call is its own query. A discovery run needs four limits and
+ * spends one query on all of them.
+ */
+export async function limits<K extends string>(keys: readonly K[]): Promise<Record<K, number>> {
+  const snapshot = await settingsSnapshot();
+  const out = {} as Record<K, number>;
+  for (const key of keys) {
+    const field = LIMIT_FIELDS.find((f) => f.key === key);
+    if (!field) {
+      out[key] = 0;
+      continue;
+    }
+    const raw = snapshot.get(key);
+    const n = raw === undefined ? Number.NaN : Number.parseInt(raw, 10);
+    out[key] = Number.isFinite(n) ? Math.min(Math.max(n, field.min), field.max) : field.fallback;
+  }
+  return out;
 }
 
 /* ── Writing ──────────────────────────────────────────────────────────── */

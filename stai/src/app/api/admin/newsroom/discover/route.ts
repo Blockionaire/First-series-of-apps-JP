@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { guard, WINDOW } from "@/lib/ratelimit";
-import { runDiscovery } from "@/lib/newsroom/discovery";
+import { DiscoveryBusyError, runDiscovery } from "@/lib/newsroom/discovery";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +44,11 @@ export async function POST(req: NextRequest) {
     const result = await runDiscovery({ force });
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
+    // One run at a time: the cron or another click already holds the lease.
+    // Nothing was started, so there is nothing to record.
+    if (e instanceof DiscoveryBusyError) {
+      return NextResponse.json({ error: e.message }, { status: 409 });
+    }
     // The run records its own failure before rethrowing, so the Inbox shows a
     // failed run rather than a gap.
     return NextResponse.json(

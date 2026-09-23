@@ -51,6 +51,14 @@ export type HydrateDeps = {
   userAgent?: string;
   /** Overrides the extractor's own cap. The probe passes a smaller one. */
   limit?: number;
+  /**
+   * What is left of the RUN's detail-page allowance. Unlike `limit` it never
+   * raises the extractor's cap, only lowers it: a run shares one allowance
+   * across every source it fetches.
+   */
+  budget?: number;
+  /** Epoch ms after which no further page is opened (the run's time budget). */
+  deadline?: number;
 };
 
 export type Hydrated = {
@@ -92,16 +100,25 @@ export async function hydrate(
   }
 
   const doFetch = deps.fetch ?? globalThis.fetch;
-  const cap = Math.max(0, deps.limit ?? extractor.detailLimit ?? DEFAULT_DETAIL_LIMIT);
+  const ownCap = Math.max(0, deps.limit ?? extractor.detailLimit ?? DEFAULT_DETAIL_LIMIT);
+  const cap = Math.min(ownCap, Math.max(0, deps.budget ?? Number.POSITIVE_INFINITY));
 
   const items: FeedItem[] = [...out.items];
   const rejected: string[] = [...out.rejected];
   const seen = new Set(items.map((i) => i.url));
 
   let fetched = 0;
+  let deferred = 0;
 
   for (const p of pending.slice(0, cap)) {
     if (seen.has(p.url)) continue;
+
+    // The run's time budget. What is not opened now is still on the index
+    // next run; nothing is lost, and nothing is retried here.
+    if (deps.deadline !== undefined && Date.now() >= deps.deadline) {
+      deferred += 1;
+      continue;
+    }
 
     // The last line of defence before a request leaves the building.
     //
@@ -154,6 +171,11 @@ export async function hydrate(
       listed: pending.length,
     };
   }
+
+  // Only what the RUN held back is worth saying; the extractor's own cap is
+  // its normal shape, and silent as it always was.
+  const held = Math.min(pending.length, ownCap) - Math.min(pending.length, cap) + deferred;
+  if (held > 0) rejected.push(`${held} publication pages not opened this run — run budget reached`);
 
   return {
     result: { ok: true, items, rejected },

@@ -9,12 +9,13 @@
  * no publication. Phase 2's entire output is a list a human looks at.
  *
  * ── The query budget ────────────────────────────────────────────────────
- * STAI runs on Cloudflare Workers Free, where one invocation may issue at most
- * 50 D1 queries. The first version of this file asked the database a question
- * per item and per story — about ten round trips per new item and three per
- * open story on EVERY run — so ten sources with twenty items each took over
- * two thousand queries, and a run where nothing had changed still took about
- * a thousand (CODE_AUDIT.md, H2).
+ * The first version of this file asked the database a question per item and
+ * per story — about ten round trips per new item and three per open story on
+ * EVERY run — so ten sources with twenty items each took over two thousand
+ * queries, and a run where nothing had changed still took about a thousand
+ * (CODE_AUDIT.md, H2). Workers Paid allows 1,000 per invocation; the run is
+ * held to ~9–22 anyway, because a limit is not a target and a run suddenly
+ * spending fifty times its usual budget is a fault to notice.
  *
  * So a run is now three steps, and the query count no longer grows with the
  * number of items:
@@ -35,8 +36,31 @@
  *
  * Evaluation then reads the open stories and their members in two queries,
  * and writes back only the stories whose gate results or selection actually
- * changed. tests/discovery-budget.test.mjs holds the result to a budget well
- * under 50 at realistic workloads.
+ * changed. tests/discovery-budget.test.mjs holds the result to that budget at
+ * realistic workloads.
+ *
+ * ── What one run may spend ──────────────────────────────────────────────
+ * Operator-configurable in site settings, and all low on purpose:
+ *
+ *   · `newsroom.max_sources_per_run` — due sources fetched per run, least
+ *     recently attempted first; one outbound request each;
+ *   · `newsroom.max_detail_fetches_per_run` — publication pages opened behind
+ *     an index, shared across the run (each extractor has its own cap too);
+ *   · `newsroom.max_run_seconds` — no source or page is STARTED after this.
+ *
+ * Anything a limit holds back is logged `skipped_budget` and stays due, so it
+ * is picked up by the next run rather than lost. Outbound requests go one at a
+ * time, each with a 15-second timeout and a 4 MB body limit, and none is ever
+ * retried within a run: a failure is recorded against its source and the run
+ * moves on. The next scheduled run is the retry.
+ *
+ * ── One run at a time ───────────────────────────────────────────────────
+ * The run claims a lease in `newsroom_pipeline_runs` with a single statement
+ * that succeeds only if no other discovery run is `running`. A second caller
+ * — the cron firing during a manual run, or the button pressed twice — gets
+ * `DiscoveryBusyError` and does nothing. A run whose invocation was killed
+ * never records a finish; once its lease is older than the time budget plus
+ * five minutes it is marked failed ("abandoned") and stops blocking.
  *
  * ── Idempotency ─────────────────────────────────────────────────────────
  * Cron fires, workers retry, and an operator presses the manual button twice.
@@ -58,7 +82,7 @@
  */
 
 import { sql, type SqlParam, type Statement } from "../sql";
-import { limit } from "../site-config";
+import { limits } from "../site-config";
 import { fetchSource, shouldFetch, FAILURE_OUTCOMES, type FetchOutcome, type FetchResult } from "./fetcher.ts";
 import { normaliseItem, type NormalisedItem } from "./normalise.ts";
 import {
@@ -111,19 +135,43 @@ const OPEN_CLUSTER_LIMIT = 400;
 /** Stories evaluated per run, as before: the most recently seen 300. */
 const EVALUATE_LIMIT = 300;
 
-async function openRun(workflow: string, at = new Date()): Promise<number> {
-  const key = idempotencyKey(workflow, at);
+/** Another discovery run holds the lease; this one did nothing. */
+export class DiscoveryBusyError extends Error {
+  constructor() {
+    super("another discovery run is in progress");
+    this.name = "DiscoveryBusyError";
+  }
+}
+
+/**
+ * Claim the run, or refuse.
+ *
+ * Two statements, and the second is the lock: it inserts (or, within the same
+ * hour's key, re-arms) a `running` row ONLY if no discovery run is running, and
+ * returns the row it claimed. Nothing returned means someone else holds it.
+ * D1 serialises writes, so two callers cannot both see "none running".
+ */
+async function claimRun(workflow: string, at: Date, leaseMs: number): Promise<number> {
+  // A run whose invocation died never recorded a finish. Past its lease it is
+  // recorded as failed rather than left to block every run after it.
   await sql().run(
+    `UPDATE newsroom_pipeline_runs
+        SET status='failed', finished_at=${NOW_SQL},
+            error='abandoned: no finish was recorded within the run lease'
+      WHERE workflow=? AND status='running' AND started_at < ?`,
+    [workflow, new Date(Date.now() - leaseMs).toISOString()]
+  );
+  const claimed = await sql().all<{ id: number }>(
     `INSERT INTO newsroom_pipeline_runs (workflow, idempotency_key, status)
-     VALUES (?, ?, 'running')
-     ON CONFLICT(idempotency_key) DO NOTHING`,
-    [workflow, key]
+     SELECT ?, ?, 'running'
+      WHERE NOT EXISTS (SELECT 1 FROM newsroom_pipeline_runs WHERE workflow = ? AND status = 'running')
+     ON CONFLICT(idempotency_key) DO UPDATE SET
+       status = 'running', started_at = ${NOW_SQL}, finished_at = NULL, error = NULL
+     RETURNING id`,
+    [workflow, idempotencyKey(workflow, at), workflow]
   );
-  const row = await sql().first<{ id: number }>(
-    "SELECT id FROM newsroom_pipeline_runs WHERE idempotency_key=?",
-    [key]
-  );
-  return row?.id ?? 0;
+  if (claimed.length === 0) throw new DiscoveryBusyError();
+  return claimed[0].id;
 }
 
 async function closeRun(runId: number, status: "succeeded" | "failed", error = ""): Promise<void> {
@@ -319,14 +367,30 @@ export type DiscoveryOptions = {
   /** Injected for tests; defaults to global fetch. */
   fetch?: typeof globalThis.fetch;
   now?: number;
+  /** Injected for tests; overrides `newsroom.max_run_seconds`. */
+  runBudgetMs?: number;
 };
+
+/** Lease = time budget + this. A started source can overrun the budget by one timeout. */
+const LEASE_MARGIN_MS = 5 * 60_000;
 
 type Fetched = { source: Source; result: FetchResult; items: NormalisedItem[] } | { source: Source; skip: { outcome: FetchOutcome; reason: string } };
 
 export async function runDiscovery(options: DiscoveryOptions = {}): Promise<DiscoveryResult> {
   const now = options.now ?? Date.now();
   const at = new Date(now);
-  const runId = await openRun("discovery", at);
+
+  // Every limit the run needs, in one settings read.
+  const lim = await limits([
+    "newsroom.research_cap_per_day",
+    "newsroom.max_sources_per_run",
+    "newsroom.max_detail_fetches_per_run",
+    "newsroom.max_run_seconds",
+  ] as const);
+  const runBudgetMs = options.runBudgetMs ?? lim["newsroom.max_run_seconds"] * 1000;
+  const deadline = Date.now() + runBudgetMs;
+
+  const runId = await claimRun("discovery", at, runBudgetMs + LEASE_MARGIN_MS);
   const startedAt = at.toISOString();
 
   const summaries: SourceRunSummary[] = [];
@@ -340,17 +404,45 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
 
     const sources = await allSources();
 
+    // Which due sources this run takes. Under the limit that is all of them;
+    // over it, the least recently attempted first, so a limit rotates through
+    // the registry instead of starving whatever sorts last.
+    const decisions = sources.map((source) => ({ source, decision: shouldFetch(source, now, options.force) }));
+    const due = decisions.filter((d) => d.decision.due).map((d) => d.source);
+    const maxSources = lim["newsroom.max_sources_per_run"];
+    const chosen = new Set(
+      (due.length <= maxSources
+        ? due
+        : [...due].sort((a, b) => ((a.last_attempt_at ?? "") < (b.last_attempt_at ?? "") ? -1 : (a.last_attempt_at ?? "") > (b.last_attempt_at ?? "") ? 1 : 0)).slice(0, maxSources)
+      ).map((s) => s.id)
+    );
+    let detailBudget = lim["newsroom.max_detail_fetches_per_run"];
+
     // Network first, database later: every due source is fetched (in registry
     // order, one at a time, as before) and normalised before anything is
     // looked up, so the lookups can be asked once for the whole run.
     const fetched: Fetched[] = [];
-    for (const source of sources) {
-      const decision = shouldFetch(source, now, options.force);
+    for (const { source, decision } of decisions) {
       if (!decision.due) {
         fetched.push({ source, skip: { outcome: decision.outcome, reason: decision.reason } });
         continue;
       }
-      const result = await fetchSource(source, { fetch: options.fetch });
+      if (!chosen.has(source.id)) {
+        fetched.push({
+          source,
+          skip: { outcome: "skipped_budget", reason: `run limit of ${maxSources} sources reached — still due, taken next run` },
+        });
+        continue;
+      }
+      if (Date.now() >= deadline) {
+        fetched.push({
+          source,
+          skip: { outcome: "skipped_budget", reason: `run time budget of ${Math.round(runBudgetMs / 1000)}s reached — still due, taken next run` },
+        });
+        continue;
+      }
+      const result = await fetchSource(source, { fetch: options.fetch, detailBudget, deadline });
+      detailBudget = Math.max(0, detailBudget - (result.detailFetches ?? 0));
       const items: NormalisedItem[] = [];
       if (result.outcome === "ok") {
         for (const raw of result.items) {
@@ -858,7 +950,7 @@ export async function runDiscovery(options: DiscoveryOptions = {}): Promise<Disc
 
     /* ── Apply the cap ────────────────────────────────────────────────── */
 
-    const cap = await limit("newsroom.research_cap_per_day");
+    const cap = lim["newsroom.research_cap_per_day"];
     const selections = applyCap(qualifying, cap);
     const today = dayKey(at);
 

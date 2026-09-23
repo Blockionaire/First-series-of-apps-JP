@@ -44,6 +44,8 @@ export const FETCH_OUTCOMES = [
   "skipped_not_due",
   "skipped_manual",
   "skipped_unsupported",
+  // Due, but a run limit (sources, time) held it back; it is still due next run.
+  "skipped_budget",
 ] as const;
 export type FetchOutcome = (typeof FETCH_OUTCOMES)[number];
 
@@ -54,6 +56,7 @@ export const SKIP_OUTCOMES: readonly FetchOutcome[] = [
   "skipped_not_due",
   "skipped_manual",
   "skipped_unsupported",
+  "skipped_budget",
 ];
 
 /** Outcomes that mean the source is not working and somebody should look. */
@@ -74,6 +77,8 @@ export type FetchResult = {
   etag?: string;
   lastModified?: string;
   durationMs: number;
+  /** Publication pages opened behind an index (extractor sources only). */
+  detailFetches?: number;
 };
 
 /** Beyond this a "feed" is something else — an error page, or a whole site. */
@@ -177,7 +182,13 @@ export async function fetchSource(
   source: Pick<Source, "feed_url" | "ingestion_method" | "etag" | "last_modified_header"> & {
     domain?: string;
   },
-  deps: { fetch?: typeof globalThis.fetch } = {}
+  deps: {
+    fetch?: typeof globalThis.fetch;
+    /** What is left of the run's detail-page allowance. */
+    detailBudget?: number;
+    /** Epoch ms after which no detail page is opened. */
+    deadline?: number;
+  } = {}
 ): Promise<FetchResult> {
   const started = Date.now();
   const doFetch = deps.fetch ?? globalThis.fetch;
@@ -302,9 +313,11 @@ export async function fetchSource(
     // Publications whose title and date live behind the link, opened one
     // level deep and bounded by the extractor's own cap. Runs unconditionally
     // because it is a no-op for every extractor that reads a single page.
-    const { result: out } = await hydrate(extractor, extracted, {
+    const { result: out, fetched: detailFetches } = await hydrate(extractor, extracted, {
       fetch: doFetch,
       userAgent: USER_AGENT,
+      budget: deps.detailBudget,
+      deadline: deps.deadline,
     });
     if (!out.ok) {
       return {
@@ -313,6 +326,7 @@ export async function fetchSource(
         error: out.error,
         items: [],
         durationMs: elapsed(),
+        detailFetches,
       };
     }
     return {
@@ -325,6 +339,7 @@ export async function fetchSource(
       etag: res.headers.get("etag") ?? "",
       lastModified: res.headers.get("last-modified") ?? "",
       durationMs: elapsed(),
+      detailFetches,
     };
   }
 
