@@ -265,6 +265,40 @@ describe("admin register — filters", { skip }, () => {
     assert.match(admins, new RegExp(ADMIN_EMAIL.replace(".", "\\.")), "plan=admin should list the admin");
   });
 
+  test("plan is what the person can read today: a granted member is STAI+ (M5)", async () => {
+    // users.plan is written only by the frozen billing code, so read directly
+    // it said "free" for every granted reader and every admin.
+    await fetch(`${BASE}/api/auth/signup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "granted@test.eu", password: "granted-password-1", name: "Granted Reader", firm: "Test LLP" }),
+    });
+    const plusBefore = await (await asAdmin("/api/admin/export/accounts?plan=plus")).text();
+    assert.ok(!/granted@test\.eu/.test(plusBefore), "not STAI+ before the grant");
+
+    const grant = await fetch(`${BASE}/api/admin/access`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: cookie, Origin: BASE },
+      body: JSON.stringify({ action: "grant", email: "granted@test.eu", reason: "register test" }),
+    });
+    assert.equal(grant.status, 200, await grant.clone().text());
+
+    const plus = await (await asAdmin("/api/admin/export/accounts?plan=plus")).text();
+    assert.match(plus, /granted@test\.eu/, "a granted reader is listed under STAI+");
+    assert.match(plus, new RegExp(ADMIN_EMAIL.replace(".", "\\.")), "and so is an admin");
+    assert.ok(!/member@test\.eu/.test(plus), "a plain member is not");
+
+    const free = await (await asAdmin("/api/admin/export/accounts?plan=free")).text();
+    assert.ok(!/granted@test\.eu/.test(free), "and the granted reader has left Free");
+    assert.match(free, /member@test\.eu/);
+
+    const all = await (await asAdmin("/api/admin/export/accounts")).text();
+    const header = csvHeader(all);
+    const planAt = header.indexOf("Plan");
+    const row = all.split("\n").find((l) => l.includes("granted@test.eu"));
+    assert.equal(csvHeader(row)[planAt], "plus", "the Plan cell says plus");
+  });
+
   test("an unrecognised filter value is ignored, not executed", async () => {
     // The filter is matched against an allowlist by id, so nothing from the
     // query string can reach the SQL. An injection attempt falls back to the

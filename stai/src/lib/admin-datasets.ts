@@ -1,4 +1,5 @@
 import { interestLabel } from "./earlyaccess";
+import { ENTITLEMENT_SQL, GRANT_SQL } from "./entitlement";
 import { FIRM_INTERESTS } from "./firms";
 
 /**
@@ -44,7 +45,7 @@ export type Dataset = {
   label: string;
   /** One line under the heading: what this list is and where it comes from. */
   blurb: string;
-  /** The table to COUNT for the total. */
+  /** The table (or a literal derived table from this file) to read and COUNT. */
   from: string;
   /** Columns, in display order. */
   columns: Column[];
@@ -71,12 +72,34 @@ const firmInterestLabel = (id: string) => FIRM_INTERESTS.find((i) => i.id === id
 /** STAI-FRM-0007 and friends — the reference the enquiry tables already show. */
 const ref = (prefix: string) => (r: Row) => `STAI-${prefix}-${String(r.id ?? "").padStart(4, "0")}`;
 
+/**
+ * Accounts, with `plan` and `founding` DERIVED rather than read.
+ *
+ * `users.plan` and `users.founding` are written only by the frozen billing
+ * code, which is dormant — so read directly they said "free" for every
+ * granted reader and every admin, and the STAI+ filter matched nobody
+ * (CODE_AUDIT.md M5). This is the rule `currentUser()` applies on every
+ * request (auth.ts): a live paid subscription, the admin role, or a live
+ * complimentary grant is STAI+. Same SQL fragments, same order, so the
+ * register cannot disagree with what the member actually sees.
+ *
+ * Still a literal from this file: nothing from a request reaches it.
+ */
+const ACCOUNTS = `(SELECT u.id, u.created_at, u.email, u.name, u.firm, u.role,
+    CASE WHEN EXISTS (SELECT 1 FROM subscriptions sub WHERE sub.user_id = u.id AND ${ENTITLEMENT_SQL})
+           OR u.role = 'admin'
+           OR EXISTS (SELECT 1 FROM access_grants g WHERE g.user_id = u.id AND ${GRANT_SQL})
+         THEN 'plus' ELSE 'free' END AS plan,
+    EXISTS (SELECT 1 FROM subscriptions sub
+             WHERE sub.user_id = u.id AND sub.plan = 'founding' AND ${ENTITLEMENT_SQL}) AS founding
+  FROM users u) AS accounts`;
+
 export const DATASETS: Dataset[] = [
   {
     id: "accounts",
     label: "Accounts",
-    blurb: "Everyone who created a STAI account, newest first.",
-    from: "users",
+    blurb: "Everyone who created a STAI account, newest first. Plan is what they can read today: paid, granted or admin.",
+    from: ACCOUNTS,
     filters: {
       param: "plan",
       options: [
