@@ -42,7 +42,7 @@ import { JURISDICTIONS } from "@/lib/newsroom/jurisdictions";
  * decide what is valid.
  */
 
-const TYPE_LABEL: Record<string, string> = {
+export const TYPE_LABEL: Record<string, string> = {
   regulator: "Regulator",
   standard_setter: "Standard setter",
   vendor: "Vendor",
@@ -61,7 +61,7 @@ const METHOD_LABEL: Record<string, string> = {
   manual: "Manual — entered by hand",
 };
 
-const RETENTION_LABEL: Record<string, string> = {
+export const RETENTION_LABEL: Record<string, string> = {
   indefinite: "Indefinite — official texts",
   ninety_days: "90 days",
   reference_only: "Reference only — metadata, no body",

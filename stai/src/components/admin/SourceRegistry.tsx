@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 import AddSource from "./AddSource";
+import EditSourceDetails from "./EditSourceDetails";
 
 export type RegistryRow = {
   id: number;
@@ -10,7 +11,10 @@ export type RegistryRow = {
   domain: string;
   tier: number;
   type: string;
+  /** Display labels, for the table and its filter. */
   jurisdictions: string[];
+  /** The stored codes, for the edit form. */
+  jurisdictionCodes: string[];
   ingestion: string;
   feedUrl: string;
   frequency: number;
@@ -288,6 +292,8 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
    * broken feeds end up staying broken.
    */
   const [editing, setEditing] = useState<number | null>(null);
+  /** The row whose "Edit details" form is open. */
+  const [detailsOpen, setDetailsOpen] = useState<number | null>(null);
   const [draftUrl, setDraftUrl] = useState("");
   const [draftMethod, setDraftMethod] = useState("");
 
@@ -582,7 +588,8 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                 </tr>
               )}
               {visible.map((s) => (
-                <tr key={s.id} className="border-b rule align-top">
+                <Fragment key={s.id}>
+                <tr className="border-b rule align-top">
                   <td className="py-2 pr-4">
                     <StatusDot status={s.status} />
                     {/* Why it is not live, where the reason is not the health
@@ -599,6 +606,17 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                     <span className="f-mono block text-[0.7rem]" style={{ color: "var(--ink-faint)" }}>
                       {s.domain} · {s.type} · keeps {s.retention.replace(/_/g, " ")}
                     </span>
+                    {/* Tier, jurisdictions, type and the rest. The feed URL
+                        keeps its own Edit below, because changing it resets
+                        retrieval permission and this does not. */}
+                    <button
+                      type="button"
+                      aria-expanded={detailsOpen === s.id}
+                      onClick={() => setDetailsOpen(detailsOpen === s.id ? null : s.id)}
+                      className="f-mono mt-1 text-[0.68rem] text-cream-400 underline underline-offset-4 hover:text-cream-100"
+                    >
+                      {detailsOpen === s.id ? "Close details" : "Edit details"}
+                    </button>
 
                     {/* The configured feed, in full and openable.
                         This is what has to be checked before a source is
@@ -918,6 +936,37 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                     )}
                   </td>
                 </tr>
+                {detailsOpen === s.id && (
+                  <tr className="border-b rule">
+                    <td colSpan={10} className="py-3">
+                      <EditSourceDetails
+                        source={{
+                          id: s.id,
+                          name: s.name,
+                          domain: s.domain,
+                          type: s.type,
+                          tier: s.tier,
+                          jurisdictionCodes: s.jurisdictionCodes,
+                          frequency: s.frequency,
+                          retention: s.retention,
+                          licenseNotes: s.licenseNotes,
+                          active: s.active,
+                        }}
+                        onClose={() => setDetailsOpen(null)}
+                        onSaved={(changes) => {
+                          setDetailsOpen(null);
+                          setError("");
+                          setMessage(
+                            changes
+                              ? `${s.name} updated: ${changes}. Retrievable and On were not changed.`
+                              : `${s.name}: nothing changed.`
+                          );
+                        }}
+                      />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>

@@ -9,10 +9,16 @@ import {
   setSourceFetchAllowed,
   setSourceReviewStatus,
   sourceById,
+  updateSourceDetails,
   updateSourceFeedUrl,
 } from "@/lib/newsroom/store";
 import { proposedAsSourceCreates } from "@/lib/newsroom/proposed-sources";
-import { feedUrlBelongsTo, isReviewStatus, validateSource } from "@/lib/newsroom/sources";
+import {
+  describeSourceChanges,
+  feedUrlBelongsTo,
+  isReviewStatus,
+  validateSource,
+} from "@/lib/newsroom/sources";
 import { probeFeed } from "@/lib/newsroom/probe";
 
 /**
@@ -34,6 +40,10 @@ import { probeFeed } from "@/lib/newsroom/probe";
  *                   because permission was granted for the old address.
  *   set_review    — records what a human concluded. Advisory: it is not read
  *                   by the fetcher, and it cannot grant retrieval.
+ *   update_details — corrects name, type, tier, jurisdictions, frequency,
+ *                   retention and licence notes. Validated like `create`;
+ *                   never the domain, URL or method, and it leaves both
+ *                   permissions as they were. Every change is logged.
  *   test_source   — the ONE action here that makes an outbound request. See
  *                   the note on it below.
  *   create        — registers one hand-entered source, validated.
@@ -158,6 +168,62 @@ export async function POST(req: NextRequest) {
       feed_url: check.value.feed_url,
       ingestion_method: check.value.ingestion_method,
     });
+  }
+
+  if (action === "update_details") {
+    const id = Number(b.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return NextResponse.json({ error: "A source id is required" }, { status: 400 });
+    }
+    const source = await sourceById(id);
+    if (!source) return NextResponse.json({ error: "No such source" }, { status: 404 });
+
+    // A field left out keeps its current value; one sent is validated by the
+    // SAME function as registration. Domain, feed URL and method are taken
+    // from the stored row and cannot be changed here: the URL has its own
+    // action because moving it resets retrieval permission.
+    const check = validateSource({
+      name: b.name === undefined ? source.name : String(b.name),
+      domain: source.domain,
+      source_type: b.source_type === undefined ? source.source_type : String(b.source_type),
+      authority_tier: b.authority_tier === undefined ? source.authority_tier : Number(b.authority_tier),
+      jurisdictions: Array.isArray(b.jurisdictions) ? b.jurisdictions.map(String) : source.jurisdictions,
+      topics: source.topics,
+      ingestion_method: source.ingestion_method,
+      feed_url: source.feed_url,
+      fetch_frequency: b.fetch_frequency === undefined ? source.fetch_frequency : Number(b.fetch_frequency),
+      license_notes: b.license_notes === undefined ? source.license_notes : String(b.license_notes),
+      snapshot_retention:
+        b.snapshot_retention === undefined ? source.snapshot_retention : String(b.snapshot_retention),
+    });
+    if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
+
+    const v = check.value;
+    const after = {
+      name: v.name,
+      source_type: v.source_type,
+      authority_tier: v.authority_tier,
+      jurisdictions: v.jurisdictions,
+      fetch_frequency: v.fetch_frequency,
+      snapshot_retention: v.snapshot_retention,
+      license_notes: v.license_notes,
+    };
+    const changes = describeSourceChanges(
+      {
+        name: source.name,
+        source_type: source.source_type,
+        authority_tier: source.authority_tier,
+        jurisdictions: source.jurisdictions,
+        fetch_frequency: source.fetch_frequency,
+        snapshot_retention: source.snapshot_retention,
+        license_notes: source.license_notes,
+      },
+      after
+    );
+    if (!changes) return NextResponse.json({ ok: true, changes: "" });
+
+    await updateSourceDetails({ id, ...after, actor: user.email, changes });
+    return NextResponse.json({ ok: true, changes });
   }
 
   if (action === "set_review") {

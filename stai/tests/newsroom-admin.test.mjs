@@ -517,6 +517,122 @@ describe("registering a source from the browser", { skip }, () => {
   });
 });
 
+describe("editing a source's details", { skip }, () => {
+  // ICAEW is proposed as Tier 1 but is a professional body: a Tier 2 signal
+  // source. Exactly the correction this exists for.
+  const icaew = () => one("SELECT * FROM newsroom_sources WHERE domain='icaew.com'");
+  const logFor = (id) =>
+    query("SELECT error FROM newsroom_fetch_log WHERE source_id=? AND error LIKE 'details edited%' ORDER BY id", [id]);
+
+  test("tier, jurisdictions, type, name, frequency, retention and notes can all be changed", async () => {
+    const before = icaew();
+    assert.equal(before.authority_tier, 1, "registered from the proposal as Tier 1");
+
+    const { status, json } = await post({
+      action: "update_details",
+      id: before.id,
+      name: "ICAEW — Audit & Assurance",
+      source_type: "professional_body",
+      authority_tier: 2,
+      jurisdictions: ["UK", "GLOBAL"],
+      fetch_frequency: 120,
+      snapshot_retention: "reference_only",
+      license_notes: "Terms checked 2026-09-24",
+    });
+    assert.equal(status, 200, JSON.stringify(json));
+    assert.match(json.changes, /tier 1 → 2/);
+    assert.match(json.changes, /jurisdictions UK → GLOBAL, UK/);
+
+    const after = icaew();
+    assert.equal(after.name, "ICAEW — Audit & Assurance");
+    assert.equal(after.authority_tier, 2);
+    assert.deepEqual(JSON.parse(after.jurisdictions).sort(), ["GLOBAL", "UK"]);
+    assert.equal(after.fetch_frequency, 120);
+    assert.equal(after.snapshot_retention, "reference_only");
+    assert.equal(after.license_notes, "Terms checked 2026-09-24");
+  });
+
+  test("every change is logged with who made it", async () => {
+    const [entry] = logFor(icaew().id);
+    assert.ok(entry, "the edit is on the source's record");
+    assert.match(entry.error, new RegExp(`details edited by ${ADMIN_EMAIL.replace(".", "\\.")}: .*tier 1 → 2`));
+  });
+
+  test("permissions, domain, feed URL and method cannot be changed here", async () => {
+    const s = icaew();
+    await post({ action: "set_flag", id: s.id, field: "fetch_allowed", value: true });
+    await post({ action: "set_flag", id: s.id, field: "active", value: true });
+
+    const { status } = await post({
+      action: "update_details",
+      id: s.id,
+      authority_tier: 3,
+      // None of these is a field of this action; all must be ignored.
+      domain: "evil.example",
+      feed_url: "https://evil.example/feed",
+      ingestion_method: "manual",
+      fetch_allowed: false,
+      active: false,
+    });
+    assert.equal(status, 200);
+    const after = icaew();
+    assert.equal(after.authority_tier, 3);
+    assert.equal(after.domain, "icaew.com");
+    assert.equal(after.feed_url, s.feed_url);
+    assert.equal(after.ingestion_method, s.ingestion_method);
+    assert.equal(after.fetch_allowed, 1, "a details edit does not revoke retrieval");
+    assert.equal(after.active, 1, "and does not switch the source off");
+
+    // Back to how the rest of this file expects it.
+    await post({ action: "set_flag", id: s.id, field: "active", value: false });
+    await post({ action: "set_flag", id: s.id, field: "fetch_allowed", value: false });
+  });
+
+  test("a field left out keeps its value", async () => {
+    const before = icaew();
+    await post({ action: "update_details", id: before.id, authority_tier: 2 });
+    const after = icaew();
+    assert.equal(after.authority_tier, 2);
+    assert.equal(after.name, before.name);
+    assert.equal(after.jurisdictions, before.jurisdictions);
+    assert.equal(after.fetch_frequency, before.fetch_frequency);
+  });
+
+  test("invalid values are refused and nothing is stored", async () => {
+    const before = icaew();
+    for (const [body, pattern] of [
+      [{ authority_tier: 4 }, /Tier must be 1, 2 or 3/],
+      [{ jurisdictions: [] }, /at least one jurisdiction/i],
+      [{ jurisdictions: ["XX"] }, /Unknown jurisdiction/],
+      [{ source_type: "blog" }, /Unknown source type/],
+      [{ fetch_frequency: 5 }, /between 15 minutes and a week/],
+      [{ snapshot_retention: "forever" }, /Unknown retention/],
+      [{ name: "   " }, /Name is required/],
+    ]) {
+      const { status, json } = await post({ action: "update_details", id: before.id, ...body });
+      assert.equal(status, 400, JSON.stringify(body));
+      assert.match(json.error, pattern);
+    }
+    assert.deepEqual(icaew(), before, "the row is untouched");
+  });
+
+  test("saving without a change logs nothing", async () => {
+    const s = icaew();
+    const logged = logFor(s.id).length;
+    const { status, json } = await post({ action: "update_details", id: s.id, authority_tier: s.authority_tier });
+    assert.equal(status, 200);
+    assert.equal(json.changes, "");
+    assert.equal(logFor(s.id).length, logged);
+  });
+
+  test("an unknown source is a 404; a signed-out caller is refused", async () => {
+    assert.equal((await post({ action: "update_details", id: 999999, authority_tier: 2 })).status, 404);
+    const anon = await post({ action: "update_details", id: icaew().id, authority_tier: 1 }, false);
+    assert.equal(anon.status, 403);
+    assert.equal(icaew().authority_tier, 2, "unchanged");
+  });
+});
+
 describe("correcting a moved feed URL", { skip }, () => {
   /** The AFM row, whose feed URL was the first found to 404 in production. */
   const afm = () => one("SELECT * FROM newsroom_sources WHERE domain='afm.nl'");

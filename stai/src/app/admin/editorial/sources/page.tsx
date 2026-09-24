@@ -101,6 +101,7 @@ export default async function SourcesPage() {
           tier: s.authority_tier,
           type: s.source_type,
           jurisdictions: s.jurisdictions.map(jurisdictionLabel),
+          jurisdictionCodes: s.jurisdictions,
           ingestion: s.ingestion_method,
           feedUrl: s.feed_url,
           frequency: s.fetch_frequency,

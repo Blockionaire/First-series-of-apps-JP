@@ -680,6 +680,64 @@ export async function updateSourceFeedUrl(input: {
   );
 }
 
+/**
+ * Correct a source's descriptive details: name, type, tier, jurisdictions,
+ * fetch frequency, retention and licence notes.
+ *
+ * Deliberately NOT the domain, the feed URL or the retrieval method. The
+ * domain is the source's identity (and what its feed must belong to); the URL
+ * and method have their own path above because changing WHERE we fetch from
+ * resets retrieval permission. Nothing here changes where a request goes, so
+ * `fetch_allowed` and `active` are left exactly as they were.
+ *
+ * Tier and jurisdictions are copied onto items at ingestion, so a change here
+ * applies to what is retrieved from now on; stories already built keep the
+ * counts they were built with.
+ *
+ * Every edit is recorded in the source's fetch log with who made it and what
+ * changed, the same place a feed-URL change is recorded — a Tier 2 source
+ * promoted to Tier 1 is a change in how much its word is trusted, and that
+ * must never be silent.
+ */
+export async function updateSourceDetails(input: {
+  id: number;
+  name: string;
+  source_type: string;
+  authority_tier: number;
+  jurisdictions: string[];
+  fetch_frequency: number;
+  snapshot_retention: string;
+  license_notes: string;
+  actor: string;
+  /** "tier 2 → 1; jurisdictions EU → EU, NL" — what changed, for the log. */
+  changes: string;
+}): Promise<void> {
+  await sql().batch([
+    {
+      sql: `UPDATE newsroom_sources SET
+              name = ?, source_type = ?, authority_tier = ?, jurisdictions = ?,
+              fetch_frequency = ?, snapshot_retention = ?, license_notes = ?,
+              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+            WHERE id = ?`,
+      params: [
+        input.name,
+        input.source_type,
+        input.authority_tier,
+        JSON.stringify(input.jurisdictions),
+        input.fetch_frequency,
+        input.snapshot_retention,
+        input.license_notes,
+        input.id,
+      ],
+    },
+    {
+      sql: `INSERT INTO newsroom_fetch_log (source_id, outcome, error, items_found, items_new)
+            VALUES (?, 'skipped_not_due', ?, 0, 0)`,
+      params: [input.id, `details edited by ${input.actor}: ${input.changes}`.slice(0, 1000)],
+    },
+  ]);
+}
+
 /* ── Human review (phase 2.5) ─────────────────────────────────────────── */
 
 /**

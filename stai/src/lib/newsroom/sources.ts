@@ -432,3 +432,40 @@ export function liveState(s: {
   if (s.health === "never_fetched" || s.health === "silent") return "waiting";
   return "live";
 }
+
+/* ── Editing an existing source ──────────────────────────────────────────── */
+
+/** The fields "Edit details" may change. Not domain, feed URL or method. */
+export type SourceDetails = {
+  name: string;
+  source_type: string;
+  authority_tier: number;
+  jurisdictions: string[];
+  fetch_frequency: number;
+  snapshot_retention: string;
+  license_notes: string;
+};
+
+/**
+ * What an edit changed, in words for the source's log: "tier 2 → 1;
+ * jurisdictions EU → EU, NL". Empty when nothing changed.
+ *
+ * Jurisdictions compare as sets, so re-ordering them is not a change.
+ */
+export function describeSourceChanges(before: SourceDetails, after: SourceDetails): string {
+  const out: string[] = [];
+  if (before.name !== after.name) out.push(`name "${before.name}" → "${after.name}"`);
+  if (before.source_type !== after.source_type) out.push(`type ${before.source_type} → ${after.source_type}`);
+  if (before.authority_tier !== after.authority_tier) out.push(`tier ${before.authority_tier} → ${after.authority_tier}`);
+  const a = [...before.jurisdictions].sort().join(", ");
+  const b = [...after.jurisdictions].sort().join(", ");
+  if (a !== b) out.push(`jurisdictions ${a || "none"} → ${b || "none"}`);
+  if (before.fetch_frequency !== after.fetch_frequency) {
+    out.push(`fetch every ${before.fetch_frequency} → ${after.fetch_frequency} min`);
+  }
+  if (before.snapshot_retention !== after.snapshot_retention) {
+    out.push(`retention ${before.snapshot_retention} → ${after.snapshot_retention}`);
+  }
+  if (before.license_notes !== after.license_notes) out.push("licence notes edited");
+  return out.join("; ");
+}
