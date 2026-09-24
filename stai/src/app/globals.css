@@ -490,3 +490,227 @@ body {
   html { background: #fff; color: #111; }
   header, footer, nav, .no-print { display: none !important; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   HOMEPAGE EDITORIAL CONCEPT — "paper edition"
+   ────────────────────────────────────────────────────────────────────────
+   A visual prototype for the public homepage only. Everything below is
+   scoped to `.home-ed` (the homepage wrapper) or to `html:has(.home-ed)`,
+   so no other page changes. Remove this block, the four eb-garamond files
+   in /public/fonts, and the homepage markup to revert.
+
+   Three type layers:
+     display / editorial  — EB Garamond (serif)          .ed-serif .ed-display
+     body / product       — Archivo (existing sans)      .ed-body
+     data / evidence      — JetBrains Mono (existing)    .ed-meta
+   ════════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: "EB Garamond Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 800;
+  src: url("/fonts/eb-garamond-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "EB Garamond Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 400 800;
+  src: url("/fonts/eb-garamond-latin-wght-italic.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "EB Garamond Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 800;
+  src: url("/fonts/eb-garamond-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "EB Garamond Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 400 800;
+  src: url("/fonts/eb-garamond-latin-ext-wght-italic.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* The paper palette. Remaps the site's semantic tokens while the homepage
+   is on screen — header and footer included — exactly the way the light
+   theme remaps them, so every existing component follows. Placed after
+   the light theme block so it wins in both themes on this page only. */
+html:has(.home-ed) {
+  --color-navy-950: #ebe4d7; /* deepest panel: a darker sheet of paper */
+  --color-navy-900: #f6f1e8; /* the page */
+  --color-navy-850: #f0eadf;
+  --color-navy-800: #ede6da;
+  --color-navy-700: #ddd4c4;
+  --color-navy-600: #c9bea9;
+  --color-cream-100: #1d1915; /* charcoal-brown ink, never pure black */
+  --color-cream-200: #2a2420;
+  --color-cream-400: #5b514a;
+  --color-cream-600: #7b7066;
+  --color-gold-300: #8f7326;
+  --color-signal-up: #3f7a50;
+  --color-signal-down: #a64f3b;
+  --line: rgba(29, 25, 21, 0.13);
+  --line-strong: rgba(29, 25, 21, 0.28);
+  --ink-muted: rgba(29, 25, 21, 0.74);
+  --ink-faint: rgba(29, 25, 21, 0.62); /* ≈5:1 on the paper */
+  --gold-line: rgba(143, 115, 38, 0.45);
+  --ed-accent: #7c2027; /* burgundy: used sparingly */
+  --ed-night: #191512; /* deep brown-black for the one dark band */
+  --ed-serif: "EB Garamond Variable", "EB Garamond", Garamond, "Times New Roman", serif;
+  color-scheme: light;
+}
+html:has(.home-ed) ::selection {
+  background: #2a2420;
+  color: #f6f1e8;
+}
+html:has(.home-ed) .btn-ghost:hover { background: rgba(29, 25, 21, 0.05); }
+
+.home-ed {
+  background: var(--color-navy-900);
+  color: var(--color-cream-200);
+}
+
+/* Layer 1 — display / editorial */
+.ed-serif {
+  font-family: var(--ed-serif);
+  font-weight: 420;
+  letter-spacing: -0.012em;
+  font-feature-settings: "kern", "liga", "onum";
+}
+.ed-display {
+  text-wrap: balance;
+  font-family: var(--ed-serif);
+  font-weight: 420;
+  line-height: 0.98;
+  letter-spacing: -0.022em;
+  color: var(--color-cream-100);
+  font-feature-settings: "kern", "liga", "dlig";
+}
+.ed-italic { font-style: italic; font-weight: 400; }
+.ed-accent { color: var(--ed-accent); }
+
+/* Layer 2 — body / product */
+.ed-body {
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--ink-muted);
+}
+
+/* Layer 3 — data / evidence. Sparingly. */
+.ed-meta {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--ink-faint);
+}
+
+/* Buttons: quiet, sans, sentence case. The mono .btn stays for the tools. */
+.ed-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 560;
+  letter-spacing: 0.005em;
+  padding: 0.95rem 1.5rem;
+  border: 1px solid var(--color-cream-100);
+  border-radius: 1px;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.ed-btn-primary { background: var(--color-cream-100); color: var(--color-navy-900); }
+.ed-btn-primary:hover { background: var(--ed-accent); border-color: var(--ed-accent); }
+.ed-btn-quiet { background: transparent; color: var(--color-cream-100); border-color: var(--line-strong); }
+.ed-btn-quiet:hover { border-color: var(--color-cream-100); }
+.ed-btn .ed-arrow { transition: transform 0.25s ease; }
+.ed-btn:hover .ed-arrow { transform: translateX(3px); }
+
+/* A link that underlines from left to right on hover — headlines only. */
+.ed-hl {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 0 92%;
+  background-repeat: no-repeat;
+  transition: background-size 0.5s cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+.group:hover .ed-hl,
+.group:focus-visible .ed-hl { background-size: 100% 1px; }
+
+.ed-link {
+  color: var(--color-cream-100);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 4px;
+  transition: text-decoration-color 0.2s ease;
+}
+.ed-link:hover { text-decoration-color: var(--ed-accent); }
+
+/* The one dark band: brown-black with paper ink. Tokens remap inside it so
+   existing classes keep working. */
+.ed-night {
+  --color-cream-100: #f4ede2;
+  --color-cream-200: #e6ded2;
+  --color-cream-400: #b9ae9f;
+  --line: rgba(244, 237, 226, 0.14);
+  --line-strong: rgba(244, 237, 226, 0.28);
+  --ink-muted: rgba(244, 237, 226, 0.76);
+  --ink-faint: rgba(244, 237, 226, 0.62);
+  --ed-accent: #d78a86; /* burgundy lifted for contrast on the dark band */
+  background: var(--ed-night);
+  color: var(--color-cream-200);
+}
+
+/* Editorial plate: a deliberate placeholder where original photography or
+   illustration would go. Typography, not stock imagery. */
+.ed-plate {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background:
+    radial-gradient(120% 90% at 85% 10%, rgba(124, 32, 39, 0.22), transparent 60%),
+    var(--ed-night);
+  color: #efe7da;
+  overflow: hidden;
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .ed-plate { aspect-ratio: 21 / 9; }
+}
+.ed-plate .ed-display { color: #efe7da; }
+.ed-plate-rule { background: #b3464d; }
+.ed-plate .ed-meta { color: rgba(239, 231, 218, 0.7); }
+.ed-plate::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(239, 231, 218, 0.16);
+  pointer-events: none;
+}
+
+/* The workbench: where the page turns engineered. */
+.ed-bench {
+  background: var(--color-navy-950);
+  border: 1px solid var(--line-strong);
+}
+.ed-tab[aria-selected="true"] {
+  color: var(--color-cream-100);
+  border-bottom-color: var(--ed-accent);
+}
+
+/* Index rows in the intelligence system */
+.ed-row { transition: background-color 0.25s ease; }
+.ed-row:hover { background: rgba(29, 25, 21, 0.035); }
+.ed-row .ed-arrow { transition: transform 0.3s ease, color 0.3s ease; }
+.ed-row:hover .ed-arrow { transform: translateX(4px); color: var(--ed-accent); }
+
+/* Focus: visible on paper */
+.home-ed :focus-visible { outline-color: var(--color-cream-100); }
+.ed-night :focus-visible { outline-color: #f4ede2; }

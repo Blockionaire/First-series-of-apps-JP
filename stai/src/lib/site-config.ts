@@ -115,14 +115,14 @@ export function toggleForPath(path: string): Toggle | undefined {
 export type TextField = { key: string; label: string; fallback: string; multiline?: boolean; help?: string };
 
 export const HOME_FIELDS: TextField[] = [
-  { key: "home.eyebrow", label: "Eyebrow", fallback: "" , help: "Leave empty to use the site slogan." },
+  { key: "home.eyebrow", label: "Eyebrow", fallback: "" , help: "Leave empty for “The intelligence layer for AI in audit”." },
   { key: "home.headline", label: "Headline", fallback: "AI is rewriting the audit.", help: "The first line, in full-strength ink." },
   { key: "home.headline2", label: "Headline, second line", fallback: "Stay the one who checks.", help: "Set in the muted shade under the first." },
-  { key: "home.sub", label: "Standfirst", fallback: "The intelligence desk for audit, accountancy and finance professionals across Europe — sharp editorial, audit-grade prompts, and answers grounded in cited evidence. Built the way you work.", multiline: true },
-  { key: "home.cta1.label", label: "Primary button", fallback: "Read the Briefing" },
+  { key: "home.sub", label: "Standfirst", fallback: "The intelligence layer for AI in audit, accountancy and finance — sourced, dated, and written for the people who sign off.", multiline: true },
+  { key: "home.cta1.label", label: "Primary button", fallback: "Explore the latest intelligence" },
   { key: "home.cta1.href", label: "Primary button link", fallback: "/news" },
-  { key: "home.cta2.label", label: "Secondary button", fallback: "What changes on 2 August" },
-  { key: "home.cta2.href", label: "Secondary button link", fallback: "/ai-act" },
+  { key: "home.cta2.label", label: "Secondary button", fallback: "Join The Briefing" },
+  { key: "home.cta2.href", label: "Secondary button link", fallback: "#briefing" },
 ];
 
 function textIn(snapshot: ReadonlyMap<string, string>, key: string): string {

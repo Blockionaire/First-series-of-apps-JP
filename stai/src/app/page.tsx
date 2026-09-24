@@ -1,17 +1,11 @@
 import Link from "next/link";
-import {
-  allArticles,
-  featuredArticles,
-  allPrompts,
-  EARLY_BIRD_END_ISO,
-} from "@/lib/content";
-import { daysUntil } from "@/lib/format";
-import Ticker from "@/components/chrome/Ticker";
-import SignalField from "@/components/home/SignalField";
-import EnforcementClock from "@/components/chrome/EnforcementClock";
+import { preload } from "react-dom";
+import { allArticles, featuredArticles, allPrompts, type ArticleSummary } from "@/lib/content";
+import { fmtDate } from "@/lib/format";
 import Reveal from "@/components/Reveal";
-import { LeadCard, IndexCard, RowCard } from "@/components/ArticleCard";
+import NewsletterForm from "@/components/NewsletterForm";
 import { PlusBadge } from "@/components/Logo";
+import Workbench from "@/components/home/Workbench";
 import { SITE, pageMeta } from "@/lib/seo";
 import { enabledMap, homeCopy } from "@/lib/site-config";
 
@@ -31,379 +25,508 @@ export const metadata = pageMeta({
   absoluteTitle: true,
 });
 
+/* ───────────────────────────────────────────────────────────────────────────
+ * HOMEPAGE — EDITORIAL CONCEPT ("paper edition")
+ *
+ * The public, editorial face of STAI: a publication front page first, the
+ * tools second. Styles live in the "HOMEPAGE EDITORIAL CONCEPT" block at the
+ * end of globals.css and apply only while `.home-ed` is on the page.
+ *
+ * Every piece of content is either real data (articles, prompts, settings
+ * copy) or a true, dated statement. Nothing here is invented to fill space.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/** The day, the way a front page prints it, in the desk's own timezone. */
+function editionDate(now = new Date()): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Europe/Amsterdam",
+  }).format(now);
+}
+
+/** Split a headline's closing full stop off so it can take the accent. */
+function withStop(text: string): [string, string] {
+  const m = /^(.*?)([.!?])$/.exec(text.trim());
+  return m ? [m[1], m[2]] : [text, ""];
+}
+
+function Meta({ a, withAuthor = false }: { a: ArticleSummary; withAuthor?: boolean }) {
+  return (
+    <p className="ed-meta flex flex-wrap gap-x-3 gap-y-1">
+      <span className="text-cream-400">{a.category}</span>
+      <span aria-hidden>·</span>
+      <time dateTime={a.published_at}>{fmtDate(a.published_at)}</time>
+      <span aria-hidden>·</span>
+      <span>{a.reading_min} min</span>
+      {withAuthor && (
+        <>
+          <span aria-hidden>·</span>
+          <span>{a.author}</span>
+        </>
+      )}
+      {a.premium && <PlusBadge />}
+    </p>
+  );
+}
+
+/** A section's opening line: number, name, and an optional way onward. */
+function SectionHead({ n, label, title, link }: { n: string; label: string; title: React.ReactNode; link?: { href: string; text: string } }) {
+  return (
+    <div className="grid gap-6 border-t pt-6 rule-strong md:grid-cols-[minmax(0,1fr)_minmax(0,3fr)_auto] md:items-baseline">
+      <p className="ed-meta">
+        <span className="text-cream-400">{n}</span> — {label}
+      </p>
+      <h2 className="ed-display text-[clamp(2.1rem,4.4vw,3.6rem)]">{title}</h2>
+      {link && (
+        <Link href={link.href} className="ed-link text-sm md:justify-self-end">
+          {link.text}
+        </Link>
+      )}
+    </div>
+  );
+}
+
 export default async function Home() {
+  // The serif carries the first impression; fetch it with the document.
+  preload("/fonts/eb-garamond-latin-wght-normal.woff2", { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+  preload("/fonts/eb-garamond-latin-wght-italic.woff2", { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+
   const featured = await featuredArticles();
-  const lead = featured[0];
-  const secondary = featured.slice(1, 4);
   const latest = await allArticles(6);
+  const lead = featured[0] ?? latest[0];
+  const secondary = (featured.length > 1 ? featured.slice(1, 4) : latest.slice(1, 4)).filter((a) => a.id !== lead?.id);
+  const shown = new Set([lead?.id, ...secondary.map((a) => a.id)]);
+  const wire = latest.filter((a) => !shown.has(a.id)).slice(0, 4);
+
   const prompts = await allPrompts();
-  const teaserPrompts = prompts
+  const benchPrompts = prompts
     .filter((p) => !p.premium)
-    .slice(0, 2)
-    .concat(prompts.filter((p) => p.premium).slice(0, 1));
-  const earlyBirdDays = daysUntil(EARLY_BIRD_END_ISO);
-  // The homepage's own words, and which sections it is allowed to show. Both
-  // come from site settings, so an operator can change the headline or close a
-  // section without a deploy — and a section whose page is switched off never
-  // renders a link into a 404.
+    .slice(0, 3)
+    .concat(prompts.filter((p) => p.premium).slice(0, 1))
+    .map((p) => ({ slug: p.slug, title: p.title, category: p.category, premium: p.premium }));
+
+  // The homepage's own words, and which sections it may show. Both come from
+  // site settings, so an operator can change the headline or close a section
+  // without a deploy — and a closed section never renders a link into a 404.
   const copy = await homeCopy();
   const on = await enabledMap();
 
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const aiActApplies = today >= "2026-08-02";
+  const [line1, stop1] = withStop(copy["home.headline"] || "AI is rewriting the audit.");
+  const [line2, stop2] = withStop(copy["home.headline2"] || "");
+  const cta2Href = copy["home.cta2.href"] || "#briefing";
+  const showCta2 = Boolean(copy["home.cta2.label"]) && (!cta2Href.startsWith("#briefing") || on.newsletter);
+
+  const system = [
+    on.news && { href: "/news", name: "News", role: "What changed", line: "Dated reporting on regulation, standards and enforcement." },
+    on.insights && { href: "/insights", name: "Insights", role: "What it means", line: "Analysis that connects a development to audit methodology." },
+    on.newsletter && { href: "#briefing", name: "The Briefing", role: "What matters", line: "The week in one considered read." },
+    on.prompts && { href: "/prompts", name: "Prompts", role: "Put it to work", line: "Audit-grade prompts, written like methodology." },
+    on.aiAct && { href: "/ai-act", name: "AI Act", role: "Track what is moving", line: "Obligations, dates and articles, kept current." },
+    on.ask && { href: "/ask", name: "Ask STAI", role: "Ask the evidence", line: "Answers from STAI’s own reporting, every claim cited." },
+  ].filter(Boolean) as { href: string; name: string; role: string; line: string }[];
+
   return (
-    <>
-      {/* ——— Hero: the desk ——— */}
-      <section className="relative overflow-hidden border-b rule">
-        <SignalField />
-        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-14 pt-14 sm:px-6 lg:grid-cols-[1.5fr_1fr] lg:gap-16 lg:pb-20 lg:pt-20">
-          <div>
-            <p className="f-label" style={{ color: "var(--ink-muted)" }}>
-              {copy["home.eyebrow"] || `STAI — ${SITE.tagline}`}
-            </p>
-            <h1 className="f-display mt-5 text-[clamp(2.6rem,7vw,5.2rem)] text-cream-100">
-              {copy["home.headline"]}
-              {copy["home.headline2"] && (
-                <>
-                  <br />
-                  <span className="text-cream-400">{copy["home.headline2"]}</span>
-                </>
-              )}
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed" style={{ color: "var(--ink-muted)" }}>
-              {copy["home.sub"]}
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              {copy["home.cta1.label"] && (
-                <Link href={copy["home.cta1.href"] || "/news"} className="btn btn-primary">
-                  {copy["home.cta1.label"]}
-                </Link>
-              )}
-              {copy["home.cta2.label"] && (
-                <Link href={copy["home.cta2.href"] || "/ai-act"} className="btn btn-ghost">
-                  {copy["home.cta2.label"]}
-                </Link>
-              )}
+    <div className="home-ed">
+      {/* ═══ A. Hero ═══════════════════════════════════════════════════════ */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6">
+        {/* Masthead line: the page dated like a front page. */}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b py-4 rule">
+          <p className="ed-meta">{copy["home.eyebrow"] || "The intelligence layer for AI in audit"}</p>
+          <p className="ed-meta">{editionDate(now)} · Amsterdam</p>
+        </div>
+
+        <div className="pb-16 pt-16 sm:pt-24 lg:pb-24 lg:pt-32">
+          <h1 className="ed-display max-w-[15ch] text-[clamp(3rem,9.2vw,8.6rem)] sm:max-w-none">
+            <span className="block">
+              {line1}
+              <span className="ed-accent">{stop1}</span>
+            </span>
+            {line2 && (
+              <span className="ed-italic block text-cream-400">
+                {line2}
+                <span className="ed-accent">{stop2}</span>
+              </span>
+            )}
+          </h1>
+
+          <div className="mt-14 grid gap-12 lg:mt-20 lg:grid-cols-[minmax(0,5fr)_minmax(0,1fr)_minmax(0,4fr)] lg:items-end">
+            <div>
+              <p className="ed-body max-w-[34rem] text-[1.15rem] sm:text-[1.25rem]">{copy["home.sub"]}</p>
+              <div className="mt-9 flex flex-wrap gap-3">
+                {copy["home.cta1.label"] && (
+                  <Link href={copy["home.cta1.href"] || "/news"} className="ed-btn ed-btn-primary">
+                    {copy["home.cta1.label"]} <span className="ed-arrow" aria-hidden>→</span>
+                  </Link>
+                )}
+                {showCta2 && (
+                  <Link href={cta2Href} className="ed-btn ed-btn-quiet">
+                    {copy["home.cta2.label"]}
+                  </Link>
+                )}
+              </div>
+            </div>
+            <ul className="lg:col-start-3" aria-label="What STAI tells you">
+              {["Know what changed.", "Know what matters.", "Know what to do next."].map((t, i) => (
+                <li key={t} className="flex items-baseline gap-5 border-t py-3 rule last:border-b">
+                  <span className="ed-meta w-6">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="ed-serif text-[1.45rem] leading-tight text-cream-100 sm:text-[1.65rem]">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* A restrained live signal: real dates, no counters. */}
+        <div className="flex flex-col gap-2 border-t py-4 rule sm:flex-row sm:items-baseline sm:justify-between">
+          {latest[0] && (
+            <Link href={`/briefing/${latest[0].slug}`} className="group ed-meta flex min-w-0 items-baseline gap-3">
+              <span className="text-cream-400">Latest</span>
+              <time dateTime={latest[0].published_at}>{fmtDate(latest[0].published_at)}</time>
+              <span className="truncate font-sans normal-case tracking-normal text-[0.85rem] text-cream-200">
+                <span className="ed-hl">{latest[0].title}</span>
+              </span>
+            </Link>
+          )}
+          <p className="ed-meta shrink-0">
+            EU AI Act · most obligations {aiActApplies ? "apply since" : "apply from"} 02 Aug 2026
+          </p>
+        </div>
+      </section>
+
+      {/* ═══ B. Latest intelligence — the front page ═════════════════════════ */}
+      {lead && (
+        <section className="mx-auto max-w-7xl px-4 pt-20 sm:px-6 lg:pt-28" aria-labelledby="latest-heading">
+          <div id="latest-heading">
+            <SectionHead
+              n="01"
+              label="Latest intelligence"
+              title={<>What changed <span className="ed-italic">this week</span></>}
+              link={on.news ? { href: "/news", text: "All intelligence" } : undefined}
+            />
+          </div>
+
+          <div className="mt-12 grid gap-14 lg:mt-16 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
+            {/* The lead: visibly the most important thing on the page. */}
+            <article className="group">
+              <Link href={`/briefing/${lead.slug}`} className="block">
+                <div className="ed-plate" aria-hidden>
+                  <p className="ed-meta absolute left-7 top-7">Lead story</p>
+                  <p className="ed-meta absolute right-7 top-7">{lead.kind === "insight" ? "Insight" : "News"}</p>
+                  <span className="ed-plate-rule absolute left-7 top-14 h-px w-10" />
+                  <p className="ed-meta absolute bottom-7 right-7 hidden sm:block">{fmtDate(lead.published_at)}</p>
+                  <p className="ed-display ed-italic absolute bottom-6 left-7 right-7 text-[clamp(2.6rem,6vw,5rem)]">
+                    {lead.category}
+                  </p>
+                </div>
+                <div className="mt-7">
+                  <Meta a={lead} />
+                </div>
+                <h3 className="ed-display mt-4 text-[clamp(2rem,3.6vw,3.25rem)] leading-[1.02]">
+                  <span className="ed-hl">{lead.title}</span>
+                </h3>
+                <p className="ed-body mt-5 max-w-2xl">{lead.dek}</p>
+                <p className="mt-5 text-sm text-cream-400">
+                  By <span className="text-cream-100">{lead.author}</span>
+                  {lead.author_role ? <span>, {lead.author_role}</span> : null}
+                </p>
+              </Link>
+            </article>
+
+            {/* Secondary stories: ruled, not boxed. */}
+            <div>
+              {secondary.map((a, i) => (
+                <Reveal key={a.id} delay={i * 90}>
+                  <article className={`group border-t py-7 rule ${i === 0 ? "lg:border-t-0 lg:pt-0" : ""}`}>
+                    <Link href={`/briefing/${a.slug}`} className="block">
+                      <Meta a={a} />
+                      <h3 className="ed-serif mt-3 text-[1.6rem] leading-[1.12] text-cream-100 sm:text-[1.8rem]">
+                        <span className="ed-hl">{a.title}</span>
+                      </h3>
+                      <p className="mt-3 line-clamp-2 text-[0.95rem] leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+                        {a.dek}
+                      </p>
+                      <p className="mt-3 text-[0.85rem] text-cream-400">By {a.author}</p>
+                    </Link>
+                  </article>
+                </Reveal>
+              ))}
             </div>
           </div>
 
-          {/* Desk panel — self-start so it hugs its content instead of
-              stretching to the hero row and leaving a void beneath. */}
-          <div className="self-start border bg-navy-950/80 p-5 backdrop-blur-[2px] panel-lift rule-strong">
-            <div className="flex items-center justify-between border-b pb-3 rule">
-              <span className="f-label" style={{ color: "var(--ink-faint)" }}>
-                Desk status
-              </span>
-              <span className="f-mono inline-flex items-center gap-2 text-[0.65rem] uppercase tracking-[0.14em] text-cream-400">
-                <span className="live-dot inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--color-signal-up)" }} aria-hidden />
-                Live
-              </span>
-            </div>
-            <div className="border-b py-4 rule">
-              <p className="f-label" style={{ color: "var(--ink-faint)" }}>
-                EU AI Act — obligations enforceable
-              </p>
-              <p className="f-mono mt-2 text-2xl font-bold tabular-nums text-cream-100">
-                <EnforcementClock compact />
-              </p>
-              <p className="f-mono mt-1 text-[0.65rem] tracking-[0.1em] uppercase" style={{ color: "var(--ink-faint)" }}>
-                02 AUG 2026 · Art. 113 ·{" "}
-                <Link href="/ai-act" className="underline underline-offset-2 hover:text-cream-100">
-                  what changes
-                </Link>
-              </p>
-            </div>
-            <div className="border-b py-4 rule">
-              <p className="f-label" style={{ color: "var(--ink-faint)" }}>
-                This week on the desk
-              </p>
-              <ul className="mt-2 space-y-2">
-                {latest.slice(0, 3).map((a) => (
-                  <li key={a.id}>
-                    <Link
-                      href={`/briefing/${a.slug}`}
-                      className="block text-sm leading-snug text-cream-200 hover:text-cream-100"
-                    >
-                      <span className="f-mono mr-2 text-[0.62rem]" style={{ color: "var(--ink-faint)" }}>
-                        ▸
+          {/* On the wire: the rest of the week, as a quiet list. */}
+          {wire.length > 0 && (
+            <div className="mt-16 border-t pt-6 rule-strong">
+              <p className="ed-meta">Also on the desk</p>
+              <ul className="mt-4 grid gap-x-10 sm:grid-cols-2">
+                {wire.map((a) => (
+                  <li key={a.id} className="border-b rule">
+                    <Link href={`/briefing/${a.slug}`} className="group flex items-baseline gap-5 py-4">
+                      <time dateTime={a.published_at} className="ed-meta w-14 shrink-0">
+                        {fmtDate(a.published_at).slice(0, 6)}
+                      </time>
+                      <span className="min-w-0 flex-1 text-[1rem] leading-snug text-cream-100">
+                        <span className="ed-hl">{a.title}</span>
                       </span>
-                      {a.title}
+                      <span className="ed-meta hidden shrink-0 md:inline">{a.category}</span>
                     </Link>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="pt-4">
-              <p className="f-mono text-[0.68rem] leading-relaxed tracking-[0.02em]" style={{ color: "var(--ink-muted)" }}>
-                STAI+ is in early access — not yet on sale ·{" "}
-                <Link href="/plus" className="underline underline-offset-2 hover:text-cream-100">
-                  join the list
+          )}
+        </section>
+      )}
+
+      {/* ═══ C. Point of view ═══════════════════════════════════════════════ */}
+      <section className="ed-night mt-24 lg:mt-36" aria-labelledby="pov-heading">
+        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:py-36">
+          <p className="ed-meta">
+            <span className="text-cream-400">02</span> — Point of view
+          </p>
+          <h2 id="pov-heading" className="ed-display mt-10 text-[clamp(3rem,8.5vw,8rem)]">
+            <span className="block">AI moves fast.</span>
+            <span className="ed-italic block text-cream-400">
+              Audit cannot guess<span className="ed-accent">.</span>
+            </span>
+          </h2>
+          <div className="mt-20 grid gap-10 md:grid-cols-3 lg:mt-28">
+            {[
+              ["Evidence before hype.", "Every claim is dated, sourced and traceable to the text that makes it true."],
+              ["Judgement stays human.", "Tools can draft, sort and summarise. Signing an opinion remains a professional act."],
+              ["Practical, not promotional.", "If it does not change what a team does on an engagement, it does not lead."],
+            ].map(([h, t]) => (
+              <Reveal key={h}>
+                <div className="border-t pt-5 rule-strong">
+                  <p className="ed-serif text-[1.6rem] leading-tight text-cream-100">{h}</p>
+                  <p className="mt-3 max-w-sm text-[0.95rem] leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+                    {t}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ D. The intelligence system — a table of contents ═══════════════ */}
+      {system.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-6 lg:pt-36">
+          <SectionHead n="03" label="The intelligence layer" title={<>From signal <span className="ed-italic">to working paper</span></>} />
+          <p className="ed-body mt-6 max-w-xl md:ml-[25%]">
+            One evidence base behind all of it. Everything STAI publishes and builds draws on the same sourced, dated record.
+          </p>
+          <ul className="mt-14 border-t rule-strong">
+            {system.map((s, i) => (
+              <li key={s.name} className="border-b rule">
+                <Link
+                  href={s.href}
+                  className="ed-row group grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-1 px-1 py-6 md:grid-cols-[4rem_minmax(0,2.2fr)_minmax(0,2fr)_minmax(0,3fr)_2rem] md:py-8"
+                >
+                  <span className="ed-meta">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="ed-display text-[clamp(1.9rem,3.4vw,3rem)]">{s.name}</span>
+                  <span className="ed-arrow text-xl text-cream-400 md:order-last" aria-hidden>
+                    →
+                  </span>
+                  <span className="ed-serif ed-italic col-start-2 text-[1.25rem] text-cream-400 md:col-start-auto md:text-[1.45rem]">
+                    {s.role}
+                  </span>
+                  <span className="col-start-2 text-[0.95rem] leading-relaxed md:col-start-auto" style={{ color: "var(--ink-muted)" }}>
+                    {s.line}
+                  </span>
                 </Link>
-              </p>
-            </div>
-          </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* ═══ E. Evidence ═══════════════════════════════════════════════════ */}
+      <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-6 lg:pt-36" aria-labelledby="evidence-heading">
+        <div className="border-t pt-6 rule-strong">
+          <p className="ed-meta">
+            <span className="text-cream-400">04</span> — Evidence
+          </p>
         </div>
-      </section>
-
-      <Ticker />
-
-      {/* ——— Front page ——— */}
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
-        <div className="flex items-baseline justify-between border-b pb-3 rule-strong">
-          <h2 className="f-display text-2xl text-cream-100">The Briefing</h2>
-          <Link href="/news" className="f-label text-cream-400 hover:text-cream-100">
-            Full desk →
-          </Link>
-        </div>
-
-        {/* `minmax(0, …)` on every track, not a bare `1fr`.
-            A bare `fr` track carries an automatic minimum of min-content, so
-            it can never be narrower than its widest unbreakable child — and a
-            grid item cannot shrink a track the way a flex item shrinks. Any
-            `white-space: nowrap` descendant then silently widens the whole
-            page instead of being clipped. That is exactly what happened here:
-            the single mobile column measured 495px inside a 358px container
-            and dragged the document 121px past the screen edge. */}
-        <div className="mt-8 grid gap-12 grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="mt-10 grid gap-16 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-20">
           <div>
-            {lead && <LeadCard a={lead} />}
-            <div className="mt-12 grid gap-8 sm:grid-cols-3">
-              {secondary.map((a, i) => (
-                <Reveal key={a.id} delay={i * 80}>
-                  <IndexCard a={a} num={String(i + 2).padStart(2, "0")} />
-                </Reveal>
+            <h2 id="evidence-heading" className="ed-display text-[clamp(2.6rem,5.6vw,5rem)]">
+              <span className="block">Evidence first.</span>
+              <span className="ed-italic block text-cream-400">Interpretation second.</span>
+            </h2>
+            <dl className="mt-12 grid gap-x-10 gap-y-8 sm:grid-cols-2">
+              {[
+                ["Primary sources", "Regulation is cited to the text itself, not to someone’s summary of it."],
+                ["Source tiers", "Issuing bodies settle facts. Commentary adds context. Chatter only starts a search."],
+                ["Clear jurisdiction", "EU, member-state and UK rules are not the same thing, and we say which one we mean."],
+                ["Human review", "An editor stands behind every published piece. Nothing is claimed that cannot be shown."],
+              ].map(([k, v]) => (
+                <div key={k} className="border-t pt-4 rule">
+                  <dt className="ed-meta text-cream-400">{k}</dt>
+                  <dd className="mt-2 text-[0.98rem] leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+                    {v}
+                  </dd>
+                </div>
               ))}
-            </div>
+            </dl>
           </div>
-          <aside className="lg:border-l lg:pl-8 rule">
-            <h3 className="f-label" style={{ color: "var(--ink-faint)" }}>
-              Latest on the wire
-            </h3>
-            <div className="mt-2">
-              {latest.map((a) => (
-                <RowCard key={a.id} a={a} />
-              ))}
-            </div>
-            <Link href="/news" className="f-label mt-4 inline-block text-cream-400 hover:text-cream-100">
-              Open the Radar view →
-            </Link>
-          </aside>
-        </div>
-      </section>
 
-      {/* ——— Ask STAI teaser ——— */}
-      {on.ask && (
-      <section className="border-y bg-navy-850 rule">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2 lg:gap-16">
+          {/* A specimen of how one claim is recorded. The claim is true and the
+              citation is real: the AI Act's application date, Art. 113. */}
           <Reveal>
+            <figure className="ed-bench self-start p-6 sm:p-8">
+              <figcaption className="ed-meta flex items-center justify-between border-b pb-4 rule">
+                <span>How a claim is recorded</span>
+                <span className="text-cream-400">Specimen</span>
+              </figcaption>
+              <p className="ed-serif mt-6 text-[1.7rem] leading-snug text-cream-100">
+                “Most obligations of the EU AI Act apply from 2 August 2026.”
+              </p>
+              <dl className="f-mono mt-8 grid grid-cols-[8.5rem_minmax(0,1fr)] gap-y-3 text-[0.74rem] leading-relaxed">
+                {[
+                  ["Primary text", "Regulation (EU) 2024/1689, Art. 113"],
+                  ["Source tier", "Tier 1 — the issuing body"],
+                  ["Jurisdiction", "EU"],
+                  ["Support", "Supported · primary source"],
+                  ["Review", "Editor, before publication"],
+                ].map(([k, v]) => (
+                  <div key={k} className="contents">
+                    <dt className="uppercase tracking-[0.12em]" style={{ color: "var(--ink-faint)" }}>
+                      {k}
+                    </dt>
+                    <dd className="text-cream-100">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </figure>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══ F. The Briefing ═══════════════════════════════════════════════ */}
+      {on.newsletter && (
+        <section id="briefing" className="mx-auto max-w-7xl scroll-mt-24 px-4 pt-24 sm:px-6 lg:pt-36" aria-labelledby="briefing-heading">
+          <div className="grid gap-14 border-t pt-6 rule-strong lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-20">
             <div>
-              <p className="f-label" style={{ color: "var(--ink-faint)" }}>
-                Ask STAI
+              <p className="ed-meta">
+                <span className="text-cream-400">05</span> — The Briefing
               </p>
-              <h2 className="f-display mt-3 text-3xl text-cream-100 sm:text-4xl">
-                Answers with an evidence trail
+              <h2 id="briefing-heading" className="ed-display mt-10 text-[clamp(2.6rem,5.2vw,4.6rem)]">
+                <span className="block">The Briefing.</span>
+                <span className="ed-italic block text-cream-400">Weekly. Only what matters.</span>
               </h2>
-              <p className="mt-4 max-w-md leading-relaxed" style={{ color: "var(--ink-muted)" }}>
-                Ask STAI answers from the platform&apos;s own research and reporting — every claim cited, every
-                citation one click from its source. If the desk hasn&apos;t covered it, it says so. No confident
-                inventions, ever. Export any answer as a working-paper memo.
+              <p className="ed-body mt-8 max-w-md">
+                One considered read on the regulatory moves and standards signals that matter to European audit and
+                finance. It has not started yet — join the list and the first issue comes to you.
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link href="/ask" className="btn btn-primary">
-                  Ask a question
-                </Link>
-                <span className="f-mono self-center text-[0.68rem] tracking-[0.08em]" style={{ color: "var(--ink-faint)" }}>
-                  Free taste · unlimited on <PlusBadge />
-                </span>
+              <div className="mt-8 max-w-md">
+                <NewsletterForm source="home" />
               </div>
+              <p className="ed-meta mt-4">No spam · one email when it starts</p>
             </div>
-          </Reveal>
-          <Reveal delay={120}>
-            <div className="border bg-navy-950 p-5 rule-strong" aria-label="Example Ask STAI exchange">
-              <p className="f-mono text-[0.7rem] tracking-[0.06em] text-cream-400">
-                <span style={{ color: "var(--ink-faint)" }}>you ›</span> Do we need to keep the prompts our team
-                used on an engagement?
-              </p>
-              <div className="f-mono mt-4 space-y-3 border-t pt-4 text-[0.78rem] leading-relaxed rule text-cream-200">
-                <p>
-                  Yes — if an AI output influenced an audit conclusion, the prompt is audit documentation under
-                  ISA 230: it is the procedure design, and reperformance is impossible without it{" "}
-                  <span className="text-cream-400">[1]</span>. Inspection teams in two jurisdictions already
-                  request the full chain — prompt, model version, data scope, corroboration{" "}
-                  <span className="text-cream-400">[1]</span>. The emerging practice is a single AI-procedures
-                  memo per engagement recording tools, populations and human review{" "}
-                  <span className="text-cream-400">[2]</span>.
+
+            {/* A preview set like the publication it will be — built from the
+                desk's latest real reporting, not a fabricated issue. */}
+            <div className="border p-7 rule sm:p-10" style={{ background: "var(--color-navy-850)" }}>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b pb-4 rule">
+                <p className="ed-serif text-[1.35rem] text-cream-100">
+                  The Briefing <span className="ed-italic text-cream-400">— preview</span>
                 </p>
-                <p className="text-[0.68rem]" style={{ color: "var(--ink-faint)" }}>
-                  [1] The prompt is the new working paper — M. van Dijk · [2] What CSRD assurance teams actually
-                  need from AI — S. Lindqvist
-                </p>
+                <p className="ed-meta">From this week’s desk</p>
               </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-      )}
-
-      {/* ——— Prompt library teaser ——— */}
-      {on.prompts && (
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-3 rule-strong">
-          <div>
-            <h2 className="f-display text-2xl text-cream-100">The Prompt Library</h2>
-            <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
-              Vetted, guardrailed prompts for real audit, tax and finance work — written like methodology, not
-              magic tricks.
-            </p>
-          </div>
-          <Link href="/prompts" className="f-label text-cream-400 hover:text-cream-100">
-            Browse all →
-          </Link>
-        </div>
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-          {teaserPrompts.map((p, i) => (
-            <Reveal key={p.id} delay={i * 80}>
-              <Link
-                href={`/prompts/${p.slug}`}
-                className="group flex h-full flex-col border bg-navy-850 p-5 transition-colors rule hover:border-[var(--line-strong)]"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="f-mono text-[0.62rem] tracking-[0.16em] uppercase" style={{ color: "var(--ink-faint)" }}>
-                    {p.category}
-                  </span>
-                  {p.premium ? (
-                    <PlusBadge />
-                  ) : (
-                    <span className="f-mono text-[0.62rem] tracking-[0.14em] uppercase text-cream-400">Free</span>
-                  )}
-                </div>
-                <h3 className="f-display-wide mt-3 text-lg text-cream-100">{p.title}</h3>
-                <p className="mt-2 flex-1 text-sm" style={{ color: "var(--ink-muted)" }}>
-                  {p.description}
-                </p>
-                <p className="f-mono mt-4 text-[0.65rem] tracking-[0.08em]" style={{ color: "var(--ink-faint)" }}>
-                  {p.uses > 0 ? `${p.uses} uses this quarter · ` : ""}open →
-                </p>
-              </Link>
-            </Reveal>
-          ))}
-        </div>
-        <Reveal>
-          <div className="mt-6 border p-5 rule" style={{ borderColor: "var(--gold-line)", background: "rgba(201,168,76,0.04)" }}>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <p className="max-w-2xl text-sm leading-relaxed text-cream-200">
-                <span className="f-mono mr-2 text-[0.65rem] font-bold tracking-[0.16em] uppercase text-gold-300">
-                  Adapt with AI
-                </span>
-                STAI+ members hand any prompt their client, sector, jurisdiction and framework — and get it
-                rewritten for that exact engagement, guardrails intact, with a note on what changed and why.
-              </p>
-              <Link href="/plus" className="btn btn-plus-ghost premium-focus">
-                See STAI+
-              </Link>
+              <ol className="mt-2">
+                {latest.slice(0, 3).map((a, i) => (
+                  <li key={a.id} className="border-b rule last:border-b-0">
+                    <Link href={`/briefing/${a.slug}`} className="group grid grid-cols-[2.2rem_minmax(0,1fr)] gap-x-3 py-6">
+                      <span className="ed-serif ed-italic text-[1.5rem] leading-none text-cream-400">{i + 1}</span>
+                      <span>
+                        <span className="ed-meta block">{a.category}</span>
+                        <span className="ed-serif mt-2 block text-[1.4rem] leading-snug text-cream-100">
+                          <span className="ed-hl">{a.title}</span>
+                        </span>
+                        <span className="mt-2 line-clamp-2 text-[0.92rem] leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+                          {a.dek}
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
             </div>
           </div>
-        </Reveal>
-      </section>
+        </section>
       )}
 
-      {/* ——— Assessment band (cream) ——— */}
-      {on.assessment && (
-      <section className="border-y bg-cream-200 rule">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-4 py-12 sm:px-6">
-          <div className="max-w-2xl">
-            <p className="f-mono text-[0.65rem] font-semibold tracking-[0.18em] uppercase text-navy-700">
-              Free diagnostic · 3 minutes
+      {/* ═══ G. The workbench — where the page turns engineered ═════════════ */}
+      {(on.prompts || on.aiAct || on.ask || on.assessment) && (
+        <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-6 lg:pt-36" aria-labelledby="bench-heading">
+          <div className="border-t pt-6 rule-strong">
+            <p className="ed-meta">
+              <span className="text-cream-400">06</span> — The workbench
             </p>
-            <h2 className="f-display mt-2 text-3xl text-navy-900 sm:text-4xl">
-              Where does your firm actually stand?
+          </div>
+          <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:items-end">
+            <h2 id="bench-heading" className="ed-display text-[clamp(2.6rem,5.2vw,4.6rem)]">
+              <span className="block">The work gets faster.</span>
+              <span className="ed-italic block text-cream-400">The accountability does not.</span>
             </h2>
-            <p className="mt-3 text-navy-800">
-              Eight questions calibrated against how European firms are really deploying AI. Get your maturity
-              band, the gaps inspectors would find first, and the next three moves — scored instantly.
+            <p className="ed-body max-w-md">
+              Instruments built on the same evidence: prompts written like methodology, an AI Act tracker, grounded
+              answers and a diagnostic for your firm.
             </p>
           </div>
-          <Link
-            href="/assessment"
-            className="btn border-navy-900 bg-navy-900 text-cream-100 hover:bg-navy-800"
-          >
-            Take the assessment
-          </Link>
-        </div>
-      </section>
+          <div className="mt-12">
+            <Workbench
+              prompts={benchPrompts}
+              today={today}
+              show={{ prompts: on.prompts, aiAct: on.aiAct, ask: on.ask, assessment: on.assessment, plus: on.plus }}
+            />
+          </div>
+        </section>
       )}
 
-      {/* ——— Training strip ——— */}
-      {on.training && (
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-3 rule-strong">
-          <div>
-            <h2 className="f-display text-2xl text-cream-100">Training for firms</h2>
-            <p className="mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
-              Live programmes that turn licences into practice — early-bird pricing ends in {earlyBirdDays} days.
-            </p>
-          </div>
-          <Link href="/training" className="f-label text-cream-400 hover:text-cream-100">
-            Programmes &amp; booking →
+      {/* ═══ H. Close ═══════════════════════════════════════════════════════ */}
+      <section className="mx-auto max-w-7xl px-4 pb-24 pt-28 sm:px-6 lg:pb-36 lg:pt-44">
+        <h2 className="ed-display text-center text-[clamp(2.8rem,7.4vw,6.8rem)]">
+          Stay ahead of AI <span className="ed-italic">in audit</span>
+          <span className="ed-accent">.</span>
+        </h2>
+        <div className="mt-12 flex flex-wrap justify-center gap-3">
+          <Link href={on.news ? "/news" : "/insights"} className="ed-btn ed-btn-primary">
+            Explore STAI <span className="ed-arrow" aria-hidden>→</span>
           </Link>
+          {on.newsletter && (
+            <Link href="#briefing" className="ed-btn ed-btn-quiet">
+              Join The Briefing
+            </Link>
+          )}
         </div>
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-          {[
-            { name: "Copilot Beginners", price: "€1,195", note: "Half-day · foundations & scenario drills" },
-            { name: "Copilot Experienced", price: "€2,245", note: "Full day · most popular", popular: true },
-            { name: "Full AI Package", price: "€5,625", note: "Multi-week · firm-wide transformation" },
-          ].map((t, i) => (
-            <Reveal key={t.name} delay={i * 80}>
-              <Link
-                href="/training"
-                className="group block border p-5 transition-colors rule hover:border-[var(--line-strong)]"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="index-num">{String(i + 1).padStart(2, "0")}</span>
-                  {t.popular && (
-                    <span className="f-mono text-[0.62rem] font-bold tracking-[0.16em] uppercase text-cream-100">
-                      Most booked
-                    </span>
-                  )}
-                </div>
-                <h3 className="f-display-wide mt-3 text-xl text-cream-100">{t.name}</h3>
-                <p className="f-mono mt-2 text-lg font-bold tabular-nums text-cream-100">
-                  {t.price}
-                  <span className="ml-2 text-[0.65rem] font-medium" style={{ color: "var(--ink-faint)" }}>
-                    −25% early bird
-                  </span>
-                </p>
-                <p className="mt-2 text-sm" style={{ color: "var(--ink-muted)" }}>
-                  {t.note}
-                </p>
+        {(on.training || on.podcast || on.plus) && (
+          <p className="ed-meta mt-16 flex flex-wrap justify-center gap-x-6 gap-y-2">
+            <span>Also from STAI</span>
+            {on.training && (
+              <Link href="/training" className="text-cream-400 hover:text-cream-100">
+                Training for firms
               </Link>
-            </Reveal>
-          ))}
-        </div>
+            )}
+            {on.podcast && (
+              <Link href="/podcast" className="text-cream-400 hover:text-cream-100">
+                Podcast
+              </Link>
+            )}
+            {on.plus && (
+              <Link href="/plus" className="text-gold-300 hover:underline premium-focus">
+                STAI+ early access — not yet on sale
+              </Link>
+            )}
+          </p>
+        )}
       </section>
-      )}
-
-      {/* ——— STAI+ early access band (gold — premium) ——— */}
-      {on.plus && (
-      <section className="border-t rule" style={{ background: "linear-gradient(180deg, rgba(201,168,76,0.07), rgba(201,168,76,0.02))" }}>
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-4 py-12 sm:px-6">
-          <div className="max-w-2xl">
-            <p className="f-mono text-[0.65rem] font-bold tracking-[0.18em] uppercase text-gold-300">
-              STAI+ early access — not yet on sale
-            </p>
-            <h2 className="f-display mt-2 text-3xl text-cream-100 sm:text-4xl">
-              Help decide what the paid tier becomes.
-            </h2>
-            <p className="mt-3 max-w-xl" style={{ color: "var(--ink-muted)" }}>
-              STAI+ isn&apos;t open yet, and there&apos;s nothing to pay. Tell us which of the planned
-              capabilities would actually be worth it to you — the full prompt library, unlimited grounded
-              answers, implementation guides — and you&apos;ll be first in when it opens.
-            </p>
-          </div>
-          <Link href="/plus" className="btn btn-plus premium-focus">
-            Join STAI+ early access
-          </Link>
-        </div>
-      </section>
-      )}
-    </>
+    </div>
   );
 }
