@@ -36,6 +36,7 @@ import {
   type Tier,
 } from "./sources.ts";
 import type { Probe } from "./probe.ts";
+import type { Attempt, ItemStats, ProbeLite } from "./source-health.ts";
 
 // ─── Sources ──────────────────────────────────────────────────────────────
 
@@ -97,6 +98,115 @@ export async function sourcesWithHealth(): Promise<SourceWithHealth[]> {
     // dormant seeded row as "never fetched" would bury the two genuinely
     // broken feeds under forty-eight that are simply not on yet.
     health: s.active ? sourceHealth(s, now) : { state: "ok" as const, detail: "" },
+  }));
+}
+
+/* ── Source health dashboard ─────────────────────────────────────────── */
+
+/** Fetch-log rows the history strip looks back over (newest ids only). */
+const HEALTH_LOG_WINDOW = 20_000;
+/** Attempts shown per source. */
+export const HEALTH_HISTORY = 12;
+
+export type BoardRow = {
+  source: Source;
+  attempts: Attempt[];
+  probes: ProbeLite[];
+  items: ItemStats | null;
+};
+
+/**
+ * Everything the Source Health dashboard needs, in FOUR queries whatever the
+ * number of sources — never one per source.
+ *
+ *   1. the sources themselves (fetch telemetry and human dates live on the row);
+ *   2. the last HEALTH_HISTORY attempts per source, one windowed query over
+ *      the newest HEALTH_LOG_WINDOW fetch-log ids (a rowid range, so its cost
+ *      does not grow with the log's age; skips are not attempts);
+ *   3. the last two Test source runs per source, windowed the same way;
+ *   4. per-source item statistics, grouped over the covering index added in
+ *      migration 0012.
+ *
+ * A source with no attempt inside the window simply shows no history strip;
+ * its last outcome, last success and failure count are on its own row and
+ * always current.
+ */
+export async function sourceHealthBoard(now = Date.now()): Promise<BoardRow[]> {
+  const sources = await allSources();
+
+  const attemptRows = await sql().all<{
+    source_id: number; outcome: string; started_at: string; items_found: number; http_status: number | null;
+  }>(
+    `SELECT source_id, outcome, started_at, items_found, http_status FROM (
+       SELECT source_id, outcome, started_at, items_found, http_status,
+              ROW_NUMBER() OVER (PARTITION BY source_id ORDER BY id DESC) AS rn
+         FROM newsroom_fetch_log
+        WHERE id > (SELECT COALESCE(MAX(id), 0) FROM newsroom_fetch_log) - ?
+          AND outcome NOT LIKE 'skipped%'
+     ) WHERE rn <= ? ORDER BY source_id, rn`,
+    [HEALTH_LOG_WINDOW, HEALTH_HISTORY]
+  );
+
+  const probeRows = await sql().all<{
+    source_id: number; ok: number; created_at: string; http_status: number | null;
+    format: string; final_url: string; item_count: number; error: string;
+  }>(
+    `SELECT source_id, ok, created_at, http_status, format, final_url, item_count, error FROM (
+       SELECT *, ROW_NUMBER() OVER (PARTITION BY source_id ORDER BY id DESC) AS rn
+         FROM newsroom_source_probes
+     ) WHERE rn <= 2 ORDER BY source_id, rn`
+  );
+
+  const yearAgo = new Date(now - 365 * 86_400_000).toISOString();
+  const monthAgo = new Date(now - 30 * 86_400_000).toISOString();
+  const itemRows = await sql().all<{
+    source_id: number; latest: string | null; earliest_in_year: string | null; dated_in_year: number;
+    dated_total: number; recent: number; recent_undated: number;
+  }>(
+    `SELECT source_id,
+            MAX(published_at) AS latest,
+            MIN(CASE WHEN published_at >= ? THEN published_at END) AS earliest_in_year,
+            SUM(CASE WHEN published_at >= ? THEN 1 ELSE 0 END) AS dated_in_year,
+            SUM(CASE WHEN published_at IS NOT NULL THEN 1 ELSE 0 END) AS dated_total,
+            SUM(CASE WHEN retrieved_at >= ? THEN 1 ELSE 0 END) AS recent,
+            SUM(CASE WHEN retrieved_at >= ? AND published_at IS NULL THEN 1 ELSE 0 END) AS recent_undated
+       FROM newsroom_source_items
+      GROUP BY source_id`,
+    [yearAgo, yearAgo, monthAgo, monthAgo]
+  );
+
+  const attempts = new Map<number, Attempt[]>();
+  for (const r of attemptRows) {
+    const list = attempts.get(r.source_id) ?? [];
+    list.push({ outcome: r.outcome, at: r.started_at, itemsFound: r.items_found, httpStatus: r.http_status });
+    attempts.set(r.source_id, list);
+  }
+  const probes = new Map<number, ProbeLite[]>();
+  for (const r of probeRows) {
+    const list = probes.get(r.source_id) ?? [];
+    list.push({
+      ok: r.ok === 1, at: r.created_at, httpStatus: r.http_status, format: r.format,
+      finalUrl: r.final_url, itemCount: r.item_count, error: r.error,
+    });
+    probes.set(r.source_id, list);
+  }
+  const items = new Map<number, ItemStats>();
+  for (const r of itemRows) {
+    items.set(r.source_id, {
+      latestPublishedAt: r.latest,
+      earliestInYear: r.earliest_in_year,
+      datedInYear: r.dated_in_year ?? 0,
+      datedTotal: r.dated_total ?? 0,
+      recent: r.recent ?? 0,
+      recentUndated: r.recent_undated ?? 0,
+    });
+  }
+
+  return sources.map((source) => ({
+    source,
+    attempts: attempts.get(source.id) ?? [],
+    probes: probes.get(source.id) ?? [],
+    items: items.get(source.id) ?? null,
   }));
 }
 
@@ -164,11 +274,48 @@ export async function setSourceActive(id: number, active: boolean, actor: string
   );
 }
 
-export async function setSourceFetchAllowed(id: number, allowed: boolean): Promise<void> {
+/**
+ * Grant or withdraw retrieval permission.
+ *
+ * Granting it is the act of saying "I checked the terms and robots.txt", so
+ * it records who and when (`terms_checked_*`). Withdrawing leaves the last
+ * check on the record — it happened, even if the answer has changed.
+ */
+export async function setSourceFetchAllowed(id: number, allowed: boolean, actor = ""): Promise<void> {
+  if (allowed && actor) {
+    await sql().run(
+      `UPDATE newsroom_sources SET fetch_allowed=1,
+         terms_checked_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'), terms_checked_by=?,
+         updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?`,
+      [actor, id]
+    );
+    return;
+  }
   await sql().run(
     `UPDATE newsroom_sources SET fetch_allowed=?,
        updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?`,
     [allowed ? 1 : 0, id]
+  );
+}
+
+/**
+ * "A person checked this source's configuration is still appropriate."
+ *
+ * Sets `confirmed_at` and nothing else — not Active, not Retrievable, not the
+ * review status. With `termsChecked`, also records that the terms and
+ * robots.txt were re-read, which is a separate claim and so a separate tick.
+ */
+export async function confirmSource(input: { id: number; actor: string; termsChecked: boolean }): Promise<void> {
+  await sql().run(
+    input.termsChecked
+      ? `UPDATE newsroom_sources SET
+           confirmed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), confirmed_by = ?,
+           terms_checked_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), terms_checked_by = ?
+         WHERE id = ?`
+      : `UPDATE newsroom_sources SET
+           confirmed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), confirmed_by = ?
+         WHERE id = ?`,
+    input.termsChecked ? [input.actor, input.actor, input.id] : [input.actor, input.id]
   );
 }
 

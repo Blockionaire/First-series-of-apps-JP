@@ -4,6 +4,8 @@ import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 import AddSource from "./AddSource";
 import EditSourceDetails from "./EditSourceDetails";
+import { STATUS_META } from "./SourceHealthSummary";
+import type { Legal, OpStatus, Technical } from "@/lib/newsroom/source-health";
 
 export type RegistryRow = {
   id: number;
@@ -23,8 +25,6 @@ export type RegistryRow = {
   activatedBy: string | null;
   licenseNotes: string;
   retention: string;
-  health: string;
-  healthDetail: string;
   /* ── Fetch telemetry ──────────────────────────────────────────────────
    * What happened the LAST TIME WE TRIED, as distinct from when this last
    * worked. A source whose last attempt was a 404 four minutes ago and one
@@ -49,68 +49,128 @@ export type RegistryRow = {
   reviewNote: string;
   /** False when the engine has no way to read this source at all. */
   supported: boolean;
-  /** Derived server-side by `liveState`. See the dot below. */
-  status: string;
+
+  /* ── Source health (derived server-side by `assessSource`) ─────────────
+   * One operational status and the reasons for it, plus the two separate
+   * answers it is built from: does retrieval work, and may we retrieve.
+   * Never stored and never acted on — see lib/newsroom/source-health.ts.
+   */
+  status: OpStatus;
+  technical: Technical;
+  legal: Legal;
+  reasons: string[];
+  /** Needs-attention priority group (0 most urgent). */
+  group: number;
+  lastConfirmedAt: string | null;
+  lastConfirmedRel: string;
+  confirmedBy: string;
+  confirmationStale: boolean;
+  termsCheckedAt: string | null;
+  termsCheckedRel: string;
+  termsCheckedBy: string;
+  lastSuccessAt: string | null;
+  lastSuccessRel: string;
+  lastAttemptRel: string;
+  latestItemAt: string | null;
+  latestItemRel: string;
+  lastTest: { ok: boolean; at: string; rel: string; summary: string } | null;
+  /** Recent fetch attempts, oldest first. */
+  history: { kind: "ok" | "empty" | "fail"; at: string; label: string }[];
 };
 
 /**
- * What the dot means.
- *
- * Computed by `liveState` in lib/newsroom/sources.ts and passed in, NOT
- * recomputed here. The filter below selects on the same value, so the dot and
- * the filter cannot disagree — a filter that hides a row the dot calls live is
- * worse than no filter, because it is believed.
+ * The operational status, as a word and a colour. The word matters: roughly
+ * one man in twelve cannot tell the green from the red, and this table's job
+ * is at-a-glance triage. The reasons are the point — nobody should have to
+ * open a log to learn why a row is red.
  */
-const STATUS_STYLE: Record<string, { dot: string; label: string; title: string }> = {
-  live: {
-    dot: "var(--color-signal-up)",
-    label: "Live",
-    title: "On, permitted and retrieving successfully",
-  },
-  waiting: {
-    dot: "var(--color-gold-300)",
-    label: "Waiting",
-    title: "On and permitted, but nothing retrieved yet",
-  },
-  broken: {
-    dot: "var(--color-signal-down)",
-    label: "Broken",
-    title: "On and permitted, but failing — this one needs you",
-  },
-  dormant: {
-    dot: "var(--color-navy-600)",
-    label: "Not live",
-    title: "Switched off or retrieval not permitted — nothing is wrong, it is just not running",
-  },
-  excluded: {
-    dot: "var(--color-navy-600)",
-    label: "Do not use",
-    title: "Examined and rejected",
-  },
-};
-
-function StatusDot({ status }: { status: string }) {
-  const s = STATUS_STYLE[status] ?? STATUS_STYLE.dormant;
+function StatusBadge({ row }: { row: RegistryRow }) {
+  const m = STATUS_META[row.status];
   return (
-    <span className="flex items-center gap-2 whitespace-nowrap" title={s.title}>
-      <span
-        aria-hidden="true"
-        className="inline-block h-2 w-2 shrink-0 rounded-full"
-        style={{
-          background: s.dot,
-          // A ring only on the live one. It is the state being scanned for,
-          // and on a table of fifty rows a flat dot of any colour reads as
-          // decoration until something makes one of them the signal.
-          boxShadow: status === "live" ? `0 0 0 3px color-mix(in srgb, ${s.dot} 25%, transparent)` : "none",
-        }}
-      />
-      {/* The word, not only the colour. Roughly one man in twelve cannot tell
-          the green from the red, and this table's whole job is at-a-glance
-          triage. */}
-      <span className="f-mono text-[0.7rem]">{s.label}</span>
+    <span className="block">
+      <span className="flex items-center gap-2 whitespace-nowrap" title={m.title}>
+        <span aria-hidden="true" className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: m.color }} />
+        <span className="f-mono text-[0.7rem] font-bold uppercase tracking-[0.1em]" style={{ color: m.color }}>
+          {m.label}
+        </span>
+      </span>
+      {row.reasons.slice(0, 3).map((r) => (
+        <span key={r} className="mt-1 block max-w-[13rem] text-[0.68rem] leading-snug" style={{ color: "var(--ink-muted)" }}>
+          {r}
+        </span>
+      ))}
+      {row.reasons.length > 3 && (
+        <span className="mt-1 block text-[0.65rem]" style={{ color: "var(--ink-faint)" }} title={row.reasons.slice(3).join("\n")}>
+          + {row.reasons.length - 3} more
+        </span>
+      )}
     </span>
   );
 }
+
+const TECHNICAL_LABEL: Record<Technical, string> = {
+  working: "working",
+  degraded: "degraded",
+  broken: "broken",
+  untested: "untested",
+};
+const LEGAL_LABEL: Record<Legal, string> = {
+  permitted: "permitted",
+  unchecked: "unchecked",
+  restricted: "do not use",
+};
+
+/** The last dozen attempts, oldest on the left: ✓ worked, ○ empty, ✕ failed. */
+function HistoryStrip({ history }: { history: RegistryRow["history"] }) {
+  if (history.length === 0) return null;
+  return (
+    <span className="mt-1 flex items-center gap-[3px]" aria-label={`Last ${history.length} fetch attempts`}>
+      {history.map((h, i) => (
+        <span
+          key={i}
+          title={h.label}
+          className="f-mono inline-block w-[0.7rem] text-center text-[0.68rem] leading-none"
+          style={{
+            color:
+              h.kind === "ok" ? "var(--color-signal-up)" : h.kind === "empty" ? "var(--color-gold-300)" : "var(--color-signal-down)",
+          }}
+        >
+          {h.kind === "ok" ? "✓" : h.kind === "empty" ? "○" : "✕"}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** Quick filters: one choice per group, "" meaning any. */
+const QUICK: { group: "status" | "active" | "retrieval" | "tier" | "method"; id: string; label: string }[] = [
+  { group: "status", id: "attention", label: "Needs attention" },
+  { group: "status", id: "broken", label: "Broken" },
+  { group: "status", id: "unreviewed", label: "Unreviewed" },
+  { group: "status", id: "healthy", label: "Healthy" },
+  { group: "status", id: "disabled", label: "Disabled" },
+  { group: "active", id: "on", label: "Active" },
+  { group: "active", id: "off", label: "Inactive" },
+  { group: "retrieval", id: "permitted", label: "Retrieval permitted" },
+  { group: "retrieval", id: "unchecked", label: "Retrieval unchecked" },
+  { group: "tier", id: "1", label: "Tier 1" },
+  { group: "tier", id: "2", label: "Tier 2" },
+  { group: "tier", id: "3", label: "Tier 3" },
+  { group: "method", id: "feed", label: "RSS / Atom" },
+  { group: "method", id: "html_scrape", label: "HTML extractor" },
+  { group: "method", id: "json_api", label: "JSON / API" },
+];
+
+const SORTS: { id: string; label: string }[] = [
+  { id: "priority", label: "Priority (broken first)" },
+  { id: "name", label: "Name" },
+  { id: "tier", label: "Tier" },
+  { id: "success", label: "Last success, oldest first" },
+  { id: "confirmed", label: "Last confirmed, oldest first" },
+];
+
+const STATUS_RANK: Record<OpStatus, number> = { broken: 0, attention: 1, unreviewed: 2, healthy: 3, disabled: 4 };
+const epoch = (iso: string | null) => (iso ? Date.parse(iso) || 0 : 0);
 
 /** What the feed tester found. Mirrors `Probe` in lib/newsroom/probe.ts. */
 export type ProbeResult = {
@@ -213,46 +273,98 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
    */
   const [q, setQ] = useState("");
   const [fStatus, setFStatus] = useState("");
+  const [fActive, setFActive] = useState("");
+  const [fRetrieval, setFRetrieval] = useState("");
   const [fTier, setFTier] = useState("");
   const [fMethod, setFMethod] = useState("");
   const [fReview, setFReview] = useState("");
   const [fJurisdiction, setFJurisdiction] = useState("");
+  const [sort, setSort] = useState("priority");
+
+  const quick = { status: fStatus, active: fActive, retrieval: fRetrieval, tier: fTier, method: fMethod };
+  const setQuick = { status: setFStatus, active: setFActive, retrieval: setFRetrieval, tier: setFTier, method: setFMethod };
 
   const jurisdictionOptions = [
     ...new Set(sources.flatMap((s) => s.jurisdictions)),
   ].sort();
 
-  const visible = sources.filter((s) => {
-    if (fStatus && s.status !== fStatus) return false;
-    if (fTier && String(s.tier) !== fTier) return false;
-    if (fMethod && s.ingestion !== fMethod) return false;
-    if (fReview && s.reviewStatus !== fReview) return false;
-    if (fJurisdiction && !s.jurisdictions.includes(fJurisdiction)) return false;
-    if (q.trim()) {
-      // Name, domain and the feed URL together: an operator hunting a broken
-      // source usually has the URL in front of them, not the display name.
-      const hay = `${s.name} ${s.domain} ${s.feedUrl}`.toLowerCase();
-      if (!hay.includes(q.trim().toLowerCase())) return false;
+  const matches = (s: RegistryRow, g: keyof typeof quick, id: string) => {
+    if (!id) return true;
+    switch (g) {
+      case "status":
+        return s.status === id;
+      case "active":
+        return id === "on" ? s.active : !s.active;
+      case "retrieval":
+        return id === "permitted" ? s.fetchAllowed : !s.fetchAllowed;
+      case "tier":
+        return String(s.tier) === id;
+      case "method":
+        return id === "feed" ? s.ingestion === "rss" || s.ingestion === "atom" : s.ingestion === id;
     }
-    return true;
-  });
+  };
 
-  const filtered = Boolean(q.trim() || fStatus || fTier || fMethod || fReview || fJurisdiction);
+  const visible = sources
+    .filter((s) => {
+      for (const g of Object.keys(quick) as (keyof typeof quick)[]) {
+        if (!matches(s, g, quick[g])) return false;
+      }
+      if (fReview && s.reviewStatus !== fReview) return false;
+      if (fJurisdiction && !s.jurisdictions.includes(fJurisdiction)) return false;
+      if (q.trim()) {
+        // Name, domain and the feed URL together: an operator hunting a broken
+        // source usually has the URL in front of them, not the display name.
+        const hay = `${s.name} ${s.domain} ${s.feedUrl}`.toLowerCase();
+        if (!hay.includes(q.trim().toLowerCase())) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const byPriority = STATUS_RANK[a.status] - STATUS_RANK[b.status] || a.tier - b.tier || a.name.localeCompare(b.name);
+      if (sort === "name") return a.name.localeCompare(b.name);
+      if (sort === "tier") return a.tier - b.tier || byPriority;
+      if (sort === "success") return epoch(a.lastSuccessAt) - epoch(b.lastSuccessAt) || byPriority;
+      if (sort === "confirmed") return epoch(a.lastConfirmedAt) - epoch(b.lastConfirmedAt) || byPriority;
+      return byPriority;
+    });
+
+  const filtered = Boolean(q.trim() || fStatus || fActive || fRetrieval || fTier || fMethod || fReview || fJurisdiction);
   function clearFilters() {
     setQ("");
     setFStatus("");
+    setFActive("");
+    setFRetrieval("");
     setFTier("");
     setFMethod("");
     setFReview("");
     setFJurisdiction("");
   }
 
-  /** Counts across EVERY row, not the filtered view — a tally that changed as
-   *  you filtered would be useless for deciding what to filter to. */
-  const tally = sources.reduce<Record<string, number>>((acc, s) => {
-    acc[s.status] = (acc[s.status] ?? 0) + 1;
-    return acc;
-  }, {});
+  /** Counts across EVERY row, not the filtered view — a count that changed
+   *  as you filtered would be useless for deciding what to filter to. */
+  const countOf = (g: keyof typeof quick, id: string) => sources.filter((s) => matches(s, g, id)).length;
+
+  /**
+   * "A person checked this is still right." Changes no switch and no review
+   * status; with the box ticked it also records that the terms were re-read.
+   */
+  const [termsTick, setTermsTick] = useState<Record<number, boolean>>({});
+  async function confirmSource(id: number, name: string) {
+    setBusy(id);
+    setError("");
+    setMessage("");
+    try {
+      const terms = termsTick[id] === true;
+      await post({ action: "confirm", id, terms_checked: terms });
+      setTermsTick((t) => ({ ...t, [id]: false }));
+      setMessage(`${name} confirmed${terms ? " and terms re-checked" : ""}. Nothing else changed.`);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not confirm the source");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function post(body: Record<string, unknown>) {
     const res = await fetch("/api/admin/newsroom/source", {
@@ -413,35 +525,53 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
 
       {sources.length > 0 && (
         <>
-          {/* The three questions this page gets asked, as one click each.
-              Counted over every row rather than the filtered view: a tally
-              that changed as you filtered could not tell you what to filter
-              to. */}
+          {/* Quick filters, one choice per group, each with its count over
+              EVERY row. Clicking the selected chip again clears that group. */}
           <div className="mt-6 flex flex-wrap items-center gap-2">
-            {[
-              { id: "", label: `All ${sources.length}` },
-              { id: "live", label: `Live ${tally.live ?? 0}` },
-              { id: "broken", label: `Broken ${tally.broken ?? 0}` },
-              { id: "waiting", label: `Waiting ${tally.waiting ?? 0}` },
-              { id: "dormant", label: `Not live ${tally.dormant ?? 0}` },
-              { id: "excluded", label: `Do not use ${tally.excluded ?? 0}` },
-            ].map((chip) => (
-              <button
-                key={chip.id || "all"}
-                type="button"
-                onClick={() => setFStatus(chip.id)}
-                className={fStatus === chip.id ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}
-              >
-                {chip.id && (
-                  <span
-                    aria-hidden="true"
-                    className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
-                    style={{ background: STATUS_STYLE[chip.id]?.dot }}
-                  />
-                )}
-                {chip.label}
-              </button>
-            ))}
+            <button
+              type="button"
+              onClick={clearFilters}
+              className={!filtered ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}
+            >
+              All {sources.length}
+            </button>
+            {QUICK.map((c, i) => {
+              const on = quick[c.group] === c.id;
+              const newGroup = i > 0 && QUICK[i - 1].group !== c.group;
+              return (
+                <span key={`${c.group}:${c.id}`} className="contents">
+                  {newGroup && <span aria-hidden="true" className="mx-1 h-4 w-px" style={{ background: "var(--line)" }} />}
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setQuick[c.group](on ? "" : c.id)}
+                    className={on ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"}
+                  >
+                    {c.group === "status" && (
+                      <span
+                        aria-hidden="true"
+                        className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
+                        style={{ background: STATUS_META[c.id as OpStatus].color }}
+                      />
+                    )}
+                    {c.label} {countOf(c.group, c.id)}
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <label className="f-mono flex items-center gap-2 text-[0.72rem]" style={{ color: "var(--ink-faint)" }}>
+              Sort
+              <select value={sort} onChange={(e) => setSort(e.target.value)} className="input-stai-sm">
+                {SORTS.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
           <p className="f-mono mt-3 text-[0.72rem]" style={{ color: "var(--ink-faint)" }}>
@@ -469,31 +599,17 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                 <th className="py-2 pr-4">Tier</th>
                 <th className="py-2 pr-4">Jurisdiction</th>
                 <th className="py-2 pr-4">Method</th>
-                <th className="py-2 pr-4">Every</th>
                 <th className="py-2 pr-4">Review</th>
                 <th className="py-2 pr-4">Retrievable</th>
                 <th className="py-2 pr-4">Active</th>
-                <th className="py-2">Health</th>
+                <th className="py-2 pr-4">Checked by a person</th>
+                <th className="py-2">Retrieval health</th>
               </tr>
               {/* The filter row, under the labels it filters. Each control
                   sits in its own column so there is no legend to read — the
                   thing above the box says what the box narrows. */}
               <tr className="border-b rule align-top">
-                <th className="py-2 pr-4">
-                  <select
-                    aria-label="Filter by status"
-                    value={fStatus}
-                    onChange={(e) => setFStatus(e.target.value)}
-                    className="input-stai-sm w-full"
-                  >
-                    <option value="">Any</option>
-                    {["live", "waiting", "broken", "dormant", "excluded"].map((v) => (
-                      <option key={v} value={v}>
-                        {STATUS_STYLE[v].label}
-                      </option>
-                    ))}
-                  </select>
-                </th>
+                <th className="py-2 pr-4" />
                 <th className="py-2 pr-4">
                   <input
                     type="search"
@@ -504,22 +620,7 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                     className="input-stai-sm w-full"
                   />
                 </th>
-                <th className="py-2 pr-4">
-                  <select
-                    aria-label="Filter by tier"
-                    value={fTier}
-                    onChange={(e) => setFTier(e.target.value)}
-                    // The Tier column is one character wide, so `w-full`
-                    // collapsed this to a sliver with its own label clipped.
-                    // A minimum wide enough for "Any" plus the chevron.
-                    className="input-stai-sm w-full min-w-[4.5rem]"
-                  >
-                    <option value="">Any</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                  </select>
-                </th>
+                <th className="py-2 pr-4" />
                 <th className="py-2 pr-4">
                   <select
                     aria-label="Filter by jurisdiction"
@@ -531,21 +632,6 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                     {jurisdictionOptions.map((j) => (
                       <option key={j} value={j}>
                         {j}
-                      </option>
-                    ))}
-                  </select>
-                </th>
-                <th className="py-2 pr-4">
-                  <select
-                    aria-label="Filter by method"
-                    value={fMethod}
-                    onChange={(e) => setFMethod(e.target.value)}
-                    className="input-stai-sm w-full"
-                  >
-                    <option value="">Any</option>
-                    {["rss", "atom", "json_api", "html_scrape", "manual"].map((m) => (
-                      <option key={m} value={m}>
-                        {m}
                       </option>
                     ))}
                   </select>
@@ -566,6 +652,7 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                     ))}
                   </select>
                 </th>
+                <th className="py-2 pr-4" />
                 <th className="py-2 pr-4" />
                 <th className="py-2 pr-4" />
                 <th className="py-2" />
@@ -589,17 +676,9 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
               )}
               {visible.map((s) => (
                 <Fragment key={s.id}>
-                <tr className="border-b rule align-top">
+                <tr id={`source-${s.id}`} className="scroll-mt-24 border-b rule align-top">
                   <td className="py-2 pr-4">
-                    <StatusDot status={s.status} />
-                    {/* Why it is not live, where the reason is not the health
-                        column's business. An html_scrape row with no extractor
-                        reads as permitted and healthy and will never fetch. */}
-                    {!s.supported && (
-                      <span className="f-mono mt-1 block text-[0.65rem] text-gold-300">
-                        no extractor
-                      </span>
-                    )}
+                    <StatusBadge row={s} />
                   </td>
                   <td className="py-2 pr-4">
                     <span className="text-cream-200">{s.name}</span>
@@ -842,8 +921,12 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                   </td>
                   <td className="f-mono py-2 pr-4 tabular-nums text-cream-400">{s.tier}</td>
                   <td className="py-2 pr-4 text-cream-400">{s.jurisdictions.join(", ")}</td>
-                  <td className="f-mono py-2 pr-4 text-[0.72rem] text-cream-400">{s.ingestion}</td>
-                  <td className="f-mono py-2 pr-4 tabular-nums text-cream-400">{s.frequency}m</td>
+                  <td className="f-mono py-2 pr-4 text-[0.72rem] text-cream-400">
+                    {s.ingestion}
+                    <span className="block tabular-nums" style={{ color: "var(--ink-faint)" }}>
+                      every {s.frequency}m
+                    </span>
+                  </td>
 
                   {/* Where a person has got to. Deliberately NOT a permission:
                       choosing "Retrieval approved" records that somebody read
@@ -900,39 +983,83 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                       </span>
                     )}
                   </td>
-                  <td className="f-mono py-2 text-[0.72rem] text-cream-400">
-                    {s.active ? (
-                      <>
-                        <span className={s.health === "ok" ? "text-cream-400" : "text-gold-300"}>
-                          {s.health}
+                  {/* When a person last looked, and the button to say they
+                      just did. Confirming changes no switch and no review
+                      status. The terms check is a separate claim, so it is
+                      a separate tick. */}
+                  <td className="py-2 pr-4 text-[0.72rem]">
+                    <span
+                      className={s.confirmationStale ? "block text-gold-300" : "block text-cream-400"}
+                      title={s.lastConfirmedAt ? `${s.lastConfirmedAt.slice(0, 16).replace("T", " ")} UTC${s.confirmedBy ? ` · ${s.confirmedBy}` : ""}` : "Never confirmed"}
+                    >
+                      {s.lastConfirmedAt ? `Confirmed ${s.lastConfirmedRel}` : "Never confirmed"}
+                    </span>
+                    <span
+                      className="block"
+                      style={{ color: "var(--ink-faint)" }}
+                      title={s.termsCheckedAt ? `${s.termsCheckedAt.slice(0, 16).replace("T", " ")} UTC${s.termsCheckedBy ? ` · ${s.termsCheckedBy}` : ""}` : "No terms check recorded"}
+                    >
+                      Terms {s.termsCheckedAt ? `checked ${s.termsCheckedRel}` : "check not recorded"}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={busy === s.id}
+                      onClick={() => confirmSource(s.id, s.name)}
+                      className="btn btn-ghost btn-sm mt-1"
+                    >
+                      Confirm source
+                    </button>
+                    <label className="mt-1 flex items-center gap-1 text-[0.66rem]" style={{ color: "var(--ink-faint)" }}>
+                      <input
+                        type="checkbox"
+                        checked={termsTick[s.id] === true}
+                        onChange={(e) => setTermsTick((t) => ({ ...t, [s.id]: e.target.checked }))}
+                      />
+                      terms re-checked too
+                    </label>
+                  </td>
+
+                  {/* Technical and legal side by side and never merged: a
+                      feed can work perfectly and still not be ours to read. */}
+                  <td className="f-mono py-2 text-[0.7rem] text-cream-400">
+                    <span className="block whitespace-nowrap">
+                      <span style={{ color: "var(--ink-faint)" }}>technical</span>{" "}
+                      <span className={s.technical === "working" ? "text-cream-200" : s.technical === "untested" ? "" : "text-gold-300"}>
+                        {TECHNICAL_LABEL[s.technical]}
+                      </span>
+                      {" · "}
+                      <span style={{ color: "var(--ink-faint)" }}>retrieval</span>{" "}
+                      <span className={s.legal === "permitted" ? "text-cream-200" : "text-gold-300"}>{LEGAL_LABEL[s.legal]}</span>
+                    </span>
+                    <HistoryStrip history={s.history} />
+                    <span className="mt-1 block" style={{ color: "var(--ink-faint)" }}>
+                      <span title={s.lastSuccessAt ?? "never"}>last success {s.lastSuccessRel}</span>
+                      {s.lastAttemptAt && (
+                        <span className="block" title={s.lastAttemptAt}>
+                          last attempt {s.lastAttemptRel} · {s.lastOutcome}
+                          {s.lastHttpStatus ? ` ${s.lastHttpStatus}` : ""} · {s.lastItemsFound} found, {s.lastItemsNew} new
                         </span>
-                        {s.healthDetail && (
-                          <span className="block" style={{ color: "var(--ink-faint)" }}>
-                            {s.healthDetail}
-                          </span>
-                        )}
-                        {/* The last ATTEMPT, which is a different question
-                            from the last success and is usually the one being
-                            asked when a feed looks quiet. */}
-                        {s.lastAttemptAt && (
-                          <span className="block" style={{ color: "var(--ink-faint)" }}>
-                            {s.lastAttemptAt.slice(5, 16).replace("T", " ")} · {s.lastOutcome}
-                            {s.lastHttpStatus ? ` ${s.lastHttpStatus}` : ""} · {s.lastItemsFound}{" "}
-                            found, {s.lastItemsNew} new
-                          </span>
-                        )}
-                        {s.lastError && (
-                          <span className="block text-gold-300">{s.lastError.slice(0, 90)}</span>
-                        )}
-                        {s.consecutiveFailures > 0 && (
-                          <span className="block text-gold-300">
-                            {s.consecutiveFailures} consecutive failure
-                            {s.consecutiveFailures === 1 ? "" : "s"}
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span style={{ color: "var(--ink-faint)" }}>—</span>
+                      )}
+                      {s.lastTest && (
+                        <span className={s.lastTest.ok ? "block" : "block text-gold-300"} title={s.lastTest.at}>
+                          last test {s.lastTest.rel} · {s.lastTest.ok ? "usable" : "failed"} · {s.lastTest.summary}
+                        </span>
+                      )}
+                      {s.latestItemAt && (
+                        <span className="block" title={s.latestItemAt}>
+                          newest item {s.latestItemRel}
+                        </span>
+                      )}
+                    </span>
+                    {s.consecutiveFailures > 0 && (
+                      <span className="block text-gold-300">
+                        {s.consecutiveFailures} consecutive failure{s.consecutiveFailures === 1 ? "" : "s"}
+                      </span>
+                    )}
+                    {s.lastError && (
+                      <span className="block text-gold-300" title={s.lastError}>
+                        {s.lastError.slice(0, 90)}
+                      </span>
                     )}
                   </td>
                 </tr>

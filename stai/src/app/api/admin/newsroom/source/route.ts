@@ -3,6 +3,7 @@ import { currentUser } from "@/lib/auth";
 import { guard, WINDOW } from "@/lib/ratelimit";
 import {
   allSources,
+  confirmSource,
   createSource,
   recordProbe,
   setSourceActive,
@@ -40,6 +41,8 @@ import { probeFeed } from "@/lib/newsroom/probe";
  *                   because permission was granted for the old address.
  *   set_review    — records what a human concluded. Advisory: it is not read
  *                   by the fetcher, and it cannot grant retrieval.
+ *   confirm       — records that a person checked the source is still right
+ *                   (and, if ticked, re-read its terms). Changes no switch.
  *   update_details — corrects name, type, tier, jurisdictions, frequency,
  *                   retention and licence notes. Validated like `create`;
  *                   never the domain, URL or method, and it leaves both
@@ -113,7 +116,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
     if (field === "fetch_allowed") {
-      await setSourceFetchAllowed(id, value);
+      await setSourceFetchAllowed(id, value, user.email);
       return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: `Unknown field: ${field}` }, { status: 400 });
@@ -168,6 +171,19 @@ export async function POST(req: NextRequest) {
       feed_url: check.value.feed_url,
       ingestion_method: check.value.ingestion_method,
     });
+  }
+
+  if (action === "confirm") {
+    const id = Number(b.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return NextResponse.json({ error: "A source id is required" }, { status: 400 });
+    }
+    if (!(await sourceById(id))) {
+      return NextResponse.json({ error: "No such source" }, { status: 404 });
+    }
+    const termsChecked = b.terms_checked === true;
+    await confirmSource({ id, actor: user.email, termsChecked });
+    return NextResponse.json({ ok: true, termsChecked });
   }
 
   if (action === "update_details") {

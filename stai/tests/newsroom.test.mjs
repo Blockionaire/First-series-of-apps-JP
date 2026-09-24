@@ -56,8 +56,6 @@ import {
 import {
   DEFAULT_FREQUENCY,
   DEFAULT_RETENTION,
-  LIVE_STATES,
-  liveState,
   sourceHealth,
   validateSource,
 } from "../src/lib/newsroom/sources.ts";
@@ -659,87 +657,5 @@ describe("the proposed source list", () => {
     const linkedin = PROPOSED_SOURCES.find((p) => p.domain === "linkedin.com");
     assert.ok(linkedin);
     assert.equal(linkedin.ingestion_method, "manual");
-  });
-});
-
-
-/* ── The registry's status dot ──────────────────────────────────────────── */
-
-describe("what a source is actually doing", () => {
-  /** On, permitted, supported and healthy — the state being scanned for. */
-  const base = {
-    active: true,
-    fetch_allowed: true,
-    supported: true,
-    review_status: "unreviewed",
-    health: "ok",
-  };
-
-  test("on, permitted and retrieving is live", () => {
-    assert.equal(liveState(base), "live");
-  });
-
-  test("the dot reports reality, not intent", () => {
-    // `review_status` is advisory and cannot start a fetch, so it must not
-    // change this. A source switched on without being reviewed IS live, and
-    // showing it as anything else would hide exactly the situation worth
-    // seeing.
-    for (const status of ["unreviewed", "feed_verified", "retrieval_approved", "needs_fix"]) {
-      assert.equal(liveState({ ...base, review_status: status }), "live", status);
-    }
-  });
-
-  test("switched off or unpermitted is not live, and is not broken either", () => {
-    // Forty-eight dormant rows reported as problems would bury the two that
-    // genuinely need attention.
-    assert.equal(liveState({ ...base, active: false }), "dormant");
-    assert.equal(liveState({ ...base, fetch_allowed: false }), "dormant");
-    assert.equal(
-      liveState({ ...base, active: false, health: "failing" }),
-      "dormant",
-      "an inactive source is off, not failing"
-    );
-  });
-
-  test("failing and blocked need attention", () => {
-    assert.equal(liveState({ ...base, health: "failing" }), "broken");
-    assert.equal(liveState({ ...base, health: "blocked" }), "broken");
-  });
-
-  test("nothing retrieved yet is waiting, not broken", () => {
-    assert.equal(liveState({ ...base, health: "never_fetched" }), "waiting");
-    assert.equal(liveState({ ...base, health: "silent" }), "waiting");
-  });
-
-  test("a source the engine cannot read at all is broken, not waiting", () => {
-    // html_scrape with no extractor. It reads as permitted and healthy and
-    // will never fetch — the one state that never resolves on its own.
-    assert.equal(liveState({ ...base, supported: false }), "broken");
-    assert.equal(liveState({ ...base, supported: false, health: "never_fetched" }), "broken");
-  });
-
-  test("do not use outranks everything", () => {
-    // It already withdraws both permissions when set; this makes a rejected
-    // row read as a decision rather than as an ordinary dormant one.
-    assert.equal(liveState({ ...base, review_status: "do_not_use" }), "excluded");
-    assert.equal(
-      liveState({ ...base, review_status: "do_not_use", active: false }),
-      "excluded"
-    );
-  });
-
-  test("every state is one of the declared ones", () => {
-    // Guards the UI's lookup table, which falls back to "dormant" for an
-    // unknown value and would therefore show a wrong dot rather than crash.
-    for (const active of [true, false]) {
-      for (const fetch_allowed of [true, false]) {
-        for (const supported of [true, false]) {
-          for (const health of ["ok", "never_fetched", "silent", "failing", "blocked"]) {
-            const got = liveState({ ...base, active, fetch_allowed, supported, health });
-            assert.ok(LIVE_STATES.includes(got), `${got} is not a declared state`);
-          }
-        }
-      }
-    }
   });
 });

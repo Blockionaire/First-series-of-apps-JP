@@ -3,12 +3,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { pageMeta } from "@/lib/seo";
 import { currentUser } from "@/lib/auth";
-import { sourcesWithHealth } from "@/lib/newsroom/store";
+import { sourceHealthBoard } from "@/lib/newsroom/store";
 import { PROPOSED_SOURCES, proposedCountByTier } from "@/lib/newsroom/proposed-sources";
-import { TIER_MEANING, liveState, type Tier } from "@/lib/newsroom/sources";
+import { TIER_MEANING, type Tier } from "@/lib/newsroom/sources";
+import { assessSource, attentionQueue, compareByStatus, failureLabel, relativeAge } from "@/lib/newsroom/source-health";
 import { extractorFor } from "@/lib/newsroom/extractors";
 import { jurisdictionLabel } from "@/lib/newsroom/jurisdictions";
-import SourceRegistry from "@/components/admin/SourceRegistry";
+import SourceRegistry, { type RegistryRow } from "@/components/admin/SourceRegistry";
+import SourceHealthSummary from "@/components/admin/SourceHealthSummary";
 
 export const dynamic = "force-dynamic";
 
@@ -38,11 +40,120 @@ export default async function SourcesPage() {
   const user = await currentUser();
   if (!user || user.role !== "admin") redirect("/login?next=/admin/editorial/sources");
 
-  const sources = await sourcesWithHealth();
+  const now = Date.now();
+  const board = await sourceHealthBoard(now);
+  const sources = board.map((b) => b.source);
   const proposedByTier = proposedCountByTier();
 
+  // One assessment per source, used by the summary and the table alike.
+  const rows: RegistryRow[] = board
+    .map(({ source: s, attempts, probes, items }) => {
+      const supported = s.ingestion_method !== "html_scrape" || extractorFor(s.domain) !== null;
+      const a = assessSource(
+        {
+          tier: s.authority_tier,
+          active: s.active,
+          fetchAllowed: s.fetch_allowed,
+          reviewStatus: s.review_status,
+          reviewedAt: s.reviewed_at,
+          confirmedAt: s.confirmed_at,
+          termsCheckedAt: s.terms_checked_at,
+          supported,
+          fetchFrequency: s.fetch_frequency,
+          lastAttemptAt: s.last_attempt_at,
+          lastSuccessAt: s.last_success_at,
+          lastOutcome: s.last_outcome,
+          lastHttpStatus: s.last_http_status,
+          lastError: s.last_error,
+          consecutiveFailures: s.consecutive_failures,
+          attempts,
+          probes,
+          items,
+        },
+        now
+      );
+      const probe = probes[0];
+      return {
+        id: s.id,
+        name: s.name,
+        domain: s.domain,
+        tier: s.authority_tier,
+        type: s.source_type,
+        jurisdictions: s.jurisdictions.map(jurisdictionLabel),
+        jurisdictionCodes: s.jurisdictions,
+        ingestion: s.ingestion_method,
+        feedUrl: s.feed_url,
+        frequency: s.fetch_frequency,
+        fetchAllowed: s.fetch_allowed,
+        active: s.active,
+        activatedBy: s.activated_by,
+        licenseNotes: s.license_notes,
+        retention: s.snapshot_retention,
+        lastAttemptAt: s.last_attempt_at,
+        lastOutcome: s.last_outcome,
+        lastHttpStatus: s.last_http_status,
+        lastError: s.last_error,
+        lastItemsFound: s.last_items_found,
+        lastItemsNew: s.last_items_new,
+        consecutiveFailures: s.consecutive_failures,
+        // Whether the engine can read this source AT ALL. Computed here
+        // rather than in the browser so the extractor allowlist stays a
+        // server-side fact with one implementation.
+        supported,
+        reviewStatus: s.review_status,
+        reviewedBy: s.reviewed_by,
+        reviewedAt: s.reviewed_at,
+        reviewNote: s.review_note,
+        // ── Source health (derived; see lib/newsroom/source-health.ts) ──
+        status: a.status,
+        technical: a.technical,
+        legal: a.legal,
+        reasons: a.reasons.map((r) => r.text),
+        group: a.group,
+        lastConfirmedAt: a.lastConfirmedAt,
+        lastConfirmedRel: relativeAge(a.lastConfirmedAt, now),
+        confirmedBy: s.confirmed_by || s.reviewed_by,
+        confirmationStale: a.confirmationStale,
+        termsCheckedAt: s.terms_checked_at,
+        termsCheckedRel: relativeAge(s.terms_checked_at, now),
+        termsCheckedBy: s.terms_checked_by,
+        lastSuccessAt: s.last_success_at,
+        lastSuccessRel: relativeAge(s.last_success_at, now),
+        lastAttemptRel: relativeAge(s.last_attempt_at, now),
+        latestItemAt: items?.latestPublishedAt ?? null,
+        latestItemRel: relativeAge(items?.latestPublishedAt ?? null, now),
+        lastTest: probe
+          ? {
+              ok: probe.ok,
+              at: probe.at,
+              rel: relativeAge(probe.at, now),
+              summary: probe.ok
+                ? `${probe.itemCount} item${probe.itemCount === 1 ? "" : "s"} · ${probe.format}`
+                : (probe.error || (probe.httpStatus ? `HTTP ${probe.httpStatus}` : "failed")).slice(0, 90),
+            }
+          : null,
+        // Oldest first, so the strip reads left to right like a timeline.
+        history: [...attempts].reverse().map((t) => ({
+          kind: (t.outcome === "ok" || t.outcome === "not_modified"
+            ? "ok"
+            : t.outcome === "empty_feed"
+              ? "empty"
+              : "fail") as "ok" | "empty" | "fail",
+          at: t.at,
+          label: `${t.at.slice(0, 16).replace("T", " ")} · ${
+            t.outcome === "ok" || t.outcome === "not_modified" || t.outcome === "empty_feed"
+              ? `${t.outcome.replace(/_/g, " ")} · ${t.itemsFound} items`
+              : failureLabel(t.outcome, t.httpStatus, "")
+          }`,
+        })),
+      };
+    })
+    .sort(compareByStatus);
+
+  const queue = attentionQueue(rows, 10);
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[104rem] px-4 py-10 sm:px-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="f-label" style={{ color: "var(--ink-faint)" }}>
@@ -75,6 +186,8 @@ export default async function SourcesPage() {
         </Link>
       </header>
 
+      <SourceHealthSummary rows={rows} queue={queue} />
+
       <section className="mt-8 grid gap-4 sm:grid-cols-3">
         {([1, 2, 3] as const).map((t: Tier) => (
           <div key={t} className="border p-4 rule">
@@ -94,52 +207,7 @@ export default async function SourcesPage() {
       </section>
 
       <SourceRegistry
-        sources={sources.map((s) => ({
-          id: s.id,
-          name: s.name,
-          domain: s.domain,
-          tier: s.authority_tier,
-          type: s.source_type,
-          jurisdictions: s.jurisdictions.map(jurisdictionLabel),
-          jurisdictionCodes: s.jurisdictions,
-          ingestion: s.ingestion_method,
-          feedUrl: s.feed_url,
-          frequency: s.fetch_frequency,
-          fetchAllowed: s.fetch_allowed,
-          active: s.active,
-          activatedBy: s.activated_by,
-          licenseNotes: s.license_notes,
-          retention: s.snapshot_retention,
-          health: s.health.state,
-          healthDetail: s.health.detail,
-          lastAttemptAt: s.last_attempt_at,
-          lastOutcome: s.last_outcome,
-          lastHttpStatus: s.last_http_status,
-          lastError: s.last_error,
-          lastItemsFound: s.last_items_found,
-          lastItemsNew: s.last_items_new,
-          consecutiveFailures: s.consecutive_failures,
-          // Whether the engine can read this source AT ALL. Computed here
-          // rather than in the browser so the extractor allowlist stays a
-          // server-side fact with one implementation — a second copy in the
-          // client would be the version that drifts.
-          supported:
-            s.ingestion_method !== "html_scrape" ||
-            extractorFor(s.domain) !== null,
-          status: liveState({
-            active: s.active,
-            fetch_allowed: s.fetch_allowed,
-            review_status: s.review_status,
-            supported:
-              s.ingestion_method !== "html_scrape" ||
-              extractorFor(s.domain) !== null,
-            health: s.health.state,
-          }),
-          reviewStatus: s.review_status,
-          reviewedBy: s.reviewed_by,
-          reviewedAt: s.reviewed_at,
-          reviewNote: s.review_note,
-        }))}
+        sources={rows}
         proposedCount={PROPOSED_SOURCES.length}
         alreadyLoaded={sources.length > 0}
       />

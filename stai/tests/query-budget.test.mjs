@@ -195,4 +195,19 @@ describe("admin screens stay inside one invocation", { skip }, () => {
   for (const p of ["/admin", "/admin/editorial", "/admin/editorial/sources", "/admin/people", "/admin/growth", "/admin/settings", "/admin/content", "/admin/prompts"]) {
     test(p, async () => within(`${p} (admin)`, await cost(p, admin), ADMIN_CEILING));
   }
+
+  test("the source health dashboard costs the same for 51 sources as for none", async () => {
+    // Its health, history, tests and item statistics are four set-based
+    // queries, never one per source (lib/newsroom/store.ts sourceHealthBoard).
+    const empty = await cost("/admin/editorial/sources", admin);
+    const res = await fetch(`${BASE}/api/admin/newsroom/source`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: admin },
+      body: JSON.stringify({ action: "load_proposal" }),
+    });
+    assert.equal(res.status, 200);
+    const full = await cost("/admin/editorial/sources", admin);
+    within("/admin/editorial/sources (51 sources)", full, 10);
+    assert.equal(full.queries.length, empty.queries.length, `${empty.queries.length} queries empty, ${full.queries.length} with 51 sources`);
+  });
 });

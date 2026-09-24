@@ -1085,7 +1085,7 @@ describe("the review status is advisory, not a permission", { skip }, () => {
 
 /* ── Scanning the registry ──────────────────────────────────────────────── */
 
-describe("the registry can be scanned and filtered", { skip }, () => {
+describe("the source health dashboard", { skip }, () => {
   const DOMAIN = "stai-status-test.invalid";
   let sourceId;
 
@@ -1107,74 +1107,143 @@ describe("the registry can be scanned and filtered", { skip }, () => {
   });
 
   const page = () => authed("/admin/editorial/sources").then((r) => r.text());
-
-  test("every row carries a status, and a new one is not live", async () => {
-    // Registered, never activated: nothing is wrong with it, it is just not
-    // running. Reporting that as a problem would bury the real ones.
+  /** The rendered row for the test source, with React's text-node markers removed. */
+  const row = async () => {
     const html = await page();
-    assert.match(html, /Not live/, "no dormant state rendered");
-    assert.ok(!/>Live</.test(html.split("Status test source")[1] ?? ""), "a dormant row read as live");
+    const at = html.indexOf(`id="source-${sourceId}"`);
+    assert.ok(at > 0, "the row carries its anchor");
+    return html.slice(at, html.indexOf("</tr>", at)).replace(/<!-- -->/g, "");
+  };
+  const src = () => one("SELECT * FROM newsroom_sources WHERE id=?", [sourceId]);
+
+  test("a new source is Unreviewed, and says why", async () => {
+    const r = await row();
+    assert.match(r, />Unreviewed</);
+    assert.match(r, /Not yet reviewed/);
   });
 
-  test("the counts are rendered and add up", async () => {
-    const html = await page();
+  test("the summary, the attention list and the counts are rendered", async () => {
+    const html = (await page()).replace(/<!-- -->/g, "");
+    for (const label of ["Total sources", "Healthy", "Needs attention", "Broken", "Unreviewed", "Active", "Retrieval permitted", "Needs your attention"]) {
+      assert.ok(html.includes(label), `no "${label}"`);
+    }
     const total = one("SELECT COUNT(*) n FROM newsroom_sources").n;
     assert.match(html, new RegExp(`All ${total}\\b`), "the all-count does not match the registry");
-    // React splits text around an expression with `<!-- -->` markers in SSR,
-    // so "Showing {n} of {m}" is not contiguous in the served HTML.
-    // React splits text around an expression with `<!-- -->` markers in SSR,
-    // so "Showing {n} of {m}" is not contiguous in the served HTML.
+    assert.match(html, /Tier 1 healthy \d+\/\d+/);
     assert.match(html, /Showing[\s\S]{0,30}?\d+[\s\S]{0,30}?of[\s\S]{0,30}?\d+/);
   });
 
-  test("the header carries a filter for each column that has one", async () => {
-    const html = await page();
-    for (const label of [
-      "Filter by status",
-      "Filter by name, domain or URL",
-      "Filter by tier",
-      "Filter by jurisdiction",
-      "Filter by method",
-      "Filter by review status",
-    ]) {
+  test("quick filters and search are offered", async () => {
+    const html = (await page()).replace(/<!-- -->/g, "");
+    for (const label of ["Needs attention", "Retrieval unchecked", "Tier 3", "HTML extractor", "JSON / API", "Filter by name, domain or URL", "Filter by jurisdiction", "Filter by review status"]) {
       assert.ok(html.includes(label), `no ${label} control`);
     }
   });
 
-  test("a live source reads as live", async () => {
-    // Activated, permitted, and given a successful fetch. The state the whole
-    // column exists to make findable.
+  test("reviewed, on, permitted and fetching: Healthy", async () => {
+    await post({ action: "set_review", id: sourceId, status: "feed_verified", note: "" });
     await post({ action: "set_flag", id: sourceId, field: "active", value: true });
     await post({ action: "set_flag", id: sourceId, field: "fetch_allowed", value: true });
     exec(
-      "UPDATE newsroom_sources SET last_success_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
+      `UPDATE newsroom_sources SET last_success_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+         last_attempt_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'), last_outcome='ok' WHERE id=?`,
       [sourceId]
     );
-    const html = await page();
-    const row = html.split("Status test source")[0] ?? "";
-    assert.match(row.slice(-2000), /Live/, "an active, permitted, healthy source did not read as live");
+    const r = await row();
+    assert.match(r, />Healthy</);
+    const text = r.replace(/<[^>]+>/g, "");
+    assert.match(text, /technical\s*working/);
+    assert.match(text, /retrieval\s*permitted/);
   });
 
-  test("a failing source reads as broken, not live", async () => {
-    exec("UPDATE newsroom_sources SET consecutive_failures=9 WHERE id=?", [sourceId]);
-    const html = await page();
-    assert.match(html, /Broken/, "a failing source did not read as broken");
+  test("one failure is Attention with the error; repeated failures are Broken", async () => {
+    exec("UPDATE newsroom_sources SET consecutive_failures=1, last_outcome='http_error', last_http_status=503 WHERE id=?", [sourceId]);
+    let r = await row();
+    assert.match(r, />Attention</);
+    assert.match(r, /1 recent fetch failure — HTTP 503/);
+
+    exec("UPDATE newsroom_sources SET consecutive_failures=4, last_http_status=404 WHERE id=?", [sourceId]);
+    r = await row();
+    assert.match(r, />Broken</);
+    assert.match(r, /4 consecutive fetch failures — HTTP 404/);
+    const html = (await page()).replace(/<!-- -->/g, "");
+    const list = html.slice(html.indexOf("Needs your attention"), html.indexOf("</ol>", html.indexOf("Needs your attention")));
+    assert.match(list, /Status test source/, "a broken Tier 1 source is on the attention list");
   });
 
-  test("withdrawing the source returns it to not live", async () => {
-    exec("UPDATE newsroom_sources SET consecutive_failures=0 WHERE id=?", [sourceId]);
+  test("on but not permitted is a retrieval problem, not a technical one", async () => {
+    exec("UPDATE newsroom_sources SET consecutive_failures=0, last_outcome='ok', last_http_status=200 WHERE id=?", [sourceId]);
+    await post({ action: "set_flag", id: sourceId, field: "fetch_allowed", value: false });
+    const r = await row();
+    assert.match(r, />Attention</);
+    assert.match(r, /retrieval permission unchecked/);
+    assert.match(r.replace(/<[^>]+>/g, ""), /retrieval\s*unchecked/);
+  });
+
+  test("switched off after review: Disabled", async () => {
     await post({ action: "set_flag", id: sourceId, field: "active", value: false });
-    const html = await page();
-    const row = html.split("Status test source")[0] ?? "";
-    assert.match(row.slice(-2000), /Not live/, "a switched-off source still read as live");
+    await post({ action: "set_review", id: sourceId, status: "retrieval_approved", note: "" });
+    await post({ action: "set_flag", id: sourceId, field: "fetch_allowed", value: true });
+    const r = await row();
+    assert.match(r, />Disabled</);
+    assert.match(r, /Switched off/);
   });
 
-  test("the status is a word as well as a colour", async () => {
-    // Roughly one man in twelve cannot tell the green from the red, and this
-    // table's whole job is at-a-glance triage.
-    const html = await page();
-    for (const word of ["Live", "Broken", "Waiting", "Not live"]) {
-      assert.ok(html.includes(word), `${word} is not written anywhere`);
-    }
+  test("rendering the dashboard changes nothing", async () => {
+    const before = src();
+    await page();
+    await page();
+    assert.deepEqual(src(), before, "the dashboard is read-only");
   });
 });
+
+describe("confirming a source", { skip }, () => {
+  const efrag = () => one("SELECT * FROM newsroom_sources WHERE domain='efrag.org'");
+
+  test("records who and when, and changes nothing else", async () => {
+    const before = efrag();
+    assert.equal(before.confirmed_at, null, "nothing is confirmed by the migration");
+    const { status, json } = await post({ action: "confirm", id: before.id });
+    assert.equal(status, 200, JSON.stringify(json));
+    const after = efrag();
+    assert.ok(after.confirmed_at, "confirmed_at set");
+    assert.equal(after.confirmed_by, ADMIN_EMAIL);
+    assert.equal(after.terms_checked_at, before.terms_checked_at, "the terms were not claimed as checked");
+    const strip = (row) => {
+      const rest = { ...row };
+      delete rest.confirmed_at;
+      delete rest.confirmed_by;
+      return rest;
+    };
+    assert.deepEqual(strip(after), strip(before), "active, retrieval, review and every other field unchanged");
+  });
+
+  test("with the box ticked, it also records a terms check", async () => {
+    const before = efrag();
+    await post({ action: "confirm", id: before.id, terms_checked: true });
+    const after = efrag();
+    assert.ok(after.terms_checked_at);
+    assert.equal(after.terms_checked_by, ADMIN_EMAIL);
+    assert.equal(after.fetch_allowed, before.fetch_allowed, "a terms check does not grant retrieval");
+    assert.equal(after.review_status, before.review_status);
+  });
+
+  test("ticking Retrievable records the terms check with the admin's name", async () => {
+    const s = one("SELECT * FROM newsroom_sources WHERE domain='esma.europa.eu'");
+    assert.equal(s.terms_checked_at, null);
+    await post({ action: "set_flag", id: s.id, field: "fetch_allowed", value: true });
+    const after = one("SELECT * FROM newsroom_sources WHERE id=?", [s.id]);
+    assert.ok(after.terms_checked_at);
+    assert.equal(after.terms_checked_by, ADMIN_EMAIL);
+    await post({ action: "set_flag", id: s.id, field: "fetch_allowed", value: false });
+    assert.ok(one("SELECT terms_checked_at FROM newsroom_sources WHERE id=?", [s.id]).terms_checked_at, "withdrawing keeps the record of the last check");
+  });
+
+  test("unknown source 404; signed-out caller refused", async () => {
+    assert.equal((await post({ action: "confirm", id: 999999 })).status, 404);
+    const before = efrag();
+    assert.equal((await post({ action: "confirm", id: before.id }, false)).status, 403);
+    assert.equal(efrag().confirmed_at, before.confirmed_at);
+  });
+});
+
