@@ -633,6 +633,43 @@ describe("the dry run surfaces it", { skip }, () => {
     assert.match(html, /Rejected:/);
   });
 
+  // The first member of a story, in the order the card lists them, so it is
+  // among the originals shown before anything is expanded.
+  const firstOriginal = () =>
+    one(
+      `SELECT ss.story_id, i.canonical_url, i.title
+         FROM newsroom_story_sources ss
+         JOIN newsroom_source_items i ON i.id = ss.source_item_id
+         JOIN newsroom_sources s ON s.id = i.source_id
+        WHERE ss.story_id = (SELECT MIN(story_id) FROM newsroom_story_sources)
+        ORDER BY s.authority_tier ASC, i.retrieved_at ASC LIMIT 1`
+    );
+  const html = (s) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
+  const re = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const linkTo = (item) =>
+    new RegExp(
+      `<a href="${re(html(item.canonical_url))}" target="_blank" rel="noreferrer noopener"[^>]*>${re(html(item.title))}`
+    );
+
+  test("every card links to its original articles without being expanded", async () => {
+    const item = firstOriginal();
+    assert.ok(item, "the run produced stories with items");
+    const page = await (await get("/admin/editorial/dry-run")).text();
+    // Server-rendered with every card closed, so a match here is a link the
+    // reviewer sees without clicking "Gates and sources".
+    assert.match(page, linkTo(item), `no link to ${item.canonical_url} labelled "${item.title}"`);
+    // React separates adjacent text nodes with <!-- --> in server HTML.
+    assert.match(page.replace(/<!-- -->/g, ""), /Original articles?</);
+  });
+
+  test("the story's full record links to its original articles too", async () => {
+    const item = firstOriginal();
+    const page = await (await get(`/admin/editorial/${item.story_id}`)).text();
+    assert.match(page, linkTo(item));
+    assert.match(page.replace(/<!-- -->/g, ""), /Original articles \(\d+\)/);
+  });
+
   test("a signed-out visitor cannot see any of it", async () => {
     const res = await fetch(`${BASE}/admin/editorial/dry-run`, { redirect: "manual" });
     assert.ok([302, 307, 308].includes(res.status));

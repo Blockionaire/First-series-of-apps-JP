@@ -11,6 +11,7 @@ import {
   recentRuns,
   storyMembers,
 } from "@/lib/newsroom/store";
+import { externalHref } from "@/lib/newsroom/links";
 import { limit } from "@/lib/site-config";
 import DryRunCandidates, { type CandidateCard } from "@/components/admin/DryRunCandidates";
 import RunDiscovery from "@/components/admin/RunDiscovery";
@@ -83,8 +84,12 @@ export default async function DryRunPage({ searchParams }: Props) {
         primary: c.primary_source_count,
         feedbackCount: c.feedback_count,
         sources: members.map((m) => ({
+          itemId: m.item_id,
           name: m.source_name,
           tier: m.tier,
+          title: m.title,
+          // Only http(s) becomes a link; anything else renders as text.
+          href: externalHref(m.canonical_url),
           url: m.canonical_url,
           relationship: m.relationship,
           publishedAt: m.published_at,

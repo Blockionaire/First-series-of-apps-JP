@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { hostOf } from "@/lib/newsroom/links";
 
 export type Gate = { id: string; label: string; passed: boolean; detail: string };
 
@@ -39,8 +40,13 @@ export type CandidateCard = {
   primary: number;
   feedbackCount: number;
   sources: {
+    itemId: number;
     name: string;
     tier: number;
+    /** The item's own headline, as retrieved. */
+    title: string;
+    /** `url` when it is http(s), else null — never a `javascript:` link. */
+    href: string | null;
     url: string;
     relationship: string;
     /* The raw ingested dates, per item. Without these there is no way to see
@@ -70,6 +76,47 @@ const VERDICTS = [
  * can say "you were wrong to drop that", and nobody can say it about
  * something they cannot see.
  */
+/** Items shown on the card before "Gates and sources" is opened. */
+const VISIBLE_ORIGINALS = 3;
+
+/**
+ * One retrieved document, linked to where it was published.
+ *
+ * The headline is the link text rather than "open": in a story that merged
+ * several items, which one a link leads to is the whole question. The host is
+ * shown beside it so a reader can see where the click goes before making it.
+ * Opens in a new tab, without a referrer, so the publisher does not learn the
+ * back-office address.
+ */
+function Original({ s }: { s: CandidateCard["sources"][number] }) {
+  const label = s.title.trim() || s.url;
+  return (
+    <>
+      <span className="f-mono text-[0.7rem] text-gold-300">T{s.tier}</span>{" "}
+      <span className="text-cream-200">{s.name}</span>{" "}
+      {s.href ? (
+        <a
+          href={s.href}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="underline underline-offset-4 text-cream-400 hover:text-cream-100"
+        >
+          {label}
+          <span aria-hidden="true"> ↗</span>
+          <span className="sr-only"> (opens the original in a new tab)</span>
+        </a>
+      ) : (
+        <span style={{ color: "var(--ink-muted)" }} title="Not an http(s) address, so not linked">
+          {label}
+        </span>
+      )}{" "}
+      <span className="f-mono text-[0.68rem]" style={{ color: "var(--ink-faint)" }}>
+        {hostOf(s.url)}
+      </span>
+    </>
+  );
+}
+
 export default function DryRunCandidates({ cards }: { cards: CandidateCard[] }) {
   const router = useRouter();
   const [open, setOpen] = useState<number | null>(null);
@@ -171,6 +218,28 @@ export default function DryRunCandidates({ cards }: { cards: CandidateCard[] }) 
               {c.updateCount > 0 && ` · updated ${c.updateCount}× (items joined or revised)`}
             </p>
 
+            {/* The originals, without opening anything: checking what the
+                engine actually read is the first thing a reviewer does. */}
+            {c.sources.length > 0 && (
+              <div className="mt-3">
+                <p className="f-label" style={{ color: "var(--ink-faint)" }}>
+                  Original {c.sources.length === 1 ? "article" : "articles"}
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {c.sources.slice(0, VISIBLE_ORIGINALS).map((s) => (
+                    <li key={s.itemId} className="text-[0.8rem]">
+                      <Original s={s} />
+                    </li>
+                  ))}
+                </ul>
+                {c.sources.length > VISIBLE_ORIGINALS && !isOpen && (
+                  <p className="f-mono mt-1 text-[0.68rem]" style={{ color: "var(--ink-faint)" }}>
+                    + {c.sources.length - VISIBLE_ORIGINALS} more under “Gates and sources”
+                  </p>
+                )}
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => setOpen(isOpen ? null : c.id)}
@@ -204,18 +273,9 @@ export default function DryRunCandidates({ cards }: { cards: CandidateCard[] }) 
                 </p>
                 <ul className="mt-2 space-y-1">
                   {c.sources.map((s) => (
-                    <li key={s.url} className="text-[0.8rem]">
-                      <span className="f-mono text-[0.7rem] text-gold-300">T{s.tier}</span>{" "}
-                      <span className="text-cream-200">{s.name}</span>{" "}
-                      <span style={{ color: "var(--ink-faint)" }}>({s.relationship})</span>{" "}
-                      <a
-                        href={s.url}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="underline underline-offset-4 text-cream-400 hover:text-cream-100"
-                      >
-                        open
-                      </a>
+                    <li key={s.itemId} className="text-[0.8rem]">
+                      <Original s={s} />{" "}
+                      <span style={{ color: "var(--ink-faint)" }}>({s.relationship})</span>
                       {/* The dates exactly as ingested. A feed that supplies no
                           date at all and one that supplies an old date look
                           identical from the story's summary line, and they are

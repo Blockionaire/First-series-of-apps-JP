@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { pageMeta } from "@/lib/seo";
 import { currentUser } from "@/lib/auth";
-import { storyById, storyHistory } from "@/lib/newsroom/store";
+import { storyById, storyHistory, storyMembers } from "@/lib/newsroom/store";
+import { externalHref, hostOf } from "@/lib/newsroom/links";
 import { jurisdictionLabel } from "@/lib/newsroom/jurisdictions";
 import { mayEnterResearch, mayReachReview, nextStates, isRiskClass } from "@/lib/newsroom/state";
 
@@ -43,6 +44,7 @@ export default async function StoryPage({ params }: Props) {
   if (!story) notFound();
 
   const history = await storyHistory(storyId);
+  const members = await storyMembers(storyId);
 
   const researchGate = mayEnterResearch({
     tier1: story.tier1_source_count,
@@ -120,6 +122,49 @@ export default async function StoryPage({ params }: Props) {
           <p className="mt-4 text-[0.8rem] text-gold-300">
             Escalated by {story.escalated_by}: {story.escalated_reason}
           </p>
+        )}
+      </section>
+
+      <section className="mt-8">
+        <h2 className="f-label border-b pb-3 rule-strong" style={{ color: "var(--ink-faint)" }}>
+          Original articles ({members.length})
+        </h2>
+        {members.length === 0 ? (
+          <p className="mt-3 text-sm" style={{ color: "var(--ink-muted)" }}>
+            No retrieved items are attached to this story.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {members.map((m) => {
+              const href = externalHref(m.canonical_url);
+              const label = m.title.trim() || m.canonical_url;
+              return (
+                <li key={m.item_id} className="text-sm">
+                  <span className="f-mono text-[0.7rem] text-gold-300">T{m.tier}</span>{" "}
+                  <span className="text-cream-200">{m.source_name}</span>{" "}
+                  {href ? (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="underline underline-offset-4 text-cream-400 hover:text-cream-100"
+                    >
+                      {label}
+                      <span aria-hidden="true"> ↗</span>
+                      <span className="sr-only"> (opens the original in a new tab)</span>
+                    </a>
+                  ) : (
+                    <span style={{ color: "var(--ink-muted)" }}>{label}</span>
+                  )}
+                  <span className="f-mono block text-[0.68rem]" style={{ color: "var(--ink-faint)" }}>
+                    {hostOf(m.canonical_url)} · {m.relationship} · published{" "}
+                    {m.published_at ? m.published_at.slice(0, 16).replace("T", " ") : "— none in the feed"} ·
+                    retrieved {m.retrieved_at.slice(0, 16).replace("T", " ")}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </section>
 
