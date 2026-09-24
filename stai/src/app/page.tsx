@@ -76,9 +76,10 @@ function Meta({ a, withAuthor = false }: { a: ArticleSummary; withAuthor?: boole
 function SectionHead({ n, label, title, link }: { n: string; label: string; title: React.ReactNode; link?: { href: string; text: string } }) {
   return (
     <div className="grid gap-6 border-t pt-6 rule-strong md:grid-cols-[minmax(0,1fr)_minmax(0,3fr)_auto] md:items-baseline">
-      <p className="ed-meta">
-        <span className="text-cream-400">{n}</span> — {label}
-      </p>
+      <p className="ed-kicker">
+            <span className="ed-num">{n}</span>
+            {label}
+          </p>
       <h2 className="ed-display text-[clamp(2.1rem,4.4vw,3.6rem)]">{title}</h2>
       {link && (
         <Link href={link.href} className="ed-link text-sm md:justify-self-end">
@@ -137,11 +138,11 @@ export default async function Home() {
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
         {/* Masthead line: the page dated like a front page. */}
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b py-4 rule">
-          <p className="ed-meta">{copy["home.eyebrow"] || "The intelligence layer for AI in audit"}</p>
+          <p className="ed-kicker">{copy["home.eyebrow"] || "The intelligence layer for AI in audit"}</p>
           <p className="ed-meta">{editionDate(now)} · Amsterdam</p>
         </div>
 
-        <div className="pb-16 pt-16 sm:pt-24 lg:pb-24 lg:pt-32">
+        <div className="pb-12 pt-12 sm:pt-20 lg:pb-20 lg:pt-24">
           <h1 className="ed-display max-w-[15ch] text-[clamp(3rem,9.2vw,8.6rem)] sm:max-w-none">
             <span className="block">
               {line1}
@@ -155,7 +156,7 @@ export default async function Home() {
             )}
           </h1>
 
-          <div className="mt-14 grid gap-12 lg:mt-20 lg:grid-cols-[minmax(0,5fr)_minmax(0,1fr)_minmax(0,4fr)] lg:items-end">
+          <div className="mt-8 grid gap-10 sm:mt-10 lg:mt-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,1fr)_minmax(0,4fr)] lg:items-end">
             <div>
               <p className="ed-body max-w-[34rem] text-[1.15rem] sm:text-[1.25rem]">{copy["home.sub"]}</p>
               <div className="mt-9 flex flex-wrap gap-3">
@@ -174,7 +175,7 @@ export default async function Home() {
             <ul className="lg:col-start-3" aria-label="What STAI tells you">
               {["Know what changed.", "Know what matters.", "Know what to do next."].map((t, i) => (
                 <li key={t} className="flex items-baseline gap-5 border-t py-3 rule last:border-b">
-                  <span className="ed-meta w-6">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="ed-num w-6 text-[1.15rem]">{i + 1}</span>
                   <span className="ed-serif text-[1.45rem] leading-tight text-cream-100 sm:text-[1.65rem]">{t}</span>
                 </li>
               ))}
@@ -201,7 +202,7 @@ export default async function Home() {
 
       {/* ═══ B. Latest intelligence — the front page ═════════════════════════ */}
       {lead && (
-        <section className="mx-auto max-w-7xl px-4 pt-20 sm:px-6 lg:pt-28" aria-labelledby="latest-heading">
+        <section className="mx-auto max-w-7xl px-4 pt-14 sm:px-6 sm:pt-16 lg:pt-24" aria-labelledby="latest-heading">
           <div id="latest-heading">
             <SectionHead
               n="01"
@@ -211,26 +212,53 @@ export default async function Home() {
             />
           </div>
 
-          <div className="mt-12 grid gap-14 lg:mt-16 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
+          <div className="mt-10 grid gap-12 lg:mt-12 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
             {/* The lead: visibly the most important thing on the page. */}
             <article className="group">
               <Link href={`/briefing/${lead.slug}`} className="block">
+                {/* The lead story's file card: its real filing metadata set as a
+                    document, in place of a photograph. Decorative for screen
+                    readers, which get the same facts as text just below. */}
                 <div className="ed-plate" aria-hidden>
-                  <p className="ed-meta absolute left-7 top-7">Lead story</p>
-                  <p className="ed-meta absolute right-7 top-7">{lead.kind === "insight" ? "Insight" : "News"}</p>
-                  <span className="ed-plate-rule absolute left-7 top-14 h-px w-10" />
-                  <p className="ed-meta absolute bottom-7 right-7 hidden sm:block">{fmtDate(lead.published_at)}</p>
-                  <p className="ed-display ed-italic absolute bottom-6 left-7 right-7 text-[clamp(2.6rem,6vw,5rem)]">
-                    {lead.category}
-                  </p>
+                  <div className="ed-plate-head">
+                    <span>STAI · Lead story</span>
+                    <span>
+                      {lead.kind === "insight" ? "Insight" : "News"}
+                      {lead.premium ? " · STAI+" : ""}
+                    </span>
+                  </div>
+                  <div className="ed-plate-body">
+                    <p className="ed-plate-cat">{lead.category}</p>
+                    <span className="ed-plate-rule" />
+                    {lead.tags.length > 0 && (
+                      <p className="ed-plate-filed">
+                        <span>Filed under</span>
+                        {lead.tags.slice(0, 3).join(" · ")}
+                      </p>
+                    )}
+                  </div>
+                  <dl className="ed-plate-ledger">
+                    <div>
+                      <dt>Published</dt>
+                      <dd>{fmtDate(lead.published_at)}</dd>
+                    </div>
+                    <div>
+                      <dt>Reading</dt>
+                      <dd>{lead.reading_min} min</dd>
+                    </div>
+                    <div>
+                      <dt>Section</dt>
+                      <dd>{lead.category}</dd>
+                    </div>
+                  </dl>
                 </div>
-                <div className="mt-7">
+                <div className="sr-only">
                   <Meta a={lead} />
                 </div>
-                <h3 className="ed-display mt-4 text-[clamp(2rem,3.6vw,3.25rem)] leading-[1.02]">
+                <h3 className="ed-display mt-6 text-[clamp(2rem,3.6vw,3.25rem)] leading-[1.02]">
                   <span className="ed-hl">{lead.title}</span>
                 </h3>
-                <p className="ed-body mt-5 max-w-2xl">{lead.dek}</p>
+                <p className="ed-body mt-4 max-w-2xl max-sm:line-clamp-4">{lead.dek}</p>
                 <p className="mt-5 text-sm text-cream-400">
                   By <span className="text-cream-100">{lead.author}</span>
                   {lead.author_role ? <span>, {lead.author_role}</span> : null}
@@ -238,17 +266,17 @@ export default async function Home() {
               </Link>
             </article>
 
-            {/* Secondary stories: ruled, not boxed. */}
-            <div>
+            {/* Secondary stories: ruled, not boxed. Two-up on tablets. */}
+            <div className="md:grid md:grid-cols-2 md:gap-x-8 lg:block">
               {secondary.map((a, i) => (
                 <Reveal key={a.id} delay={i * 90}>
-                  <article className={`group border-t py-7 rule ${i === 0 ? "lg:border-t-0 lg:pt-0" : ""}`}>
+                  <article className={`group border-t py-6 rule ${i === 0 ? "lg:border-t-0 lg:pt-0" : ""}`}>
                     <Link href={`/briefing/${a.slug}`} className="block">
                       <Meta a={a} />
                       <h3 className="ed-serif mt-3 text-[1.6rem] leading-[1.12] text-cream-100 sm:text-[1.8rem]">
                         <span className="ed-hl">{a.title}</span>
                       </h3>
-                      <p className="mt-3 line-clamp-2 text-[0.95rem] leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+                      <p className="mt-3 line-clamp-2 text-[0.95rem] leading-relaxed max-sm:hidden" style={{ color: "var(--ink-muted)" }}>
                         {a.dek}
                       </p>
                       <p className="mt-3 text-[0.85rem] text-cream-400">By {a.author}</p>
@@ -261,8 +289,8 @@ export default async function Home() {
 
           {/* On the wire: the rest of the week, as a quiet list. */}
           {wire.length > 0 && (
-            <div className="mt-16 border-t pt-6 rule-strong">
-              <p className="ed-meta">Also on the desk</p>
+            <div className="mt-12 border-t pt-5 rule-strong">
+              <p className="ed-kicker">Also on the desk</p>
               <ul className="mt-4 grid gap-x-10 sm:grid-cols-2">
                 {wire.map((a) => (
                   <li key={a.id} className="border-b rule">
@@ -284,18 +312,19 @@ export default async function Home() {
       )}
 
       {/* ═══ C. Point of view ═══════════════════════════════════════════════ */}
-      <section className="ed-night mt-24 lg:mt-36" aria-labelledby="pov-heading">
-        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:py-36">
-          <p className="ed-meta">
-            <span className="text-cream-400">02</span> — Point of view
+      <section className="ed-night mt-16 sm:mt-20 lg:mt-24" aria-labelledby="pov-heading">
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
+          <p className="ed-kicker">
+            <span className="ed-num">02</span>
+            Point of view
           </p>
-          <h2 id="pov-heading" className="ed-display mt-10 text-[clamp(3rem,8.5vw,8rem)]">
+          <h2 id="pov-heading" className="ed-display mt-8 text-[clamp(3rem,8.5vw,8rem)]">
             <span className="block">AI moves fast.</span>
             <span className="ed-italic block text-cream-400">
               Audit cannot guess<span className="ed-accent">.</span>
             </span>
           </h2>
-          <div className="mt-20 grid gap-10 md:grid-cols-3 lg:mt-28">
+          <div className="mt-14 grid gap-8 md:grid-cols-3 lg:mt-20">
             {[
               ["Evidence before hype.", "Every claim is dated, sourced and traceable to the text that makes it true."],
               ["Judgement stays human.", "Tools can draft, sort and summarise. Signing an opinion remains a professional act."],
@@ -316,19 +345,19 @@ export default async function Home() {
 
       {/* ═══ D. The intelligence system — a table of contents ═══════════════ */}
       {system.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-6 lg:pt-36">
+        <section className="mx-auto max-w-7xl px-4 pt-16 sm:px-6 sm:pt-20 lg:pt-24">
           <SectionHead n="03" label="The intelligence layer" title={<>From signal <span className="ed-italic">to working paper</span></>} />
           <p className="ed-body mt-6 max-w-xl md:ml-[25%]">
             One evidence base behind all of it. Everything STAI publishes and builds draws on the same sourced, dated record.
           </p>
-          <ul className="mt-14 border-t rule-strong">
+          <ul className="mt-10 border-t rule-strong">
             {system.map((s, i) => (
               <li key={s.name} className="border-b rule">
                 <Link
                   href={s.href}
-                  className="ed-row group grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-1 px-1 py-6 md:grid-cols-[4rem_minmax(0,2.2fr)_minmax(0,2fr)_minmax(0,3fr)_2rem] md:py-8"
+                  className="ed-row group grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-1 px-1 py-4 md:grid-cols-[4rem_minmax(0,2.2fr)_minmax(0,2fr)_minmax(0,3fr)_2rem] md:py-6"
                 >
-                  <span className="ed-meta">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="ed-num text-[1.15rem]">{i + 1}</span>
                   <span className="ed-display text-[clamp(1.9rem,3.4vw,3rem)]">{s.name}</span>
                   <span className="ed-arrow text-xl text-cream-400 md:order-last" aria-hidden>
                     →
@@ -347,19 +376,20 @@ export default async function Home() {
       )}
 
       {/* ═══ E. Evidence ═══════════════════════════════════════════════════ */}
-      <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-6 lg:pt-36" aria-labelledby="evidence-heading">
+      <section className="mx-auto max-w-7xl px-4 pt-16 sm:px-6 sm:pt-20 lg:pt-24" aria-labelledby="evidence-heading">
         <div className="border-t pt-6 rule-strong">
-          <p className="ed-meta">
-            <span className="text-cream-400">04</span> — Evidence
+          <p className="ed-kicker">
+            <span className="ed-num">04</span>
+            Evidence
           </p>
         </div>
-        <div className="mt-10 grid gap-16 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-20">
+        <div className="mt-8 grid gap-12 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-20">
           <div>
             <h2 id="evidence-heading" className="ed-display text-[clamp(2.6rem,5.6vw,5rem)]">
               <span className="block">Evidence first.</span>
               <span className="ed-italic block text-cream-400">Interpretation second.</span>
             </h2>
-            <dl className="mt-12 grid gap-x-10 gap-y-8 sm:grid-cols-2">
+            <dl className="mt-8 grid gap-x-10 gap-y-5 sm:mt-10 sm:grid-cols-2 sm:gap-y-6">
               {[
                 ["Primary sources", "Regulation is cited to the text itself, not to someone’s summary of it."],
                 ["Source tiers", "Issuing bodies settle facts. Commentary adds context. Chatter only starts a search."],
@@ -367,7 +397,7 @@ export default async function Home() {
                 ["Human review", "An editor stands behind every published piece. Nothing is claimed that cannot be shown."],
               ].map(([k, v]) => (
                 <div key={k} className="border-t pt-4 rule">
-                  <dt className="ed-meta text-cream-400">{k}</dt>
+                  <dt className="ed-kicker text-cream-100">{k}</dt>
                   <dd className="mt-2 text-[0.98rem] leading-relaxed" style={{ color: "var(--ink-muted)" }}>
                     {v}
                   </dd>
@@ -410,13 +440,14 @@ export default async function Home() {
 
       {/* ═══ F. The Briefing ═══════════════════════════════════════════════ */}
       {on.newsletter && (
-        <section id="briefing" className="mx-auto max-w-7xl scroll-mt-24 px-4 pt-24 sm:px-6 lg:pt-36" aria-labelledby="briefing-heading">
-          <div className="grid gap-14 border-t pt-6 rule-strong lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-20">
+        <section id="briefing" className="mx-auto max-w-7xl scroll-mt-24 px-4 pt-16 sm:px-6 sm:pt-20 lg:pt-24" aria-labelledby="briefing-heading">
+          <div className="grid gap-12 border-t pt-6 rule-strong md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:gap-10 lg:gap-20">
             <div>
-              <p className="ed-meta">
-                <span className="text-cream-400">05</span> — The Briefing
-              </p>
-              <h2 id="briefing-heading" className="ed-display mt-10 text-[clamp(2.6rem,5.2vw,4.6rem)]">
+              <p className="ed-kicker">
+            <span className="ed-num">05</span>
+            The Briefing
+          </p>
+              <h2 id="briefing-heading" className="ed-display mt-8 text-[clamp(2.6rem,5.2vw,4.6rem)]">
                 <span className="block">The Briefing.</span>
                 <span className="ed-italic block text-cream-400">Weekly. Only what matters.</span>
               </h2>
@@ -427,7 +458,7 @@ export default async function Home() {
               <div className="mt-8 max-w-md">
                 <NewsletterForm source="home" />
               </div>
-              <p className="ed-meta mt-4">No spam · one email when it starts</p>
+              <p className="mt-4 text-[0.8rem]" style={{ color: "var(--ink-faint)" }}>No spam — one email when it starts.</p>
             </div>
 
             {/* A preview set like the publication it will be — built from the
@@ -437,19 +468,19 @@ export default async function Home() {
                 <p className="ed-serif text-[1.35rem] text-cream-100">
                   The Briefing <span className="ed-italic text-cream-400">— preview</span>
                 </p>
-                <p className="ed-meta">From this week’s desk</p>
+                <p className="ed-kicker">From this week’s desk</p>
               </div>
               <ol className="mt-2">
                 {latest.slice(0, 3).map((a, i) => (
                   <li key={a.id} className="border-b rule last:border-b-0">
-                    <Link href={`/briefing/${a.slug}`} className="group grid grid-cols-[2.2rem_minmax(0,1fr)] gap-x-3 py-6">
+                    <Link href={`/briefing/${a.slug}`} className="group grid grid-cols-[2.2rem_minmax(0,1fr)] gap-x-3 py-4 sm:py-5">
                       <span className="ed-serif ed-italic text-[1.5rem] leading-none text-cream-400">{i + 1}</span>
                       <span>
                         <span className="ed-meta block">{a.category}</span>
                         <span className="ed-serif mt-2 block text-[1.4rem] leading-snug text-cream-100">
                           <span className="ed-hl">{a.title}</span>
                         </span>
-                        <span className="mt-2 line-clamp-2 text-[0.92rem] leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+                        <span className="mt-2 line-clamp-2 text-[0.92rem] leading-relaxed max-sm:hidden" style={{ color: "var(--ink-muted)" }}>
                           {a.dek}
                         </span>
                       </span>
@@ -464,13 +495,14 @@ export default async function Home() {
 
       {/* ═══ G. The workbench — where the page turns engineered ═════════════ */}
       {(on.prompts || on.aiAct || on.ask || on.assessment) && (
-        <section className="mx-auto max-w-7xl px-4 pt-24 sm:px-6 lg:pt-36" aria-labelledby="bench-heading">
+        <section className="mx-auto max-w-7xl px-4 pt-16 sm:px-6 sm:pt-20 lg:pt-24" aria-labelledby="bench-heading">
           <div className="border-t pt-6 rule-strong">
-            <p className="ed-meta">
-              <span className="text-cream-400">06</span> — The workbench
-            </p>
+            <p className="ed-kicker">
+            <span className="ed-num">06</span>
+            The workbench
+          </p>
           </div>
-          <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:items-end">
+          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:items-end">
             <h2 id="bench-heading" className="ed-display text-[clamp(2.6rem,5.2vw,4.6rem)]">
               <span className="block">The work gets faster.</span>
               <span className="ed-italic block text-cream-400">The accountability does not.</span>
@@ -480,7 +512,7 @@ export default async function Home() {
               answers and a diagnostic for your firm.
             </p>
           </div>
-          <div className="mt-12">
+          <div className="mt-10">
             <Workbench
               prompts={benchPrompts}
               today={today}
@@ -491,12 +523,12 @@ export default async function Home() {
       )}
 
       {/* ═══ H. Close ═══════════════════════════════════════════════════════ */}
-      <section className="mx-auto max-w-7xl px-4 pb-24 pt-28 sm:px-6 lg:pb-36 lg:pt-44">
+      <section className="mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 sm:pb-20 lg:pb-24 lg:pt-28">
         <h2 className="ed-display text-center text-[clamp(2.8rem,7.4vw,6.8rem)]">
           Stay ahead of AI <span className="ed-italic">in audit</span>
           <span className="ed-accent">.</span>
         </h2>
-        <div className="mt-12 flex flex-wrap justify-center gap-3">
+        <div className="mt-10 flex flex-wrap justify-center gap-3">
           <Link href={on.news ? "/news" : "/insights"} className="ed-btn ed-btn-primary">
             Explore STAI <span className="ed-arrow" aria-hidden>→</span>
           </Link>
@@ -507,7 +539,7 @@ export default async function Home() {
           )}
         </div>
         {(on.training || on.podcast || on.plus) && (
-          <p className="ed-meta mt-16 flex flex-wrap justify-center gap-x-6 gap-y-2">
+          <p className="mt-10 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[0.85rem]" style={{ color: "var(--ink-faint)" }}>
             <span>Also from STAI</span>
             {on.training && (
               <Link href="/training" className="text-cream-400 hover:text-cream-100">
@@ -521,7 +553,7 @@ export default async function Home() {
             )}
             {on.plus && (
               <Link href="/plus" className="text-gold-300 hover:underline premium-focus">
-                STAI+ early access — not yet on sale
+                STAI+ early access, not yet on sale
               </Link>
             )}
           </p>

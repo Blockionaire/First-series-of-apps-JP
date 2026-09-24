@@ -670,29 +670,113 @@ html:has(.home-ed) .btn-ghost:hover { background: rgba(29, 25, 21, 0.05); }
   color: var(--color-cream-200);
 }
 
-/* Editorial plate: a deliberate placeholder where original photography or
-   illustration would go. Typography, not stock imagery. */
+/* The lead story's file card. Not a placeholder for a photograph: the story's
+   own filing metadata — category, filed-under tags, dates — set like the
+   cover sheet of a working-paper file. Mono appears here only because every
+   value in the head and ledger is data. */
 .ed-plate {
   position: relative;
-  aspect-ratio: 16 / 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  aspect-ratio: 2 / 1;
+  padding: 1.5rem 1.75rem 1.4rem;
   background:
-    radial-gradient(120% 90% at 85% 10%, rgba(124, 32, 39, 0.22), transparent 60%),
+    radial-gradient(90% 120% at 100% 0%, rgba(124, 32, 39, 0.26), transparent 55%),
     var(--ed-night);
   color: #efe7da;
-  overflow: hidden;
 }
 @media (min-width: 640px) and (max-width: 1023px) {
-  .ed-plate { aspect-ratio: 21 / 9; }
+  .ed-plate { aspect-ratio: 5 / 2; }
 }
-.ed-plate .ed-display { color: #efe7da; }
-.ed-plate-rule { background: #b3464d; }
-.ed-plate .ed-meta { color: rgba(239, 231, 218, 0.7); }
-.ed-plate::after {
-  content: "";
-  position: absolute;
-  inset: 14px;
-  border: 1px solid rgba(239, 231, 218, 0.16);
-  pointer-events: none;
+@media (max-width: 639px) {
+  .ed-plate { aspect-ratio: auto; min-height: 16rem; padding: 1.25rem; }
+}
+.ed-plate-head,
+.ed-plate-ledger dt,
+.ed-plate-filed > span {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(239, 231, 218, 0.62);
+}
+.ed-plate-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid rgba(239, 231, 218, 0.16);
+}
+.ed-plate-body { padding: 1.4rem 0 1.2rem; }
+.ed-plate-cat {
+  font-family: var(--ed-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(2.6rem, 5.4vw, 4.8rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: #efe7da;
+}
+.ed-plate-rule {
+  display: block;
+  width: 2.75rem;
+  height: 1px;
+  margin: 1.1rem 0 0.95rem;
+  background: #b3464d;
+}
+.ed-plate-filed {
+  font-family: var(--ed-serif);
+  font-style: italic;
+  font-size: 1.1rem;
+  line-height: 1.35;
+  color: rgba(239, 231, 218, 0.84);
+}
+.ed-plate-filed > span {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-style: normal;
+}
+.ed-plate-ledger {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid rgba(239, 231, 218, 0.16);
+}
+.ed-plate-ledger > div { padding-top: 0.85rem; min-width: 0; }
+.ed-plate-ledger > div + div {
+  border-left: 1px solid rgba(239, 231, 218, 0.16);
+  padding-left: 1rem;
+}
+.ed-plate-ledger dd {
+  margin-top: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: #efe7da;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Section kicker: the editorial label. Sans with a serif numeral — the mono
+   voice is kept for evidence (dates, categories, sources), not for chrome. */
+.ed-kicker {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--ink-muted);
+}
+.ed-num {
+  font-family: var(--ed-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.1em;
+  color: var(--color-cream-400);
+  font-feature-settings: "onum";
 }
 
 /* The workbench: where the page turns engineered. */
