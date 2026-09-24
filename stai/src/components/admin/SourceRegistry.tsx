@@ -1066,6 +1066,11 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                 {detailsOpen === s.id && (
                   <tr className="border-b rule">
                     <td colSpan={10} className="py-3">
+                      {/* The table scrolls sideways on narrow screens, and this
+                          cell spans all of it. Pinned to the visible part and
+                          no wider than the screen, so the form and its Save
+                          button are never off to one side of a phone. */}
+                      <div className="sticky left-0 max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-3rem)]">
                       <EditSourceDetails
                         source={{
                           id: s.id,
@@ -1090,6 +1095,7 @@ export default function SourceRegistry({ sources, proposedCount, alreadyLoaded }
                           );
                         }}
                       />
+                      </div>
                     </td>
                   </tr>
                 )}
