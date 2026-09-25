@@ -145,6 +145,90 @@ describe("free launch", { skip: hasBuild ? false : "no standalone build" }, () =
     }
   });
 
+  test("the back office is not counted as traffic", async () => {
+    const post = (path) =>
+      fetch(`${BASE}/api/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "page_view", path }),
+      });
+
+    const before = db();
+    const n0 = before.prepare("SELECT COUNT(*) AS n FROM events WHERE kind='page_view'").get().n;
+    before.close();
+
+    // Admin surfaces record nothing, and are not handed a visitor token —
+    // otherwise looking at the dashboard would inflate the dashboard.
+    for (const p of ["/admin", "/admin/growth", "/admin/people"]) {
+      const res = await post(p);
+      assert.equal(res.status, 200, `${p} should be accepted but ignored`);
+      assert.equal((await res.json()).recorded, false, `${p} must not be recorded`);
+      assert.equal(
+        res.headers.getSetCookie().filter((c) => c.startsWith("stai_v=")).length,
+        0,
+        `${p} must not mint a visitor token`
+      );
+    }
+
+    // Whole segments only. A bare startsWith("/admin") would swallow this one,
+    // and any future public path that merely begins with those letters.
+    for (const p of ["/administrators", "/account"]) {
+      assert.equal((await (await post(p)).json()).recorded, undefined, `${p} should still be recorded`);
+    }
+
+    const after = db();
+    const rows = after
+      .prepare("SELECT path FROM events WHERE kind='page_view' ORDER BY id DESC LIMIT 12")
+      .all()
+      .map((r) => r.path);
+    const n1 = after.prepare("SELECT COUNT(*) AS n FROM events WHERE kind='page_view'").get().n;
+    after.close();
+
+    assert.ok(!rows.some((p) => p === "/admin" || p.startsWith("/admin/")), `admin paths leaked: ${rows}`);
+    assert.ok(rows.includes("/administrators"), "the non-admin lookalike should be there");
+    assert.equal(n1 - n0, 2, "exactly the two public paths should have been added");
+  });
+
+  test("every icon surface serves the mark, and they share one source", async () => {
+    const html = await (await fetch(`${BASE}/`)).text();
+
+    // Declared: the tab icon, the high-resolution icon, the iOS touch icon
+    // and the manifest. A phone reads a different one of these from a laptop,
+    // which is how a stale icon survives on one device and not the other.
+    for (const rel of [
+      /<link rel="icon" href="\/favicon\.ico"/,
+      /<link rel="icon" href="\/icon\.png/,
+      /<link rel="apple-touch-icon" href="\/apple-icon\.png/,
+      /<link rel="manifest" href="\/manifest\.webmanifest"/,
+    ]) {
+      assert.match(html, rel, `the document must declare ${rel}`);
+    }
+
+    // Served, with the right media type — a manifest served as HTML is
+    // ignored silently by Chrome.
+    for (const [p, type] of [
+      ["/favicon.ico", /image\//],
+      ["/icon.png", /image\/png/],
+      ["/apple-icon.png", /image\/png/],
+      ["/manifest.webmanifest", /application\/manifest\+json/],
+    ]) {
+      const res = await fetch(BASE + p);
+      assert.equal(res.status, 200, `${p} should be served`);
+      assert.match(res.headers.get("content-type") ?? "", type, `${p} content type`);
+    }
+
+    const manifest = await (await fetch(`${BASE}/manifest.webmanifest`)).json();
+    // One source of truth: the manifest must reuse the same files the <link>
+    // tags point at. Copies in public/ are how two of three surfaces get
+    // updated and the third keeps showing last year's mark.
+    const srcs = new Set(manifest.icons.map((i) => i.src));
+    assert.deepEqual([...srcs].sort(), ["/apple-icon.png", "/icon.png"]);
+    assert.ok(
+      manifest.icons.some((i) => i.purpose === "maskable"),
+      "Android crops adaptive icons; without a maskable entry it pads onto a white plate"
+    );
+  });
+
   test("analytics stores no identifying data", () => {
     const d = db();
     const cols = d.prepare("PRAGMA table_info(events)").all().map((c) => c.name);
@@ -166,7 +250,15 @@ describe("free launch", { skip: hasBuild ? false : "no standalone build" }, () =
   });
 
   test("admin surfaces reject anonymous users", async () => {
-    for (const [p, expected] of [["/admin", 307], ["/admin/growth", 307], ["/api/admin/early-access.csv", 403]]) {
+    for (const [p, expected] of [
+      ["/admin", 307],
+      ["/admin/growth", 307],
+      ["/admin/people", 307],
+      ["/api/admin/early-access.csv", 403],
+      ["/api/admin/export/accounts", 403],
+      ["/api/admin/export/newsletter", 403],
+      ["/api/admin/live", 403],
+    ]) {
       const res = await fetch(BASE + p, { redirect: "manual" });
       assert.equal(res.status, expected, `${p} should return ${expected}`);
     }

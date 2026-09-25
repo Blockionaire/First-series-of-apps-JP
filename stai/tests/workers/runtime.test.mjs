@@ -187,8 +187,16 @@ describe("Workers runtime — it is genuinely D1, not SQLite", { skip }, () => {
   });
 
   test("migrations and seed were applied by wrangler, not by the Worker", () => {
+    // Compared against migrations/ on disk rather than a hardcoded list: the
+    // claim is that wrangler applied EVERY migration in order, not that there
+    // happen to be two of them.
+    const onDisk = fs
+      .readdirSync(path.join(ROOT, "migrations"))
+      .filter((f) => f.endsWith(".sql"))
+      .sort();
     const migrations = d1("SELECT name FROM d1_migrations ORDER BY id").map((r) => r.name);
-    assert.deepEqual(migrations, ["0001_initial_schema.sql", "0002_indexes.sql"]);
+    assert.ok(onDisk.length >= 3, "the migration set should not have shrunk");
+    assert.deepEqual(migrations, onDisk, "wrangler applied every migration, in order");
 
     const [a] = d1("SELECT COUNT(*) n, SUM(status='published') pub FROM articles");
     assert.equal(a.n, 11);
@@ -225,7 +233,7 @@ describe("Workers runtime — it is genuinely D1, not SQLite", { skip }, () => {
 describe("Workers runtime — public surface", { skip }, () => {
   test("every public route answers 200", async () => {
     const routes = [
-      "/", "/briefing", "/prompts", "/ask", "/firms", "/training", "/assessment",
+      "/", "/news", "/insights", "/prompts", "/firms", "/training", "/assessment",
       "/plus", "/podcast", "/research", "/about", "/contact", "/ai-act",
       "/legal/company", "/legal/privacy", "/legal/terms", "/login", "/signup",
       "/authors/stai-editorial", "/sitemap.xml", "/robots.txt", "/feed.xml",
@@ -233,6 +241,20 @@ describe("Workers runtime — public surface", { skip }, () => {
     for (const r of routes) {
       assert.equal((await get(r)).status, 200, `${r} should be 200`);
     }
+  });
+
+  test("the two routes that are deliberately not 200 are the ones we expect", async () => {
+    // /briefing became /news in the restructure. It keeps answering, as a
+    // permanent redirect, because the address is in an already-served sitemap,
+    // in the RSS feed, and in whatever anyone bookmarked.
+    const moved = await get("/briefing");
+    assert.equal(moved.status, 308, "/briefing must redirect rather than 404");
+    assert.equal(new URL(moved.headers.get("location"), BASE).pathname, "/news");
+
+    // Ask STAI ships switched off, and switched off means the route is closed,
+    // not merely unlinked. This is the assertion that would catch it shipping
+    // open by accident.
+    assert.equal((await get("/ask")).status, 404, "/ask is switched off and must 404");
   });
 
   test("every published briefing and prompt answers 200", async () => {

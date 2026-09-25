@@ -4,7 +4,7 @@ import { allArticles } from "@/lib/content";
 export const dynamic = "force-dynamic";
 
 export default async function NotFound() {
-  const latest = (await allArticles()).slice(0, 4);
+  const latest = await allArticles(4);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
@@ -19,7 +19,7 @@ export default async function NotFound() {
       </p>
 
       <div className="mt-7 flex flex-wrap gap-3">
-        <Link href="/briefing" className="btn btn-primary">
+        <Link href="/news" className="btn btn-primary">
           Open the Briefing
         </Link>
         <Link href="/ask" className="btn btn-ghost">

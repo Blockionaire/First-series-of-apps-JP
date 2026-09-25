@@ -1,0 +1,13 @@
+-- The publisher's own label for an item.
+--
+-- Anthropic tags each newsroom entry ("Announcements", "Policy", "Product");
+-- the Commission labels CEAOB material by kind ("Report", "Consultation",
+-- "Plenary meeting conclusions", "Work programme"). Both answer the editorial
+-- question a headline often does not: what sort of thing is this.
+--
+-- Stored verbatim, as the publisher wrote it. Mapping it onto an internal
+-- taxonomy would be a judgement made at retrieval time, where nobody can
+-- review it; the Inbox shows the source's own word and a human decides.
+--
+-- Empty string rather than NULL, matching every other text column here.
+ALTER TABLE newsroom_source_items ADD COLUMN category TEXT NOT NULL DEFAULT '';

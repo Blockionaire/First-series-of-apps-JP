@@ -12,20 +12,42 @@ import EnforcementClock from "@/components/chrome/EnforcementClock";
 import Reveal from "@/components/Reveal";
 import { LeadCard, IndexCard, RowCard } from "@/components/ArticleCard";
 import { PlusBadge } from "@/components/Logo";
+import { SITE, pageMeta } from "@/lib/seo";
+import { enabledMap, homeCopy } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * The homepage states its own canonical like every other page.
+ *
+ * It used to inherit one from the root layout, which happened to be correct
+ * here and wrong everywhere else. `absoluteTitle` because this title already
+ * carries the brand and the layout's `%s — STAI` template would repeat it.
+ */
+export const metadata = pageMeta({
+  title: `STAI — ${SITE.tagline}`,
+  description: SITE.description,
+  path: "/",
+  absoluteTitle: true,
+});
 
 export default async function Home() {
   const featured = await featuredArticles();
   const lead = featured[0];
   const secondary = featured.slice(1, 4);
-  const latest = (await allArticles()).slice(0, 6);
+  const latest = await allArticles(6);
   const prompts = await allPrompts();
   const teaserPrompts = prompts
     .filter((p) => !p.premium)
     .slice(0, 2)
     .concat(prompts.filter((p) => p.premium).slice(0, 1));
   const earlyBirdDays = daysUntil(EARLY_BIRD_END_ISO);
+  // The homepage's own words, and which sections it is allowed to show. Both
+  // come from site settings, so an operator can change the headline or close a
+  // section without a deploy — and a section whose page is switched off never
+  // renders a link into a 404.
+  const copy = await homeCopy();
+  const on = await enabledMap();
 
   return (
     <>
@@ -35,24 +57,31 @@ export default async function Home() {
         <div className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-14 pt-14 sm:px-6 lg:grid-cols-[1.5fr_1fr] lg:gap-16 lg:pb-20 lg:pt-20">
           <div>
             <p className="f-label" style={{ color: "var(--ink-muted)" }}>
-              STAI — Signal &amp; Training for Audit Intelligence
+              {copy["home.eyebrow"] || `STAI — ${SITE.tagline}`}
             </p>
             <h1 className="f-display mt-5 text-[clamp(2.6rem,7vw,5.2rem)] text-cream-100">
-              AI is rewriting the audit.
-              <br />
-              <span className="text-cream-400">Stay the one who checks.</span>
+              {copy["home.headline"]}
+              {copy["home.headline2"] && (
+                <>
+                  <br />
+                  <span className="text-cream-400">{copy["home.headline2"]}</span>
+                </>
+              )}
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed" style={{ color: "var(--ink-muted)" }}>
-              The intelligence desk for audit, accountancy and finance professionals across Europe — sharp
-              editorial, audit-grade prompts, and answers grounded in cited evidence. Built the way you work.
+              {copy["home.sub"]}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/briefing" className="btn btn-primary">
-                Read the Briefing
-              </Link>
-              <Link href="/ai-act" className="btn btn-ghost">
-                What changes on 2 August
-              </Link>
+              {copy["home.cta1.label"] && (
+                <Link href={copy["home.cta1.href"] || "/news"} className="btn btn-primary">
+                  {copy["home.cta1.label"]}
+                </Link>
+              )}
+              {copy["home.cta2.label"] && (
+                <Link href={copy["home.cta2.href"] || "/ai-act"} className="btn btn-ghost">
+                  {copy["home.cta2.label"]}
+                </Link>
+              )}
             </div>
           </div>
 
@@ -120,7 +149,7 @@ export default async function Home() {
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
         <div className="flex items-baseline justify-between border-b pb-3 rule-strong">
           <h2 className="f-display text-2xl text-cream-100">The Briefing</h2>
-          <Link href="/briefing" className="f-label text-cream-400 hover:text-cream-100">
+          <Link href="/news" className="f-label text-cream-400 hover:text-cream-100">
             Full desk →
           </Link>
         </div>
@@ -153,7 +182,7 @@ export default async function Home() {
                 <RowCard key={a.id} a={a} />
               ))}
             </div>
-            <Link href="/briefing" className="f-label mt-4 inline-block text-cream-400 hover:text-cream-100">
+            <Link href="/news" className="f-label mt-4 inline-block text-cream-400 hover:text-cream-100">
               Open the Radar view →
             </Link>
           </aside>
@@ -161,6 +190,7 @@ export default async function Home() {
       </section>
 
       {/* ——— Ask STAI teaser ——— */}
+      {on.ask && (
       <section className="border-y bg-navy-850 rule">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-2 lg:gap-16">
           <Reveal>
@@ -211,8 +241,10 @@ export default async function Home() {
           </Reveal>
         </div>
       </section>
+      )}
 
       {/* ——— Prompt library teaser ——— */}
+      {on.prompts && (
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-3 rule-strong">
           <div>
@@ -271,8 +303,10 @@ export default async function Home() {
           </div>
         </Reveal>
       </section>
+      )}
 
       {/* ——— Assessment band (cream) ——— */}
+      {on.assessment && (
       <section className="border-y bg-cream-200 rule">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-4 py-12 sm:px-6">
           <div className="max-w-2xl">
@@ -295,8 +329,10 @@ export default async function Home() {
           </Link>
         </div>
       </section>
+      )}
 
       {/* ——— Training strip ——— */}
+      {on.training && (
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-3 rule-strong">
           <div>
@@ -343,8 +379,10 @@ export default async function Home() {
           ))}
         </div>
       </section>
+      )}
 
       {/* ——— STAI+ early access band (gold — premium) ——— */}
+      {on.plus && (
       <section className="border-t rule" style={{ background: "linear-gradient(180deg, rgba(201,168,76,0.07), rgba(201,168,76,0.02))" }}>
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-4 py-12 sm:px-6">
           <div className="max-w-2xl">
@@ -365,6 +403,7 @@ export default async function Home() {
           </Link>
         </div>
       </section>
+      )}
     </>
   );
 }

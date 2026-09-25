@@ -201,19 +201,74 @@ export function clientIp(req: NextRequest): string {
 }
 
 /**
+ * How long to wait, in words.
+ *
+ * `retryAfter` is seconds and both stores compute it from the bucket's real
+ * reset time, so it is a fact rather than an estimate. Showing it matters:
+ * "slow down and try again shortly" gives an operator working through a
+ * registry no way to tell a ten-second pause from a fifty-minute one, so the
+ * rational response is to keep clicking.
+ *
+ * Rounded UP, always. Telling somebody to wait four minutes when the bucket
+ * clears in four minutes twenty is an invitation to be refused twice.
+ */
+export function waitPhrase(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+  if (seconds < 60) return `${Math.ceil(seconds)} second${Math.ceil(seconds) === 1 ? "" : "s"}`;
+  const mins = Math.ceil(seconds / 60);
+  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"}`;
+  const hours = Math.ceil(mins / 60);
+  return `${hours} hour${hours === 1 ? "" : "s"}`;
+}
+
+/**
+ * A stable, non-identifying bucket suffix for an authenticated caller.
+ *
+ * Hashed rather than used raw. The key reaches the Durable Object's storage
+ * and lives as long as the window, and this module already refuses to put a
+ * client IP in a log line on the same reasoning — an email address is a
+ * stronger identifier than an IP, not a weaker one. Sixteen hex characters is
+ * far more than enough to keep two admins' buckets apart.
+ */
+async function identityKey(identity: string): Promise<string> {
+  const bytes = new TextEncoder().encode(identity.trim().toLowerCase());
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)]
+    .slice(0, 8)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
  * Guard a route. Returns a 429 Response when the caller should be stopped,
  * or null to proceed.
+ *
+ * `identity` counts per authenticated ACCOUNT rather than per IP. Use it only
+ * on routes that have already established who the caller is — otherwise the
+ * counter is keyed on something the caller chooses, which is not a limit.
+ * Where it is right, it is much better than an IP: the note at the top of this
+ * file is about corporate NAT, and an admin working from an audit firm's
+ * gateway should not share a budget with everyone else behind it.
  */
 export async function guard(
   req: NextRequest,
   bucket: string,
   limit: number,
-  windowMs: number
+  windowMs: number,
+  identity?: string
 ): Promise<Response | null> {
-  const res = await rateLimit(`${bucket}:${clientIp(req)}`, limit, windowMs);
+  const who = identity ? `user:${await identityKey(identity)}` : clientIp(req);
+  const res = await rateLimit(`${bucket}:${who}`, limit, windowMs);
   if (res.ok) return null;
+
+  const wait = waitPhrase(res.retryAfter);
   return Response.json(
-    { error: "Too many requests — slow down and try again shortly." },
+    {
+      error: wait
+        ? `Too many requests — try again in ${wait}.`
+        : "Too many requests — slow down and try again shortly.",
+      retryAfter: res.retryAfter,
+    },
     { status: 429, headers: { "Retry-After": String(res.retryAfter) } }
   );
 }

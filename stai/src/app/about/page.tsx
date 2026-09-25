@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { pageMeta } from "@/lib/seo";
+import { pageMeta, SITE } from "@/lib/seo";
 import Link from "next/link";
 
 export const metadata: Metadata = pageMeta({
@@ -15,7 +15,7 @@ export default function AboutPage() {
         About
       </p>
       <h1 className="f-display mt-2 text-4xl text-cream-100 sm:text-5xl">
-        Signal &amp; training for audit intelligence
+        {SITE.tagline}
       </h1>
       <div className="prose-stai mt-8">
         <p>

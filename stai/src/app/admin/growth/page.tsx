@@ -4,8 +4,18 @@ import { redirect } from "next/navigation";
 import { pageMeta } from "@/lib/seo";
 import { currentUser } from "@/lib/auth";
 import { sql, count } from "@/lib/sql";
-import { summary, topPaths, topContent, type Window } from "@/lib/analytics";
+import {
+  summary,
+  topPaths,
+  topContent,
+  timeSeries,
+  liveVisitors,
+  funnel,
+  type Window,
+} from "@/lib/analytics";
 import { EARLY_ACCESS_INTERESTS, interestLabel } from "@/lib/earlyaccess";
+import { AreaChart, ChartFooter, BarRow } from "@/components/admin/Chart";
+import LiveVisitors from "@/components/admin/LiveVisitors";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +46,9 @@ export default async function GrowthPage({
   const paths = await topPaths(win);
   const articles = await topContent(win, "article_view");
   const prompts = await topContent(win, "prompt_view");
+  const series = await timeSeries(win);
+  const live = await liveVisitors();
+  const steps = await funnel(win);
 
   const signups = await sql().all<{
     id: number;
@@ -121,6 +134,57 @@ export default async function GrowthPage({
         <span className="text-cream-100">{totalBrief}</span>
       </p>
 
+      {/* ——— Shape of the window, and what is happening right now ———
+          Two charts rather than two lines on one: page views run several times
+          visitors on a normal day, so a shared axis would flatten the smaller
+          of them into the baseline. See components/admin/Chart.tsx. */}
+      <section className="mt-10 grid gap-6 lg:grid-cols-[2fr_1fr]">
+        <div className="grid gap-6 sm:grid-cols-2">
+          {([["pageViews", "Page views"], ["visitors", "Visitors"]] as const).map(([metric, head]) => (
+            <div key={metric} className="border p-4 rule">
+              <h2 className="f-label" style={{ color: "var(--ink-faint)" }}>
+                {head} · {win === "1" ? "last 24 hours" : `last ${win} days`}
+              </h2>
+              <AreaChart buckets={series} metric={metric} />
+              <ChartFooter buckets={series} metric={metric} />
+            </div>
+          ))}
+        </div>
+        <LiveVisitors initial={live} />
+      </section>
+
+      {/* ——— What visitors went on to do ——— */}
+      <section className="mt-10">
+        <h2 className="f-label border-b pb-2 rule-strong" style={{ color: "var(--ink-faint)" }}>
+          What visitors did · {win === "1" ? "last 24 hours" : `last ${win} days`}
+        </h2>
+        {s.visitors === 0 ? (
+          <p className="mt-3 text-sm" style={{ color: "var(--ink-muted)" }}>
+            No visitors recorded in this window, so there is nothing to convert yet.
+          </p>
+        ) : (
+          <>
+            <ul className="mt-3 space-y-2">
+              {steps.map((step) => (
+                <BarRow
+                  key={step.label}
+                  label={step.label}
+                  value={step.n}
+                  max={steps[0].n}
+                  gold={step.label !== "Visitors"}
+                  rate={step.of ? `${((step.n / step.of) * 100).toFixed(1)}%` : null}
+                  title={step.of ? `${step.n} of ${step.of} visitors` : `${step.n} visitors`}
+                />
+              ))}
+            </ul>
+            <p className="f-mono mt-3 text-[0.62rem]" style={{ color: "var(--ink-faint)" }}>
+              Each rate is against visitors, not against the line above — these are not sequential steps.
+              Someone can join the Brief waitlist without an account.
+            </p>
+          </>
+        )}
+      </section>
+
       <section className="mt-10 grid gap-10 lg:grid-cols-2">
         <div>
           <h2 className="f-label border-b pb-2 rule-strong" style={{ color: "var(--ink-faint)" }}>
@@ -133,15 +197,7 @@ export default async function GrowthPage({
           ) : (
             <ul className="mt-3 space-y-2">
               {demand.map((x) => (
-                <li key={x.label} className="flex items-center gap-3">
-                  <span className="w-52 shrink-0 text-sm text-cream-200">{x.label}</span>
-                  <span className="h-[10px] flex-1 border rule">
-                    <span className="block h-full bg-gold-500" style={{ width: `${(x.n / peak) * 100}%` }} />
-                  </span>
-                  <span className="f-mono w-8 shrink-0 text-right text-[0.75rem] tabular-nums text-cream-100">
-                    {x.n}
-                  </span>
-                </li>
+                <BarRow key={x.label} label={x.label} value={x.n} max={peak} gold title={`${x.label} — ${x.n}`} />
               ))}
             </ul>
           )}
@@ -156,14 +212,9 @@ export default async function GrowthPage({
               No page views recorded in this window.
             </p>
           ) : (
-            <ul className="mt-3">
+            <ul className="mt-3 space-y-2">
               {paths.map((p) => (
-                <li key={p.path} className="flex items-baseline justify-between gap-4 border-b py-2 rule">
-                  <span className="f-mono truncate text-[0.75rem] text-cream-200">{p.path}</span>
-                  <span className="f-mono text-[0.75rem] tabular-nums" style={{ color: "var(--ink-faint)" }}>
-                    {p.n}
-                  </span>
-                </li>
+                <BarRow key={p.path} label={p.path} value={p.n} max={paths[0].n} title={`${p.path} — ${p.n} views`} />
               ))}
             </ul>
           )}
@@ -184,14 +235,9 @@ export default async function GrowthPage({
                 Nothing recorded in this window.
               </p>
             ) : (
-              <ul className="mt-3">
+              <ul className="mt-3 space-y-2">
                 {block.rows.map((r) => (
-                  <li key={r.label} className="flex items-baseline justify-between gap-4 border-b py-2 rule">
-                    <span className="truncate text-sm text-cream-200">{r.label}</span>
-                    <span className="f-mono text-[0.75rem] tabular-nums" style={{ color: "var(--ink-faint)" }}>
-                      {r.n}
-                    </span>
-                  </li>
+                  <BarRow key={r.label} label={r.label} value={r.n} max={block.rows[0].n} title={`${r.label} — ${r.n}`} />
                 ))}
               </ul>
             )}

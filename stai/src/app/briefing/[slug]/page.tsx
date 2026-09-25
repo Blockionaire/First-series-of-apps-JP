@@ -12,6 +12,8 @@ import { IndexCard } from "@/components/ArticleCard";
 import { PlusBadge } from "@/components/Logo";
 import JsonLd from "@/components/JsonLd";
 import { pageMeta, abs, breadcrumbSchema } from "@/lib/seo";
+import { publishedIso, modifiedIso } from "@/lib/article-dates";
+import { OG_SIZE } from "@/lib/og-size";
 import { authorSlug } from "@/lib/authors";
 import { categorySlug } from "@/lib/categories";
 import { track } from "@/lib/analytics";
@@ -29,7 +31,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: a.dek,
     path: `/briefing/${a.slug}`,
     type: "article",
-    publishedTime: a.published_at,
+    publishedTime: publishedIso(a),
+    modifiedTime: modifiedIso(a),
     authors: [a.author],
     section: a.category,
     tags: a.tags,
@@ -66,8 +69,22 @@ export default async function ArticlePage({ params }: Props) {
     "@id": abs(`/briefing/${article.slug}#article`),
     headline: article.title,
     description: article.dek,
-    datePublished: article.published_at,
-    dateModified: article.published_at,
+    datePublished: publishedIso(article),
+    // Was a copy of datePublished, which told every crawler that nothing here
+    // is ever revised. For a regulation desk that is the wrong signal: a piece
+    // rewritten when an obligation changes is precisely the one worth
+    // recrawling. Both dates now come from lib/article-dates.ts.
+    dateModified: modifiedIso(article),
+    // The card the OG route already renders for this piece. Google's article
+    // structured data wants an image, and pointing at the route rather than a
+    // second asset means the card in search and the card in a share link can
+    // never drift apart.
+    image: {
+      "@type": "ImageObject",
+      url: abs(`/briefing/${article.slug}/opengraph-image`),
+      width: OG_SIZE.width,
+      height: OG_SIZE.height,
+    },
     inLanguage: "en-GB",
     articleSection: article.category,
     keywords: article.tags.join(", "),

@@ -1,4 +1,4 @@
-import { allArticles, type Article } from "./content";
+import { allArticlesWithBodies, type Article } from "./content";
 import { sql } from "./sql";
 
 /**
@@ -132,7 +132,7 @@ async function corpusFingerprint(): Promise<string> {
 }
 
 async function buildIndex(fingerprint: string): Promise<Index> {
-  const articles = await allArticles();
+  const articles = await allArticlesWithBodies();
   const chunks = articles.flatMap(chunkArticle);
   const df = new Map<string, number>();
   const tf: Map<string, number>[] = [];

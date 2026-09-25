@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { pageMeta } from "@/lib/seo";
 import { allResearch } from "@/lib/content";
+import { requirePage } from "@/lib/page-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,9 @@ export const metadata: Metadata = pageMeta({
 });
 
 export default async function ResearchPage() {
+  // Switched off in site settings → this page does not exist.
+  await requirePage("research");
+
   const papers = await allResearch();
 
   return (
@@ -39,7 +43,7 @@ export default async function ResearchPage() {
             empty shelf than a list you cannot verify.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Link href="/briefing" className="btn btn-primary">Read the Briefing</Link>
+            <Link href="/news" className="btn btn-primary">Read the News desk</Link>
             <Link href="/prompts" className="btn btn-ghost">Open the prompt library</Link>
           </div>
         </div>

@@ -198,6 +198,16 @@ describe("database seam", () => {
       ["src/lib/ai.ts", "the Anthropic client"],
       ["src/lib/ratelimit.ts", "the store slot, plus the in-memory fallback it documents"],
       ["src/lib/search.ts", "the retrieval index, which re-checks its fingerprint per query"],
+      [
+        "src/lib/newsroom/scheduled.ts",
+        // Per-isolate is exactly right here. A cron invocation has no request,
+        // so getCloudflareContext() finds nothing and the D1 binding has to come
+        // from the env that invocation was handed. This holds that env as a
+        // FALLBACK only — the ambient context is tried first — and it is
+        // rewritten at the top of every scheduled run, so a stale value could
+        // only be read by a run that supplied no env of its own.
+        "the cron invocation's env, as a fallback for the request-scoped binding lookup",
+      ],
     ]);
     const offenders = sources("src")
       .filter((f) => /^let\s+\w+/m.test(read(f)))

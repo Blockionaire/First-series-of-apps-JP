@@ -5,16 +5,28 @@ import ThemeToggle from "./ThemeToggle";
 import LanguageToggle from "./LanguageToggle";
 import MobileNav from "./MobileNav";
 import { HEADER_ICON_BTN } from "./icon-button";
+import { enabledMap } from "@/lib/site-config";
 
+/**
+ * The navigation, and the switch that governs each entry.
+ *
+ * `toggle` is the id in lib/site-config.ts. The entry disappears from every
+ * menu when that switch is off, and the page itself answers 404 — the link and
+ * the route are governed by one value, so they cannot disagree.
+ *
+ * Assessment and Research are deliberately absent: they convert as a call to
+ * action inside a page, not as a browsing destination. Both remain reachable
+ * and both have their own switch.
+ */
 export const NAV = [
-  { href: "/briefing", label: "Briefing" },
-  { href: "/prompts", label: "Prompts" },
-  { href: "/ai-act", label: "AI Act" },
-  { href: "/ask", label: "Ask STAI" },
-  { href: "/training", label: "Training" },
-  // The B2B front door. Assessment moved out of the nav — it converts best as
-  // a call to action inside pages, not as a browsing destination.
-  { href: "/firms", label: "For firms" },
+  { href: "/news", label: "News", toggle: "news" },
+  { href: "/insights", label: "Insights", toggle: "insights" },
+  { href: "/prompts", label: "Prompts", toggle: "prompts" },
+  { href: "/podcast", label: "Podcast", toggle: "podcast" },
+  { href: "/ai-act", label: "AI Act", toggle: "aiAct" },
+  { href: "/ask", label: "Ask STAI", toggle: "ask" },
+  { href: "/training", label: "Training", toggle: "training" },
+  { href: "/firms", label: "For firms", toggle: "firms" },
 ];
 
 function PersonIcon() {
@@ -37,6 +49,9 @@ function PersonIcon() {
 
 export default async function Header() {
   const user = await currentUser();
+  const enabled = await enabledMap();
+  const nav = NAV.filter((n) => enabled[n.toggle]);
+  const plusOn = enabled.plus;
 
   return (
     <header className="sticky top-0 z-50 border-b bg-navy-900/95 backdrop-blur-sm rule-strong">
@@ -56,7 +71,7 @@ export default async function Header() {
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <Link
               key={n.href}
               href={n.href}
@@ -83,6 +98,17 @@ export default async function Header() {
                     middle of the chrome as if it were a nav item. The icon
                     says "your account" without competing for attention; the
                     name still reaches assistive tech through the label. */}
+                {/* One click to the back office for the account that has
+                    one. It sits before the person icon rather than replacing
+                    it: the icon still means "you", and an admin needs both. */}
+                {user.role === "admin" && (
+                  <Link
+                    href="/admin"
+                    className="f-mono px-2 py-2 text-[0.72rem] tracking-[0.14em] uppercase text-cream-400 hover:text-cream-100"
+                  >
+                    Desk
+                  </Link>
+                )}
                 <Link
                   href="/account"
                   className={HEADER_ICON_BTN}
@@ -92,7 +118,7 @@ export default async function Header() {
                   <PersonIcon />
                 </Link>
                 {user.plan === "plus" && <PlusBadge />}
-                {user.plan !== "plus" && (
+                {user.plan !== "plus" && plusOn && (
                   <Link href="/plus" className="btn btn-plus btn-sm premium-focus ml-1.5">
                     Upgrade to STAI+
                   </Link>
@@ -106,16 +132,19 @@ export default async function Header() {
                 <Link href="/login" className="f-mono px-2 py-2 text-[0.72rem] tracking-[0.14em] uppercase text-cream-400 hover:text-cream-100">
                   Sign in
                 </Link>
-                <Link href="/plus" className="btn btn-plus btn-sm premium-focus">
-                  STAI+
-                </Link>
+                {plusOn && (
+                  <Link href="/plus" className="btn btn-plus btn-sm premium-focus">
+                    STAI+
+                  </Link>
+                )}
               </>
             )}
           </div>
 
           <MobileNav
-            nav={NAV}
-            user={user ? { name: user.name, plus: user.plan === "plus" } : null}
+            nav={nav}
+            user={user ? { name: user.name, plus: user.plan === "plus", admin: user.role === "admin" } : null}
+            plusOn={plusOn}
           />
         </div>
       </div>

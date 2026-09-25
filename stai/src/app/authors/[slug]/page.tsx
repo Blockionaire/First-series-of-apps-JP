@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AUTHORS, authorBySlug } from "@/lib/authors";
+import { authorBySlug } from "@/lib/authors";
 import { allArticles } from "@/lib/content";
 import { pageMeta, abs, breadcrumbSchema } from "@/lib/seo";
 import JsonLd from "@/components/JsonLd";
@@ -11,10 +11,6 @@ import { PlusBadge } from "@/components/Logo";
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }> };
-
-export function generateStaticParams() {
-  return AUTHORS.map((a) => ({ slug: a.slug }));
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -126,7 +122,7 @@ export default async function AuthorPage({ params }: Props) {
           Keep reading
         </p>
         <div className="mt-3 flex flex-wrap gap-3">
-          <Link href="/briefing" className="btn btn-ghost">
+          <Link href="/news" className="btn btn-ghost">
             The full Briefing
           </Link>
           <Link href="/ai-act" className="btn btn-ghost">

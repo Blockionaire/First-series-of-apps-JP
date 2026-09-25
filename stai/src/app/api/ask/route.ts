@@ -3,19 +3,23 @@ import { currentUser, anonId, bumpUsage, getUsage } from "@/lib/auth";
 import { retrieve, anthropicClient, buildAskSystemPrompt, numberHits, MODEL } from "@/lib/ai";
 import { guard, WINDOW } from "@/lib/ratelimit";
 import { track } from "@/lib/analytics";
+import { limit } from "@/lib/site-config";
 
 export const maxDuration = 60;
 
-const FREE_QUOTA = 5;
-const ANON_QUOTA = 2;
-
 /**
- * Hard ceiling on model calls per calendar month across the whole platform.
- * The per-actor quotas above are the product gate; this is the cost stop.
- * On breach we degrade to retrieval-only rather than erroring — readers keep
- * getting cited answers, the bill stops growing.
+ * The quotas, and the platform-wide ceiling.
+ *
+ * These were constants here. They are settings now — editable at
+ * /admin/settings — because they are a pricing decision rather than an
+ * engineering one, and because the ceiling is the only thing standing between
+ * a free launch and an unbounded model bill. lib/site-config.ts clamps every
+ * one of them to a declared range on the way in and on the way out, so a bad
+ * row cannot lift the ceiling.
+ *
+ * On breach of the ceiling Ask STAI degrades to retrieval-only rather than
+ * erroring: readers keep getting cited passages, the bill stops growing.
  */
-const GLOBAL_MONTHLY_CALLS = parseInt(process.env.ASK_MONTHLY_CALL_CEILING ?? "5000", 10);
 
 /**
  * Streaming protocol: the first frame is a JSON envelope (sources + quota),
@@ -36,6 +40,8 @@ export async function POST(req: NextRequest) {
   }
 
   const user = await currentUser();
+  const ANON_QUOTA = await limit("limit.ask.anon");
+  const FREE_QUOTA = await limit("limit.ask.free");
   let quota = { used: 0, limit: -1 }; // -1 = unlimited
   if (!user) {
     const anon = await anonId();
@@ -69,7 +75,7 @@ export async function POST(req: NextRequest) {
   // Cost stop: once the platform-wide monthly ceiling is reached we stop
   // calling the model entirely and serve cited passages instead.
   const globalCalls = await getUsage("global", "ask-model");
-  const withinBudget = globalCalls < GLOBAL_MONTHLY_CALLS;
+  const withinBudget = globalCalls < (await limit("limit.ask.ceiling"));
   const client = withinBudget ? anthropicClient() : null;
 
   if (!client || hits.length === 0) {

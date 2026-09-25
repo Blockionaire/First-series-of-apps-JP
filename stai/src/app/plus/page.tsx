@@ -7,6 +7,7 @@ import { currentUser } from "@/lib/auth";
 import { SPlusMark } from "@/components/Logo";
 import CheckoutButton from "@/components/plus/CheckoutButton";
 import EarlyAccessForm from "@/components/plus/EarlyAccessForm";
+import { requirePage } from "@/lib/page-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,9 @@ const features = (freeCount: number, total: number): { label: string; free: stri
 ];
 
 export default async function PlusPage() {
+  // Switched off in site settings → this page does not exist.
+  await requirePage("plus");
+
   const founding = await foundingStatus();
   const prompts = await allPrompts();
   const FEATURES = features(prompts.filter((p) => !p.premium).length, prompts.length);

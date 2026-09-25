@@ -58,5 +58,11 @@ export async function register() {
 
     const { ensureAdminAccount } = await import("./lib/bootstrap");
     await ensureAdminAccount();
+
+    // Analytics retention for the Node target, which has no cron. On Workers
+    // the scheduled handler does this; here each server start does. Best
+    // effort — it never throws.
+    const { pruneOldEvents } = await import("./lib/analytics");
+    await pruneOldEvents();
   }
 }

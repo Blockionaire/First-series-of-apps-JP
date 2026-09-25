@@ -84,9 +84,3 @@ export function applyMigrations(d: Database.Database): string[] {
 export function applySeeds(d: Database.Database): string[] {
   return applyDir(d, "seeds");
 }
-
-/** Forget that a seed ran, so the next boot re-applies it. Tests only. */
-export function resetSeedTracking(d: Database.Database) {
-  ensureTracking(d, TRACKING.seeds);
-  d.prepare(`DELETE FROM ${TRACKING.seeds}`).run();
-}

@@ -1,7 +1,10 @@
 import { ImageResponse } from "next/og";
+import { SITE } from "./seo";
 
-export const OG_SIZE = { width: 1200, height: 630 };
-export const OG_CONTENT_TYPE = "image/png";
+// Re-exported so the image routes keep one import; the values live in
+// lib/og-size.ts, which anything can import without dragging next/og along.
+export { OG_SIZE, OG_CONTENT_TYPE } from "./og-size";
+import { OG_SIZE } from "./og-size";
 
 const NAVY = "#0E1726";
 const NAVY_DEEP = "#0A111D";
@@ -152,7 +155,7 @@ export function ogCard(opts: {
           />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ display: "flex", color: CREAM_DIM, fontSize: 20, letterSpacing: 1 }}>
-              {meta ?? "Signal & training for audit intelligence"}
+              {meta ?? SITE.tagline}
             </div>
             <div style={{ display: "flex", color: CREAM_DIM, fontSize: 18, letterSpacing: 2 }}>
               EU AI ACT · 02 AUG 2026

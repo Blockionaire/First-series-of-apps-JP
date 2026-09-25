@@ -25,17 +25,18 @@
     "d1:admin:remote": "node scripts/bootstrap-admin.mjs",
     "cf:deploy": "npm run d1:migrate:remote && npm run d1:seed:remote && npm run d1:admin:remote && wrangler deploy",
     "test:workers": "node --test --test-concurrency=1 \"tests/workers/*.test.mjs\"",
-    "verify": "npm run typecheck && npm run lint && npm run build && npm test && npm run cf:build && npm run test:workers"
+    "verify": "npm run typecheck && npm run lint && npm run build && npm test && npm run cf:build && npm run test:workers",
+    "e2e": "node e2e/smoke.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "marked": "^18.0.5",
-    "next": "15.5.20",
+    "next": "15.5.26",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "sanitize-html": "^2.17.6",
+    "sanitize-html": "^2.17.7",
     "stripe": "^22.3.0"
   },
   "devDependencies": {
@@ -49,7 +50,7 @@
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.1",
     "eslint": "^9",
-    "eslint-config-next": "15.5.20",
+    "eslint-config-next": "15.5.26",
     "playwright": "^1.61.1",
     "tailwindcss": "^4",
     "typescript": "^5",

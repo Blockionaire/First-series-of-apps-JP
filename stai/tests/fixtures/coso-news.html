@@ -1,0 +1,123 @@
+<!doctype html>
+<!--
+  REPRESENTATIVE, NOT A SAVED COPY. coso.org has never been fetched by this
+  code — the build environment has no outbound network. The /news/<slug> shape
+  is inferred from the index URL the operator supplied, not observed.
+
+  Built around the specific thing that went wrong with the OLD registered URL.
+  The source used to point at /guidance, a catalogue of frameworks: evergreen
+  landing pages that never stop existing. So this fixture puts those landing
+  pages ON the news index, linked from the announcements that introduce them —
+  which is exactly where they would come back in:
+
+    · a press release announcing a framework, linking straight to
+      /guidance/internal-control-integrated-framework;
+    · the framework landing page itself, sitting in the list with the
+      announcement's date beside it.
+
+  If the guidance exclusion is ever dropped, the framework arrives as a news
+  item dated by the announcement, and does so again at the next release.
+
+  Also present: the lead story twice (feature panel and list row, one with a
+  tracking query), a promotional store link, and an undated entry.
+-->
+<html lang="en">
+<head><title>News | COSO</title></head>
+<body>
+<nav>
+  <a href="/">Home</a>
+  <a href="/guidance">Guidance</a>
+  <a href="/store">Store</a>
+  <a href="/about">About</a>
+  <a href="/news">News</a>
+</nav>
+
+<main>
+  <h1>News</h1>
+
+  <!-- The lead, shown twice. Only the canonical URL collapses them. -->
+  <div class="feature">
+    <article>
+      <span class="category">Press Release</span>
+      <span class="date">September 9, 2026</span>
+      <a href="/news/coso-releases-ai-internal-control-supplement?utm_campaign=feature">
+        COSO releases supplemental guidance on internal control over artificial intelligence
+      </a>
+      <p>
+        The supplement applies the five components of the Internal Control—Integrated
+        Framework to the governance of artificial intelligence in financial reporting.
+      </p>
+    </article>
+  </div>
+
+  <ul class="news">
+    <li>
+      <span class="category">Press Release</span>
+      <span class="date">September 9, 2026</span>
+      <a href="/news/coso-releases-ai-internal-control-supplement">
+        COSO releases supplemental guidance on internal control over artificial intelligence
+      </a>
+      <p>
+        The supplement applies the five components of the Internal Control—Integrated
+        Framework to the governance of artificial intelligence in financial reporting.
+      </p>
+      <!-- The framework landing page, linked from its own announcement. -->
+      <a href="/guidance/internal-control-integrated-framework">Internal Control—Integrated Framework</a>
+      <a href="/documents/coso-ai-supplement-2026.pdf">Download the supplement (PDF)</a>
+    </li>
+
+    <li>
+      <span class="category">Research</span>
+      <span class="date">July 21, 2026</span>
+      <a href="/news/fraud-risk-management-study-published">
+        COSO publishes study on fraud risk management in mid-sized organisations
+      </a>
+      <p>
+        The study draws on survey responses from more than four hundred organisations
+        across North America and Europe.
+      </p>
+    </li>
+
+    <li>
+      <span class="category">Announcement</span>
+      <span class="date">May 14, 2026</span>
+      <a href="/news/coso-names-new-board-chair">
+        COSO names new Board chair for the 2026 term
+      </a>
+    </li>
+
+    <li>
+      <!-- Undated. Dropped rather than dated today. -->
+      <a href="/news/entry-with-no-date-on-the-card">
+        An announcement whose card carries no date
+      </a>
+      <p>Genuine link, genuine headline, and still not publishable without a date.</p>
+    </li>
+
+    <li>
+      <!-- The guidance catalogue in the list, with a date beside it. Nothing
+           but the section rule separates it from a real announcement. -->
+      <span class="date">May 14, 2026</span>
+      <a href="/guidance/enterprise-risk-management">Enterprise Risk Management Framework</a>
+    </li>
+
+    <li>
+      <span class="date">April 2, 2026</span>
+      <a href="/store/erm-framework-pdf">Buy the ERM Framework (PDF)</a>
+    </li>
+  </ul>
+
+  <nav class="pager">
+    <a href="/news?page=2">2</a>
+    <a href="/news?page=2">Next</a>
+  </nav>
+
+  <a href="https://www.aicpa-cima.com/news">AICPA news</a>
+</main>
+
+<footer>
+  <a href="/privacy">Privacy policy</a>
+  <p>© 2026 Committee of Sponsoring Organizations of the Treadway Commission</p>
+</footer>
+</body>
+</html>

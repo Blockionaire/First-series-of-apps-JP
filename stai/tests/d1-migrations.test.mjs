@@ -77,7 +77,12 @@ describe("D1 migrations", () => {
     ]) {
       assert.ok(tables.includes(t), `missing table: ${t}`);
     }
-    assert.deepEqual(migrated, ["0001_initial_schema.sql", "0002_indexes.sql"], "both files applied, in order");
+    // Compared against the directory rather than a hardcoded list: the point
+    // is that EVERY migration applied, in name order. Pinning the filenames
+    // here just means the next migration fails this test for existing.
+    const onDisk = sqlFiles("migrations").map((f) => f.name);
+    assert.ok(onDisk.length >= 3, "the migration set should not have shrunk");
+    assert.deepEqual(migrated, onDisk, "every migration applied, in order");
     cleanup();
   });
 
@@ -87,7 +92,7 @@ describe("D1 migrations", () => {
     assert.deepEqual(second, [], "a second run applies nothing");
 
     const tracked = d.prepare("SELECT name FROM d1_migrations ORDER BY id").all().map((r) => r.name);
-    assert.deepEqual(tracked, ["0001_initial_schema.sql", "0002_indexes.sql"]);
+    assert.deepEqual(tracked, sqlFiles("migrations").map((f) => f.name));
 
     // Re-applying without tracking must fail — proof the tracking is what
     // prevents it, not luck. CREATE TABLE has no IF NOT EXISTS in 0001.
@@ -118,6 +123,245 @@ describe("D1 migrations", () => {
     execFileSync("node", ["scripts/sync-sql.mjs"], { cwd: ROOT, stdio: "ignore" });
     const after = fs.readFileSync(path.join(ROOT, "src/lib/schema/sql.generated.ts"), "utf8");
     assert.equal(after, before, "run `npm run sql:sync` — the embedded SQL is stale");
+  });
+});
+
+describe("access paths are index seeks, not scans (migration 0011)", () => {
+  // On D1 every row a scan reads is billed, so "fast enough on a small table"
+  // is not the bar. Each case is the query as the application issues it, and
+  // the assertion is on the plan: the named index is used, the table is not
+  // scanned. Dropping an index, or rewriting the query so it cannot use one,
+  // fails here rather than on a bill.
+  const plan = (d, sql, params = []) =>
+    d.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(...params).map((r) => r.detail).join(" | ");
+
+  test("which story holds an item", () => {
+    const { d, cleanup } = freshDb();
+    const p = plan(d, "SELECT story_id FROM newsroom_story_sources WHERE source_item_id=?", [1]);
+    assert.match(p, /idx_story_sources_item/, p);
+    assert.doesNotMatch(p, /SCAN newsroom_story_sources/, p);
+    cleanup();
+  });
+
+  test("purging expired sessions on sign-in", () => {
+    const { d, cleanup } = freshDb();
+    const p = plan(d, "DELETE FROM sessions WHERE expires_at <= datetime('now')");
+    assert.match(p, /idx_sessions_expires/, p);
+    assert.doesNotMatch(p, /SCAN sessions/, p);
+    cleanup();
+  });
+
+  test("entitlement on every signed-in request", async () => {
+    const { ENTITLEMENT_SQL, GRANT_SQL } = await import("../src/lib/entitlement.ts");
+    const { d, cleanup } = freshDb();
+    // The currentUser() query, verbatim in shape.
+    const p = plan(
+      d,
+      `SELECT u.id,
+              EXISTS (SELECT 1 FROM subscriptions sub WHERE sub.user_id = u.id AND ${ENTITLEMENT_SQL}) AS entitled,
+              EXISTS (SELECT 1 FROM access_grants g WHERE g.user_id = u.id AND ${GRANT_SQL}) AS granted
+       FROM sessions s JOIN users u ON u.id = s.user_id
+       WHERE s.token=? AND s.expires_at > datetime('now')`,
+      ["t"]
+    );
+    assert.match(p, /idx_subscriptions_user/, p);
+    assert.doesNotMatch(p, /SCAN sub\b/, p);
+    cleanup();
+  });
+});
+
+describe("retiring H3C and registering H2A", () => {
+  // Migration 0010 is the first migration in this project that touches DATA
+  // rather than schema, so what it may do is worth pinning down: it removes
+  // capability from one row and adds a dormant one. Nothing it does can cause
+  // a page to be fetched.
+
+  /** Migrations up to but not including 0010, so the "before" state is real. */
+  const before0010 = () => sqlFiles("migrations").filter((f) => !f.name.startsWith("0010"));
+  const mig0010 = () => sqlFiles("migrations").filter((f) => f.name.startsWith("0010"));
+
+  function registry(rows = []) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "stai-h2a-"));
+    const d = new Database(path.join(dir, "t.db"));
+    d.pragma("foreign_keys = ON");
+    apply(d, before0010(), "d1_migrations");
+    for (const r of rows) {
+      d.prepare(
+        `INSERT INTO newsroom_sources
+           (name, domain, source_type, authority_tier, jurisdictions, topics,
+            ingestion_method, feed_url, fetch_frequency, fetch_allowed,
+            license_notes, snapshot_retention, active, review_status)
+         VALUES (@name, @domain, 'regulator', 1, '["FR"]', '["audit"]',
+                 'html_scrape', @feed_url, 30, @fetch_allowed, '', 'indefinite',
+                 @active, @review_status)`
+      ).run(r);
+    }
+    return {
+      d,
+      run: () => apply(d, mig0010(), "d1_migrations"),
+      row: (domain) =>
+        d.prepare("SELECT * FROM newsroom_sources WHERE domain=?").get(domain),
+      cleanup: () => { d.close(); fs.rmSync(dir, { recursive: true, force: true }); },
+    };
+  }
+
+  const H3C = {
+    name: "H3C / Haute autorité de l'audit",
+    domain: "h3c.org",
+    feed_url: "https://www.h3c.org/actualites",
+    fetch_allowed: 1,
+    active: 1,
+    review_status: "feed_verified",
+  };
+
+  test("an active H3C row is switched off and its retrieval withdrawn", () => {
+    const r = registry([H3C]);
+    r.run();
+    const h3c = r.row("h3c.org");
+    assert.equal(h3c.active, 0);
+    assert.equal(h3c.fetch_allowed, 0, "retrieval permission must be withdrawn, not just the switch");
+    assert.equal(h3c.review_status, "do_not_use");
+    assert.match(h3c.review_note, /Superseded by H2A/);
+    assert.ok(h3c.reviewed_at, "a review decision records when it was made");
+    assert.ok(h3c.reviewed_by, "and by what");
+    r.cleanup();
+  });
+
+  test("the row is not deleted — the decision stays visible", () => {
+    // Deleting it would lose the record that somebody looked at this source
+    // and why it went. `do_not_use` is a decision; absence is not.
+    const r = registry([H3C]);
+    r.run();
+    assert.ok(r.row("h3c.org"), "H3C should still be in the registry, switched off");
+    r.cleanup();
+  });
+
+  test("H2A arrives inactive and not retrievable", () => {
+    // The property the whole registry rests on: registering a source has
+    // never implied permission to read it, and a migration is not the place
+    // to start. Decision D5.
+    const r = registry([H3C]);
+    r.run();
+    const h2a = r.row("h2a-france.org");
+    assert.ok(h2a, "H2A was not registered");
+    assert.equal(h2a.active, 0);
+    assert.equal(h2a.fetch_allowed, 0);
+    assert.equal(h2a.authority_tier, 1);
+    assert.equal(h2a.jurisdictions, '["FR"]');
+    assert.equal(h2a.ingestion_method, "html_scrape");
+    // The verified hub, exactly as the operator gave it — no `www.`, and the
+    // one combined section rather than the `/actualites/` that was guessed
+    // from the predecessor site.
+    assert.equal(h2a.feed_url, "https://h2a-france.org/publications-et-actualites/");
+    // The Tier 1 defaults, matching DEFAULT_FREQUENCY and DEFAULT_RETENTION.
+    assert.equal(h2a.fetch_frequency, 30);
+    assert.equal(h2a.snapshot_retention, "indefinite");
+    assert.equal(h2a.review_status, "unreviewed", "nobody has looked at it yet");
+    r.cleanup();
+  });
+
+  test("a registry that never loaded the proposal is left completely empty", () => {
+    // The invariant this migration nearly broke, and that newsroom-admin
+    // states outright: the registry starts empty, nothing is seeded behind
+    // your back. A source appears because a named person chose it — through
+    // load_proposal or the Add form — and a migration quietly planting one in
+    // a fresh database would be the first exception to that.
+    //
+    // It costs nothing, either: H2A is in proposed-sources.ts, so a first
+    // load_proposal registers it anyway, chosen rather than planted.
+    const r = registry([]);
+    r.run();
+    assert.equal(
+      count(r.d, "SELECT COUNT(*) n FROM newsroom_sources"),
+      0,
+      "a migration must not put a source in an empty registry"
+    );
+    r.cleanup();
+  });
+
+  test("it inserts H2A only where there was an H3C to succeed", () => {
+    // A registry with sources but no H3C — already retired by hand, say —
+    // gets nothing. This migration performs a succession; it does not seed.
+    const r = registry([
+      {
+        name: "Some other source",
+        domain: "example-regulator.eu",
+        feed_url: "https://example-regulator.eu/feed.xml",
+        fetch_allowed: 1,
+        active: 1,
+        review_status: "retrieval_approved",
+      },
+    ]);
+    r.run();
+    assert.equal(r.row("h2a-france.org"), undefined);
+    assert.equal(count(r.d, "SELECT COUNT(*) n FROM newsroom_sources"), 1);
+    r.cleanup();
+  });
+
+  test("an H2A row already added by hand is left completely alone", () => {
+    // The case that matters most: the operator did it themselves first. Their
+    // decisions — the URL they chose, the permission they granted — are not
+    // the migration's to overwrite.
+    const r = registry([
+      H3C,
+      {
+        name: "H2A by hand",
+        domain: "h2a-france.org",
+        feed_url: "https://h2a-france.org/une-autre-adresse/",
+        fetch_allowed: 1,
+        active: 1,
+        review_status: "retrieval_approved",
+      },
+    ]);
+    r.run();
+    const h2a = r.row("h2a-france.org");
+    assert.equal(h2a.name, "H2A by hand");
+    assert.equal(
+      h2a.feed_url,
+      "https://h2a-france.org/une-autre-adresse/",
+      "an operator's own URL must survive, even where the migration disagrees"
+    );
+    assert.equal(h2a.active, 1, "an operator's own activation must survive");
+    assert.equal(h2a.fetch_allowed, 1);
+    assert.equal(h2a.review_status, "retrieval_approved");
+    assert.equal(
+      count(r.d, "SELECT COUNT(*) n FROM newsroom_sources WHERE domain='h2a-france.org'"),
+      1,
+      "the domain is UNIQUE, and a second insert would have failed the migration"
+    );
+    r.cleanup();
+  });
+
+  test("it switches nothing else in the registry on or off", () => {
+    // A data migration that reached beyond its two rows would be the kind of
+    // thing nobody notices until a source starts fetching.
+    const r = registry([
+      H3C,
+      {
+        name: "Some other source",
+        domain: "example-regulator.eu",
+        feed_url: "https://example-regulator.eu/feed.xml",
+        fetch_allowed: 1,
+        active: 1,
+        review_status: "retrieval_approved",
+      },
+    ]);
+    r.run();
+    const other = r.row("example-regulator.eu");
+    assert.equal(other.active, 1);
+    assert.equal(other.fetch_allowed, 1);
+    assert.equal(other.review_status, "retrieval_approved");
+    r.cleanup();
+  });
+
+  test("a fresh database has no sources at all after every migration", () => {
+    const { d, cleanup } = freshDb();
+    assert.equal(
+      count(d, "SELECT COUNT(*) n FROM newsroom_sources"),
+      0,
+      "migrations must not register sources; load_proposal and the Add form do that"
+    );
+    cleanup();
   });
 });
 

@@ -58,3 +58,6 @@ next-env.d.ts
 # Durable Object binding. Removed in the suite teardown; ignored in case a
 # run is interrupted.
 wrangler.ratelimit-degraded.jsonc
+
+# E2E screenshots, written only when a check fails
+e2e/artifacts/

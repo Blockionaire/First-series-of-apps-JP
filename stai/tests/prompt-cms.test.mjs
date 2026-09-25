@@ -155,7 +155,10 @@ describe("prompt library — schema and seeded corpus", { skip }, () => {
   test("public prompt reads filter drafts at the data layer", () => {
     const src = fs.readFileSync(path.join(ROOT, "src/lib/content.ts"), "utf8");
     const body = (name) => {
-      const m = src.match(new RegExp(`export (?:async )?function ${name}[\\s\\S]*?\\n}`));
+      // A plain function, or one wrapped in React's per-request cache().
+      const m = src.match(
+        new RegExp(`export (?:(?:async )?function ${name}[\\s\\S]*?\\n}|const ${name} = cache\\([\\s\\S]*?\\n}\\);)`)
+      );
       assert.ok(m, `${name} not found in src/lib/content.ts — has it been renamed?`);
       return m[0];
     };

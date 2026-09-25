@@ -7,7 +7,9 @@ import { SMark, Wordmark } from "@/components/Logo";
 
 type Props = {
   nav: { href: string; label: string }[];
-  user: { name: string; plus: boolean } | null;
+  user: { name: string; plus: boolean; admin: boolean } | null;
+  /** Whether the STAI+ page is switched on; hides the membership button when not. */
+  plusOn: boolean;
 };
 
 /**
@@ -33,7 +35,7 @@ type Props = {
  * during SSR and during hydration, and can only turn true from a click in
  * the browser.
  */
-export default function MobileNav({ nav, user }: Props) {
+export default function MobileNav({ nav, user, plusOn }: Props) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -122,15 +124,25 @@ export default function MobileNav({ nav, user }: Props) {
               ))}
               <div className="mt-6 flex flex-col gap-3">
                 {user ? (
-                  <Link href="/account" onClick={close} className="btn btn-ghost">
-                    Account — {user.name.split(" ")[0]}
-                  </Link>
+                  <>
+                    {/* Same entry point as the desktop header: an admin on a
+                        phone still needs the back office, and /admin is not
+                        something to type on one. */}
+                    {user.admin && (
+                      <Link href="/admin" onClick={close} className="btn btn-primary">
+                        Desk backoffice
+                      </Link>
+                    )}
+                    <Link href="/account" onClick={close} className="btn btn-ghost">
+                      Account — {user.name.split(" ")[0]}
+                    </Link>
+                  </>
                 ) : (
                   <Link href="/login" onClick={close} className="btn btn-ghost">
                     Sign in
                   </Link>
                 )}
-                {(!user || !user.plus) && (
+                {(!user || !user.plus) && plusOn && (
                   <Link href="/plus" onClick={close} className="btn btn-plus premium-focus">
                     STAI+ membership
                   </Link>

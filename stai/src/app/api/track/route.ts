@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
-import { track, isEventKind, pruneOldEvents } from "@/lib/analytics";
+import { track, isEventKind } from "@/lib/analytics";
+import { isTrackablePath } from "@/lib/analytics-paths";
 import { guard, WINDOW } from "@/lib/ratelimit";
 
 /**
@@ -24,6 +25,13 @@ export async function POST(req: NextRequest) {
   const path = String(body.path ?? "").slice(0, 300);
   if (path && !path.startsWith("/")) return NextResponse.json({ ok: false }, { status: 400 });
 
+  // The back office does not count. Above the cookie block on purpose: a
+  // request that will not be recorded should not mint an identifier either.
+  //
+  // 200 rather than 400 — the caller did nothing wrong, and browsers holding
+  // a cached copy of the old beacon will keep sending these for a while.
+  if (!isTrackablePath(path)) return NextResponse.json({ ok: true, recorded: false });
+
   const jar = await cookies();
   let visitor = jar.get("stai_v")?.value;
   if (!visitor) {
@@ -37,10 +45,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Retention is not this request's job: it runs on the schedule (see
+  // lib/newsroom/scheduled.ts) and at Node server start, never on a visitor.
   await track(kind, { path, label: String(body.label ?? "").slice(0, 200), visitor });
-
-  // Cheap opportunistic retention sweep, roughly once per thousand events.
-  if (Math.random() < 0.001) await pruneOldEvents();
 
   return NextResponse.json({ ok: true });
 }

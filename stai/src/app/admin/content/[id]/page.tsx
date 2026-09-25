@@ -21,8 +21,8 @@ type AdminArticleRow = Omit<EditorArticle, "id" | "tags" | "premium"> & {
 };
 
 export const metadata: Metadata = pageMeta({
-  title: "Edit briefing — admin",
-  description: "STAI briefing editor.",
+  title: "Edit piece — admin",
+  description: "STAI content editor.",
   path: "/admin/content",
   noIndex: true,
 });
@@ -41,6 +41,7 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
       title: "",
       dek: "",
       category: "Analysis",
+      kind: "news",
       tags: "",
       author: "STAI Desk",
       author_role: "Newsroom",
@@ -72,12 +73,12 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <p className="f-label" style={{ color: "var(--ink-faint)" }}>
         <Link href="/admin/content" className="hover:text-cream-100">
-          Briefing editor
+          Content editor
         </Link>{" "}
         / {id === "new" ? "new" : `#${id}`}
       </p>
       <h1 className="f-display mt-2 mb-8 text-3xl text-cream-100">
-        {id === "new" ? "New briefing" : "Edit briefing"}
+        {id === "new" ? "New piece" : "Edit piece"}
       </h1>
       <ArticleEditor initial={initial} />
     </div>
