@@ -123,6 +123,14 @@ export default async function Home() {
   const cta2Href = copy["home.cta2.href"] || "#briefing";
   const showCta2 = Boolean(copy["home.cta2.label"]) && (!cta2Href.startsWith("#briefing") || on.newsletter);
 
+  // The hero's three promises, each a way in. A section switched off in site
+  // settings leaves its line as plain text rather than a link into a 404.
+  const triad = [
+    { text: "Know what changed.", href: on.news ? "/news" : "", to: "— News" },
+    { text: "Know what matters.", href: on.insights ? "/insights" : "", to: "— Insights" },
+    { text: "Know what to do next.", href: on.newsletter ? "#briefing" : "", to: "— The Briefing" },
+  ];
+
   const system = [
     on.news && { href: "/news", name: "News", role: "What changed", line: "Dated reporting on regulation, standards and enforcement." },
     on.insights && { href: "/insights", name: "Insights", role: "What it means", line: "Analysis that connects a development to audit methodology." },
@@ -138,8 +146,10 @@ export default async function Home() {
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
         {/* Masthead line: the page dated like a front page. */}
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b py-4 rule">
-          <p className="ed-kicker">{copy["home.eyebrow"] || "The intelligence layer for AI in audit"}</p>
-          <p className="ed-meta">{editionDate(now)} · Amsterdam</p>
+          <p className="ed-serif ed-italic text-[1.05rem] text-cream-200 sm:text-[1.15rem]">
+            {copy["home.eyebrow"] || "The intelligence layer for AI in audit"}
+          </p>
+          <p className="ed-meta">{editionDate(now)}</p>
         </div>
 
         <div className="pb-12 pt-12 sm:pt-20 lg:pb-20 lg:pt-24">
@@ -173,12 +183,32 @@ export default async function Home() {
               </div>
             </div>
             <ul className="lg:col-start-3" aria-label="What STAI tells you">
-              {["Know what changed.", "Know what matters.", "Know what to do next."].map((t, i) => (
-                <li key={t} className="flex items-baseline gap-5 border-t py-3 rule last:border-b">
-                  <span className="ed-num w-6 text-[1.15rem]">{i + 1}</span>
-                  <span className="ed-serif text-[1.45rem] leading-tight text-cream-100 sm:text-[1.65rem]">{t}</span>
-                </li>
-              ))}
+              {triad.map((t, i) => {
+                const inner = (
+                  <>
+                    <span className="ed-num w-6 text-[1.15rem]">{i + 1}</span>
+                    <span className="ed-serif flex-1 text-[1.45rem] leading-tight text-cream-100 sm:text-[1.65rem]">
+                      <span className="ed-hl">{t.text}</span>
+                    </span>
+                    {t.href && (
+                      <span className="ed-arrow text-lg text-cream-400" aria-hidden>
+                        →
+                      </span>
+                    )}
+                  </>
+                );
+                return (
+                  <li key={t.text} className="border-t rule last:border-b">
+                    {t.href ? (
+                      <Link href={t.href} className="ed-triad group flex items-baseline gap-5 py-3" aria-label={`${t.text} ${t.to}`}>
+                        {inner}
+                      </Link>
+                    ) : (
+                      <span className="flex items-baseline gap-5 py-3">{inner}</span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
@@ -353,6 +383,7 @@ export default async function Home() {
           <ul className="mt-10 border-t rule-strong">
             {system.map((s, i) => (
               <li key={s.name} className="border-b rule">
+                <Reveal className="reveal-x" delay={i * 80}>
                 <Link
                   href={s.href}
                   className="ed-row group grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-1 px-1 py-4 md:grid-cols-[4rem_minmax(0,2.2fr)_minmax(0,2fr)_minmax(0,3fr)_2rem] md:py-6"
@@ -369,6 +400,7 @@ export default async function Home() {
                     {s.line}
                   </span>
                 </Link>
+                </Reveal>
               </li>
             ))}
           </ul>
