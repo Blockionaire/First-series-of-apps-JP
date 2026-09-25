@@ -158,24 +158,41 @@ button{font:inherit;color:inherit}
 @keyframes wiebel{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
 .hero-p{margin-top:20px;color:var(--zacht);max-width:44ch;font-size:1.1rem}
 .hero-acties{display:flex;flex-wrap:wrap;gap:14px;margin-top:30px}
-.hero-stickers{display:flex;flex-wrap:wrap;gap:10px;margin-top:34px}
-.hero-stickers .sticker:nth-child(2){transform:rotate(-2.5deg)}
-.hero-stickers .sticker:nth-child(3){transform:rotate(2deg)}
 
 .podium{position:relative;display:grid;place-items:center;min-height:340px}
 .podium-schijf{position:absolute;width:min(84%,380px);aspect-ratio:1;border-radius:50%;
   background:radial-gradient(circle at 50% 45%, rgba(255,253,248,.6), rgba(255,253,248,0) 64%)}
-.hoofdkoek{width:min(78%,330px);animation:draai 26s linear infinite;filter:drop-shadow(0 22px 26px rgba(46,34,23,.18))}
 @keyframes draai{to{transform:rotate(360deg)}}
-.baan{position:absolute;inset:0;animation:draai 18s linear infinite}
-.baan--traag{animation-duration:30s;animation-direction:reverse}
-.baan span{position:absolute;width:60px;height:60px;display:block;animation:draai 9s linear infinite reverse}
-.baan span:nth-child(1){top:2%;left:44%}
-.baan span:nth-child(2){bottom:6%;left:6%;width:46px;height:46px}
-.baan span:nth-child(3){top:34%;right:0%;width:38px;height:38px}
+
+/* het oventje: deegbol erin, koekje eruit, en dat rondje opnieuw */
+.oven-scene{position:relative;width:min(100%,340px);aspect-ratio:1 / 1.16}
+.ovenmachine{position:absolute;top:0;left:50%;transform:translateX(-50%);width:82%;z-index:2;
+  filter:drop-shadow(0 16px 22px rgba(46,34,23,.16))}
+.deegbol{position:absolute;top:26%;left:41%;width:15%;z-index:3;opacity:0;
+  animation:deegErin 9s cubic-bezier(.4,.1,.5,1) infinite}
+.uitkoekje{position:absolute;bottom:0;left:50%;width:46%;z-index:1;transform:translate(-50%,0);
+  animation:koekjeEruit 9s cubic-bezier(.3,.6,.4,1) infinite;
+  filter:drop-shadow(0 12px 16px rgba(46,34,23,.2))}
+.uitkoekje-draai{animation:draai 7s linear infinite}
+@keyframes deegErin{
+  0%{opacity:0;transform:translate(-330%,120%) scale(.75)}
+  7%{opacity:1;transform:translate(-280%,95%) scale(1)}
+  17%{opacity:1;transform:translate(-150%,-25%) scale(1)}
+  25%{opacity:1;transform:translate(-8%,4%) scale(.95)}
+  31%{opacity:0;transform:translate(14%,10%) scale(.4)}
+  100%{opacity:0;transform:translate(14%,10%) scale(.4)}
+}
+@keyframes koekjeEruit{
+  0%,46%{opacity:0;transform:translate(-50%,-78%) scale(.32)}
+  56%{opacity:1;transform:translate(-50%,-16%) scale(.92)}
+  64%,88%{opacity:1;transform:translate(-50%,0) scale(1)}
+  97%,100%{opacity:0;transform:translate(-50%,14%) scale(.82)}
+}
+.oven-gloed{animation:ovenGloed 9s ease-in-out infinite}
+@keyframes ovenGloed{0%,24%{opacity:0}32%{opacity:.45}40%{opacity:.7}50%{opacity:.25}56%,100%{opacity:0}}
 @media(max-width:860px){
   .hero-grid{grid-template-columns:1fr;gap:8px}
-  .podium{order:-1;min-height:270px}
+  .podium{order:-1;min-height:300px}
 }
 
 /* ---------- marquee ---------- */
@@ -461,17 +478,14 @@ button{font:inherit;color:inherit}
           <a class="knop" href="#assortiment">Bekijk de koekjes</a>
           <button class="knop knop--stil" id="verrasMij" type="button">Verras me met een box</button>
         </div>
-        <div class="hero-stickers">
-          <span class="sticker sticker--gratis">Koop er 5, de 6e is gratis</span>
-          <span class="sticker">Alles zelf gebakken, ik ben 16</span>
-          <span class="sticker sticker--karamel">Ø 10 cm · 95 gram</span>
-        </div>
       </div>
       <div class="podium">
         <div class="podium-schijf" aria-hidden="true"></div>
-        <div class="hoofdkoek" id="heroKoek" aria-hidden="true"></div>
-        <div class="baan" aria-hidden="true"><span id="orbit1"></span><span id="orbit2"></span></div>
-        <div class="baan baan--traag" aria-hidden="true"><span></span><span></span><span id="orbit3"></span></div>
+        <div class="oven-scene" aria-hidden="true">
+          <div class="deegbol" id="deegbol"></div>
+          <div class="ovenmachine" id="ovenTekening"></div>
+          <div class="uitkoekje"><div class="uitkoekje-draai" id="uitKoekje"></div></div>
+        </div>
       </div>
     </div>
   </section>
@@ -782,6 +796,38 @@ function koekSVG(k, opties){
   s += '<path d="' + randPad(100, 100, 88, rng(k.seed)) + '" fill="none" stroke="' + korst + '" stroke-opacity=".55" stroke-width="3"/>';
   s += '</g></svg>';
   return s;
+}
+
+function ovenSVG(){
+  return '<svg viewBox="0 0 200 178" xmlns="http://www.w3.org/2000/svg">'
+    + '<rect x="30" y="148" width="16" height="24" rx="5" fill="var(--inkt)"/>'
+    + '<rect x="154" y="148" width="16" height="24" rx="5" fill="var(--inkt)"/>'
+    + '<rect x="14" y="8" width="172" height="146" rx="18" fill="var(--zand)" stroke="var(--inkt)" stroke-width="5"/>'
+    + '<path d="M14 46 H186" stroke="var(--inkt)" stroke-width="4"/>'
+    + '<circle cx="44" cy="27" r="8" fill="var(--karamel)" stroke="var(--inkt)" stroke-width="4"/>'
+    + '<circle cx="73" cy="27" r="8" fill="var(--papier)" stroke="var(--inkt)" stroke-width="4"/>'
+    + '<rect x="104" y="20" width="62" height="14" rx="7" fill="var(--papier)" stroke="var(--inkt)" stroke-width="4"/>'
+    + '<rect x="30" y="58" width="140" height="82" rx="14" fill="var(--papier)" stroke="var(--inkt)" stroke-width="5"/>'
+    + '<rect class="oven-gloed" x="38" y="66" width="124" height="66" rx="10" fill="var(--karamel)" opacity="0"/>'
+    + '<path d="M40 114 H160" stroke="var(--inkt)" stroke-width="3" stroke-opacity=".3"/>'
+    + '<rect x="30" y="142" width="140" height="11" rx="6" fill="var(--karamel)" stroke="var(--inkt)" stroke-width="4"/>'
+    + '</svg>';
+}
+
+function deegSVG(){
+  const vorm = randPad(50, 50, 40, rng(9));
+  const rand = rng(23);
+  let s = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><radialGradient id="deeg" cx="38%" cy="32%" r="76%">'
+    + '<stop offset="0%" stop-color="#F3DDBA"/><stop offset="70%" stop-color="#E2C089"/>'
+    + '<stop offset="100%" stop-color="#BE9455"/></radialGradient></defs>'
+    + '<path d="' + vorm + '" fill="url(#deeg)"/>';
+  for (let i = 0; i < 5; i++){
+    const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * 26;
+    s += '<circle cx="' + (50 + Math.cos(a) * d).toFixed(1) + '" cy="' + (50 + Math.sin(a) * d).toFixed(1)
+       + '" r="' + (2.4 + rand() * 2).toFixed(1) + '" fill="#6B4A34" opacity=".8"/>';
+  }
+  return s + '</svg>';
 }
 
 /* ---------- het assortiment ---------- */
@@ -1137,11 +1183,11 @@ function start(){
   const klein = koekSVG(KOEKJES[0]);
   $("#laadKoek").innerHTML = koekSVG(KOEKJES[3]);
   $("#merkKoek").innerHTML = klein;
-  $("#heroKoek").innerHTML = koekSVG(KOEKJES[0]);
+  $("#ovenTekening").innerHTML = ovenSVG();
+  $("#deegbol").innerHTML = deegSVG();
+  $("#uitKoekje").innerHTML = koekSVG(KOEKJES[0]);
   $("#cursor").innerHTML = koekSVG(KOEKJES[1]);
   $("#polaroidKoek").innerHTML = koekSVG(KOEKJES[2]);
-  ["#orbit1", "#orbit2", "#orbit3"].forEach(function(sel, i){ $(sel).innerHTML = koekSVG(KOEKJES[i + 1]); });
-  $$(".baan span:empty").forEach(function(el, i){ el.innerHTML = koekSVG(KOEKJES[(i + 3) % 5]); });
 
   // loper
   const woorden = ["Vers gebakken", "Koop er 5 · de 6e gratis", "Elke vrijdag een nieuwe batch", "48 uur gerijpt deeg", "Bezorgd in " + CONFIG.stad, "Zelf gebakken, ik ben 16"];

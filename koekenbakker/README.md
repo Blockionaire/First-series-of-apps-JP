@@ -20,7 +20,9 @@ logica). Open 'm lokaal met dubbelklikken of zet 'm op GitHub Pages.
 - **Laadscherm** — een koekje dat in de oven ligt terwijl de pagina inlaadt.
 - **Koekjescursor** — op laptop en desktop volgt een koekje je muis en laat kruimels achter.
   Uit te zetten onderaan de pagina; de keuze wordt onthouden.
-- **Hero** — een draaiend koekje met kleinere koekjes eromheen in een baan.
+- **Hero** — een oventje dat blijft doorbakken: een deegbol zweeft naar binnen, het
+  venster gloeit op, en het koekje komt eronder uit en draait daar rond. Daarna begint
+  het rondje opnieuw.
 - **Assortiment** — vijf koekjes met prijs, gewicht, allergenen en een smaakmeter.
   Tik op een koekje en er gaat een hap uit (na drie happen krijg je een knipoog terug).
 - **Spaarregel 5 + 1** — zes gleuven die meelopen met je mandje. Bij elke vijf koekjes
