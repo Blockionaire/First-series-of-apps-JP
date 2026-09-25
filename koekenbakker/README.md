@@ -25,12 +25,19 @@ logica). Open 'm lokaal met dubbelklikken of zet 'm op GitHub Pages.
   Tik op een koekje en er gaat een hap uit (na drie happen krijg je een knipoog terug).
 - **Spaarregel 5 + 1** — zes gleuven die meelopen met je mandje. Bij elke vijf koekjes
   verschijnt er automatisch een gratis koekje, waarvan je zelf de smaak kiest.
+- **Verrassingsbox** — één knop in de hero legt een box van zes koekjes in je mandje.
+  Wat erin zit blijft een verrassing: in het mandje staat alleen *1× Verrassingsbox
+  (6 koekjes)*. De box telt niet mee voor de spaarregel, want de zesde zit er al in.
 - **Bakdag** — een aftelklok naar de eerstvolgende bakdag (standaard vrijdag 16:00).
 - **Welk koekje ben jij?** — drie vragen, en het koekje dat eruit komt kun je direct
   in je mandje leggen.
 - **Over Zara**, **reviews** en een **vragenlijst**.
 - **Mandje** — schuift open vanaf de rechterkant, onthoudt zichzelf tussen bezoeken
-  (localStorage) en zet de bestelling klaar als berichtje.
+  (localStorage) en zet de bestelling klaar als berichtje. Naam en telefoon/e-mail zijn
+  verplicht; ontbreekt er iets, dan springt het veld in het rood en gaat de bestelling
+  niet weg.
+- **Afhaalmoment** — kies je afhalen, dan kies je een dag en een tijdslot (met de datum
+  van de eerstvolgende bakdag erbij), of "maakt me niet uit".
 - **Bestelbalk onderaan** op de telefoon, zodat bestellen altijd één tik weg is.
 
 Alle koekjes zijn getekend in code (SVG), dus er zijn geen foto's nodig en de site laadt
@@ -51,9 +58,21 @@ const CONFIG = {
   bezorgkosten: 2.50,
   gratisBezorgenVanaf: 6,
   bakdag: 5,                     // 0 = zondag, 5 = vrijdag
-  bakuur: 16
+  bakuur: 16,
+  boxPrijs: 14.50,               // verrassingsbox: zes koekjes, je betaalt er vijf
+  afhaalKeuze: true,             // op false: geen vaste tijdsloten, je spreekt het zelf af
+  afhaalmomenten: [
+    {dagNr: 5, tijden: ["17:00 – 18:00", "18:00 – 19:00"]},
+    {dagNr: 6, tijden: ["10:00 – 11:00", "11:00 – 12:00"]}
+  ]
 };
 ```
+
+De afhaalmomenten rekenen zichzelf uit vanaf de eerstvolgende bakdag: `dagNr` 5 is
+vrijdag, 6 is zaterdag. Wil je geen tijdsloten aanbieden, zet dan `afhaalKeuze` op
+`false` — het hele blok verdwijnt dan uit het bestelformulier en je spreekt het
+moment af in je bevestiging. De prijs van de verrassingsbox staat los van de losse
+koekjes; met `boxPrijs` bepaal je die zelf.
 
 **Nog invullen voordat de site echt live gaat:**
 

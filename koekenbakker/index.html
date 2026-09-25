@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>De Koekenbakker</title>
-<meta name="description" content="Verse chocoladekoekjes, met de hand gebakken door Zara. Elke week een nieuwe batch. Koop er 5, krijg de 6e gratis.">
+<meta name="description" content="Verse chocoladekoekjes die ik met de hand bak. Elke week een nieuwe batch. Koop er 5, krijg de 6e gratis.">
 <meta name="theme-color" content="#241710">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -335,7 +335,9 @@ button{font:inherit;color:inherit}
 .lade-kop h3{font-size:1.3rem}
 .dicht{background:none;border:2px solid var(--inkt);border-radius:999px;width:38px;height:38px;cursor:pointer;
   font-size:1.1rem;line-height:1;display:grid;place-items:center}
-.lade-body{overflow-y:auto;padding:20px;display:grid;gap:16px;align-content:start;flex:1}
+.lade-scroll{flex:1;min-height:0;overflow-y:auto}
+.lade-body{padding:20px;display:grid;gap:16px;align-content:start}
+.lade-form{padding:0 20px 22px;display:grid;gap:14px}
 .regel{display:grid;grid-template-columns:54px 1fr auto;gap:12px;align-items:center}
 .regel svg{width:54px}
 .regel h4{font-size:1rem}
@@ -354,11 +356,21 @@ button{font:inherit;color:inherit}
 .spaarbalk p{font-family:var(--kop);font-weight:700;font-size:.9rem}
 .spaarbalk .baan-bar{height:9px;background:rgba(46,34,23,.14);border-radius:99px;overflow:hidden}
 .spaarbalk .baan-bar i{display:block;height:100%;background:var(--karamel);transition:width .35s}
-.lade-voet{padding:20px;border-top:2px solid var(--inkt);display:grid;gap:14px;background:var(--papier)}
+.lade-voet{padding:16px 20px calc(16px + env(safe-area-inset-bottom));border-top:2px solid var(--inkt);display:grid;gap:12px;background:var(--papier)}
 .totaal{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--kop);font-weight:800;font-size:1.25rem}
-.totaal small{font-weight:600;font-size:.78rem;color:var(--zacht)}
+.totaal small{display:block;text-align:right;font-weight:600;font-size:.78rem;color:var(--zacht)}
 .veld{display:grid;gap:5px}
 .veld label{font-family:var(--kop);font-weight:700;font-size:.76rem;letter-spacing:.08em;text-transform:uppercase;color:var(--zacht)}
+.veld label em{font-style:normal;color:var(--karamel-diep);margin-left:6px;font-size:.68rem}
+.veld .fout{border-color:var(--karamel);background:rgba(142,90,59,.08)}
+.momenten{display:grid;gap:10px}
+.momenten.fout{outline:2px solid var(--karamel);outline-offset:6px;border-radius:12px}
+.moment-dag{font-family:var(--kop);font-weight:700;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--zacht)}
+.moment-rij{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.moment{border:2px solid var(--inkt);background:var(--room);border-radius:12px;padding:9px 13px;cursor:pointer;
+  font-family:var(--kop);font-weight:700;font-size:.84rem;font-variant-numeric:tabular-nums}
+.moment:hover{background:var(--zand)}
+.moment.aan{background:var(--inkt);color:var(--papier)}
 .veld input,.veld textarea,.veld select{padding:11px 13px;border:2px solid var(--inkt);border-radius:12px;
   background:var(--room);font-family:var(--tekst);font-size:.97rem;width:100%}
 .veld textarea{min-height:64px;resize:vertical}
@@ -430,7 +442,7 @@ button{font:inherit;color:inherit}
     <nav class="nav" aria-label="Hoofdmenu">
       <a href="#assortiment">Koekjes</a>
       <a href="#bakdag">Bakdag</a>
-      <a href="#zara">Over Zara</a>
+      <a href="#zara">Over mij</a>
       <a href="#vragen">Vragen</a>
     </nav>
     <button class="mandje-knop" id="mandjeKnop" aria-haspopup="dialog">Mandje <b id="mandjeTeller">0</b></button>
@@ -443,15 +455,15 @@ button{font:inherit;color:inherit}
     <div class="wrap hero-grid">
       <div>
         <span class="eyebrow">Vers gebakken · elke vrijdag</span>
-        <h1>Warme koekjes,<br><span class="fat"><em>rechtstreeks</em></span><br>uit Zara's oven.</h1>
-        <p class="hero-p">Vijf chocoladekoekjes, met de hand gedraaid, dezelfde dag gebakken en bij je thuis bezorgd. Nog een beetje zacht vanbinnen — precies zoals het hoort.</p>
+        <h1>Verse koekjes,<br><span class="fat"><em>rechtstreeks</em></span><br>uit mijn oven.</h1>
+        <p class="hero-p">Vijf chocoladekoekjes die ik met de hand draai, dezelfde dag bak en bij je thuis breng. Nog een beetje zacht vanbinnen — precies zoals het hoort.</p>
         <div class="hero-acties">
           <a class="knop" href="#assortiment">Bekijk de koekjes</a>
           <button class="knop knop--stil" id="verrasMij" type="button">Verras me met een box</button>
         </div>
         <div class="hero-stickers">
           <span class="sticker sticker--gratis">Koop er 5, de 6e is gratis</span>
-          <span class="sticker">Zelf gebakken door Zara (16)</span>
+          <span class="sticker">Alles zelf gebakken, ik ben 16</span>
           <span class="sticker sticker--karamel">Ø 10 cm · 95 gram</span>
         </div>
       </div>
@@ -474,7 +486,7 @@ button{font:inherit;color:inherit}
         <div class="tekstkant">
           <span class="eyebrow">Het assortiment</span>
           <h2 class="titel">Vijf keer chocolade,<br>vijf keer anders.</h2>
-          <p class="lead">Alles wordt gebakken op bestelling — geen voorraad, geen dag-oude koekjes. Tik op een koekje om er een hap uit te nemen (niet opeten, hè).</p>
+          <p class="lead">Ik bak alles op bestelling — geen voorraad, geen dag-oude koekjes. Tik op een koekje om er een hap uit te nemen (niet opeten, hè).</p>
         </div>
         <span class="sticker sticker--karamel">Deze week vers</span>
       </div>
@@ -486,8 +498,8 @@ button{font:inherit;color:inherit}
     <div class="wrap deal">
       <div class="toon">
         <span class="eyebrow">De spaarregel</span>
-        <h2 class="titel">Vijf in je mandje?<br>De zesde bakt ze erbij.</h2>
-        <p class="lead" style="margin-top:14px">Bij elke vijf koekjes doet Zara er gratis eentje bij in de doos. Je kiest zelf welke smaak — of je laat je verrassen met wat er die dag het lekkerst uit de oven komt.</p>
+        <h2 class="titel">Vijf in je mandje?<br>De zesde krijg je van mij!</h2>
+        <p class="lead" style="margin-top:14px">Bij elke vijf koekjes doe ik er gratis eentje bij in de doos. Je kiest zelf welke smaak — of je laat je verrassen met wat er die dag het lekkerst uit de oven komt.</p>
         <div class="hero-acties" style="margin-top:26px">
           <button class="knop" id="dealKnop" type="button">Stel je box samen</button>
         </div>
@@ -505,7 +517,7 @@ button{font:inherit;color:inherit}
       <div class="toon">
         <span class="eyebrow">Bakdag</span>
         <h2 class="titel">De oven gaat vrijdag om 16:00 aan.</h2>
-        <p class="lead" style="margin-top:14px">Zara bakt één keer per week, in kleine batches naast school. Bestel je vóór donderdagavond 20:00, dan zit je in de batch van vrijdag.</p>
+        <p class="lead" style="margin-top:14px">Ik bak één keer per week, in kleine batches naast school. Bestel je vóór donderdagavond 20:00, dan zit je in de batch van vrijdag.</p>
         <div class="klok" id="klok" role="timer" aria-label="Tijd tot de volgende bakdag">
           <div><b id="kD">0</b><span>dagen</span></div>
           <div><b id="kU">0</b><span>uur</span></div>
@@ -515,8 +527,8 @@ button{font:inherit;color:inherit}
       </div>
       <div class="stappen toon">
         <div class="stap"><div><h4>Kies je koekjes</h4><p>Vijf smaken, los te combineren. Vanaf 3 koekjes bestel je al.</p></div></div>
-        <div class="stap"><div><h4>Stuur je bestelling</h4><p>Eén tik en je mandje staat als berichtje klaar. Zara bevestigt persoonlijk.</p></div></div>
-        <div class="stap"><div><h4>Vrijdag warm in de doos</h4><p>Afhalen of bezorgd binnen de stad — dezelfde middag nog.</p></div></div>
+        <div class="stap"><div><h4>Stuur je bestelling</h4><p>Eén tik en je mandje staat als berichtje klaar. Ik bevestig je bestelling persoonlijk.</p></div></div>
+        <div class="stap"><div><h4>Vrijdag vers in de doos</h4><p>Afhalen of ik breng het langs binnen de stad — dezelfde middag nog.</p></div></div>
       </div>
     </div>
   </section>
@@ -536,7 +548,7 @@ button{font:inherit;color:inherit}
           <span class="monogram">Z</span>
           <span id="polaroidKoek" aria-hidden="true"></span>
         </div>
-        <figcaption>Zara, zaterdagochtend, batch nummer 63</figcaption>
+        <figcaption>Zaterdagochtend, batch nummer 63</figcaption>
       </figure>
       <div class="toon">
         <span class="eyebrow">Over de bakker</span>
@@ -591,12 +603,12 @@ button{font:inherit;color:inherit}
         </div>
       </div>
       <div class="faq toon">
-        <details open><summary>Hoe werkt "koop er 5, krijg de 6e gratis"?</summary><p>Zodra er vijf koekjes in je mandje liggen, verschijnt er automatisch een gratis koekje. Bij tien krijg je er twee, en zo door. Je kiest zelf de smaak van elk gratis koekje, of je laat het aan Zara over.</p></details>
+        <details open><summary>Hoe werkt "koop er 5, krijg de 6e gratis"?</summary><p>Zodra er vijf koekjes in je mandje liggen, verschijnt er automatisch een gratis koekje. Bij tien krijg je er twee, en zo door. Je kiest zelf de smaak van elk gratis koekje, of je laat het aan mij over.</p></details>
         <details><summary>Wanneer worden mijn koekjes gebakken?</summary><p>Elke vrijdagmiddag. Bestel je vóór donderdag 20:00, dan zit je in de batch van diezelfde week. Daarna schuif je door naar de vrijdag erop.</p></details>
-        <details><summary>Bezorgen of afhalen?</summary><p>Afhalen kan vrijdag tussen 17:00 en 19:00. Bezorgen doet Zara zelf op de fiets binnen de stad, vanaf zes koekjes gratis. Daaronder rekent ze € 2,50.</p></details>
+        <details><summary>Bezorgen of afhalen?</summary><p>Afhalen kan vrijdagavond tussen 17:00 en 19:00 of zaterdagochtend tussen 10:00 en 12:00 — je kiest je moment bij het bestellen. Bezorgen doe ik zelf op de fiets binnen de stad, vanaf zes koekjes gratis. Daaronder reken ik € 2,50.</p></details>
         <details><summary>Hoe lang blijven ze goed?</summary><p>Op hun best zijn ze de dag zelf. Daarna nog drie dagen prima in een afgesloten trommel — tien seconden in de magnetron en ze zijn weer als nieuw. Invriezen kan tot drie maanden.</p></details>
         <details><summary>Allergenen</summary><p>Alle koekjes bevatten tarwe (gluten), ei, melk en soja. De Nootje Noir en Witte Wolk bevatten noten, en alles wordt gebakken in een keuken waar noten aanwezig zijn. Laat het weten bij je bestelling als er iets speelt.</p></details>
-        <details><summary>Kan ik een grotere bestelling doen voor een feest?</summary><p>Ja. Vanaf 24 koekjes maakt Zara een aparte planning en kun je smaken laten mixen. Stuur een berichtje met de datum, dan hoor je snel of het past.</p></details>
+        <details><summary>Kan ik een grotere bestelling doen voor een feest?</summary><p>Ja. Vanaf 24 koekjes maak ik een aparte planning en kun je smaken laten mixen. Stuur de datum mee met je bestelling, dan laat ik je snel weten of het past.</p></details>
       </div>
     </div>
   </section>
@@ -607,7 +619,7 @@ button{font:inherit;color:inherit}
     <div class="voet-grid">
       <div>
         <div class="voet-merk">De Koekenbakker</div>
-        <p class="lead" style="max-width:34ch;margin-top:10px">Verse chocoladekoekjes, met de hand gebakken door Zara. Eén bakdag per week, en dan is het op.</p>
+        <p class="lead" style="max-width:34ch;margin-top:10px">Verse chocoladekoekjes die ik met de hand bak. Eén bakdag per week, en dan is het op.</p>
       </div>
       <div>
         <h4>Bestellen</h4>
@@ -648,11 +660,11 @@ button{font:inherit;color:inherit}
     <p id="spaarTekst">Nog 5 koekjes tot een gratis koekje.</p>
     <div class="baan-bar"><i id="spaarBalk" style="width:0%"></i></div>
   </div>
-  <div class="lade-body" id="ladeBody"></div>
-  <div class="lade-voet">
-    <div class="totaal"><span>Totaal</span><span><span id="totaalPrijs">€ 0,00</span><small id="totaalUitleg"></small></span></div>
-    <div class="veld"><label for="vNaam">Je naam</label><input id="vNaam" type="text" autocomplete="name" placeholder="Bijv. Joost"></div>
-    <div class="veld"><label for="vContact">Telefoon of e-mail</label><input id="vContact" type="text" autocomplete="tel" placeholder="06 – …"></div>
+  <div class="lade-scroll">
+    <div class="lade-body" id="ladeBody"></div>
+    <div class="lade-form">
+    <div class="veld"><label for="vNaam">Je naam <em>verplicht</em></label><input id="vNaam" type="text" autocomplete="name" placeholder="Bijv. Joost" required aria-required="true"></div>
+    <div class="veld"><label for="vContact">Telefoon of e-mail <em>verplicht</em></label><input id="vContact" type="text" autocomplete="tel" placeholder="06 – …" required aria-required="true"></div>
     <div class="veld">
       <label>Afhalen of bezorgen</label>
       <div class="keuzes" id="keuzes">
@@ -660,10 +672,18 @@ button{font:inherit;color:inherit}
         <button type="button" data-lever="Bezorgen">Bezorgen</button>
       </div>
     </div>
-    <div class="veld" id="adresVeld" hidden><label for="vAdres">Bezorgadres</label><input id="vAdres" type="text" autocomplete="street-address" placeholder="Straat en huisnummer"></div>
+    <div class="veld" id="afhaalVeld" hidden>
+      <label>Wanneer kom je het ophalen? <em>verplicht</em></label>
+      <div class="momenten" id="momenten"></div>
+    </div>
+    <div class="veld" id="adresVeld" hidden><label for="vAdres">Bezorgadres <em>verplicht</em></label><input id="vAdres" type="text" autocomplete="street-address" placeholder="Straat en huisnummer"></div>
     <div class="veld"><label for="vNotitie">Iets doorgeven?</label><textarea id="vNotitie" placeholder="Allergieën, cadeauverpakking, ander bezorgmoment…"></textarea></div>
+    </div>
+  </div>
+  <div class="lade-voet">
+    <div class="totaal"><span>Totaal</span><span><span id="totaalPrijs">€ 0,00</span><small id="totaalUitleg"></small></span></div>
     <button class="knop knop--vol" id="bestelKnop" type="button">Bestelling versturen</button>
-    <p class="mini">Je bestelling gaat als berichtje naar Zara. Betalen doe je bij het afhalen of bezorgen.</p>
+    <p class="mini">Je bestelling komt als berichtje bij mij binnen. Betalen doe je bij het afhalen of bezorgen.</p>
   </div>
 </aside>
 
@@ -672,7 +692,7 @@ button{font:inherit;color:inherit}
 "use strict";
 
 /* =====================================================================
-   Instellingen — pas dit blok aan als de gegevens van Zara veranderen.
+   Instellingen — pas dit blok aan als je gegevens veranderen.
    ===================================================================== */
 const CONFIG = {
   whatsapp: "",                       // bijv. "31612345678" (landcode, geen + of spaties)
@@ -681,7 +701,13 @@ const CONFIG = {
   bezorgkosten: 2.50,
   gratisBezorgenVanaf: 6,
   bakdag: 5,                          // 5 = vrijdag
-  bakuur: 16
+  bakuur: 16,
+  boxPrijs: 14.50,                    // verrassingsbox: zes koekjes, je betaalt er vijf
+  afhaalKeuze: true,                  // op false: geen vaste afhaalmomenten, je spreekt het zelf af
+  afhaalmomenten: [
+    {dagNr: 5, tijden: ["17:00 – 18:00", "18:00 – 19:00"]},
+    {dagNr: 6, tijden: ["10:00 – 11:00", "11:00 – 12:00"]}
+  ]
 };
 
 /* ---------- kleine hulpjes ---------- */
@@ -791,7 +817,22 @@ const KOEKJES = [
     seed: 89, deeg: ["#C99862", "#A97742"], korst: "#7A5024",
     brokken: ["#3A2318", "#8B5A2B", "#241611"] }
 ];
-const vind = id => KOEKJES.filter(k => k.id === id)[0];
+const BOX = {
+  id: "box", naam: "Verrassingsbox", koekjes: 6,
+  kort: "Zes koekjes, door mij uitgezocht — wat er die week het lekkerst uit de oven komt."
+};
+const vind = id => id === BOX.id ? Object.assign({prijs: CONFIG.boxPrijs}, BOX) : KOEKJES.filter(k => k.id === id)[0];
+
+function doosSVG(){
+  return '<svg viewBox="0 0 200 200" role="img" aria-label="Verrassingsbox" xmlns="http://www.w3.org/2000/svg">'
+    + '<rect x="28" y="72" width="144" height="98" rx="10" fill="var(--zand)" stroke="var(--inkt)" stroke-width="6"/>'
+    + '<rect x="18" y="52" width="164" height="34" rx="9" fill="var(--papier)" stroke="var(--inkt)" stroke-width="6"/>'
+    + '<path d="M100 52 V170" stroke="var(--inkt)" stroke-width="5" stroke-opacity=".35"/>'
+    + '<path d="M100 52 C100 30 78 22 70 34 C63 45 84 52 100 52 C116 52 137 45 130 34 C122 22 100 30 100 52Z" '
+    + 'fill="var(--karamel)" stroke="var(--inkt)" stroke-width="5"/>'
+    + '<text x="100" y="140" text-anchor="middle" font-family="Bagel Fat One, sans-serif" font-size="46" fill="var(--karamel)">?</text>'
+    + '</svg>';
+}
 
 /* ---------- kaarten ---------- */
 const happenPer = {};
@@ -831,7 +872,7 @@ function neemHap(id, bron){
   const lijst = happenPer[id] || (happenPer[id] = []);
   if (lijst.length >= 3){
     lijst.length = 0;
-    melding("Hé! Niet opeten — bestel er gewoon een 😄");
+    melding("Hé! Niet opeten — bestel er gewoon een bij mij 😄");
   } else {
     lijst.push(Math.random() * Math.PI * 2);
   }
@@ -844,8 +885,25 @@ function neemHap(id, bron){
 let mandje = lees("kb-mandje", {});
 let gratisKeuze = lees("kb-gratis", []);
 let lever = lees("kb-lever", "Afhalen");
+let afhaalmoment = lees("kb-afhaal", "");
 
-const aantalBetaald = () => Object.keys(mandje).reduce((n, id) => n + mandje[id], 0);
+function afhaalDatum(dagNr){
+  const vr = volgendeBakdag();
+  return new Date(vr.getFullYear(), vr.getMonth(), vr.getDate() + ((dagNr - CONFIG.bakdag + 7) % 7));
+}
+function tekenMomenten(){
+  const knop = (waarde, tekst) => '<button type="button" class="moment' + (afhaalmoment === waarde ? " aan" : "")
+    + '" data-moment="' + waarde + '">' + tekst + '</button>';
+  $("#momenten").innerHTML = CONFIG.afhaalmomenten.map(function(m){
+    const dag = afhaalDatum(m.dagNr).toLocaleDateString("nl-NL", {weekday: "long", day: "numeric", month: "long"});
+    return '<div><span class="moment-dag">' + dag + '</span><div class="moment-rij">'
+      + m.tijden.map(t => knop(dag + ", " + t, t)).join("") + '</div></div>';
+  }).join("") + '<div class="moment-rij">' + knop("In overleg", "Maakt me niet uit") + '</div>';
+}
+
+const aantalBetaald = () => Object.keys(mandje).filter(id => id !== BOX.id).reduce((n, id) => n + mandje[id], 0);
+const aantalBoxen = () => mandje[BOX.id] || 0;
+const koekjesTotaal = () => aantalBetaald() + aantalGratis() + aantalBoxen() * BOX.koekjes;
 const aantalGratis = () => Math.floor(aantalBetaald() / 5);
 const subtotaal = () => Object.keys(mandje).reduce((n, id) => n + mandje[id] * vind(id).prijs, 0);
 
@@ -863,11 +921,13 @@ function inMandje(id, aantal){
 
 function ververs(){
   const betaald = aantalBetaald(), gratis = aantalGratis(), sub = subtotaal();
-  $("#mandjeTeller").textContent = betaald + gratis;
+  $("#mandjeTeller").textContent = koekjesTotaal();
   $("#balkTotaal").textContent = euro(sub);
-  $("#balkTekst").textContent = betaald === 0
-    ? "Nog geen koekjes gekozen"
-    : betaald + " koekje" + (betaald === 1 ? "" : "s") + (gratis ? " + " + gratis + " gratis" : "");
+  const boxen = aantalBoxen();
+  const losseTekst = betaald + " koekje" + (betaald === 1 ? "" : "s") + (gratis ? " + " + gratis + " gratis" : "");
+  const boxTekst = boxen + " verrassingsbox" + (boxen === 1 ? "" : "en");
+  $("#balkTekst").textContent = betaald === 0 && boxen === 0 ? "Nog geen koekjes gekozen"
+    : betaald === 0 ? boxTekst : losseTekst + (boxen ? " + " + boxTekst : "");
 
   const tot5 = betaald === 0 ? 5 : (5 - (betaald % 5)) % 5;
   const spaar = tot5 === 0 && betaald > 0
@@ -892,28 +952,35 @@ function ververs(){
   } else {
     body.innerHTML = ids.map(function(id){
       const k = vind(id);
+      const onder = id === BOX.id
+        ? '<span style="display:block;font-size:.82rem;color:var(--zacht)">' + BOX.koekjes + ' koekjes · ik kies ze uit</span>'
+        : '';
       return '<div class="regel"><span class="koek-plek" data-koek="' + id + '"></span>'
-        + '<div><h4>' + k.naam + '</h4>'
+        + '<div><h4>' + k.naam + '</h4>' + onder
         + '<div class="aantal"><button type="button" data-min="' + id + '" aria-label="Eén minder">–</button>'
         + '<span>' + mandje[id] + '</span>'
         + '<button type="button" data-plus="' + id + '" aria-label="Eén meer">+</button></div></div>'
         + '<span class="r-prijs">' + euro(mandje[id] * k.prijs) + '</span></div>';
     }).join("") + gratisKeuze.map(function(keuze, i){
-      const opties = '<option value="verrassing"' + (keuze === "verrassing" ? " selected" : "") + '>Verras me (keuze van Zara)</option>'
+      const opties = '<option value="verrassing"' + (keuze === "verrassing" ? " selected" : "") + '>Verras me (ik kies iets lekkers)</option>'
         + KOEKJES.map(k => '<option value="' + k.id + '"' + (keuze === k.id ? " selected" : "") + '>' + k.naam + '</option>').join("");
       return '<div class="regel regel--gratis"><span class="koek-plek" data-koek="' + (keuze === "verrassing" ? "karamelbom" : keuze) + '"></span>'
         + '<div><h4>Gratis koekje ' + (gratisKeuze.length > 1 ? "#" + (i + 1) : "") + '</h4>'
         + '<select data-gratis="' + i + '" aria-label="Smaak van je gratis koekje">' + opties + '</select></div></div>';
     }).join("");
   }
-  $$(".koek-plek", body).forEach(function(el){ el.innerHTML = koekSVG(vind(el.dataset.koek)); });
+  $$(".koek-plek", body).forEach(function(el){
+    el.innerHTML = el.dataset.koek === BOX.id ? doosSVG() : koekSVG(vind(el.dataset.koek));
+  });
 
-  const bezorgen = lever === "Bezorgen" && (betaald + gratis) < CONFIG.gratisBezorgenVanaf && betaald > 0;
+  const bezorgen = lever === "Bezorgen" && koekjesTotaal() < CONFIG.gratisBezorgenVanaf && koekjesTotaal() > 0;
   const totaal = sub + (bezorgen ? CONFIG.bezorgkosten : 0);
   $("#totaalPrijs").textContent = euro(totaal);
-  $("#totaalUitleg").textContent = betaald === 0 ? ""
+  $("#totaalUitleg").textContent = koekjesTotaal() === 0 ? ""
     : (bezorgen ? "incl. " + euro(CONFIG.bezorgkosten) + " bezorging" : (lever === "Bezorgen" ? "gratis bezorgd" : "afhalen"));
   $("#adresVeld").hidden = lever !== "Bezorgen";
+  $("#afhaalVeld").hidden = !(lever === "Afhalen" && CONFIG.afhaalKeuze);
+  if (!$("#afhaalVeld").hidden) tekenMomenten();
 }
 
 function openLade(open){
@@ -926,16 +993,21 @@ function openLade(open){
 
 /* ---------- bestelling ---------- */
 function bestelTekst(){
-  const regels = Object.keys(mandje).map(id => "• " + mandje[id] + "× " + vind(id).naam + " — " + euro(mandje[id] * vind(id).prijs));
+  const regels = Object.keys(mandje).map(function(id){
+    const k = vind(id);
+    const extra = id === BOX.id ? " (" + BOX.koekjes + " koekjes)" : "";
+    return "• " + mandje[id] + "× " + k.naam + extra + " — " + euro(mandje[id] * k.prijs);
+  });
   gratisKeuze.forEach(function(keuze){
     regels.push("• 1× " + (keuze === "verrassing" ? "Gratis koekje (verrassing)" : "Gratis koekje: " + vind(keuze).naam) + " — gratis");
   });
-  const betaald = aantalBetaald(), gratis = aantalGratis();
-  const bezorgen = lever === "Bezorgen" && (betaald + gratis) < CONFIG.gratisBezorgenVanaf;
+  const bezorgen = lever === "Bezorgen" && koekjesTotaal() < CONFIG.gratisBezorgenVanaf;
   const totaal = subtotaal() + (bezorgen ? CONFIG.bezorgkosten : 0);
   let t = "Hoi Zara! Ik wil graag bestellen bij De Koekenbakker:\n\n" + regels.join("\n");
   t += "\n\nTotaal: " + euro(totaal) + (bezorgen ? " (incl. bezorging)" : "");
-  t += "\n" + lever + (lever === "Bezorgen" ? " — " + ($("#vAdres").value.trim() || "adres volgt") : "");
+  t += "\n" + lever + (lever === "Bezorgen"
+    ? " — " + ($("#vAdres").value.trim() || "adres volgt")
+    : (CONFIG.afhaalKeuze ? " — " + (afhaalmoment === "In overleg" ? "moment nog af te spreken" : (afhaalmoment || "moment volgt")) : ""));
   t += "\n\nNaam: " + $("#vNaam").value.trim();
   t += "\nContact: " + $("#vContact").value.trim();
   const notitie = $("#vNotitie").value.trim();
@@ -943,11 +1015,23 @@ function bestelTekst(){
   return t;
 }
 
+function struikel(veld, tekst){
+  veld.classList.add("fout");
+  veld.focus();
+  melding(tekst);
+}
+
 function versturen(){
-  if (aantalBetaald() === 0){ melding("Je mandje is nog leeg."); return; }
-  if (!$("#vNaam").value.trim()){ melding("Vul even je naam in."); $("#vNaam").focus(); return; }
-  if (!$("#vContact").value.trim()){ melding("Hoe kan Zara je bereiken?"); $("#vContact").focus(); return; }
-  if (lever === "Bezorgen" && !$("#vAdres").value.trim()){ melding("Vul je bezorgadres in."); $("#vAdres").focus(); return; }
+  if (koekjesTotaal() === 0){ melding("Je mandje is nog leeg."); return; }
+  if (!$("#vNaam").value.trim()){ struikel($("#vNaam"), "Je naam is verplicht."); return; }
+  if (!$("#vContact").value.trim()){ struikel($("#vContact"), "Een telefoonnummer of e-mailadres is verplicht."); return; }
+  if (lever === "Bezorgen" && !$("#vAdres").value.trim()){ struikel($("#vAdres"), "Vul je bezorgadres in."); return; }
+  if (lever === "Afhalen" && CONFIG.afhaalKeuze && !afhaalmoment){
+    $("#momenten").classList.add("fout");
+    $("#momenten").scrollIntoView({block: "nearest"});
+    melding("Kies even wanneer je het ophaalt.");
+    return;
+  }
   const tekst = bestelTekst();
   if (navigator.clipboard) navigator.clipboard.writeText(tekst).catch(function(){});
   if (CONFIG.whatsapp){
@@ -1060,7 +1144,7 @@ function start(){
   $$(".baan span:empty").forEach(function(el, i){ el.innerHTML = koekSVG(KOEKJES[(i + 3) % 5]); });
 
   // loper
-  const woorden = ["Vers gebakken", "Koop er 5 · de 6e gratis", "Elke vrijdag een nieuwe batch", "48 uur gerijpt deeg", "Bezorgd in " + CONFIG.stad, "Gebakken door Zara (16)"];
+  const woorden = ["Vers gebakken", "Koop er 5 · de 6e gratis", "Elke vrijdag een nieuwe batch", "48 uur gerijpt deeg", "Bezorgd in " + CONFIG.stad, "Zelf gebakken, ik ben 16"];
   $("#loper").innerHTML = (woorden.concat(woorden)).map(w => "<span>" + w + "</span>").join("");
 
   // spaarrij
@@ -1139,10 +1223,17 @@ document.addEventListener("click", function(e){
   if (e.target.closest("#ladeDicht, #sluier")){ openLade(false); return; }
   if (e.target.closest("#cursorSchakel")){ cursorAan = !cursorAan; bewaar("kb-cursor", cursorAan); cursorInstellen(); return; }
   if (e.target.closest("#verrasMij")){
-    const keuze = KOEKJES.slice().sort(() => Math.random() - .5).slice(0, 3);
-    inMandje(keuze[0].id, 2); inMandje(keuze[1].id, 2); inMandje(keuze[2].id, 1);
+    inMandje(BOX.id, 1);
     openLade(true);
-    melding("Boxje samengesteld — inclusief je gratis koekje.");
+    melding("Verrassingsbox toegevoegd — zes koekjes, ik kies ze uit.");
+    return;
+  }
+  const moment = e.target.closest("[data-moment]");
+  if (moment){
+    afhaalmoment = moment.dataset.moment;
+    bewaar("kb-afhaal", afhaalmoment);
+    $("#momenten").classList.remove("fout");
+    tekenMomenten();
     return;
   }
 });
@@ -1158,6 +1249,7 @@ document.addEventListener("change", function(e){
 });
 
 $("#bestelKnop").addEventListener("click", versturen);
+document.addEventListener("input", function(e){ e.target.classList.remove("fout"); });
 
 document.addEventListener("mousemove", function(e){
   if (!cursorAan || !fijn) return;
