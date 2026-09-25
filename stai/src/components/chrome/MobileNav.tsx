@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
+import { isCurrent } from "./NavLinks";
 import { SMark, Wordmark } from "@/components/Logo";
 
 type Props = {
@@ -37,6 +39,7 @@ type Props = {
  */
 export default function MobileNav({ nav, user, plusOn }: Props) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname() ?? "";
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -116,6 +119,7 @@ export default function MobileNav({ nav, user, plusOn }: Props) {
                   key={n.href}
                   href={n.href}
                   onClick={close}
+                  aria-current={isCurrent(pathname, n.href) ? "page" : undefined}
                   className="flex items-baseline gap-4 border-b py-4 rule"
                 >
                   <span className="index-num">{String(i + 1).padStart(2, "0")}</span>

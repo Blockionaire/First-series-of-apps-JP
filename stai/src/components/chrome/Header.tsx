@@ -4,6 +4,7 @@ import { SMark, Wordmark, PlusBadge } from "@/components/Logo";
 import ThemeToggle from "./ThemeToggle";
 import LanguageToggle from "./LanguageToggle";
 import MobileNav from "./MobileNav";
+import NavLinks from "./NavLinks";
 import { HEADER_ICON_BTN } from "./icon-button";
 import { enabledMap } from "@/lib/site-config";
 
@@ -71,15 +72,7 @@ export default async function Header() {
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
-          {nav.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className="f-mono px-3 py-2 text-[0.72rem] font-medium tracking-[0.14em] uppercase text-cream-400 transition-colors hover:text-cream-100"
-            >
-              {n.label}
-            </Link>
-          ))}
+          <NavLinks items={nav.map(({ href, label }) => ({ href, label }))} />
         </nav>
 
         {/* One right-hand cluster for both breakpoints, so the theme toggle
