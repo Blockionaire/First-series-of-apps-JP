@@ -103,6 +103,12 @@ Zonder dit werkt alles gewoon, maar ververst de app pas als je terugkeert naar h
 - **Nieuw artikel** met titel, uitgever, auteur, publicatiedatum, bron-URL en de tekst zelf.
   De tekst wordt opgemaakt tot een rustige leespagina in plaats van een muur tekst.
 - **Afbeeldingen** invoegen op de plek waar ze horen, met een onderschrift.
+- **Opmaak binnen een regel**: `**vet**`, `*cursief*` en `__onderstreept__`. Selecteer de
+  woorden en druk **Ctrl/⌘ + B, I of U** — nog een keer dezelfde toets haalt het er weer af.
+  De markeringstekens verdwijnen uit de leestekst, dus je markeringen en notities blijven
+  op dezelfde woorden staan.
+- **Formulier en artikel scrollen los van elkaar** op een breed scherm: scrol je door het
+  artikel, dan blijft het formulier links staan waar het stond, en andersom.
 - **Mappen en submappen** om je archief te ordenen — slepen mag, en er is een aparte
   weergave voor alles wat nog geen map heeft.
 - **Gelezen / ongelezen**: elk artikel houdt zijn status bij en je kunt de lijst erop filteren.

@@ -97,6 +97,13 @@ select{font:inherit;color:var(--ink);background:var(--field);border:1px solid va
 
 /* editor */
 .edit{display:grid;grid-template-columns:minmax(320px,440px) 1fr;min-height:calc(100vh - 53px)}
+/* Op een breed scherm scrollen het formulier en het artikel ieder voor zich.
+   overscroll-behavior houdt de beweging binnen de kolom waarin hij begon, zodat
+   het einde van de ene kolom de andere niet meeneemt. */
+@media (min-width:881px){
+  .edit{height:calc(100vh - 53px);min-height:0;overflow:hidden}
+  .edit > .side,.edit > .stage{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+}
 @media (max-width:880px){.edit{grid-template-columns:1fr}}
 .side{background:var(--panel);border-right:1px solid var(--line);padding:22px 22px 40px;display:flex;flex-direction:column;gap:16px}
 .restore{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;background:var(--field);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.85rem}
@@ -402,7 +409,8 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     <div>
       <label for="body">Text</label>
       <textarea id="body" placeholder="Paste the article text here…"></textarea>
-      <p class="syntax">Every line becomes a paragraph. <code># Heading</code> for a subheading, <code>- point</code> for a bullet, <code>&gt; quote</code> for a quote, <code>[image 1]</code> on its own line for an image.</p>
+      <p class="syntax">Every line becomes a paragraph. <code># Heading</code> for a subheading, <code>- point</code> for a bullet, <code>&gt; quote</code> for a quote, <code>[image 1]</code> on its own line for an image.
+        Within a line: <code>**bold**</code>, <code>*italic*</code>, <code>__underlined__</code> — or select the words and press Ctrl/⌘ + B, I or U.</p>
     </div>
     <div>
       <label for="file">Images</label>
@@ -583,6 +591,41 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
   }
   const imgSrc = im => im.dataUrl || (im.assetId ? blobUrl(im.assetId) : '');
 
+  // Vet, cursief en onderstreept. De markeringen worden hier uit de tekst
+  // gehaald en apart bijgehouden, zodat block.text precies gelijk blijft aan
+  // wat er straks op het scherm staat. Markeringen van de lezer ankeren op die
+  // tekst via posities, dus een sterretje dat wel in de tekst zou blijven staan
+  // maar niet op het scherm verschijnt, zou elke markering laten verschuiven.
+  const FMT_MARKS = [['**', 'b'], ['__', 'u'], ['*', 'i']];
+  function stripFmt(raw){
+    const fmt = [], open = [];
+    let out = '', i = 0;
+    while (i < raw.length) {
+      const rule = FMT_MARKS.find(([mk]) => raw.startsWith(mk, i));
+      if (rule) {
+        const [mk, kind] = rule;
+        const j = open.findIndex(o => o.mk === mk);
+        // Sluiten mag niet vlak na een spatie, openen niet vlak voor een spatie.
+        // Zo blijft "2 * 3 * 4" gewoon rekenwerk in plaats van cursief.
+        if (j >= 0 && !/\s$/.test(out)) {
+          const o = open.splice(j, 1)[0];
+          if (out.length > o.at) fmt.push({s: o.at, e: out.length, k: kind});
+          i += mk.length;
+          continue;
+        }
+        if (j < 0 && !/^\s/.test(raw.slice(i + mk.length)) && raw.indexOf(mk, i + mk.length) > -1) {
+          open.push({mk, kind, at: out.length});
+          i += mk.length;
+          continue;
+        }
+      }
+      out += raw[i++];
+    }
+    // Niet netjes gesloten: laat de regel dan ongemoeid in plaats van tekens op
+    // te eten die de schrijver bewust neerzette.
+    return open.length ? {text: raw, fmt: []} : {text: out, fmt};
+  }
+
   function parse(text){
     const blocks = [];
     for (const raw of String(text || '').replace(/\r/g,'').split('\n')) {
@@ -590,10 +633,10 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
       if (!line) continue;
       let m;
       if ((m = line.match(/^\[(?:image|afbeelding)\s+(\d+)\]$/i))) blocks.push({type:'img', n:+m[1]});
-      else if ((m = line.match(/^#{1,3}\s+(.*)$/))) blocks.push({type:'h', text:m[1]});
-      else if ((m = line.match(/^[-•*]\s+(.*)$/))) blocks.push({type:'li', text:m[1]});
-      else if ((m = line.match(/^>\s*(.*)$/))) blocks.push({type:'q', text:m[1]});
-      else blocks.push({type:'p', text:line});
+      else if ((m = line.match(/^#{1,3}\s+(.*)$/))) blocks.push({type:'h', ...stripFmt(m[1])});
+      else if ((m = line.match(/^[-•*]\s+(.*)$/))) blocks.push({type:'li', ...stripFmt(m[1])});
+      else if ((m = line.match(/^>\s*(.*)$/))) blocks.push({type:'q', ...stripFmt(m[1])});
+      else blocks.push({type:'p', ...stripFmt(line)});
     }
     return blocks;
   }
@@ -637,17 +680,26 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     return {placed, orphans};
   }
   const byTime = (x, y) => String(x.ann.createdAt || '').localeCompare(String(y.ann.createdAt || ''));
-  function inline(text, list){
-    if (!list || !list.length) return esc(text);
-    const marks = list.filter(x => !x.ann.para);
-    const pts = [...new Set([0, text.length, ...marks.flatMap(x => [x.s, x.e])])].sort((a, b) => a - b);
+  const FMT_TAG = {b: 'strong', i: 'em', u: 'u'};
+  const wrapFmt = (html, kinds) => kinds.reduce((inner, k) => `<${FMT_TAG[k]}>${inner}</${FMT_TAG[k]}>`, html);
+  const fmtAt = (fmt, s, e) => (fmt || []).filter(f => f.s <= s && f.e >= e).map(f => f.k);
+
+  // Knipt de regel op elke grens die ertoe doet: die van een markering en die
+  // van een stuk opmaak. Elk segment krijgt daarna zijn eigen tags.
+  function inline(text, list, fmt){
+    if ((!list || !list.length) && (!fmt || !fmt.length)) return esc(text);
+    const marks = (list || []).filter(x => !x.ann.para);
+    const pts = [...new Set([0, text.length,
+      ...marks.flatMap(x => [x.s, x.e]),
+      ...(fmt || []).flatMap(f => [f.s, f.e])])]
+      .filter(p => p >= 0 && p <= text.length).sort((a, b) => a - b);
     let h = '';
-    const icons = e => list.filter(x => x.e === e && x.ann.note && (!x.ann.para || e === text.length))
+    const icons = e => (list || []).filter(x => x.e === e && x.ann.note && (!x.ann.para || e === text.length))
       .map(x => `<button type="button" class="nt" data-note="${esc(x.ann.id)}" title="View note" aria-label="View note">${NOTE_ICON}</button>`).join('');
     for (let i = 0; i < pts.length - 1; i++) {
       const s = pts[i], e = pts[i + 1];
       const cover = marks.filter(x => x.s <= s && x.e >= e).sort(byTime).reverse();
-      const seg = esc(text.slice(s, e));
+      const seg = wrapFmt(esc(text.slice(s, e)), fmtAt(fmt, s, e));
       if (!cover.length) h += seg;
       else {
         const top = cover.find(x => colorOk(x.ann.color));
@@ -673,7 +725,7 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
     let inList = false;
     blocks.forEach((b, i) => {
       if (b.type !== 'li' && inList) { html += '</ul>'; inList = false; }
-      const T = () => placed ? inline(b.text, placed.get(i)) + paraBtn : esc(b.text);
+      const T = () => placed ? inline(b.text, placed.get(i), b.fmt) + paraBtn : inline(b.text, null, b.fmt);
       const attr = placed ? ` data-b="${i}"` : '';
       if (b.type === 'p') html += `<p${attr}>${T()}</p>`;
       else if (b.type === 'h') html += `<h3${attr}>${T()}</h3>`;
@@ -1625,6 +1677,37 @@ body.dragging-on,body.dragging-on *{cursor:grabbing !important}
   });
   fields.forEach(f => $(f).addEventListener('input', () => { saveDraft(); renderPreview(); }));
   ['keyup','click','blur'].forEach(ev => $('body').addEventListener(ev, () => { lastCursor = $('body').selectionStart; }));
+
+  // ---------- Ctrl/Cmd + B, I en U ----------
+  // setRangeText houdt de ongedaan-maken-geschiedenis van de browser heel; het
+  // input-event erna laat het voorbeeld en het concept bijwerken alsof je typte.
+  function edit(el, from, to, text, selStart, selEnd){
+    if (typeof el.setRangeText === 'function') el.setRangeText(text, from, to, 'preserve');
+    else el.value = el.value.slice(0, from) + text + el.value.slice(to);
+    el.setSelectionRange(selStart, selEnd);
+    el.dispatchEvent(new Event('input', {bubbles: true}));
+  }
+  function toggleMark(el, mk){
+    const from = el.selectionStart, to = el.selectionEnd, v = el.value;
+    const sel = v.slice(from, to), n = mk.length;
+    // Al omsloten binnen de selectie? Haal het er dan weer af.
+    if (sel.length >= n * 2 && sel.startsWith(mk) && sel.endsWith(mk))
+      return edit(el, from, to, sel.slice(n, -n), from, to - n * 2);
+    // Of staan de markeringen er net buiten?
+    if (v.slice(from - n, from) === mk && v.slice(to, to + n) === mk)
+      return edit(el, from - n, to + n, sel, from - n, to - n);
+    // Niets geselecteerd: zet een leeg paar neer en ga ertussen staan.
+    if (from === to) return edit(el, from, to, mk + mk, from + n, from + n);
+    edit(el, from, to, mk + sel + mk, from + n, to + n);
+  }
+  $('body').addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const mk = {b: '**', i: '*', u: '__'}[(e.key || '').toLowerCase()];
+    if (!mk) return;
+    e.preventDefault();
+    toggleMark(e.currentTarget, mk);
+    lastCursor = e.currentTarget.selectionStart;
+  });
 
   $('cancel').addEventListener('click', () => {
     if (editId) {
