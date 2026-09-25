@@ -564,13 +564,74 @@ html:has(.home-ed) {
   --ed-accent: #7c2027; /* burgundy: used sparingly */
   --ed-night: #191512; /* deep brown-black for the one dark band */
   --ed-serif: "EB Garamond Variable", "EB Garamond", Garamond, "Times New Roman", serif;
+
+  /* Edition tokens: everything below is the same value in both editions
+     unless the Night Edition block remaps it. */
+  --ed-night-edge: transparent; /* the manifesto band's edge rules */
+  --ed-wash: rgba(29, 25, 21, 0.05); /* ghost-button hover */
+  --ed-row-wash: rgba(29, 25, 21, 0.045); /* index-row hover */
+  --ed-selection-bg: #2a2420;
+  --ed-selection-ink: #f6f1e8;
+  --ed-btn-hover-bg: #7c2027; /* primary button hover: burgundy surface */
+  --ed-btn-hover-ink: #f6f1e8;
+  /* The lead-story file card is a dark object in both editions. */
+  --ed-plate-bg: #191512;
+  --ed-plate-glow: rgba(124, 32, 39, 0.26);
+  --ed-plate-border: transparent;
+  --ed-plate-ink: #efe7da;
+  --ed-plate-ink-soft: rgba(239, 231, 218, 0.84);
+  --ed-plate-ink-faint: rgba(239, 231, 218, 0.62);
+  --ed-plate-line: rgba(239, 231, 218, 0.16);
+  --ed-plate-rule: #b3464d;
   color-scheme: light;
 }
-html:has(.home-ed) ::selection {
-  background: #2a2420;
-  color: #f6f1e8;
+
+/* ── Night Edition ─────────────────────────────────────────────────────────
+   The same publication after dark: the paper becomes deep ink-navy, the ink
+   becomes warm ivory, and burgundy stays the one accent — lifted just enough
+   to read on the dark ground, never a surface. It is the site's existing
+   dark theme (data-theme="dark", chosen with the header toggle and kept in
+   the stai_theme cookie), so there is one theme system, not two. With no
+   choice made the homepage stays the approved Paper Edition. */
+html[data-theme="dark"]:has(.home-ed) {
+  --color-navy-950: #121a28; /* raised panel: specimen, workbench */
+  --color-navy-900: #0d1320; /* the page */
+  --color-navy-850: #0a0f1a; /* deep panel: the Briefing preview */
+  --color-navy-800: #111827;
+  --color-navy-700: #1c2432;
+  --color-navy-600: #2a3342;
+  --color-cream-100: #f3eee7; /* warm ivory: headlines, strongest text */
+  --color-cream-200: #d2ccc4; /* body */
+  --color-cream-400: #ada59b; /* italic lines, numerals: softer warm grey */
+  --color-cream-600: #8f99a6;
+  --color-gold-300: #e3c47a;
+  --color-signal-up: #6faa7e;
+  --color-signal-down: #c47a6a;
+  --line: rgba(243, 238, 231, 0.1);
+  --line-strong: rgba(243, 238, 231, 0.2);
+  --ink-muted: #c6c0b8;
+  --ink-faint: #8f99a6; /* mono metadata: cool, subdued, ≈6:1 */
+  --gold-line: rgba(227, 196, 122, 0.35);
+  --ed-accent: #c0545b; /* burgundy lifted for the dark ground, ≈4:1 */
+  --ed-night: #070b13; /* the manifesto band: a deliberate step deeper */
+  --ed-night-edge: rgba(243, 238, 231, 0.12);
+  --ed-wash: rgba(243, 238, 231, 0.05);
+  --ed-row-wash: rgba(243, 238, 231, 0.04);
+  --ed-selection-bg: #d2ccc4;
+  --ed-selection-ink: #0d1320;
+  --ed-btn-hover-bg: #7c2027;
+  --ed-btn-hover-ink: #f3eee7;
+  --ed-plate-bg: #151d2c; /* a tonal step up from the page, not a jump */
+  --ed-plate-glow: transparent;
+  --ed-plate-border: rgba(243, 238, 231, 0.1);
+  color-scheme: dark;
 }
-html:has(.home-ed) .btn-ghost:hover { background: rgba(29, 25, 21, 0.05); }
+
+html:has(.home-ed) ::selection {
+  background: var(--ed-selection-bg);
+  color: var(--ed-selection-ink);
+}
+html:has(.home-ed) .btn-ghost:hover { background: var(--ed-wash); }
 
 .home-ed {
   background: var(--color-navy-900);
@@ -629,7 +690,11 @@ html:has(.home-ed) .btn-ghost:hover { background: rgba(29, 25, 21, 0.05); }
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 .ed-btn-primary { background: var(--color-cream-100); color: var(--color-navy-900); }
-.ed-btn-primary:hover { background: var(--ed-accent); border-color: var(--ed-accent); }
+.ed-btn-primary:hover {
+  background: var(--ed-btn-hover-bg);
+  border-color: var(--ed-btn-hover-bg);
+  color: var(--ed-btn-hover-ink);
+}
 .ed-btn-quiet { background: transparent; color: var(--color-cream-100); border-color: var(--line-strong); }
 .ed-btn-quiet:hover { border-color: var(--color-cream-100); }
 .ed-btn .ed-arrow { transition: transform 0.25s ease; }
@@ -668,6 +733,11 @@ html:has(.home-ed) .btn-ghost:hover { background: rgba(29, 25, 21, 0.05); }
   --ed-accent: #d78a86; /* burgundy lifted for contrast on the dark band */
   background: var(--ed-night);
   color: var(--color-cream-200);
+  /* Hairlines at the band's edges. Transparent on paper, where the band is
+     already the darkest thing on the page; in the Night Edition they keep it
+     a deliberate pause rather than more of the same dark. Inset shadows, not
+     borders, so the band's height is identical in both editions. */
+  box-shadow: inset 0 1px 0 var(--ed-night-edge), inset 0 -1px 0 var(--ed-night-edge);
 }
 
 /* The lead story's file card. Not a placeholder for a photograph: the story's
@@ -682,9 +752,10 @@ html:has(.home-ed) .btn-ghost:hover { background: rgba(29, 25, 21, 0.05); }
   aspect-ratio: 2 / 1;
   padding: 1.5rem 1.75rem 1.4rem;
   background:
-    radial-gradient(90% 120% at 100% 0%, rgba(124, 32, 39, 0.26), transparent 55%),
-    var(--ed-night);
-  color: #efe7da;
+    radial-gradient(90% 120% at 100% 0%, var(--ed-plate-glow), transparent 55%),
+    var(--ed-plate-bg);
+  box-shadow: inset 0 0 0 1px var(--ed-plate-border);
+  color: var(--ed-plate-ink);
 }
 @media (min-width: 640px) and (max-width: 1023px) {
   .ed-plate { aspect-ratio: 5 / 2; }
@@ -699,14 +770,14 @@ html:has(.home-ed) .btn-ghost:hover { background: rgba(29, 25, 21, 0.05); }
   font-size: 0.6rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(239, 231, 218, 0.62);
+  color: var(--ed-plate-ink-faint);
 }
 .ed-plate-head {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   padding-bottom: 0.9rem;
-  border-bottom: 1px solid rgba(239, 231, 218, 0.16);
+  border-bottom: 1px solid var(--ed-plate-line);
 }
 .ed-plate-body { padding: 1.4rem 0 1.2rem; }
 .ed-plate-cat {
@@ -716,21 +787,21 @@ html:has(.home-ed) .btn-ghost:hover { background: rgba(29, 25, 21, 0.05); }
   font-size: clamp(2.6rem, 5.4vw, 4.8rem);
   line-height: 0.95;
   letter-spacing: -0.02em;
-  color: #efe7da;
+  color: var(--ed-plate-ink);
 }
 .ed-plate-rule {
   display: block;
   width: 2.75rem;
   height: 1px;
   margin: 1.1rem 0 0.95rem;
-  background: #b3464d;
+  background: var(--ed-plate-rule);
 }
 .ed-plate-filed {
   font-family: var(--ed-serif);
   font-style: italic;
   font-size: 1.1rem;
   line-height: 1.35;
-  color: rgba(239, 231, 218, 0.84);
+  color: var(--ed-plate-ink-soft);
 }
 .ed-plate-filed > span {
   display: block;
@@ -740,11 +811,11 @@ html:has(.home-ed) .btn-ghost:hover { background: rgba(29, 25, 21, 0.05); }
 .ed-plate-ledger {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid rgba(239, 231, 218, 0.16);
+  border-top: 1px solid var(--ed-plate-line);
 }
 .ed-plate-ledger > div { padding-top: 0.85rem; min-width: 0; }
 .ed-plate-ledger > div + div {
-  border-left: 1px solid rgba(239, 231, 218, 0.16);
+  border-left: 1px solid var(--ed-plate-line);
   padding-left: 1rem;
 }
 .ed-plate-ledger dd {
@@ -752,7 +823,7 @@ html:has(.home-ed) .btn-ghost:hover { background: rgba(29, 25, 21, 0.05); }
   font-family: var(--font-mono);
   font-size: 0.74rem;
   letter-spacing: 0.04em;
-  color: #efe7da;
+  color: var(--ed-plate-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -810,7 +881,7 @@ html:has(.home-ed) .btn-ghost:hover { background: rgba(29, 25, 21, 0.05); }
 .ed-row > .ed-display { transition: transform 0.4s cubic-bezier(0.2, 0.6, 0.2, 1), color 0.3s ease; }
 .ed-row .ed-arrow { transition: transform 0.3s ease, color 0.3s ease; }
 .ed-row:hover,
-.ed-row:focus-visible { background: rgba(29, 25, 21, 0.045); }
+.ed-row:focus-visible { background: var(--ed-row-wash); }
 .ed-row:hover::before,
 .ed-row:focus-visible::before { transform: scaleY(1); }
 .ed-row:hover > .ed-num,

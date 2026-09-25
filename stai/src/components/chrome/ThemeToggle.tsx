@@ -1,31 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { HEADER_ICON_BTN } from "./icon-button";
+import { effectiveTheme, nextTheme, themeCookie, type Theme } from "@/lib/theme-choice";
 
 /**
  * Dark/light switch: the glyph alone, no frame and no label.
  *
- * The server renders the correct theme from the `stai_theme` cookie (no
- * flash); this just flips the attribute and persists the choice.
+ * The server renders the reader's choice from the `stai_theme` cookie (no
+ * flash); this flips the attribute and persists the choice. On the editorial
+ * homepage the two themes are its Paper and Night Editions.
  *
- * `theme` is null until mount, because the choice lives on `documentElement`
- * and cannot be read while rendering on the server. The icon is held back
- * until then rather than guessed — a sun that silently becomes a moon a frame
- * later is worse than a beat of nothing, and the button keeps its size
- * either way so the row does not shift.
+ * The current theme is read from the root's computed `color-scheme` rather
+ * than from `data-theme`, because with no choice made each page shows its own
+ * default — dark for the site, Paper for the homepage — and the button must
+ * offer the opposite of what is actually on screen. It is re-read on every
+ * navigation, since the header outlives the page beneath it.
+ *
+ * `theme` is null until mount, because the choice cannot be read while
+ * rendering on the server. The icon is held back until then rather than
+ * guessed — a sun that silently becomes a moon a frame later is worse than a
+ * beat of nothing, and the button keeps its size either way so the row does
+ * not shift.
  */
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<"dark" | "light" | null>(null);
+  const [theme, setTheme] = useState<Theme | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
-    setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
-  }, []);
+    setTheme(effectiveTheme(getComputedStyle(document.documentElement).colorScheme));
+  }, [pathname]);
 
   function toggle() {
-    const next = theme === "light" ? "dark" : "light";
+    const next = nextTheme(theme ?? effectiveTheme(getComputedStyle(document.documentElement).colorScheme));
     document.documentElement.dataset.theme = next;
-    document.cookie = `stai_theme=${next};path=/;max-age=31536000;samesite=lax`;
+    document.cookie = themeCookie(next);
     setTheme(next);
   }
 

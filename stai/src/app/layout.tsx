@@ -6,6 +6,7 @@ import Footer from "@/components/chrome/Footer";
 import JsonLd from "@/components/JsonLd";
 import Analytics from "@/components/Analytics";
 import { SITE, abs, organizationSchema, websiteSchema, verificationMeta } from "@/lib/seo";
+import { THEME_COOKIE, themeFromCookie } from "@/lib/theme-choice";
 
 /**
  * Site-wide defaults only.
@@ -74,8 +75,10 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  // Theme is server-rendered from the cookie — no flash of wrong theme.
-  const theme = (await cookies()).get("stai_theme")?.value === "light" ? "light" : "dark";
+  // Theme is server-rendered from the cookie — no flash of wrong theme. With
+  // no choice made, no attribute is rendered and the page's own default
+  // applies (lib/theme-choice.ts).
+  const theme = themeFromCookie((await cookies()).get(THEME_COOKIE)?.value);
   return (
     <html lang="en-GB" data-theme={theme}>
       <head>
