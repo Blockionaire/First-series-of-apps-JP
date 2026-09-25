@@ -1,8 +1,9 @@
 # 🍪 De Koekenbakker
 
 De webshop van **Zara** — verse chocoladekoekjes, één bakdag per week.
-Dit is **concept 1**: speels van vorm, maar met het rustige palet van concept 2
-(steen, inkt, walnoot en klei). De andere twee richtingen staan in
+Dit is **concept 1**: speels van vorm, rustig van kleur. De hele site staat in vier
+beigetinten — papier, room, zand en een tint dieper voor de banden — met walnoot als
+enige accent. De andere twee richtingen staan in
 [`koekenbakker-studio/`](../koekenbakker-studio/) (strak en editorial) en
 [`koekenbakker-pocket/`](../koekenbakker-pocket/) (donker en mobiel).
 

@@ -27,7 +27,7 @@ grote raakvlakken in plaats van kleine linkjes.
 | | 1 — [De Koekenbakker](../koekenbakker/) | 2 — [Studio](../koekenbakker-studio/) | 3 — Pocket |
 |---|---|---|---|
 | Toon | speels en warm | strak en editorial | app-achtig, donker |
-| Grond | papier en steen | steen | diep cacaobruin |
+| Grond | beige in vier tinten | steen | diep cacaobruin |
 | Bouw | volle website | website met raster | één kolom van 480 px |
 | Koekjes | volle illustraties | vlakke zeefdruk | zacht met randlicht |
 | Bestellen | mandje van rechts | doos van zes vakjes | balk onderin + bottom sheet |

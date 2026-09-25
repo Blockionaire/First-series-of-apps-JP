@@ -17,7 +17,7 @@ Eén bestand, geen build: `index.html` bevat de hele site.
 | | Concept 1 — *De Koekenbakker* | Concept 2 — *Studio* |
 |---|---|---|
 | Toon | speels, warm, sticker-achtig | strak, editorial, rustig |
-| Kleur | hetzelfde palet, speelser ingezet | steen, inkt, walnoot |
+| Kleur | vier beigetinten + walnoot | steen, inkt, walnoot |
 | Type | dik display + grotesk | strakke grotesk + mono labels |
 | Koekjes | volle illustraties met schaduw | vlakke zeefdruk-tekeningen |
 | Beweging | laadscherm, koekjescursor, draaiende koekjes | alleen een voortgangslijn en zachte overgangen |
