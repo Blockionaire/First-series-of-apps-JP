@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bestellingen — De Koekenbakker</title>
+<meta name="theme-color" content="#E6D9C2">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Figtree:wght@300..800&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --papier:#FFFDF8;
+  --room:#FAF4EA;
+  --zand:#F1E8D8;
+  --diep:#E6D9C2;
+  --lijn:#DCCDB4;
+  --klei:#C9B291;
+  --karamel:#8E5A3B;
+  --karamel-diep:#7C4E33;
+  --inkt:#2E2217;
+  --zacht:#7E6950;
+  --groen:#5F7A4B;
+  --kop:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+  --tekst:"Figtree","Helvetica Neue",Arial,sans-serif;
+  --display:"Bagel Fat One","Trebuchet MS",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--room);color:var(--inkt);font-family:var(--tekst);font-size:16px;line-height:1.5;
+  -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--kop);font-weight:800;line-height:1.05;letter-spacing:-.02em;margin:0;text-wrap:balance}
+p{margin:0}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:inherit}
+[hidden]{display:none !important}
+:focus-visible{outline:3px solid var(--karamel);outline-offset:2px;border-radius:8px}
+.wrap{width:min(100% - 28px,780px);margin-inline:auto}
+
+.knop{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--karamel);color:var(--room);
+  border:2px solid var(--inkt);border-radius:999px;padding:11px 18px;font-family:var(--kop);font-weight:700;font-size:.92rem;
+  box-shadow:3px 3px 0 rgba(46,34,23,.2);transition:transform .15s,box-shadow .15s}
+.knop:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 rgba(46,34,23,.22)}
+.knop:active{transform:translate(2px,2px);box-shadow:0 0 0 rgba(46,34,23,.2)}
+.knop--stil{background:var(--papier);color:var(--inkt)}
+.knop--klein{padding:8px 13px;font-size:.84rem;box-shadow:2px 2px 0 rgba(46,34,23,.18)}
+.knop--vol{width:100%}
+.knop[disabled]{opacity:.5;cursor:not-allowed;transform:none}
+
+/* ---------- inloggen ---------- */
+.inlog{min-height:100dvh;display:grid;place-items:center;padding:24px}
+.inlog-kaart{background:var(--papier);border:2px solid var(--inkt);border-radius:20px;padding:28px;
+  width:min(100%,380px);display:grid;gap:14px;box-shadow:6px 6px 0 rgba(46,34,23,.16)}
+.merk{font-family:var(--display);font-size:1.5rem;display:flex;align-items:center;gap:10px}
+.merk span{width:30px;height:30px;display:block}
+.veld{display:grid;gap:5px}
+.veld label{font-family:var(--kop);font-weight:700;font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--zacht)}
+.veld input,.veld select{padding:11px 13px;border:2px solid var(--inkt);border-radius:12px;background:var(--room);
+  font-family:var(--tekst);font-size:.96rem;width:100%}
+.fout{color:var(--karamel-diep);font-size:.88rem;font-weight:600}
+.uitleg{font-size:.85rem;color:var(--zacht)}
+
+/* ---------- balk ---------- */
+.top{position:sticky;top:0;z-index:20;background:rgba(230,217,194,.94);backdrop-filter:blur(8px);
+  border-bottom:2px solid var(--inkt)}
+.top-in{display:flex;align-items:center;gap:12px;padding:12px 0}
+.top .merk{font-size:1.05rem}
+.uitlog{margin-left:auto;font-family:var(--kop);font-weight:700;font-size:.8rem;color:var(--zacht);
+  border-bottom:2px solid transparent}
+.uitlog:hover{color:var(--inkt);border-color:var(--karamel)}
+.tabs{display:flex;gap:8px;padding:0 0 12px}
+.tab{font-family:var(--kop);font-weight:700;font-size:.88rem;padding:8px 14px;border:2px solid var(--inkt);
+  border-radius:999px;background:var(--papier)}
+.tab.aan{background:var(--inkt);color:var(--room)}
+.tab b{background:var(--karamel);color:var(--room);border-radius:99px;padding:0 6px;margin-left:6px;font-size:.78rem}
+.tab.aan b{background:var(--room);color:var(--inkt)}
+
+.weekbalk{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:12px 0 0}
+.weekbalk b{font-family:var(--kop);font-weight:800;font-size:1.05rem}
+.pijl{width:34px;height:34px;border:2px solid var(--inkt);border-radius:50%;display:grid;place-items:center;
+  background:var(--papier);font-weight:800}
+
+/* ---------- kaarten ---------- */
+main{padding:18px 0 80px;display:grid;gap:16px}
+.kaart{background:var(--papier);border:2px solid var(--inkt);border-radius:18px;padding:18px;
+  box-shadow:4px 4px 0 rgba(46,34,23,.14)}
+.kaart h3{font-size:1.05rem;margin-bottom:12px}
+.kaartkop{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.kaartkop h3{margin:0}
+.etiket{font-family:var(--kop);font-weight:700;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--zacht)}
+
+.meter{height:12px;background:var(--zand);border:2px solid var(--inkt);border-radius:99px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--karamel);transition:width .4s}
+.meter i.vol{background:var(--karamel-diep)}
+.cijfers{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px}
+.cijfer{background:var(--zand);border-radius:12px;padding:11px 13px}
+.cijfer b{display:block;font-family:var(--kop);font-weight:800;font-size:1.5rem;line-height:1;font-variant-numeric:tabular-nums}
+.cijfer span{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--zacht);font-family:var(--kop);font-weight:700}
+
+/* ---------- bakbriefje ---------- */
+.briefje{display:grid;gap:0}
+.brief-rij{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 0;
+  border-bottom:1px dashed var(--lijn)}
+.brief-rij:last-child{border-bottom:0}
+.brief-rij svg{width:44px}
+.brief-rij b{font-family:var(--kop);font-weight:800;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.brief-rij span{font-size:.82rem;color:var(--zacht)}
+.brief-totaal{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;padding-top:12px;
+  border-top:2px solid var(--inkt);font-family:var(--kop);font-weight:800}
+
+/* ---------- bestellingen ---------- */
+.filters{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px}
+.filter{font-family:var(--kop);font-weight:700;font-size:.8rem;padding:6px 12px;border:2px solid var(--lijn);
+  border-radius:999px;background:var(--papier);color:var(--zacht)}
+.filter.aan{border-color:var(--inkt);background:var(--zand);color:var(--inkt)}
+.bestelling{background:var(--papier);border:2px solid var(--inkt);border-radius:18px;overflow:hidden;
+  box-shadow:4px 4px 0 rgba(46,34,23,.14)}
+.bestelling.is-nieuw{border-color:var(--karamel);box-shadow:4px 4px 0 rgba(142,90,59,.25)}
+.bestelkop{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:15px 17px;width:100%;text-align:left}
+.bestelkop:hover{background:var(--zand)}
+.bestelkop h4{font-family:var(--kop);font-weight:800;font-size:1.02rem;margin:0}
+.bestelkop .onder{font-size:.84rem;color:var(--zacht);margin-top:3px}
+.bedrag{font-family:var(--kop);font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+.chip{display:inline-block;font-family:var(--kop);font-weight:700;font-size:.68rem;letter-spacing:.08em;
+  text-transform:uppercase;border-radius:99px;padding:3px 9px;border:2px solid var(--inkt);margin-right:6px}
+.chip--nieuw{background:var(--karamel);color:var(--room)}
+.chip--bevestigd{background:var(--zand)}
+.chip--gebakken{background:var(--klei)}
+.chip--afgerond{background:var(--groen);color:#F3F6EE;border-color:var(--groen)}
+.chip--geannuleerd{background:var(--papier);color:var(--zacht);border-color:var(--lijn);text-decoration:line-through}
+.details{border-top:2px dashed var(--lijn);padding:15px 17px;display:grid;gap:12px}
+.regels{display:grid;gap:5px}
+.regels div{display:flex;justify-content:space-between;gap:12px;font-size:.94rem}
+.regels .gratis{color:var(--groen);font-weight:600}
+.gegevens{display:grid;gap:4px;font-size:.92rem}
+.gegevens b{font-family:var(--kop);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--zacht)}
+.notitie{background:var(--zand);border-radius:12px;padding:10px 12px;font-size:.92rem}
+.acties{display:flex;flex-wrap:wrap;gap:8px}
+.leeg{text-align:center;color:var(--zacht);padding:26px 0}
+
+.melding{position:fixed;left:50%;bottom:22px;transform:translate(-50%,16px);opacity:0;visibility:hidden;z-index:40;
+  background:var(--inkt);color:var(--room);padding:12px 20px;border-radius:999px;font-family:var(--kop);font-weight:700;
+  font-size:.9rem;transition:transform .3s,opacity .2s,visibility .2s;max-width:88vw;text-align:center}
+.melding.aan{transform:translate(-50%,0);opacity:1;visibility:visible}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.001ms !important;animation-duration:.001ms !important}}
+</style>
+</head>
+<body>
+
+<div class="melding" id="melding" role="status" aria-live="polite"></div>
+
+<section class="inlog" id="inlogScherm">
+  <form class="inlog-kaart" id="inlogForm">
+    <div class="merk"><span id="merkKoek" aria-hidden="true"></span> Bestellingen</div>
+    <p class="uitleg" id="inlogUitleg">Log in met het e-mailadres dat in de beveiligingsregels staat.</p>
+    <div class="veld"><label for="iMail">E-mail</label><input id="iMail" type="email" autocomplete="username" required></div>
+    <div class="veld"><label for="iWw">Wachtwoord</label><input id="iWw" type="password" autocomplete="current-password" required></div>
+    <p class="fout" id="inlogFout" hidden></p>
+    <button class="knop knop--vol" id="inlogKnop" type="submit">Inloggen</button>
+  </form>
+</section>
+
+<div id="app" hidden>
+  <header class="top">
+    <div class="wrap">
+      <div class="top-in">
+        <div class="merk"><span id="merkKoek2" aria-hidden="true"></span> Bestellingen</div>
+        <button class="uitlog" id="uitlogKnop" type="button">Uitloggen</button>
+      </div>
+      <div class="tabs">
+        <button class="tab aan" data-tab="overzicht" type="button">Deze week</button>
+        <button class="tab" data-tab="lijst" type="button">Bestellingen <b id="telNieuw">0</b></button>
+        <button class="tab" data-tab="instellingen" type="button">Instellingen</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="weekbalk">
+      <button class="pijl" id="weekTerug" type="button" aria-label="Vorige week">‹</button>
+      <b id="weekTitel">Week</b>
+      <button class="pijl" id="weekVooruit" type="button" aria-label="Volgende week">›</button>
+    </div>
+
+    <main>
+      <section id="vlakOverzicht">
+        <div class="kaart">
+          <div class="kaartkop"><h3>Baklimiet</h3><span class="etiket" id="limietTekst">0 / 100</span></div>
+          <div class="meter"><i id="limietBalk" style="width:0%"></i></div>
+          <div class="cijfers">
+            <div class="cijfer"><b id="cNieuw">0</b><span>nieuw</span></div>
+            <div class="cijfer"><b id="cKoekjes">0</b><span>koekjes</span></div>
+            <div class="cijfer"><b id="cOmzet">€ 0</b><span>omzet</span></div>
+            <div class="cijfer"><b id="cVrij">0</b><span>nog vrij</span></div>
+          </div>
+        </div>
+
+        <div class="kaart" style="margin-top:16px">
+          <div class="kaartkop"><h3>Bakbriefje</h3><span class="etiket" id="bakEtiket">alles behalve geannuleerd</span></div>
+          <div class="briefje" id="bakbriefje"></div>
+        </div>
+
+        <div class="kaart" style="margin-top:16px">
+          <div class="kaartkop"><h3>Afhalen en bezorgen</h3><span class="etiket">per moment</span></div>
+          <div id="momentenLijst"></div>
+        </div>
+      </section>
+
+      <section id="vlakLijst" hidden>
+        <div class="filters" id="filters">
+          <button class="filter aan" data-filter="alles" type="button">Alles</button>
+          <button class="filter" data-filter="nieuw" type="button">Nieuw</button>
+          <button class="filter" data-filter="bevestigd" type="button">Bevestigd</button>
+          <button class="filter" data-filter="gebakken" type="button">Gebakken</button>
+          <button class="filter" data-filter="afgerond" type="button">Afgerond</button>
+          <button class="filter" data-filter="geannuleerd" type="button">Geannuleerd</button>
+        </div>
+        <div id="bestelLijst" style="display:grid;gap:12px;margin-top:12px"></div>
+      </section>
+
+      <section id="vlakInstellingen" hidden>
+        <div class="kaart">
+          <h3>Deze week</h3>
+          <div class="veld" style="margin-top:12px">
+            <label for="sLimiet">Hoeveel koekjes kun je deze week bakken?</label>
+            <input id="sLimiet" type="number" min="0" max="2000" step="1">
+          </div>
+          <div class="veld" style="margin-top:12px">
+            <label for="sOpen">Bestellingen</label>
+            <select id="sOpen">
+              <option value="ja">Open — klanten kunnen bestellen</option>
+              <option value="nee">Gesloten — de webshop zegt dat het vol is</option>
+            </select>
+          </div>
+          <button class="knop knop--vol" id="sOpslaan" type="button" style="margin-top:16px">Opslaan</button>
+          <p class="uitleg" style="margin-top:12px">Het aantal bestelde koekjes telt de webshop zelf bij. Klopt het niet meer — bijvoorbeeld na een bestelling die je buiten de site om aannam — dan pas je het hieronder aan.</p>
+          <div class="veld" style="margin-top:12px">
+            <label for="sBesteld">Al besteld deze week</label>
+            <input id="sBesteld" type="number" min="0" max="5000" step="1">
+          </div>
+          <button class="knop knop--stil knop--vol" id="sTellerOpslaan" type="button" style="margin-top:10px">Teller bijwerken</button>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="firebase-config.js"></script>
+<script type="module">
+"use strict";
+
+const INST = window.KOEKENBAKKER_PORTAL_CONFIG || {};
+const RUIMTE = INST.ruimte || "zara";
+
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+const euro = n => "€ " + (n || 0).toLocaleString("nl-NL", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+function melden(tekst){
+  const m = $("#melding");
+  m.textContent = tekst;
+  m.classList.add("aan");
+  clearTimeout(melden._t);
+  melden._t = setTimeout(() => m.classList.remove("aan"), 2600);
+}
+
+/* ---------- koekjes tekenen (zelfde recept als de webshop) ---------- */
+function rng(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function randPad(r, wiebel){
+  const n = 20, p = [];
+  for (let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2, rr = r * (0.955 + wiebel() * 0.09);
+    p.push([100 + Math.cos(a) * rr, 100 + Math.sin(a) * rr]);
+  }
+  let d = "M" + p[0][0].toFixed(1) + "," + p[0][1].toFixed(1);
+  for (let i = 0; i < p.length; i++){
+    const b = p[(i + 1) % p.length], c = p[(i + 2) % p.length];
+    d += " Q" + b[0].toFixed(1) + "," + b[1].toFixed(1) + " " + ((b[0] + c[0]) / 2).toFixed(1) + "," + ((b[1] + c[1]) / 2).toFixed(1);
+  }
+  return d + "Z";
+}
+let uid = 0;
+function koekSVG(k){
+  const id = "k" + (++uid), r2 = rng(k.seed), rand = rng(k.seed + 77);
+  let s = '<svg viewBox="0 0 200 200" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><radialGradient id="g' + id + '" cx="42%" cy="36%" r="72%">'
+    + '<stop offset="0%" stop-color="' + k.deeg[0] + '"/><stop offset="70%" stop-color="' + k.deeg[1] + '"/>'
+    + '<stop offset="100%" stop-color="' + k.korst + '"/></radialGradient></defs>'
+    + '<path d="' + randPad(88, r2) + '" fill="url(#g' + id + ')"/>';
+  for (let i = 0; i < 8; i++){
+    const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * 62;
+    const x = 100 + Math.cos(a) * d, y = 100 + Math.sin(a) * d;
+    const w = 18 + rand() * 12, h = 13 + rand() * 8, rot = rand() * 90 - 45;
+    s += '<rect x="' + (-w / 2).toFixed(1) + '" y="' + (-h / 2).toFixed(1) + '" width="' + w.toFixed(1)
+       + '" height="' + h.toFixed(1) + '" rx="4" fill="' + k.brokken[i % k.brokken.length]
+       + '" transform="translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + rot.toFixed(1) + ')"/>';
+  }
+  return s + '</svg>';
+}
+function doosSVG(){
+  return '<svg viewBox="0 0 200 200" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'
+    + '<rect x="28" y="72" width="144" height="98" rx="10" fill="#F1E8D8" stroke="#2E2217" stroke-width="7"/>'
+    + '<rect x="18" y="52" width="164" height="34" rx="9" fill="#FFFDF8" stroke="#2E2217" stroke-width="7"/>'
+    + '<text x="100" y="146" text-anchor="middle" font-family="Bagel Fat One, sans-serif" font-size="52" fill="#8E5A3B">?</text>'
+    + '</svg>';
+}
+
+const KOEKJES = {
+  klassieker:  {naam: "De Klassieker", seed: 11, deeg: ["#E7BE85", "#D3A165"], korst: "#A9743C", brokken: ["#6B4423", "#7C4F2A", "#5A3517"]},
+  nachtdonker: {naam: "Nachtdonker",   seed: 23, deeg: ["#5B3A2A", "#42281C"], korst: "#2C1A12", brokken: ["#1E1210", "#33201A", "#120B09"]},
+  wittewolk:   {naam: "Witte Wolk",    seed: 41, deeg: ["#F0DCB4", "#E2C795"], korst: "#C29A62", brokken: ["#FAF0DC", "#F3E4C6", "#E8D3AC"]},
+  karamelbom:  {naam: "Karamelbom",    seed: 67, deeg: ["#E8B472", "#CF9450"], korst: "#9C6427", brokken: ["#C9721F", "#E39A3C", "#6B4423"]},
+  nootjenoir:  {naam: "Nootje Noir",   seed: 89, deeg: ["#C99862", "#A97742"], korst: "#7A5024", brokken: ["#3A2318", "#8B5A2B", "#241611"]}
+};
+
+/* ---------- weken ---------- */
+function weekCode(datum){
+  const d = new Date(Date.UTC(datum.getFullYear(), datum.getMonth(), datum.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const begin = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const nr = Math.ceil(((d - begin) / 86400000 + 1) / 7);
+  return d.getUTCFullYear() + "-W" + String(nr).padStart(2, "0");
+}
+function maandagVan(code){
+  const [jaar, week] = code.split("-W").map(Number);
+  const vier = new Date(Date.UTC(jaar, 0, 4));
+  const maandag = new Date(vier);
+  maandag.setUTCDate(vier.getUTCDate() - ((vier.getUTCDay() || 7) - 1) + (week - 1) * 7);
+  return maandag;
+}
+function weekLabel(code){
+  const ma = maandagVan(code), zo = new Date(ma); zo.setUTCDate(ma.getUTCDate() + 6);
+  const kort = d => d.toLocaleDateString("nl-NL", {day: "numeric", month: "short", timeZone: "UTC"});
+  return "Week " + code.split("-W")[1] + " · " + kort(ma) + " – " + kort(zo);
+}
+
+/* ---------- toestand ---------- */
+let db = null, auth = null, fx = null, fa = null;
+let huidigeWeek = weekCode(new Date());
+let bestellingen = [], weekDoc = null;
+let filter = "alles", tab = "overzicht";
+let stopBestellingen = null, stopWeek = null;
+const opengeklapt = new Set();
+
+const STATUSSEN = {
+  nieuw: "Nieuw", bevestigd: "Bevestigd", gebakken: "Gebakken",
+  afgerond: "Afgerond", geannuleerd: "Geannuleerd"
+};
+
+/* ---------- opstarten ---------- */
+async function start(){
+  $("#merkKoek").innerHTML = koekSVG(KOEKJES.klassieker);
+  $("#merkKoek2").innerHTML = koekSVG(KOEKJES.karamelbom);
+
+  if (!INST.firebase){
+    $("#inlogUitleg").textContent = "Er is nog geen verbinding ingesteld. Vul firebase-config.js in — de stappen staan in README.md.";
+    $("#iMail").disabled = $("#iWw").disabled = $("#inlogKnop").disabled = true;
+    return;
+  }
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  fa = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+  fx = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+  const app = initializeApp(INST.firebase);
+  auth = fa.getAuth(app);
+  db = fx.getFirestore(app);
+
+  fa.onAuthStateChanged(auth, function(gebruiker){
+    $("#inlogScherm").hidden = !!gebruiker;
+    $("#app").hidden = !gebruiker;
+    if (gebruiker) luister(); else losmaken();
+  });
+}
+
+function losmaken(){
+  if (stopBestellingen) stopBestellingen();
+  if (stopWeek) stopWeek();
+  stopBestellingen = stopWeek = null;
+}
+
+function luister(){
+  losmaken();
+  $("#weekTitel").textContent = weekLabel(huidigeWeek);
+
+  stopWeek = fx.onSnapshot(fx.doc(db, "koekenbakker", RUIMTE, "weken", huidigeWeek), function(snap){
+    weekDoc = snap.exists() ? snap.data() : null;
+    tekenOverzicht();
+    vulInstellingen();
+  });
+
+  stopBestellingen = fx.onSnapshot(
+    fx.query(fx.collection(db, "koekenbakker", RUIMTE, "bestellingen"), fx.where("week", "==", huidigeWeek)),
+    function(snap){
+      bestellingen = snap.docs.map(d => Object.assign({id: d.id}, d.data()));
+      bestellingen.sort((a, b) => (b.gemaakt && b.gemaakt.seconds || 0) - (a.gemaakt && a.gemaakt.seconds || 0));
+      tekenOverzicht();
+      tekenLijst();
+    },
+    function(fout){ melden("Lezen lukt niet: " + fout.code); }
+  );
+}
+
+/* ---------- overzicht ---------- */
+const lopend = () => bestellingen.filter(b => b.status !== "geannuleerd");
+
+function tekenOverzicht(){
+  const limiet = weekDoc && typeof weekDoc.limiet === "number" ? weekDoc.limiet : (INST.weekLimiet || 100);
+  const besteld = weekDoc && typeof weekDoc.besteld === "number" ? weekDoc.besteld : 0;
+  const deel = limiet > 0 ? Math.min(100, (besteld / limiet) * 100) : 0;
+
+  $("#limietTekst").textContent = besteld + " / " + limiet + " koekjes";
+  $("#limietBalk").style.width = deel + "%";
+  $("#limietBalk").classList.toggle("vol", besteld >= limiet);
+
+  const nieuw = bestellingen.filter(b => b.status === "nieuw").length;
+  $("#cNieuw").textContent = nieuw;
+  $("#telNieuw").textContent = nieuw;
+  $("#cKoekjes").textContent = lopend().reduce((n, b) => n + (b.koekjes || 0), 0);
+  $("#cOmzet").textContent = euro(lopend().reduce((n, b) => n + (b.bedrag || 0), 0));
+  $("#cVrij").textContent = Math.max(0, limiet - besteld);
+
+  // bakbriefje: per smaak opgeteld
+  const per = {};
+  let vrijeKeuze = 0;
+  lopend().forEach(function(b){
+    (b.regels || []).forEach(function(r){
+      if (r.id === "box"){ vrijeKeuze += (r.aantal || 0) * 6; return; }
+      if (r.id === "verrassing"){ vrijeKeuze += (r.aantal || 0); return; }
+      per[r.id] = (per[r.id] || 0) + (r.aantal || 0);
+    });
+  });
+  const rijen = Object.keys(per).sort((a, b) => per[b] - per[a]).map(function(id){
+    const k = KOEKJES[id];
+    return '<div class="brief-rij">' + (k ? koekSVG(k) : "<span></span>")
+      + '<span>' + (k ? k.naam : id) + '</span><b>' + per[id] + '×</b></div>';
+  });
+  if (vrijeKeuze > 0){
+    rijen.push('<div class="brief-rij">' + doosSVG()
+      + '<span>Zelf uitkiezen<br><span style="font-size:.82rem">verrassingsboxen en gratis koekjes</span></span>'
+      + '<b>' + vrijeKeuze + '×</b></div>');
+  }
+  const totaal = Object.keys(per).reduce((n, id) => n + per[id], 0) + vrijeKeuze;
+  $("#bakbriefje").innerHTML = rijen.length
+    ? rijen.join("") + '<div class="brief-totaal"><span>Totaal te bakken</span><span>' + totaal + ' koekjes</span></div>'
+    : '<p class="leeg">Nog geen bestellingen voor deze week.</p>';
+
+  // afhalen en bezorgen
+  const momenten = {};
+  lopend().forEach(function(b){
+    const sleutel = b.levering === "Bezorgen" ? "Bezorgen" : (b.moment || "Afhalen — moment nog af te spreken");
+    (momenten[sleutel] = momenten[sleutel] || []).push(b);
+  });
+  const namen = Object.keys(momenten).sort();
+  $("#momentenLijst").innerHTML = namen.length === 0
+    ? '<p class="leeg">Nog niets ingepland.</p>'
+    : namen.map(function(sleutel){
+        return '<div style="padding:10px 0;border-bottom:1px dashed var(--lijn)">'
+          + '<span class="etiket">' + sleutel + '</span>'
+          + momenten[sleutel].map(function(b){
+              return '<div style="font-size:.94rem;margin-top:4px">' + veilig(b.naam) + ' — ' + (b.koekjes || 0) + ' koekjes'
+                + (b.levering === "Bezorgen" ? '<br><span style="color:var(--zacht);font-size:.88rem">' + veilig(b.adres || "") + '</span>' : '')
+                + '</div>';
+            }).join("")
+          + '</div>';
+      }).join("");
+}
+
+const veilig = t => String(t == null ? "" : t)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/* ---------- lijst ---------- */
+function tijdKort(ts){
+  if (!ts || !ts.seconds) return "zojuist";
+  return new Date(ts.seconds * 1000).toLocaleString("nl-NL", {weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"});
+}
+
+function contactLink(contact){
+  const c = String(contact || "").trim();
+  if (!c) return "";
+  if (c.indexOf("@") > -1) return '<a class="knop knop--stil knop--klein" href="mailto:' + veilig(c) + '">Mailen</a>';
+  const nummer = c.replace(/[^0-9+]/g, "");
+  const wa = nummer.replace(/^0/, "31").replace(/\+/g, "");
+  return '<a class="knop knop--stil knop--klein" href="tel:' + veilig(nummer) + '">Bellen</a>'
+       + '<a class="knop knop--stil knop--klein" href="https://wa.me/' + veilig(wa) + '" target="_blank" rel="noopener">WhatsApp</a>';
+}
+
+function tekenLijst(){
+  const lijst = filter === "alles" ? bestellingen : bestellingen.filter(b => b.status === filter);
+  $("#bestelLijst").innerHTML = lijst.length === 0
+    ? '<p class="leeg">Geen bestellingen in deze selectie.</p>'
+    : lijst.map(function(b){
+        const open = opengeklapt.has(b.id);
+        const regels = (b.regels || []).map(function(r){
+          return '<div><span class="' + (r.gratis ? "gratis" : "") + '">' + (r.aantal || 1) + '× ' + veilig(r.naam) + '</span>'
+            + '<span>' + (r.gratis ? "gratis" : euro((r.aantal || 1) * (r.stuk || 0))) + '</span></div>';
+        }).join("");
+        return '<article class="bestelling' + (b.status === "nieuw" ? " is-nieuw" : "") + '">'
+          + '<button class="bestelkop" data-klap="' + b.id + '" type="button">'
+          +   '<div><h4><span class="chip chip--' + b.status + '">' + (STATUSSEN[b.status] || b.status) + '</span>'
+          +   veilig(b.naam) + '</h4>'
+          +   '<div class="onder">' + veilig(b.code || "") + ' · ' + (b.koekjes || 0) + ' koekjes · ' + tijdKort(b.gemaakt) + '</div></div>'
+          +   '<span class="bedrag">' + euro(b.bedrag) + '<br><span class="etiket">' + (open ? "sluiten" : "openen") + '</span></span>'
+          + '</button>'
+          + (open
+            ? '<div class="details">'
+              + '<div class="regels">' + regels + '</div>'
+              + '<div class="gegevens"><b>Contact</b><span>' + veilig(b.contact || "—") + '</span></div>'
+              + '<div class="gegevens"><b>' + (b.levering === "Bezorgen" ? "Bezorgen" : "Afhalen") + '</b><span>'
+                + veilig(b.levering === "Bezorgen" ? (b.adres || "adres volgt") : (b.moment || "moment nog af te spreken")) + '</span></div>'
+              + (b.notitie ? '<div class="notitie">' + veilig(b.notitie) + '</div>' : "")
+              + '<div class="acties">' + knoppenVoor(b) + '</div>'
+              + '</div>'
+            : "")
+          + '</article>';
+      }).join("");
+}
+
+function knoppenVoor(b){
+  const k = (status, tekst, stil) => '<button class="knop ' + (stil ? "knop--stil " : "") + 'knop--klein" data-status="'
+    + status + '" data-id="' + b.id + '" type="button">' + tekst + '</button>';
+  let uit = contactLink(b.contact);
+  if (b.status === "nieuw") uit += k("bevestigd", "Bevestigen");
+  if (b.status === "bevestigd") uit += k("gebakken", "Gebakken");
+  if (b.status === "gebakken") uit += k("afgerond", "Afgerond");
+  if (b.status === "afgerond") uit += k("gebakken", "Terug naar gebakken", true);
+  if (b.status !== "geannuleerd") uit += k("geannuleerd", "Annuleren", true);
+  else uit += k("nieuw", "Terugzetten", true);
+  return uit;
+}
+
+/* ---------- wijzigen ---------- */
+async function statusZetten(id, nieuw){
+  const b = bestellingen.filter(x => x.id === id)[0];
+  if (!b) return;
+  try {
+    await fx.updateDoc(fx.doc(db, "koekenbakker", RUIMTE, "bestellingen", id), {status: nieuw});
+    // een geannuleerde bestelling telt niet meer mee voor het weeklimiet
+    const verschil = (b.status !== "geannuleerd" && nieuw === "geannuleerd") ? -(b.koekjes || 0)
+                   : (b.status === "geannuleerd" && nieuw !== "geannuleerd") ? (b.koekjes || 0) : 0;
+    if (verschil !== 0){
+      await fx.setDoc(fx.doc(db, "koekenbakker", RUIMTE, "weken", huidigeWeek),
+                      {besteld: fx.increment(verschil)}, {merge: true});
+    }
+    melden(STATUSSEN[nieuw] + ".");
+  } catch (fout){
+    melden("Opslaan lukte niet: " + (fout.code || fout.message));
+  }
+}
+
+function vulInstellingen(){
+  $("#sLimiet").value = weekDoc && typeof weekDoc.limiet === "number" ? weekDoc.limiet : (INST.weekLimiet || 100);
+  $("#sBesteld").value = weekDoc && typeof weekDoc.besteld === "number" ? weekDoc.besteld : 0;
+  $("#sOpen").value = (weekDoc && weekDoc.open === false) ? "nee" : "ja";
+}
+
+async function weekOpslaan(velden){
+  try {
+    await fx.setDoc(fx.doc(db, "koekenbakker", RUIMTE, "weken", huidigeWeek), velden, {merge: true});
+    melden("Opgeslagen.");
+  } catch (fout){
+    melden("Opslaan lukte niet: " + (fout.code || fout.message));
+  }
+}
+
+/* ---------- klikken ---------- */
+$("#inlogForm").addEventListener("submit", async function(e){
+  e.preventDefault();
+  $("#inlogFout").hidden = true;
+  try {
+    await fa.signInWithEmailAndPassword(auth, $("#iMail").value.trim(), $("#iWw").value);
+  } catch (fout){
+    $("#inlogFout").textContent = fout.code === "auth/invalid-credential"
+      ? "Dat e-mailadres en wachtwoord passen niet bij elkaar."
+      : "Inloggen lukte niet: " + fout.code;
+    $("#inlogFout").hidden = false;
+  }
+});
+
+document.addEventListener("click", function(e){
+  const tabKnop = e.target.closest("[data-tab]");
+  if (tabKnop){
+    tab = tabKnop.dataset.tab;
+    $$(".tab").forEach(t => t.classList.toggle("aan", t === tabKnop));
+    $("#vlakOverzicht").hidden = tab !== "overzicht";
+    $("#vlakLijst").hidden = tab !== "lijst";
+    $("#vlakInstellingen").hidden = tab !== "instellingen";
+    return;
+  }
+  const f = e.target.closest("[data-filter]");
+  if (f){
+    filter = f.dataset.filter;
+    $$(".filter").forEach(x => x.classList.toggle("aan", x === f));
+    tekenLijst();
+    return;
+  }
+  const klap = e.target.closest("[data-klap]");
+  if (klap){
+    const id = klap.dataset.klap;
+    if (opengeklapt.has(id)) opengeklapt.delete(id); else opengeklapt.add(id);
+    tekenLijst();
+    return;
+  }
+  const st = e.target.closest("[data-status]");
+  if (st){ statusZetten(st.dataset.id, st.dataset.status); return; }
+
+  if (e.target.closest("#weekTerug") || e.target.closest("#weekVooruit")){
+    const stap = e.target.closest("#weekTerug") ? -7 : 7;
+    const ma = maandagVan(huidigeWeek);
+    ma.setUTCDate(ma.getUTCDate() + stap);
+    huidigeWeek = weekCode(new Date(ma.getUTCFullYear(), ma.getUTCMonth(), ma.getUTCDate()));
+    opengeklapt.clear();
+    luister();
+    return;
+  }
+  if (e.target.closest("#sOpslaan")){
+    weekOpslaan({limiet: Math.max(0, parseInt($("#sLimiet").value, 10) || 0), open: $("#sOpen").value === "ja"});
+    return;
+  }
+  if (e.target.closest("#sTellerOpslaan")){
+    weekOpslaan({besteld: Math.max(0, parseInt($("#sBesteld").value, 10) || 0)});
+    return;
+  }
+  if (e.target.closest("#uitlogKnop")){ fa.signOut(auth); return; }
+});
+
+start().catch(function(fout){
+  console.error(fout);
+  $("#inlogUitleg").textContent = "Er ging iets mis bij het opstarten: " + fout.message;
+});
+</script>
+</body>
+</html>

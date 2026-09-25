@@ -1,0 +1,113 @@
+/* =====================================================================
+   DE KOEKENBAKKER — beveiligingsregels voor Firestore
+   =====================================================================
+   Dit bestand is de échte beveiliging. Alles wat de webshop en de portal
+   zelf controleren is vriendelijkheid richting de gebruiker; wat hier
+   staat draait bij Google en is niet te omzeilen.
+
+   Zo zet je ze aan:
+     Firebase Console → Firestore Database → Rules → alles hieronder
+     erin plakken → Publish.
+
+   ZET EERST JE EIGEN E-MAILADRES IN bakkerMails() HIERONDER. Dat is het
+   adres waarmee je in de portal inlogt. Zonder dat kun je geen enkele
+   bestelling lezen — ook jij niet.
+
+   De afspraak in het kort:
+
+     - Iedereen mag een bestelling plaatsen, maar er verder niets mee:
+       niet lezen, niet wijzigen, niet verwijderen. Een klant kan dus
+       nooit zien wat een ander besteld heeft.
+     - Een bestelling moet er ook uitzien als een bestelling: een naam,
+       een contactgegeven, hooguit 40 koekjes en status "nieuw".
+     - Het weekoverzicht (hoeveel er al besteld is) mag iedereen lezen —
+       de webshop heeft dat nodig om te weten of de week nog ruimte
+       heeft. Wijzigen mag alleen in één richting: het aantal omhoog,
+       met hooguit 40 tegelijk.
+     - Jij, met het adres hieronder, mag alles.
+   ===================================================================== */
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------------------------------------------------------------
+       Wie is de bakker? Vul hier je eigen e-mailadres in.
+       Meerdere mag: return ['zara@voorbeeld.nl', 'mama@voorbeeld.nl'];
+       --------------------------------------------------------------- */
+    function bakkerMails() {
+      return ['jij@voorbeeld.nl'];
+    }
+
+    function isBakker() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() in bakkerMails();
+    }
+
+    /* ---------------------------------------------------------------
+       De bestellingen
+       --------------------------------------------------------------- */
+    match /koekenbakker/{ruimte}/bestellingen/{bestelling} {
+
+      function geldigeBestelling() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['code', 'week', 'status', 'gemaakt', 'naam', 'contact',
+                                 'notitie', 'levering', 'moment', 'adres', 'regels',
+                                 'koekjes', 'bedrag'])
+          && d.status == 'nieuw'
+          && d.naam is string && d.naam.size() > 0 && d.naam.size() <= 120
+          && d.contact is string && d.contact.size() > 0 && d.contact.size() <= 120
+          && d.week is string && d.week.size() <= 10
+          && d.code is string && d.code.size() <= 8
+          && d.levering in ['Afhalen', 'Bezorgen']
+          && d.moment is string && d.moment.size() <= 120
+          && d.adres is string && d.adres.size() <= 200
+          && d.notitie is string && d.notitie.size() <= 600
+          && d.regels is list && d.regels.size() <= 40
+          && d.koekjes is int && d.koekjes > 0 && d.koekjes <= 40
+          && d.bedrag is number && d.bedrag >= 0 && d.bedrag <= 2000;
+      }
+
+      /* Een klant mag bestellen. Meer niet. */
+      allow create: if geldigeBestelling();
+
+      /* Lezen, bijwerken en weggooien is alleen voor de bakker. */
+      allow read, update, delete: if isBakker();
+    }
+
+    /* ---------------------------------------------------------------
+       Het weekoverzicht: hoeveel er deze week besteld is
+       --------------------------------------------------------------- */
+    match /koekenbakker/{ruimte}/weken/{week} {
+
+      /* De webshop moet dit kunnen lezen om te weten of de week vol is.
+         Er staan alleen aantallen in, geen klantgegevens. */
+      allow read: if true;
+
+      /* De eerste bestelling van een week maakt het overzicht aan. */
+      allow create: if request.resource.data.keys().hasOnly(['besteld', 'limiet', 'open'])
+        && request.resource.data.besteld is int
+        && request.resource.data.besteld > 0
+        && request.resource.data.besteld <= 40
+        && request.resource.data.limiet is int
+        && request.resource.data.limiet >= 0
+        && request.resource.data.limiet <= 2000
+        && request.resource.data.open == true;
+
+      /* Daarna mag een bestelling alleen de teller ophogen — nooit het
+         limiet veranderen, nooit de teller omlaag. */
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['besteld'])
+        && request.resource.data.besteld is int
+        && request.resource.data.besteld > resource.data.besteld
+        && request.resource.data.besteld <= resource.data.besteld + 40;
+
+      /* De bakker mag alles: limiet zetten, week sluiten, teller
+         corrigeren, en bij een annulering de teller omlaag. */
+      allow write: if isBakker();
+    }
+
+    /* Alles wat hier niet staat, mag niet. */
+  }
+}

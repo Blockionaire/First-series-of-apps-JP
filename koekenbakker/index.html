@@ -711,6 +711,7 @@ button{font:inherit;color:inherit}
   </div>
 </aside>
 
+<script src="firebase-config.js"></script>
 <script>
 (function(){
 "use strict";
@@ -738,6 +739,14 @@ const CONFIG = {
 };
 
 /* ---------- kleine hulpjes ---------- */
+const INST = window.KOEKENBAKKER_CONFIG || {};
+const RUIMTE = INST.ruimte || "zara";
+
+// Wat er live uit de database komt. Zolang die er niet is, blijft dit leeg
+// en rekent de site met de getallen uit CONFIG hierboven.
+let weekStand = null;
+let db = null, fx = null;
+
 const $ = (s, el) => (el || document).querySelector(s);
 const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
 const euro = n => "€ " + n.toLocaleString("nl-NL", {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -751,6 +760,40 @@ function melding(tekst){
   t.classList.add("zien");
   clearTimeout(melding._t);
   melding._t = setTimeout(() => t.classList.remove("zien"), 2600);
+}
+
+// Het weeknummer volgens de ISO-afspraak: maandag is de eerste dag.
+function weekCode(datum){
+  const d = new Date(Date.UTC(datum.getFullYear(), datum.getMonth(), datum.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const begin = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const nr = Math.ceil(((d - begin) / 86400000 + 1) / 7);
+  return d.getUTCFullYear() + "-W" + String(nr).padStart(2, "0");
+}
+const dezeWeek = () => weekCode(volgendeBakdag());   // de week van de eerstvolgende bakdag
+
+async function verbind(){
+  if (!INST.firebase) return;
+  try {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+    fx = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    db = fx.getFirestore(initializeApp(INST.firebase));
+    fx.onSnapshot(fx.doc(db, "koekenbakker", RUIMTE, "weken", dezeWeek()), function(snap){
+      weekStand = snap.exists() ? snap.data() : {besteld: 0, limiet: CONFIG.weekLimiet, open: true};
+      ververs();
+      ruimteTonen();
+    }, function(){ /* geen verbinding: de site werkt gewoon door */ });
+  } catch (fout){
+    console.warn("Geen verbinding met de database, de site werkt zonder.", fout);
+  }
+}
+
+// Een kort, uitspreekbaar bestelnummer.
+function bestelCode(){
+  const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let c = "";
+  for (let i = 0; i < 4; i++) c += letters[Math.floor(Math.random() * letters.length)];
+  return c;
 }
 
 /* ---------- koekjes tekenen ---------- */
@@ -962,12 +1005,17 @@ function tekenMomenten(){
 
 const aantalBetaald = () => Object.keys(mandje).filter(id => id !== BOX.id).reduce((n, id) => n + mandje[id], 0);
 const aantalBoxen = () => mandje[BOX.id] || 0;
-const ruimteDezeWeek = () => Math.max(0, CONFIG.weekLimiet - CONFIG.alBesteld);
+const weekLimiet = () => (weekStand && typeof weekStand.limiet === "number") ? weekStand.limiet : CONFIG.weekLimiet;
+const weekBesteld = () => (weekStand && typeof weekStand.besteld === "number") ? weekStand.besteld : CONFIG.alBesteld;
+const weekOpen = () => !weekStand || weekStand.open !== false;
+const ruimteDezeWeek = () => Math.max(0, weekLimiet() - weekBesteld());
 
 // Wat houdt deze bestelling tegen? Lege tekst betekent: niets aan de hand.
 function grensTekst(){
   const n = koekjesTotaal(), vrij = ruimteDezeWeek();
   if (n === 0) return "";
+  if (!weekOpen())
+    return "Ik heb de bestellingen voor deze week gesloten. Stuur me een berichtje, dan zet ik je op de lijst voor de volgende batch.";
   if (CONFIG.weekLimiet && vrij === 0)
     return "Mijn baklimiet voor deze week is bereikt. Stuur me een berichtje, dan zet ik je bovenaan voor de batch van volgende week.";
   if (CONFIG.weekLimiet && n > vrij)
@@ -1072,7 +1120,7 @@ function openLade(open){
 }
 
 /* ---------- bestelling ---------- */
-function bestelTekst(){
+function bestelTekst(code){
   const regels = Object.keys(mandje).map(function(id){
     const k = vind(id);
     const extra = id === BOX.id ? " (" + BOX.koekjes + " koekjes)" : "";
@@ -1084,6 +1132,7 @@ function bestelTekst(){
   const bezorgen = lever === "Bezorgen" && koekjesTotaal() < CONFIG.gratisBezorgenVanaf;
   const totaal = subtotaal() + (bezorgen ? CONFIG.bezorgkosten : 0);
   let t = "Hoi Zara! Ik wil graag bestellen bij De Koekenbakker:\n\n" + regels.join("\n");
+  if (code) t = "Bestelling " + code + "\n\n" + t;
   t += "\n\nTotaal: " + euro(totaal) + (bezorgen ? " (incl. bezorging)" : "");
   t += "\n" + lever + (lever === "Bezorgen"
     ? " — " + ($("#vAdres").value.trim() || "adres volgt")
@@ -1101,7 +1150,48 @@ function struikel(veld, tekst){
   melding(tekst);
 }
 
-function versturen(){
+// De bestelling wegschrijven naar de database, en het weektotaal ophogen.
+async function bewaarBestelling(code){
+  const week = dezeWeek(), n = koekjesTotaal();
+  const regels = Object.keys(mandje).map(function(id){
+    const k = vind(id);
+    return {id: id, naam: k.naam, aantal: mandje[id], stuk: k.prijs, gratis: false};
+  }).concat(gratisKeuze.map(function(keuze){
+    const k = vind(keuze === "verrassing" ? "karamelbom" : keuze);
+    return {id: keuze, naam: keuze === "verrassing" ? "Gratis koekje (verrassing)" : k.naam,
+            aantal: 1, stuk: 0, gratis: true};
+  }));
+  const bezorgen = lever === "Bezorgen" && n < CONFIG.gratisBezorgenVanaf;
+  try {
+    await fx.addDoc(fx.collection(db, "koekenbakker", RUIMTE, "bestellingen"), {
+      code: code,
+      week: week,
+      status: "nieuw",
+      gemaakt: fx.serverTimestamp(),
+      naam: $("#vNaam").value.trim().slice(0, 120),
+      contact: $("#vContact").value.trim().slice(0, 120),
+      notitie: $("#vNotitie").value.trim().slice(0, 600),
+      levering: lever,
+      moment: lever === "Afhalen" ? String(afhaalmoment || "").slice(0, 120) : "",
+      adres: lever === "Bezorgen" ? $("#vAdres").value.trim().slice(0, 200) : "",
+      regels: regels,
+      koekjes: n,
+      bedrag: Math.round((subtotaal() + (bezorgen ? CONFIG.bezorgkosten : 0)) * 100) / 100
+    });
+    const week_ref = fx.doc(db, "koekenbakker", RUIMTE, "weken", week);
+    try {
+      await fx.updateDoc(week_ref, {besteld: fx.increment(n)});
+    } catch (nogNiet) {
+      await fx.setDoc(week_ref, {besteld: n, limiet: CONFIG.weekLimiet, open: true});
+    }
+    return true;
+  } catch (fout) {
+    console.error(fout);
+    return false;
+  }
+}
+
+async function versturen(){
   if (koekjesTotaal() === 0){ melding("Je mandje is nog leeg."); return; }
   if (grensTekst()){ melding("Deze bestelling is te groot — stuur me even een berichtje."); return; }
   if (!$("#vNaam").value.trim()){ struikel($("#vNaam"), "Je naam is verplicht."); return; }
@@ -1113,7 +1203,30 @@ function versturen(){
     melding("Kies even wanneer je het ophaalt.");
     return;
   }
-  stuur(bestelTekst(), "Bestelling De Koekenbakker", "Je bestelling staat klaar");
+  let code = "";
+  if (db){
+    const knop = $("#bestelKnop");
+    knop.disabled = true;
+    knop.textContent = "Bezig met versturen…";
+    const nieuweCode = bestelCode();
+    const gelukt = await bewaarBestelling(nieuweCode);
+    knop.textContent = "Bestelling versturen";
+    knop.disabled = false;
+    if (gelukt) code = nieuweCode;
+    else melding("Opslaan lukte niet — je bestelling gaat als berichtje.");
+  }
+
+  stuur(bestelTekst(code), "Bestelling De Koekenbakker",
+        code ? "Bestelling " + code + " is binnen en staat klaar" : "Je bestelling staat klaar");
+
+  if (code){
+    mandje = {};
+    gratisKeuze = [];
+    bewaar("kb-mandje", mandje);
+    bewaar("kb-gratis", gratisKeuze);
+    ververs();
+    setTimeout(function(){ openLade(false); }, 400);
+  }
 }
 
 function stuur(tekst, onderwerp, bevestiging){
@@ -1259,11 +1372,9 @@ function start(){
   tikTak();
   setInterval(tikTak, 1000);
   cursorInstellen();
+  verbind();
   $("#jaar").textContent = new Date().getFullYear();
-  const vrij = ruimteDezeWeek();
-  $("#ruimteTekst").textContent = vrij === 0
-    ? "De batch van deze week zit vol. Bestel je nu, dan bak ik je koekjes volgende week."
-    : "Nog " + vrij + " van de " + CONFIG.weekLimiet + " koekjes vrij in de batch van deze week.";
+  ruimteTonen();
   $$("#keuzes button").forEach(b => b.classList.toggle("aan", b.dataset.lever === lever));
 
   // in beeld schuiven
@@ -1275,6 +1386,15 @@ function start(){
     $$(".toon").forEach(el => io.observe(el));
     setTimeout(() => $$(".toon").forEach(el => el.classList.add("in")), 3500);
   }
+}
+
+function ruimteTonen(){
+  const vrij = ruimteDezeWeek();
+  $("#ruimteTekst").textContent = !weekOpen()
+    ? "De bestellingen voor deze week zijn gesloten. Wat je nu bestelt, bak ik volgende week."
+    : vrij === 0
+      ? "De batch van deze week zit vol. Bestel je nu, dan bak ik je koekjes volgende week."
+      : "Nog " + vrij + " van de " + weekLimiet() + " koekjes vrij in de batch van deze week.";
 }
 
 /* ---------- klikken en typen ---------- */

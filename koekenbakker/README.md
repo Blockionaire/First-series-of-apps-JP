@@ -105,15 +105,30 @@ Twee rem­men, zodat je nooit meer toezegt dan je kunt bakken:
    batch van deze week, dan komt er: *"Mijn baklimiet voor deze week is bijna bereikt: ik
    kan er nog X bakken."* In de sectie **Bakdag** staat doorlopend hoeveel er nog vrij zijn.
 
-⚠️ **Belangrijk over het weeklimiet.** Deze site is één bestand zonder server: bestellingen
-komen als berichtje bij je binnen en worden nergens centraal geteld. `alBesteld` is daarom
-een getal dat je **zelf bijhoudt** — zet het na elke bevestigde bestelling hoger en elke
-maandag weer op `0`. De site rekent daar dan mee voor iedereen die hem daarna opent.
+**Hoe het weeklimiet weet hoe vol de week zit**, hangt ervan af of je de database hebt
+aangezet (zie hieronder):
 
-Wil je dat het écht vanzelf gaat — een teller die over alle klanten meeloopt en zichzelf
-elke week reset — dan is er een database nodig. In deze repo draaien `boodschappen`,
-`geldzaken` en `wijnkelder` al op Firebase; dezelfde opzet kan hier ook, dan telt elke
-bestelling automatisch mee en gaat de bestelknop vanzelf op slot zodra de week vol is.
+- **Zonder database** telt de site niets; `alBesteld` is een getal dat je zelf bijhoudt.
+  Zet het na elke bevestigde bestelling hoger en elke maandag weer op `0`.
+- **Met database** telt elke bestelling automatisch mee, over alle klanten heen, en zet de
+  webshop zichzelf op slot zodra de week vol is. `weekLimiet` en `alBesteld` zijn dan
+  alleen nog het vangnet voor als de verbinding wegvalt; het echte limiet zet je in de
+  portal.
+
+---
+
+## De database en de bestellingenportal
+
+Vul je [`firebase-config.js`](firebase-config.js) in, dan gebeurt er drie dingen:
+
+1. elke bestelling wordt opgeslagen, dus je raakt er nooit meer een kwijt in je berichten;
+2. het weeklimiet telt vanzelf mee over alle klanten heen;
+3. de bestellingen komen live binnen in de portal:
+   [`koekenbakker-bestellingen/`](../koekenbakker-bestellingen/).
+
+Daar staat ook hoe je het project aanmaakt, in zes stappen, plus de beveiligingsregels die
+je één keer moet plakken. Zonder die invulling werkt de webshop precies zoals hiervoor:
+bestellingen komen als berichtje binnen via WhatsApp of e-mail.
 
 ---
 
