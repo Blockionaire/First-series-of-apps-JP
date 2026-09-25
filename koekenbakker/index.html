@@ -276,6 +276,7 @@ button{font:inherit;color:inherit}
 .klok div{background:var(--papier);color:var(--inkt);border-radius:14px;padding:14px 18px;min-width:82px;text-align:center;
   border:2px solid var(--inkt)}
 .klok b{display:block;font-family:var(--kop);font-weight:800;font-size:2rem;font-variant-numeric:tabular-nums;line-height:1}
+.ruimte{margin-top:20px;font-family:var(--kop);font-weight:700;font-size:.95rem;color:var(--karamel-diep)}
 .klok span{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--karamel-diep);font-family:var(--kop);font-weight:700}
 .stappen{display:grid;gap:14px;counter-reset:s}
 .stap{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start;background:var(--papier);color:var(--inkt);
@@ -396,6 +397,10 @@ button{font:inherit;color:inherit}
   font-family:var(--kop);font-weight:700;font-size:.9rem}
 .keuzes button.aan{background:var(--inkt);color:var(--room)}
 .mini{font-size:.8rem;color:var(--zacht);text-align:center}
+.veldnoot{font-size:.78rem;color:var(--zacht)}
+.grens{font-size:.88rem;line-height:1.45;background:rgba(142,90,59,.09);border:2px dashed var(--karamel);
+  border-radius:14px;padding:12px 14px;color:var(--inkt)}
+.grens b{font-weight:800}
 
 /* ---------- balk onderaan (mobiel) ---------- */
 .balk{position:fixed;left:0;right:0;bottom:0;z-index:45;background:var(--diep);color:var(--inkt);
@@ -538,11 +543,12 @@ button{font:inherit;color:inherit}
           <div><b id="kM">0</b><span>min</span></div>
           <div><b id="kS">0</b><span>sec</span></div>
         </div>
+        <p class="ruimte" id="ruimteTekst"></p>
       </div>
       <div class="stappen toon">
         <div class="stap"><div><h4>Kies je koekjes</h4><p>Vijf smaken, los te combineren. Vanaf 3 koekjes bestel je al.</p></div></div>
         <div class="stap"><div><h4>Stuur je bestelling</h4><p>Eén tik en je mandje staat als berichtje klaar. Ik bevestig je bestelling persoonlijk.</p></div></div>
-        <div class="stap"><div><h4>Vrijdag vers in de doos</h4><p>Afhalen of ik breng het langs binnen de stad — dezelfde middag nog.</p></div></div>
+        <div class="stap"><div><h4>Vrijdag vers in de doos</h4><p>Afhalen, of ik breng het langs in de Hoeksche Waard — dezelfde middag nog.</p></div></div>
       </div>
     </div>
   </section>
@@ -619,7 +625,7 @@ button{font:inherit;color:inherit}
       <div class="faq toon">
         <details open><summary>Hoe werkt "koop er 5, krijg de 6e gratis"?</summary><p>Zodra er vijf koekjes in je mandje liggen, verschijnt er automatisch een gratis koekje. Bij tien krijg je er twee, en zo door. Je kiest zelf de smaak van elk gratis koekje, of je laat het aan mij over.</p></details>
         <details><summary>Wanneer worden mijn koekjes gebakken?</summary><p>Elke vrijdagmiddag. Bestel je vóór donderdag 20:00, dan zit je in de batch van diezelfde week. Daarna schuif je door naar de vrijdag erop.</p></details>
-        <details><summary>Bezorgen of afhalen?</summary><p>Afhalen kan vrijdagavond tussen 17:00 en 19:00 of zaterdagochtend tussen 10:00 en 12:00 — je kiest je moment bij het bestellen. Bezorgen doe ik zelf op de fiets binnen de stad, vanaf zes koekjes gratis. Daaronder reken ik € 2,50.</p></details>
+        <details><summary>Bezorgen of afhalen?</summary><p>Afhalen kan vrijdagavond tussen 17:00 en 19:00 of zaterdagochtend tussen 10:00 en 12:00 — je kiest je moment bij het bestellen. Bezorgen doe ik zelf op de fiets, alleen binnen de Hoeksche Waard: gratis vanaf zes koekjes, daaronder reken ik € 2,50. Woon je er buiten, dan kun je altijd afhalen.</p></details>
         <details><summary>Hoe lang blijven ze goed?</summary><p>Op hun best zijn ze de dag zelf. Daarna nog drie dagen prima in een afgesloten trommel — tien seconden in de magnetron en ze zijn weer als nieuw. Invriezen kan tot drie maanden.</p></details>
         <details><summary>Allergenen</summary><p>Alle koekjes bevatten tarwe (gluten), ei, melk en soja. De Nootje Noir en Witte Wolk bevatten noten, en alles wordt gebakken in een keuken waar noten aanwezig zijn. Laat het weten bij je bestelling als er iets speelt.</p></details>
         <details><summary>Kan ik een grotere bestelling doen voor een feest?</summary><p>Ja. Vanaf 24 koekjes maak ik een aparte planning en kun je smaken laten mixen. Stuur de datum mee met je bestelling, dan laat ik je snel weten of het past.</p></details>
@@ -690,13 +696,17 @@ button{font:inherit;color:inherit}
       <label>Wanneer kom je het ophalen? <em>verplicht</em></label>
       <div class="momenten" id="momenten"></div>
     </div>
-    <div class="veld" id="adresVeld" hidden><label for="vAdres">Bezorgadres <em>verplicht</em></label><input id="vAdres" type="text" autocomplete="street-address" placeholder="Straat en huisnummer"></div>
+    <div class="veld" id="adresVeld" hidden><label for="vAdres">Bezorgadres <em>verplicht</em></label>
+      <input id="vAdres" type="text" autocomplete="street-address" placeholder="Straat, huisnummer en plaats">
+      <span class="veldnoot">Ik bezorg alleen in de Hoeksche Waard.</span></div>
     <div class="veld"><label for="vNotitie">Iets doorgeven?</label><textarea id="vNotitie" placeholder="Allergieën, cadeauverpakking, ander bezorgmoment…"></textarea></div>
     </div>
   </div>
   <div class="lade-voet">
     <div class="totaal"><span>Totaal</span><span><span id="totaalPrijs">€ 0,00</span><small id="totaalUitleg"></small></span></div>
+    <p class="grens" id="grens" hidden></p>
     <button class="knop knop--vol" id="bestelKnop" type="button">Bestelling versturen</button>
+    <button class="knop knop--stil knop--vol" id="overlegKnop" type="button" hidden>Stuur me een berichtje</button>
     <p class="mini">Je bestelling komt als berichtje bij mij binnen. Betalen doe je bij het afhalen of bezorgen.</p>
   </div>
 </aside>
@@ -711,12 +721,15 @@ button{font:inherit;color:inherit}
 const CONFIG = {
   whatsapp: "",                       // bijv. "31612345678" (landcode, geen + of spaties)
   email: "hoi@dekoekenbakker.nl",
-  stad: "de stad",
+  stad: "de Hoeksche Waard",           // hier bezorg ik, en nergens anders
   bezorgkosten: 2.50,
   gratisBezorgenVanaf: 6,
   bakdag: 5,                          // 5 = vrijdag
   bakuur: 16,
   boxPrijs: 14.50,                    // verrassingsbox: zes koekjes, je betaalt er vijf
+  maxPerBestelling: 20,               // daarboven eerst even overleggen
+  weekLimiet: 100,                    // zoveel koekjes kun je in één week bakken
+  alBesteld: 0,                       // hoeveel er deze week al besteld zijn — zelf bijhouden
   afhaalKeuze: true,                  // op false: geen vaste afhaalmomenten, je spreekt het zelf af
   afhaalmomenten: [
     {dagNr: 5, tijden: ["17:00 – 18:00", "18:00 – 19:00"]},
@@ -949,6 +962,21 @@ function tekenMomenten(){
 
 const aantalBetaald = () => Object.keys(mandje).filter(id => id !== BOX.id).reduce((n, id) => n + mandje[id], 0);
 const aantalBoxen = () => mandje[BOX.id] || 0;
+const ruimteDezeWeek = () => Math.max(0, CONFIG.weekLimiet - CONFIG.alBesteld);
+
+// Wat houdt deze bestelling tegen? Lege tekst betekent: niets aan de hand.
+function grensTekst(){
+  const n = koekjesTotaal(), vrij = ruimteDezeWeek();
+  if (n === 0) return "";
+  if (CONFIG.weekLimiet && vrij === 0)
+    return "Mijn baklimiet voor deze week is bereikt. Stuur me een berichtje, dan zet ik je bovenaan voor de batch van volgende week.";
+  if (CONFIG.weekLimiet && n > vrij)
+    return "Mijn baklimiet voor deze week is bijna bereikt: ik kan er nog " + vrij + " bakken. Haal er " + (n - vrij)
+         + " uit je mandje, of stuur me een berichtje voor volgende week.";
+  if (n > CONFIG.maxPerBestelling)
+    return "Meer dan " + CONFIG.maxPerBestelling + " koekjes? Neem even contact met me op, dan plan ik het samen met je in.";
+  return "";
+}
 const koekjesTotaal = () => aantalBetaald() + aantalGratis() + aantalBoxen() * BOX.koekjes;
 const aantalGratis = () => Math.floor(aantalBetaald() / 5);
 const subtotaal = () => Object.keys(mandje).reduce((n, id) => n + mandje[id] * vind(id).prijs, 0);
@@ -1024,6 +1052,12 @@ function ververs(){
   $("#totaalPrijs").textContent = euro(totaal);
   $("#totaalUitleg").textContent = koekjesTotaal() === 0 ? ""
     : (bezorgen ? "incl. " + euro(CONFIG.bezorgkosten) + " bezorging" : (lever === "Bezorgen" ? "gratis bezorgd" : "afhalen"));
+  const grens = grensTekst();
+  $("#grens").hidden = !grens;
+  $("#grens").textContent = grens;
+  $("#bestelKnop").disabled = !!grens;
+  $("#overlegKnop").hidden = !grens;
+
   $("#adresVeld").hidden = lever !== "Bezorgen";
   $("#afhaalVeld").hidden = !(lever === "Afhalen" && CONFIG.afhaalKeuze);
   if (!$("#afhaalVeld").hidden) tekenMomenten();
@@ -1069,6 +1103,7 @@ function struikel(veld, tekst){
 
 function versturen(){
   if (koekjesTotaal() === 0){ melding("Je mandje is nog leeg."); return; }
+  if (grensTekst()){ melding("Deze bestelling is te groot — stuur me even een berichtje."); return; }
   if (!$("#vNaam").value.trim()){ struikel($("#vNaam"), "Je naam is verplicht."); return; }
   if (!$("#vContact").value.trim()){ struikel($("#vContact"), "Een telefoonnummer of e-mailadres is verplicht."); return; }
   if (lever === "Bezorgen" && !$("#vAdres").value.trim()){ struikel($("#vAdres"), "Vul je bezorgadres in."); return; }
@@ -1078,15 +1113,35 @@ function versturen(){
     melding("Kies even wanneer je het ophaalt.");
     return;
   }
-  const tekst = bestelTekst();
+  stuur(bestelTekst(), "Bestelling De Koekenbakker", "Je bestelling staat klaar");
+}
+
+function stuur(tekst, onderwerp, bevestiging){
   if (navigator.clipboard) navigator.clipboard.writeText(tekst).catch(function(){});
   if (CONFIG.whatsapp){
     window.open("https://wa.me/" + CONFIG.whatsapp + "?text=" + encodeURIComponent(tekst), "_blank", "noopener");
-    melding("Je bestelling staat klaar in WhatsApp.");
+    melding(bevestiging + " in WhatsApp.");
   } else {
-    window.location.href = "mailto:" + CONFIG.email + "?subject=" + encodeURIComponent("Bestelling De Koekenbakker") + "&body=" + encodeURIComponent(tekst);
-    melding("Bestelling gekopieerd en klaargezet in je mail.");
+    window.location.href = "mailto:" + CONFIG.email + "?subject=" + encodeURIComponent(onderwerp) + "&body=" + encodeURIComponent(tekst);
+    melding(bevestiging + " in je mail, en gekopieerd naar je klembord.");
   }
+}
+
+// Bij een grote bestelling of een volle week: eerst even overleggen.
+function overleggen(){
+  const n = koekjesTotaal();
+  const regels = Object.keys(mandje).map(function(id){
+    const k = vind(id);
+    return "• " + mandje[id] + "× " + k.naam + (id === BOX.id ? " (" + BOX.koekjes + " koekjes)" : "");
+  });
+  let t = "Hoi Zara! Ik zou graag een grotere bestelling doen: " + n + " koekje" + (n === 1 ? "" : "s") + ".";
+  if (regels.length) t += "\n\nWat ik in gedachten heb:\n" + regels.join("\n");
+  t += "\n\nKan dat, en welke week zou passen?";
+  const naam = $("#vNaam").value.trim();
+  if (naam) t += "\n\nNaam: " + naam;
+  const contact = $("#vContact").value.trim();
+  if (contact) t += "\nContact: " + contact;
+  stuur(t, "Grote bestelling De Koekenbakker", "Je berichtje staat klaar");
 }
 
 /* ---------- quiz: welk koekje ben jij? ---------- */
@@ -1205,6 +1260,10 @@ function start(){
   setInterval(tikTak, 1000);
   cursorInstellen();
   $("#jaar").textContent = new Date().getFullYear();
+  const vrij = ruimteDezeWeek();
+  $("#ruimteTekst").textContent = vrij === 0
+    ? "De batch van deze week zit vol. Bestel je nu, dan bak ik je koekjes volgende week."
+    : "Nog " + vrij + " van de " + CONFIG.weekLimiet + " koekjes vrij in de batch van deze week.";
   $$("#keuzes button").forEach(b => b.classList.toggle("aan", b.dataset.lever === lever));
 
   // in beeld schuiven
@@ -1295,6 +1354,7 @@ document.addEventListener("change", function(e){
 });
 
 $("#bestelKnop").addEventListener("click", versturen);
+$("#overlegKnop").addEventListener("click", overleggen);
 document.addEventListener("input", function(e){ e.target.classList.remove("fout"); });
 
 document.addEventListener("mousemove", function(e){

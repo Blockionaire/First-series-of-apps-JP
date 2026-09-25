@@ -56,12 +56,15 @@ Bovenaan het `<script>`-blok in `index.html` staat één instellingenblok:
 const CONFIG = {
   whatsapp: "",                  // bijv. "31612345678" — landcode, geen + of spaties
   email: "hoi@dekoekenbakker.nl",
-  stad: "de stad",
+  stad: "de Hoeksche Waard",     // hier bezorg ik, en nergens anders
   bezorgkosten: 2.50,
   gratisBezorgenVanaf: 6,
   bakdag: 5,                     // 0 = zondag, 5 = vrijdag
   bakuur: 16,
   boxPrijs: 14.50,               // verrassingsbox: zes koekjes, je betaalt er vijf
+  maxPerBestelling: 20,          // daarboven eerst even overleggen
+  weekLimiet: 100,               // zoveel koekjes kun je in één week bakken
+  alBesteld: 0,                  // hoeveel er deze week al besteld zijn — zelf bijhouden
   afhaalKeuze: true,             // op false: geen vaste tijdsloten, je spreekt het zelf af
   afhaalmomenten: [
     {dagNr: 5, tijden: ["17:00 – 18:00", "18:00 – 19:00"]},
@@ -81,11 +84,36 @@ koekjes; met `boxPrijs` bepaal je die zelf.
 1. `whatsapp` — zolang dit leeg is, gaat een bestelling via e-mail in plaats van WhatsApp.
 2. `email` en `stad`.
 3. De Instagram- en TikTok-links in de footer (staan nu op `#`).
+4. `weekLimiet` — hoeveel koekjes je in één week aankunt (nu 100).
 4. De teksten over Zara en de drie reviews — die zijn nu als voorbeeld ingevuld.
 
 Een koekje toevoegen of veranderen doe je in de lijst `KOEKJES`: naam, prijs, gewicht,
 omschrijving, labels, smaakmeter (1 t/m 5), en de kleuren van het deeg, de korst en de
 chocoladebrokken. Zet je er een zesde bij, dan schuift het raster vanzelf mee.
+
+---
+
+## Grenzen aan een bestelling
+
+Twee rem­men, zodat je nooit meer toezegt dan je kunt bakken:
+
+1. **Meer dan 20 koekjes in één bestelling** (`maxPerBestelling`) — de verstuurknop gaat
+   op slot en er verschijnt: *"Meer dan 20 koekjes? Neem even contact met me op, dan plan
+   ik het samen met je in."* Daaronder staat een knop die een kort berichtje voor je
+   klaarzet met wat de klant in gedachten heeft, zodat je het met elkaar kunt afspreken.
+2. **Het weeklimiet** (`weekLimiet`, standaard 100) — past de bestelling niet meer in de
+   batch van deze week, dan komt er: *"Mijn baklimiet voor deze week is bijna bereikt: ik
+   kan er nog X bakken."* In de sectie **Bakdag** staat doorlopend hoeveel er nog vrij zijn.
+
+⚠️ **Belangrijk over het weeklimiet.** Deze site is één bestand zonder server: bestellingen
+komen als berichtje bij je binnen en worden nergens centraal geteld. `alBesteld` is daarom
+een getal dat je **zelf bijhoudt** — zet het na elke bevestigde bestelling hoger en elke
+maandag weer op `0`. De site rekent daar dan mee voor iedereen die hem daarna opent.
+
+Wil je dat het écht vanzelf gaat — een teller die over alle klanten meeloopt en zichzelf
+elke week reset — dan is er een database nodig. In deze repo draaien `boodschappen`,
+`geldzaken` en `wijnkelder` al op Firebase; dezelfde opzet kan hier ook, dan telt elke
+bestelling automatisch mee en gaat de bestelknop vanzelf op slot zodra de week vol is.
 
 ---
 
