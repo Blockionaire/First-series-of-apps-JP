@@ -23,7 +23,9 @@
     "d1:migrate:remote": "wrangler d1 migrations apply stai-production --remote",
     "d1:seed:remote": "wrangler d1 execute stai-production --remote --file=seeds/0001_verified_corpus.sql --yes",
     "d1:admin:remote": "node scripts/bootstrap-admin.mjs",
-    "cf:deploy": "npm run d1:migrate:remote && npm run d1:seed:remote && npm run d1:admin:remote && wrangler deploy",
+    "d1:preview:setup": "node scripts/preview-db.mjs",
+    "cf:preview:deploy": "npm run d1:preview:setup && wrangler preview",
+    "cf:deploy":"npm run d1:migrate:remote && npm run d1:seed:remote && npm run d1:admin:remote && wrangler deploy",
     "test:workers": "node --test --test-concurrency=1 \"tests/workers/*.test.mjs\"",
     "verify": "npm run typecheck && npm run lint && npm run build && npm test && npm run cf:build && npm run test:workers",
     "e2e": "node e2e/smoke.mjs"
@@ -54,7 +56,7 @@
     "playwright": "^1.61.1",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "wrangler": "^4.132.0"
+    "wrangler": "^4.140.0"
   },
   "engines": {
     "node": ">=22.14.0 <23"

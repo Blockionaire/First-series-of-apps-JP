@@ -121,5 +121,53 @@
     // to "production" in a built Worker; overriding it here would change
     // paywall and sandbox behaviour as a side effect.
     "APP_URL": "https://stai-ahead.com"
+  },
+
+  // Worker Previews (`wrangler preview`, used for non-production branch
+  // builds). A Preview inherits NONE of the vars, bindings or secrets above:
+  // it gets exactly what this block declares, and nothing else. `wrangler
+  // deploy` ignores this block, so production is unaffected by it.
+  //
+  // What is deliberately absent:
+  //   - secrets: none. No Stripe (payments stay frozen), no Resend (mail is
+  //     kept in the outbox, never sent), no Anthropic (no AI spend), no
+  //     IndexNow key (a Preview must never ping search engines), no admin
+  //     bootstrap credentials.
+  //   - cron triggers: Previews cannot carry them, so scheduled discovery can
+  //     never run from a Preview.
+  //   - the production database. `stai-preview` is a separate D1 database
+  //     holding the schema and the public verified corpus only — no users,
+  //     sessions or events. `npm run d1:preview:setup` migrates and seeds it,
+  //     and refuses to run if this block ever names the production database.
+  "previews": {
+    "vars": {
+      "STAI_RUNTIME": "workers",
+      "STAI_WORKERS_PLAN": "free",
+      // Used only for absolute URLs in metadata (canonical, OG, JSON-LD,
+      // sitemap, RSS) and in the text of emails, which a Preview never sends.
+      // Redirects, forms, cookies and navigation are all relative, so this
+      // does not send a Preview visitor to production — and pointing
+      // canonicals at the real domain keeps Preview pages from being indexed
+      // as a second copy of the site.
+      "APP_URL": "https://stai-ahead.com"
+    },
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "stai-preview",
+        "database_id": "4d12294a-8498-4851-bb2f-46c4c5303c4b",
+        "migrations_dir": "migrations"
+      }
+    ],
+    // The rate limiter. The class is declared in "migrations" above, so each
+    // Preview gets its own instance: its counters never touch production's.
+    "durable_objects": {
+      "bindings": [
+        {
+          "name": "RATE_LIMITER",
+          "class_name": "RateLimiterDO"
+        }
+      ]
+    }
   }
 }
