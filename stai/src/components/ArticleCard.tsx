@@ -32,7 +32,7 @@ export function LeadCard({ a }: { a: ArticleSummary }) {
           )}
           {a.premium && <PlusBadge />}
         </div>
-        <h2 className="f-display mt-4 text-[clamp(2rem,5vw,3.6rem)] text-cream-100 transition-colors group-hover:text-white">
+        <h2 className="f-display mt-4 text-[clamp(2rem,5vw,3.6rem)] text-cream-100 transition-colors group-hover:text-accent">
           {a.title}
         </h2>
         <p className="mt-4 max-w-2xl text-base leading-relaxed" style={{ color: "var(--ink-muted)" }}>
@@ -56,7 +56,7 @@ export function IndexCard({ a, num }: { a: ArticleSummary; num: string }) {
           <CategoryTag category={a.category} />
           {a.premium && <PlusBadge />}
         </div>
-        <h3 className="f-display-wide mt-3 text-xl text-cream-100 transition-colors group-hover:text-white">
+        <h3 className="f-display-wide mt-3 text-xl text-cream-100 transition-colors group-hover:text-accent">
           {a.title}
         </h3>
         <p className="mt-2 line-clamp-3 text-sm" style={{ color: "var(--ink-muted)" }}>

@@ -68,22 +68,29 @@ export function generateMetadata(): Metadata {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#0E1726" },
-    { media: "(prefers-color-scheme: light)", color: "#F5F2EC" },
+    { media: "(prefers-color-scheme: dark)", color: "#0D1320" },
+    { media: "(prefers-color-scheme: light)", color: "#F6F1E8" },
   ],
-  colorScheme: "dark light",
+  colorScheme: "light dark",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   // Theme is server-rendered from the cookie — no flash of wrong theme. With
-  // no choice made, no attribute is rendered and the page's own default
-  // applies (lib/theme-choice.ts).
+  // no choice made, no attribute is rendered and the Paper Edition applies
+  // (lib/theme-choice.ts).
   const theme = themeFromCookie((await cookies()).get(THEME_COOKIE)?.value);
   return (
     <html lang="en-GB" data-theme={theme}>
       <head>
         {/* The display face is the first impression; preload so it never
             flashes a fallback. Latin subset only — latin-ext loads on demand. */}
+        <link
+          rel="preload"
+          href="/fonts/eb-garamond-latin-wght-normal.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         <link
           rel="preload"
           href="/fonts/archivo-latin-wdth-normal.woff2"

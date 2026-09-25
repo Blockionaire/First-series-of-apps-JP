@@ -9,14 +9,14 @@ import { effectiveTheme, nextTheme, themeCookie, type Theme } from "@/lib/theme-
  * Dark/light switch: the glyph alone, no frame and no label.
  *
  * The server renders the reader's choice from the `stai_theme` cookie (no
- * flash); this flips the attribute and persists the choice. On the editorial
- * homepage the two themes are its Paper and Night Editions.
+ * flash); this flips the attribute and persists the choice. The two themes
+ * are the Paper Edition (the default) and the Night Edition.
  *
  * The current theme is read from the root's computed `color-scheme` rather
- * than from `data-theme`, because with no choice made each page shows its own
- * default — dark for the site, Paper for the homepage — and the button must
- * offer the opposite of what is actually on screen. It is re-read on every
- * navigation, since the header outlives the page beneath it.
+ * than from `data-theme`, because with no choice made there is no attribute
+ * at all, and the button must offer the opposite of what is actually on
+ * screen. It is re-read on every navigation, since the header outlives the
+ * page beneath it.
  *
  * `theme` is null until mount, because the choice cannot be read while
  * rendering on the server. The icon is held back until then rather than

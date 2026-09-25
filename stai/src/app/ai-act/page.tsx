@@ -261,7 +261,7 @@ export default async function AiActPage() {
                 <span className="f-mono text-[0.6rem] tracking-[0.14em] uppercase" style={{ color: "var(--ink-faint)" }}>
                   {a.category} · <time dateTime={a.published_at}>{fmtDate(a.published_at)}</time>
                 </span>
-                <span className="f-display-wide mt-1.5 block text-base text-cream-100 group-hover:text-white">
+                <span className="f-display-wide mt-1.5 block text-base text-cream-100 group-hover:text-accent">
                   {a.title}
                 </span>
               </Link>

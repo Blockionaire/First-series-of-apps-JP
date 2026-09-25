@@ -1,5 +1,5 @@
 /**
- * The homepage's Paper and Night Editions.
+ * The site's Paper and Night Editions (Design System v2).
  *
  * Two layers of check:
  *
@@ -11,8 +11,8 @@
  * 2. In a browser (needs `npm run build` and the bundled Chromium): the
  *    toggle switches editions without a reload, persists the choice in the
  *    existing stai_theme cookie, the server renders that choice on the next
- *    request (no flash), and a reader who has chosen nothing still gets the
- *    approved Paper homepage and the unchanged dark site elsewhere.
+ *    request (no flash), and a reader who has chosen nothing gets the Paper
+ *    Edition on every page.
  */
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
@@ -24,17 +24,18 @@ import path from "node:path";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const CSS = fs.readFileSync(path.join(ROOT, "src/app/globals.css"), "utf8");
 
-function block(selector) {
-  const i = CSS.indexOf(`${selector} {`);
-  assert.ok(i !== -1, `${selector} block should exist`);
-  const body = CSS.slice(i, CSS.indexOf("}", i));
+function block(re) {
+  const m = CSS.match(re);
+  assert.ok(m, `${re} block should exist`);
   const tokens = new Map();
-  for (const m of body.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)) tokens.set(m[1], m[2].trim());
+  for (const t of m[1].matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)) tokens.set(t[1], t[2].trim());
   return tokens;
 }
 
-const paper = block("html:has(.home-ed)");
-const night = block('html[data-theme="dark"]:has(.home-ed)');
+// Paper is the default: Tailwind's @theme plus :root. Night overrides both.
+const paper = new Map([...block(/@theme\s*\{([^}]*)\}/), ...block(/:root\s*\{([^}]*)\}/)]);
+const night = new Map([...paper, ...block(/html\[data-theme="dark"\]\s*\{([^}]*)\}/)]);
+const nightOnly = block(/html\[data-theme="dark"\]\s*\{([^}]*)\}/);
 
 /** #rrggbb → relative luminance (WCAG 2.x). */
 function luminance(hex) {
@@ -48,16 +49,14 @@ function contrast(a, b) {
 }
 
 describe("Night Edition palette", () => {
-  test("remaps every colour token the Paper Edition sets", () => {
-    const colourTokens = [...paper.keys()].filter(
-      (t) => t !== "--ed-serif" && !t.startsWith("--ed-plate-ink") && t !== "--ed-plate-line" && t !== "--ed-plate-rule"
-    );
-    const missing = colourTokens.filter((t) => !night.has(t));
+  test("remaps every surface, ink and accent token", () => {
+    const colourTokens = [...paper.keys()].filter((t) => /^--color-(navy|cream|signal|accent)|^--color-gold-300$|^--(line|ink|ed-accent|ed-night)/.test(t));
+    const missing = colourTokens.filter((t) => !nightOnly.has(t));
     assert.deepEqual(missing, [], `set on paper but not remapped for night: ${missing.join(", ")}`);
   });
 
   test("uses no pure black", () => {
-    for (const [t, v] of night) assert.doesNotMatch(v, /#000(000)?\b/i, `${t} is pure black`);
+    for (const [t, v] of nightOnly) assert.doesNotMatch(v, /#000(000)?\b/i, `${t} is pure black`);
   });
 
   test("text on every Night surface meets WCAG AA", () => {
@@ -111,7 +110,6 @@ const PORT = Number(process.env.THEME_TEST_PORT ?? 3231);
 const BASE = `http://127.0.0.1:${PORT}`;
 const PAPER = "rgb(246, 241, 232)"; // #f6f1e8
 const NIGHT = "rgb(13, 19, 32)"; // #0d1320
-const SITE_DARK = "rgb(14, 23, 38)"; // #0e1726, the site's own dark page
 
 let server, dataDir, browser;
 
@@ -149,15 +147,26 @@ describe("theme toggle in a browser", { skip }, () => {
   const pageBg = (p) => p.evaluate(() => getComputedStyle(document.documentElement).backgroundColor);
   const toggle = (p) => p.locator("header button[aria-label^='Switch to']").first();
 
-  test("no choice made: Paper homepage, dark site elsewhere, no data-theme rendered", async () => {
+  test("no choice made: the Paper Edition on every page, no data-theme rendered", async () => {
     const html = await (await fetch(`${BASE}/`)).text();
     assert.doesNotMatch(html.slice(0, html.indexOf(">", html.indexOf("<html")) + 1), /data-theme/);
     const ctx = await browser.newContext();
     const p = await ctx.newPage();
-    await p.goto(`${BASE}/`);
-    assert.equal(await pageBg(p), PAPER);
-    await p.goto(`${BASE}/about`);
-    assert.equal(await pageBg(p), SITE_DARK);
+    for (const path of ["/", "/about", "/news", "/prompts"]) {
+      await p.goto(`${BASE}${path}`);
+      assert.equal(await pageBg(p), PAPER, `${path} should be paper`);
+    }
+    await ctx.close();
+  });
+
+  test("a Night choice holds across pages", async () => {
+    const ctx = await browser.newContext();
+    await ctx.addCookies([{ name: "stai_theme", value: "dark", url: BASE }]);
+    const p = await ctx.newPage();
+    for (const path of ["/", "/about", "/news", "/prompts"]) {
+      await p.goto(`${BASE}${path}`);
+      assert.equal(await pageBg(p), NIGHT, `${path} should be night`);
+    }
     await ctx.close();
   });
 

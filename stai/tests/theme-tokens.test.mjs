@@ -93,27 +93,29 @@ describe("theme tokens", () => {
     assert.deepEqual(pinned, [], `hard-coded colours in style props:\n  ${pinned.join("\n  ")}`);
   });
 
-  test("both themes define the same token set", () => {
-    // Light mode is a remap, so a token defined only in one theme is a token
-    // that silently disappears in the other.
+  test("the Night Edition remaps every token the Paper Edition sets", () => {
+    // Paper is the default (@theme + :root); Night is html[data-theme="dark"].
+    // A token Paper sets but Night does not keeps its paper value at night.
     const block = (re) => {
       const m = CSS.match(re);
       if (!m) return null;
       return new Set([...m[1].matchAll(/(--[a-z0-9-]+)\s*:/g)].map((x) => x[1]));
     };
-    const light = block(/html\[data-theme="light"\]\s*\{([^}]*)\}/);
-    assert.ok(light, "the light theme block should exist");
-
-    // The dark defaults live in :root. Everything :root remaps for ink and
-    // hairlines must have a light counterpart.
+    const theme = block(/@theme\s*\{([^}]*)\}/);
     const root = block(/:root\s*\{([^}]*)\}/);
-    assert.ok(root, ":root should exist");
+    const night = block(/html\[data-theme="dark"\]\s*\{([^}]*)\}/);
+    assert.ok(theme && root && night, "@theme, :root and the Night block should all exist");
 
-    const onlyDark = [...root].filter((t) => !light.has(t) && t !== "--color-scheme");
-    assert.deepEqual(
-      onlyDark,
-      [],
-      `defined for dark but not light — these keep their dark value on the beige page: ${onlyDark.join(", ")}`
-    );
+    // Deliberately the same in both editions: fonts, the gold surfaces
+    // (STAI+ keeps dark ink on gold in both), the serif alias, and the lead
+    // card's own ink, which is a dark object in both.
+    const constant = (t) =>
+      t.startsWith("--font-") ||
+      t === "--color-gold-500" ||
+      t === "--color-gold-700" ||
+      t === "--ed-serif" ||
+      /^--ed-plate-(ink|line|rule)/.test(t);
+    const missing = [...theme, ...root].filter((t) => !constant(t) && !night.has(t));
+    assert.deepEqual(missing, [], `set for Paper but not remapped for Night: ${missing.join(", ")}`);
   });
 });

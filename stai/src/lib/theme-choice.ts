@@ -4,10 +4,8 @@
  *
  * The `stai_theme` cookie is the whole mechanism. When it is set, the server
  * renders it as `data-theme`, so the first paint is already right — no flash.
- * When it is not set, no `data-theme` is rendered and each page shows its own
- * default: the dark site theme everywhere, except the editorial homepage,
- * whose default is its approved Paper Edition. The Night Edition is simply
- * the homepage under `data-theme="dark"`.
+ * When it is not set, no `data-theme` is rendered and the default applies:
+ * the Paper Edition. `data-theme="dark"` is the Night Edition.
  */
 
 export type Theme = "light" | "dark";

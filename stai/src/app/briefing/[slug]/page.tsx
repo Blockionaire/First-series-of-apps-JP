@@ -285,7 +285,7 @@ export default async function ArticlePage({ params }: Props) {
               <p className="f-label" style={{ color: "var(--ink-faint)" }}>
                 Read next · {readNext.category} · {readNext.reading_min} min
               </p>
-              <h2 className="f-display mt-3 text-2xl text-cream-100 transition-colors group-hover:text-white sm:text-4xl">
+              <h2 className="f-display mt-3 text-2xl text-cream-100 transition-colors group-hover:text-accent sm:text-4xl">
                 {readNext.title}
               </h2>
               <p className="mt-3 max-w-2xl leading-relaxed" style={{ color: "var(--ink-muted)" }}>

@@ -95,7 +95,7 @@ export default function PromptExplorer({ items, isPlus }: { items: PromptCard[];
                 <span className="f-mono text-[0.6rem] tracking-[0.14em] uppercase text-cream-400">Free</span>
               )}
             </div>
-            <h2 className="f-display-wide mt-3 text-lg leading-tight text-cream-100 group-hover:text-white">
+            <h2 className="f-display-wide mt-3 text-lg leading-tight text-cream-100 group-hover:text-accent">
               {p.title}
             </h2>
             <p className="mt-2 flex-1 text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>

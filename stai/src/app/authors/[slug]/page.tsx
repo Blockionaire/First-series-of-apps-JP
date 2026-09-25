@@ -96,7 +96,7 @@ export default async function AuthorPage({ params }: Props) {
               <Link href={`/briefing/${a.slug}`} className="group grid gap-x-6 gap-y-1 py-5 sm:grid-cols-[4rem_1fr] sm:items-baseline">
                 <span className="index-num">{String(i + 1).padStart(2, "0")} /</span>
                 <span>
-                  <span className="f-display-wide block text-lg text-cream-100 transition-colors group-hover:text-white sm:text-xl">
+                  <span className="f-display-wide block text-lg text-cream-100 transition-colors group-hover:text-accent sm:text-xl">
                     {a.title}
                     {a.premium && (
                       <span className="ml-3 align-middle">

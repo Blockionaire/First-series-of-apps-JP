@@ -170,7 +170,7 @@ export default async function PromptPage({ params }: Props) {
                   </span>
                   {s.premium && <PlusBadge />}
                 </div>
-                <p className="f-display-wide mt-2 text-base text-cream-100 group-hover:text-white">{s.title}</p>
+                <p className="f-display-wide mt-2 text-base text-cream-100 group-hover:text-accent">{s.title}</p>
               </Link>
             ))}
           </div>

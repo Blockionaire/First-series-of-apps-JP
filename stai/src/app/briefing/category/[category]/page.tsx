@@ -85,7 +85,7 @@ export default async function CategoryPage({ params }: Props) {
             <Link href={`/briefing/${a.slug}`} className="group grid gap-x-6 gap-y-1 py-6 sm:grid-cols-[4rem_1fr] sm:items-baseline">
               <span className="index-num">{String(i + 1).padStart(2, "0")} /</span>
               <span>
-                <h2 className="f-display-wide text-xl text-cream-100 transition-colors group-hover:text-white sm:text-2xl">
+                <h2 className="f-display-wide text-xl text-cream-100 transition-colors group-hover:text-accent sm:text-2xl">
                   {a.title}
                   {a.premium && (
                     <span className="ml-3 align-middle">

@@ -92,7 +92,7 @@ export default function BriefingExplorer({ items }: { items: RadarItem[] }) {
                   {fmtDate(a.publishedAt)}
                 </span>
                 <span className="min-w-0">
-                  <span className="f-display-wide block text-xl text-cream-100 transition-colors group-hover:text-white sm:text-2xl">
+                  <span className="f-display-wide block text-xl text-cream-100 transition-colors group-hover:text-accent sm:text-2xl">
                     {a.title}
                   </span>
                   <span className="mt-1 block max-w-3xl text-sm leading-relaxed" style={{ color: "var(--ink-muted)" }}>
