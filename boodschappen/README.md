@@ -140,20 +140,28 @@ vaak jullie het gegeten hebben en hoe lang geleden. Zoeken kan op gerecht én op
 
 ### Budget
 Het budgettabblad houdt jullie **maandbudget** bij — geen verrekening onderling,
-gewoon: hoeveel is er deze maand nog over?
+gewoon: hoeveel is er deze periode nog over? Die periode is standaard de kalendermaand,
+maar je kunt hem laten resetten op je salarisdatum (zie hieronder).
 
 - **Stel een budget in** (⚙️ rechtsboven): één bedrag per maand voor jullie samen.
   Je huisgenoot ziet dezelfde teller. Voor een uitzonderlijke maand kun je een
   **afwijkend bedrag** instellen dat alleen voor die maand geldt.
+- **Wanneer reset de teller** — standaard op de 1e, maar je kunt elke dag van 1 tot 28
+  kiezen. Zet hem op je salarisdatum en de teller loopt bijvoorbeeld van 24 september
+  tot en met 23 oktober, en begint dan opnieuw. Terwijl je de dag kiest, zie je meteen
+  welke periode er dan loopt. De app praat vanaf dan over *periode* in plaats van
+  *maand*, en de kop van het budgetscherm toont het bereik (*24 sep – 23 okt*).
+  Uitgaven verhuizen vanzelf mee naar de periode waar hun datum in valt — ook die van
+  vroeger, en ook bij je huisgenoot, want de instelling staat in de gedeelde database.
 - Een **ring** laat zien wat er nog over is. Groen zolang het meevalt, geel vanaf
   85%, rood zodra je eroverheen gaat.
 - Loopt het budget vol, dan zegt de app dat: vanaf 85% hoeveel er nog te gaan is, en
   daarboven met hoeveel je eroverheen bent. Bewust géén "voor of achter op schema" —
   boodschappen doe je niet in dagporties.
-- Drie tellers: aantal uitgaven, het gemiddelde per keer en wat je vorige maand uitgaf.
+- Drie tellers: aantal uitgaven, het gemiddelde per keer en wat je de vorige periode uitgaf.
 - **Waar gaat het heen** — een balkje per winkel, van groot naar klein.
-- **Per maand** — een staafje per maand van de laatste halfjaar, met een stippellijn
-  op het budget van die maand. Tik op een staafje om die maand te bekijken.
+- **Per periode** — een staafje per periode van het laatste halfjaar, met een stippellijn
+  op het budget ervan. Tik op een staafje om die periode te bekijken.
 - Een **uitgave** noteer je met bedrag, winkel, waarvoor het was, de datum en
   eventueel een foto van de bon. Na het winkelen vraagt de app er zelf om.
 

@@ -462,6 +462,7 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
   transition:transform var(--vt);
 }
 .sugg button:active{transform:scale(.94);}
+.sugg button.aan{background:var(--accent); color:var(--accent-ink);}
 
 /* ---------- winkelmodus ---------- */
 .wm-kop{
@@ -1197,17 +1198,57 @@ function datumLang(ts){
   if(!ts) return "";
   return new Date(ts).toLocaleDateString("nl-NL", {weekday:"long", day:"numeric", month:"long"});
 }
-function maandSleutel(ts){ const d = new Date(ts); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); }
+/* ---------- budgetperiodes ----------
+   Normaal loopt een budgetmaand van de 1e tot de laatste dag. Wie rond
+   zijn salaris wil resetten, zet de startdag op bijvoorbeeld 24: dan loopt
+   de teller van 24 september tot en met 23 oktober. De sleutel blijft
+   "JJJJ-MM" — die van de maand waarin de periode begint. */
+function budgetStartDag(){
+  const d = Math.round(Number(S.budget && S.budget.startDag) || 1);
+  return Math.min(28, Math.max(1, d));
+}
+function maandSleutel(ts){
+  const d = new Date(ts);
+  const start = budgetStartDag();
+  /* nog vóór de resetdag? Dan hoor je bij de periode die vorige maand begon.
+     De startdag is hoogstens 28, dus deze stap kan nooit een maand overslaan. */
+  if(start > 1 && d.getDate() < start) d.setMonth(d.getMonth() - 1);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+}
+/* de eerste en de laatste dag van de periode met deze sleutel */
+function periodeVan(sleutel){
+  const [j, m] = String(sleutel).split("-").map(Number);
+  const dag = budgetStartDag();
+  const van = new Date(j, m-1, dag);
+  const tot = new Date(j, m-1, dag);
+  tot.setMonth(tot.getMonth() + 1);
+  tot.setDate(tot.getDate() - 1);
+  return {van, tot};
+}
+const dagMaand = d => d.toLocaleDateString("nl-NL", {day:"numeric", month:"short"}).replace(".", "");
+/* heet het een maand of een periode? Dat hangt van de startdag af */
+const periodeWoord = () => budgetStartDag() === 1 ? "maand" : "periode";
+const dezePeriode  = () => budgetStartDag() === 1 ? "deze maand" : "deze periode";
+
 function maandKort(sleutel){
   const [j, m] = sleutel.split("-").map(Number);
-  const naam = new Date(j, m-1, 1).toLocaleDateString("nl-NL", {month:"long"});
-  const kop = naam.charAt(0).toUpperCase() + naam.slice(1);
-  return j === new Date().getFullYear() ? kop : kop + " " + j;
+  if(budgetStartDag() === 1){
+    const naam = new Date(j, m-1, 1).toLocaleDateString("nl-NL", {month:"long"});
+    const kop = naam.charAt(0).toUpperCase() + naam.slice(1);
+    return j === new Date().getFullYear() ? kop : kop + " " + j;
+  }
+  const {van} = periodeVan(sleutel);
+  return dagMaand(van);
 }
 function maandNaam(sleutel){
   const [j,m] = sleutel.split("-").map(Number);
-  const naam = new Date(j, m-1, 1).toLocaleDateString("nl-NL", {month:"long", year:"numeric"});
-  return naam.charAt(0).toUpperCase() + naam.slice(1);
+  if(budgetStartDag() === 1){
+    const naam = new Date(j, m-1, 1).toLocaleDateString("nl-NL", {month:"long", year:"numeric"});
+    return naam.charAt(0).toUpperCase() + naam.slice(1);
+  }
+  const {van, tot} = periodeVan(sleutel);
+  const jaarErbij = tot.getFullYear() !== new Date().getFullYear() ? " " + tot.getFullYear() : "";
+  return dagMaand(van) + " – " + dagMaand(tot) + jaarErbij;
 }
 
 /* het gekleurde Nutri-Score-blokje */
@@ -1370,7 +1411,7 @@ const S = {
   winkelSessie:null,       // {winkelId, gestart}
   kies:null,               // Set met item-id's zolang je meerdere tegelijk kiest
   maand:null,                    // welke maand het budgetscherm laat zien
-  budget:{standaard:0, perMaand:{}},
+  budget:{standaard:0, perMaand:{}, startDag:1},   // startDag: op welke dag de budgetteller reset
   laatsteItemIds:null,     // om nieuwe items van de ander te herkennen
   sheet:null,
   kijker:null
@@ -3552,8 +3593,8 @@ function sheetAfrekenen(){
   const st = {bedrag:"", fotoFile:null, winkel: winkelVoorstel()};
   const body = `
     <p style="margin:0 0 16px; color:var(--ink-2); font-size:15px; line-height:1.5">
-      Wat heb je uitgegeven? Dan telt het meteen mee in het budget van deze
-      maand.${budgetVoor(maandSleutel(nu())) > 0
+      Wat heb je uitgegeven? Dan telt het meteen mee in het budget van
+      ${dezePeriode()}.${budgetVoor(maandSleutel(nu())) > 0
         ? " Er is nu nog <b>" + euro(Math.max(0, budgetVoor(maandSleutel(nu())) - bonnenVan(maandSleutel(nu())).reduce((s,b) => s + (Number(b.bedrag)||0), 0))) + "</b> over."
         : ""}
     </p>
@@ -3638,12 +3679,15 @@ function bonnenVan(maand){
 }
 function maandInfo(maand){
   const [jaar, mnd] = maand.split("-").map(Number);
-  const dagenTotaal = new Date(jaar, mnd, 0).getDate();
+  const {van, tot} = periodeVan(maand);
+  const dagen = (a,b) => Math.round((b - a) / 864e5);
+  const dagenTotaal = dagen(van, tot) + 1;
   const n = new Date();
+  const vandaag = new Date(n.getFullYear(), n.getMonth(), n.getDate());
   const isNu = maand === maandSleutel(nu());
   const isToekomst = maand > maandSleutel(nu());
-  const dagVandaag = isNu ? n.getDate() : (isToekomst ? 0 : dagenTotaal);
-  return {jaar, mnd, dagenTotaal, dagVandaag, isNu, isToekomst,
+  const dagVandaag = isNu ? dagen(van, vandaag) + 1 : (isToekomst ? 0 : dagenTotaal);
+  return {jaar, mnd, van, tot, dagenTotaal, dagVandaag, isNu, isToekomst,
           dagenOver: Math.max(0, dagenTotaal - dagVandaag + (isNu ? 1 : 0))};
 }
 
@@ -3659,7 +3703,7 @@ function schermBudget(){
   const deel = budget > 0 ? uitgegeven / budget : 0;
   const info = maandInfo(maand);
 
-  /* maanden om tussen te wisselen: alles met bonnen, plus deze maand */
+  /* periodes om tussen te wisselen: alles met bonnen, plus die van nu */
   const maanden = [...new Set([maandSleutel(nu()), ...S.bonnen.map(b => maandSleutel(b.datum||b.gemaakt||0))])]
     .filter(m => m > "2000-00").sort().reverse().slice(0, 13);
 
@@ -3699,12 +3743,12 @@ function geenBudgetKaart(uitgegeven, aantal){
   return `
   <div class="budgetkaart">
     <div style="font-size:38px; margin-bottom:8px">🎯</div>
-    <div style="font-size:19px; font-weight:700; letter-spacing:var(--kop)">Nog geen maandbudget</div>
+    <div style="font-size:19px; font-weight:700; letter-spacing:var(--kop)">Nog geen ${periodeWoord() === "maand" ? "maandbudget" : "budget"}</div>
     <p style="color:var(--ink-2); font-size:14.5px; line-height:1.5; margin:8px 0 0">
-      Stel in hoeveel jullie per maand aan boodschappen willen uitgeven.
+      Stel in hoeveel jullie per ${periodeWoord()} aan boodschappen willen uitgeven.
       Daarna zie je hier in één oogopslag wat er nog over is.
     </p>
-    ${aantal ? `<div class="hint" style="margin-top:10px">Deze maand al ${euro(uitgegeven)} uitgegeven in ${aantal} ${aantal===1?"bon":"bonnen"}.</div>` : ""}
+    ${aantal ? `<div class="hint" style="margin-top:10px">${dezePeriode().charAt(0).toUpperCase() + dezePeriode().slice(1)} al ${euro(uitgegeven)} uitgegeven in ${aantal} ${aantal===1?"bon":"bonnen"}.</div>` : ""}
     <button class="knop vol" id="b-instel2" style="margin-top:16px">${IK.euro} Budget instellen</button>
   </div>`;
 }
@@ -3720,14 +3764,14 @@ function budgetKaart(budget, uitgegeven, over, deel, info){
   let tempo = "";
   if(info.isNu){
     if(over < 0){
-      tempo = `<div class="tempo let">${IK.waarsch}<span>Het budget van deze maand is met ${euro(-over)} overschreden</span></div>`;
+      tempo = `<div class="tempo let">${IK.waarsch}<span>Het budget van ${dezePeriode()} is met ${euro(-over)} overschreden</span></div>`;
     }else if(deel > 0.85){
-      tempo = `<div class="tempo neutraal">${IK.klok}<span>Nog ${euro(over)} te gaan deze maand</span></div>`;
+      tempo = `<div class="tempo neutraal">${IK.klok}<span>Nog ${euro(over)} te gaan ${dezePeriode()}</span></div>`;
     }
   }else if(!info.isToekomst){
     tempo = over >= 0
-      ? `<div class="tempo goed">${IK.vink}<span>Deze maand ${euro(over)} onder het budget gebleven</span></div>`
-      : `<div class="tempo let">${IK.waarsch}<span>Deze maand ${euro(-over)} over het budget gegaan</span></div>`;
+      ? `<div class="tempo goed">${IK.vink}<span>Deze ${periodeWoord()} ${euro(over)} onder het budget gebleven</span></div>`
+      : `<div class="tempo let">${IK.waarsch}<span>Deze ${periodeWoord()} ${euro(-over)} over het budget gegaan</span></div>`;
   }
 
   return `
@@ -3764,7 +3808,7 @@ function statRij(bonnen, uitgegeven, info, budget, maand){
     <div class="stat"><b>${euro(gem)}</b><span>per keer</span></div>
     <div class="stat">
       <b>${vorigeSom ? euro(vorigeSom) : "—"}</b>
-      <span>vorige maand</span>
+      <span>vorige ${periodeWoord()}</span>
     </div>
   </div>`;
 }
@@ -3844,7 +3888,7 @@ function maandenSectie(huidigeMaand){
 
   return `
   <div class="sectie">
-    <div class="sectie-kop"><h2>Per maand</h2><span class="lijn"></span>
+    <div class="sectie-kop"><h2>Per ${periodeWoord()}</h2><span class="lijn"></span>
       <span class="telw">gemiddeld ${euro(maanden.reduce((s,m)=>s+(perMaand.get(m)||0),0)/maanden.length)}</span>
     </div>
     <div class="lijst">
@@ -3860,7 +3904,9 @@ function maandenSectie(huidigeMaand){
               ${doel !== null ? `<span class="mdoel" style="bottom:${doel.toFixed(1)}px"></span>` : ""}
               <span class="mstaaf" style="height:${h.toFixed(1)}px"></span>
             </span>
-            <span class="mlabel">${new Date(Number(m.slice(0,4)), Number(m.slice(5,7))-1, 1).toLocaleDateString("nl-NL",{month:"short"}).replace(".","")}</span>
+            <span class="mlabel">${budgetStartDag() === 1
+              ? new Date(Number(m.slice(0,4)), Number(m.slice(5,7))-1, 1).toLocaleDateString("nl-NL",{month:"short"}).replace(".","")
+              : esc(dagMaand(periodeVan(m).van))}</span>
           </button>`;
         }).join("")}
       </div>
@@ -3891,14 +3937,15 @@ function sheetBudgetInstellen(){
   const maand = S.maand || maandSleutel(nu());
   const standaard = Number((S.budget && S.budget.standaard) || 0);
   const perMaand = (S.budget && S.budget.perMaand) || {};
+  const startDag = budgetStartDag();
   const heeftEigen = perMaand[maand] != null && perMaand[maand] !== "";
   const body = `
     <p style="margin:0 0 16px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
-      Hoeveel willen jullie per maand aan boodschappen uitgeven? Dit geldt voor jullie samen
+      Hoeveel willen jullie per ${periodeWoord()} aan boodschappen uitgeven? Dit geldt voor jullie samen
       en je huisgenoot ziet dezelfde teller.
     </p>
     <div class="veld">
-      <label>Budget per maand</label>
+      <label>Budget per ${periodeWoord()}</label>
       <div style="position:relative">
         <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); font-size:24px; font-weight:700; color:var(--muted)">€</span>
         <input class="invoer" id="bi-bedrag" inputmode="decimal" placeholder="400"
@@ -3910,14 +3957,27 @@ function sheetBudgetInstellen(){
       </div>
     </div>
     <div class="veld">
+      <label>Wanneer reset de teller</label>
+      <div class="veld-rij" style="align-items:center">
+        <button type="button" class="knop stil" id="bi-dagmin" aria-label="Eerder" style="flex:0 0 auto; padding:13px 17px">−</button>
+        <input class="invoer" id="bi-dag" inputmode="numeric" maxlength="2" value="${startDag}"
+               style="text-align:center; font-size:22px; font-weight:700; letter-spacing:-.02em">
+        <button type="button" class="knop stil" id="bi-dagplus" aria-label="Later" style="flex:0 0 auto; padding:13px 17px">+</button>
+      </div>
+      <div class="sugg" id="bi-dagsugg">
+        ${[1, 23, 24, 25, 27].map(n => `<button type="button" data-dag="${n}">${n === 1 ? "de 1e" : "de " + n + "e"}</button>`).join("")}
+      </div>
+      <div class="hint" id="bi-dagtekst"></div>
+    </div>
+    <div class="veld">
       <label>Alleen voor ${esc(maandNaam(maand))}</label>
       <button type="button" class="schakel" id="bi-eigen" style="width:100%">
-        <span class="tk"><b>Afwijkend bedrag deze maand</b>
+        <span class="tk"><b>Afwijkend bedrag deze ${periodeWoord()}</b>
           <span>handig voor een feestmaand of een lange vakantie</span></span>
         <span class="tuimel ${heeftEigen?"aan":""}"></span>
       </button>
       <div class="${heeftEigen?"":"verborgen"}" id="bi-eigenvak" style="margin-top:10px">
-        <input class="invoer" id="bi-eigenbedrag" inputmode="decimal" placeholder="Budget voor deze maand"
+        <input class="invoer" id="bi-eigenbedrag" inputmode="decimal" placeholder="Budget voor deze ${periodeWoord()}"
                value="${heeftEigen ? String(perMaand[maand]).replace(".", ",") : ""}"
                style="text-align:center; font-weight:650">
       </div>
@@ -3926,11 +3986,35 @@ function sheetBudgetInstellen(){
     <button class="knop stil" id="bi-annuleer" style="flex:0 0 auto">Annuleer</button>
     <button class="knop" id="bi-opslaan" style="flex:1">Opslaan</button>`;
 
-  sheet({titel:"Maandbudget", body, voet, naTeken:() => {
+  sheet({titel:"Budget", body, voet, naTeken:() => {
     const inp = $("#bi-bedrag");
     setTimeout(() => inp.focus(), 250);
     let eigenAan = heeftEigen;
     $$("#bi-sugg [data-snel]").forEach(b => b.onclick = () => { inp.value = b.dataset.snel; tril(6); });
+
+    /* de startdag, met meteen te zien welke periode er dan loopt */
+    const dagIn = $("#bi-dag");
+    const leesDag = () => Math.min(28, Math.max(1, Math.round(Number(dagIn.value) || 1)));
+    const toonDag = () => {
+      const d = leesDag();
+      $$("#bi-dagsugg [data-dag]").forEach(b => b.classList.toggle("aan", Number(b.dataset.dag) === d));
+      /* even doen alsof de nieuwe dag al geldt, om de periode te kunnen laten zien */
+      const oud = S.budget.startDag;
+      S.budget.startDag = d;
+      const {van, tot} = periodeVan(maandSleutel(nu()));
+      S.budget.startDag = oud;
+      $("#bi-dagtekst").innerHTML = d === 1
+        ? "De teller loopt van de 1e tot de laatste dag van de maand."
+        : `De teller loopt nu van <b>${dagMaand(van)}</b> tot en met <b>${dagMaand(tot)}</b>, en reset daarna weer.`;
+    };
+    const zetDag = d => { dagIn.value = Math.min(28, Math.max(1, d)); tril(6); toonDag(); };
+    dagIn.oninput = toonDag;
+    dagIn.onblur = () => { dagIn.value = leesDag(); toonDag(); };
+    $("#bi-dagmin").onclick  = () => zetDag(leesDag() - 1);
+    $("#bi-dagplus").onclick = () => zetDag(leesDag() + 1);
+    $$("#bi-dagsugg [data-dag]").forEach(b => b.onclick = () => zetDag(Number(b.dataset.dag)));
+    toonDag();
+
     $("#bi-eigen").onclick = () => {
       eigenAan = !eigenAan; tril();
       $("#bi-eigen .tuimel").classList.toggle("aan", eigenAan);
@@ -3942,6 +4026,7 @@ function sheetBudgetInstellen(){
       const lees = el => Number(String(el.value).replace(",", ".").replace(/[^0-9.]/g,"")) || 0;
       const bedrag = lees(inp);
       if(bedrag <= 0){ inp.focus(); inp.style.borderColor = "var(--rood)"; return; }
+      const dag = leesDag();
       const nieuwPer = Object.assign({}, perMaand);
       if(eigenAan){
         const eigen = lees($("#bi-eigenbedrag"));
@@ -3950,9 +4035,12 @@ function sheetBudgetInstellen(){
       const knop = $("#bi-opslaan");
       knop.disabled = true; knop.innerHTML = `<span class="spinner"></span> Opslaan…`;
       try{
-        await DB.zet(PAD.meta + "/budget", {standaard:bedrag, perMaand:nieuwPer, gewijzigdDoor:S.ik.id, gewijzigdOp:nu()});
-        S.budget = {standaard:bedrag, perMaand:nieuwPer};
-        sluitSheet(); tekenNu(); toast("Budget ingesteld op " + euro(budgetVoor(maand)), "🎯");
+        await DB.zet(PAD.meta + "/budget", {standaard:bedrag, perMaand:nieuwPer, startDag:dag, gewijzigdDoor:S.ik.id, gewijzigdOp:nu()});
+        S.budget = {standaard:bedrag, perMaand:nieuwPer, startDag:dag};
+        /* de periodes zijn verschoven, dus de gekozen maand kan niet meer bestaan */
+        S.maand = null;
+        sluitSheet(); tekenNu();
+        toast("Budget ingesteld op " + euro(budgetVoor(maandSleutel(nu()))), "🎯");
       }catch(e){ console.error(e); toast("Opslaan lukte niet"); knop.disabled = false; knop.innerHTML = "Opslaan"; }
     };
   }});
@@ -4137,7 +4225,7 @@ function schermMeer(){
         </div>
 
         <div class="sectie">
-          <div class="sectie-kop"><h2>Deze maand</h2><span class="lijn"></span></div>
+          <div class="sectie-kop"><h2>${dezePeriode().charAt(0).toUpperCase() + dezePeriode().slice(1)}</h2><span class="lijn"></span></div>
           <div class="stat-rij" style="margin-top:0">
             <div class="stat"><b>${open.length}</b><span>op de lijst</span></div>
             <div class="stat"><b>${S.items.filter(i => i.af && maandSleutel(i.afOp||0) === maandSleutel(nu())).length}</b><span>gehaald</span></div>
@@ -4153,7 +4241,7 @@ function schermMeer(){
                 ? euro(uitgegevenNu - budgetNu) + " over het budget van " + euro(budgetNu)
                 : "nog " + euro(budgetNu - uitgegevenNu) + " van je budget van " + euro(budgetNu)}
             </div>` : `
-            <button class="knop zacht klein vol" id="m-budget" style="margin-top:10px">${IK.euro} Maandbudget instellen</button>`}
+            <button class="knop zacht klein vol" id="m-budget" style="margin-top:10px">${IK.euro} Budget instellen</button>`}
         </div>
 
         <div class="sectie">
@@ -5807,7 +5895,8 @@ function startLuisteren(){
   DB.luister(PAD.bonnen, l => { S.bonnen = l; if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu(); });
   DB.luister(PAD.meta, l => {
     const b = l.find(x => x.id === "budget");
-    S.budget = b ? {standaard: Number(b.standaard)||0, perMaand: b.perMaand || {}} : {standaard:0, perMaand:{}};
+    S.budget = b ? {standaard: Number(b.standaard)||0, perMaand: b.perMaand || {}, startDag: Number(b.startDag)||1}
+                 : {standaard:0, perMaand:{}, startDag:1};
     if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu();
   });
 }
