@@ -750,8 +750,11 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     75% { transform: translateX(4px); }
   }
 </style>
+<link rel="stylesheet" href="renovation-access.css">
+<script src="renovation-access.js"></script>
 </head>
 <body>
+<section id="ovs-access"><div class="ovs-access-card"><h1>Toegang controleren…</h1><p>Het aanmeldscherm wordt geladen. Vernieuw de pagina als dit niet lukt.</p></div></section>
 
 <div class="app-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
   <div>
@@ -1496,12 +1499,13 @@ function togglePageEnabled(pageId) {
 // ── SUPABASE ────────────────────────────────────────────────────────────────
 const SUPABASE_URL = 'https://dqwkbtsstvakcvlnwvwk.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxd2tidHNzdHZha2N2bG53dndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1ODAwNjIsImV4cCI6MjA5NDE1NjA2Mn0.IfZQoWzrZRmvRY44zBjjHXwC8T3UnsXj2VS95jf8m6w';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{storageKey:'ovs-private-session'}});
 
 let supabaseConnected = false;
 let realtimeChannel = null;
 
 async function supabaseSave(stateData) {
+  if (!RenovationAccess.isReady()) return;
   try {
     const { error } = await sb.from('ovs_state').upsert({
       id: 'main',
@@ -1522,6 +1526,7 @@ async function supabaseSave(stateData) {
 }
 
 async function supabaseLoad() {
+  if (!RenovationAccess.isReady()) return null;
   try {
     const { data, error } = await sb.from('ovs_state').select('data').eq('id','main').single();
     if (!error && data && data.data && Object.keys(data.data).length > 0) {
@@ -1535,6 +1540,7 @@ async function supabaseLoad() {
 }
 
 function setupRealtime() {
+  if (!RenovationAccess.isReady()) return;
   if (realtimeChannel) realtimeChannel.unsubscribe();
   realtimeChannel = sb.channel('ovs-changes')
     .on('postgres_changes', {
@@ -2848,6 +2854,7 @@ function updateCollapseCounts() {
 // ── END COLLAPSIBLE ───────────────────────────────────────────────────────────
 
 async function load() {
+  await RenovationAccess.require(sb);
   loadSettings();
   updateSyncIndicator('loading');
   try {
@@ -2934,6 +2941,7 @@ async function load() {
   setupRealtime();
 }
 function save() {
+  if (!RenovationAccess.isReady()) return;
   localStorage.setItem('ovs-v16', JSON.stringify(state));
   supabaseSave(state);
 }
@@ -3458,7 +3466,7 @@ document.addEventListener('keydown', e => {
   }, {passive:true});
 })();
 
-load();
+load().then(() => RenovationAccess.reveal()).catch(() => RenovationAccess.failed());
 </script>
 
 </div>
