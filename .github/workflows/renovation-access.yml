@@ -1,0 +1,66 @@
+name: Verify renovation private access
+on:
+  push:
+    branches: [main, codex/renovation-private-access]
+    paths:
+      - renovation-access.*
+      - Huisje OVS app final version*.html
+      - tests/renovation-*
+      - .github/workflows/renovation-access.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  access:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: renovation-fixture-only
+          POSTGRES_DB: renovation_access_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: renovation-fixture-only
+      PGDATABASE: renovation_access_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Verify actual SQL policy and access RPC
+        run: |
+          python3 tests/renovation-database.py > /tmp/renovation-sql.log 2>&1 || {
+            python3 - <<'PY'
+          from pathlib import Path
+          t=Path('/tmp/renovation-sql.log').read_text()[-6000:]
+          print('::error::'+t.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PY
+            exit 1
+          }
+          cat /tmp/renovation-sql.log
+      - name: Install isolated browser test tools
+        run: |
+          npm install --prefix /tmp/renovation-test-tools --no-audit --no-fund @playwright/test@1.58.0
+          node /tmp/renovation-test-tools/node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Verify both actual renovation pages
+        env:
+          NODE_PATH: /tmp/renovation-test-tools/node_modules
+        run: |
+          node tests/renovation-browser.cjs > /tmp/renovation-browser.log 2>&1 || {
+            python3 - <<'PY'
+          from pathlib import Path
+          t=Path('/tmp/renovation-browser.log').read_text()[-6000:]
+          print('::error::'+t.replace('%','%25').replace('\r','%0D').replace('\n','%0A'))
+          PY
+            exit 1
+          }
+          cat /tmp/renovation-browser.log

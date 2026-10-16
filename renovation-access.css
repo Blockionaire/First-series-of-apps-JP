@@ -1,0 +1,18 @@
+body:not([data-ovs-unlocked]) > :not(#ovs-access):not(script):not(style) { display: none !important; }
+#ovs-access[hidden], #ovs-account-bar[hidden] { display: none !important; }
+#ovs-access { min-height: 100svh; display: grid; place-items: center; padding: 28px 20px; box-sizing: border-box; background: #f5f3ee; color: #292e28; font-family: 'DM Sans', sans-serif; }
+.ovs-access-card { width: min(100%, 420px); }
+.ovs-access-label { font-size: 11px; font-weight: 700; letter-spacing: .15em; color: #617b59; }
+.ovs-access-card h1 { font-size: clamp(30px, 8vw, 42px); letter-spacing: -.045em; line-height: 1.1; margin: 16px 0; }
+.ovs-access-card p { line-height: 1.6; }
+.ovs-access-card form { display: grid; gap: 18px; margin-top: 28px; }
+.ovs-access-card label { display: grid; gap: 8px; font-size: 14px; font-weight: 500; }
+.ovs-access-card input { width: 100%; box-sizing: border-box; padding: 14px 16px; border: 1px solid #cccfc5; border-radius: 14px; background: #fff; color: #292e28; font: inherit; font-size: 16px; }
+.ovs-access-card button { min-height: 48px; border: 0; border-radius: 14px; background: #536b49; color: #fff; padding: 12px 18px; font: inherit; font-weight: 600; cursor: pointer; }
+.ovs-access-card button:disabled { opacity: .6; cursor: wait; }
+.ovs-access-card input:focus-visible, .ovs-access-card button:focus-visible, #ovs-account-bar button:focus-visible { outline: 3px solid #b4c8a7; outline-offset: 3px; }
+.ovs-access-card .ovs-access-secondary { background: transparent; color: #536b49; padding: 8px 0; min-height: 44px; }
+.ovs-access-card [data-status] { min-height: 48px; margin-bottom: 0; font-size: 14px; }
+.ovs-access-card .ovs-access-note { color: #626b5f; font-size: 12px; }
+#ovs-account-bar { position: fixed; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 50; }
+#ovs-account-bar button { min-height: 44px; border: 1px solid #ccd3c7; border-radius: 12px; padding: 10px 14px; background: #f5f3ee; color: #425739; box-shadow: 0 2px 12px #0001; font: 13px 'DM Sans', sans-serif; cursor: pointer; }
