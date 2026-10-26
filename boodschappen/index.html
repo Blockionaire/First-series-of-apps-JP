@@ -976,11 +976,13 @@ body.sleepbezig{cursor:grabbing; user-select:none; -webkit-user-select:none;}
 .toast{
   position:fixed; left:50%; transform:translateX(-50%) translateY(0); z-index:120;
   bottom:calc(var(--nav-h) + 82px + env(safe-area-inset-bottom));
-  background:var(--ink); color:var(--bg); padding:11px 18px; border-radius:999px;
+  background:var(--ink); color:var(--bg); padding:11px 18px; border-radius:23px;
   font-size:14.5px; font-weight:600; box-shadow:var(--schaduw-op); max-width:88vw;
   text-align:center; animation:toastIn .28s cubic-bezier(.32,.72,0,1);
-  display:flex; align-items:center; gap:8px;
+  display:flex; align-items:center; gap:8px; line-height:1.35;
 }
+/* één regel blijft een pil; loopt de tekst door, dan geen zwarte bal */
+.toast > span:last-child{overflow-wrap:anywhere;}
 @keyframes toastIn{from{opacity:0; transform:translateX(-50%) translateY(14px);}}
 .toast.weg{opacity:0; transform:translateX(-50%) translateY(14px); transition:all .3s ease;}
 
@@ -5552,7 +5554,7 @@ function sheetGerechtBewerk(bestaand, concept){
       <div class="veld-rij">
         <input class="invoer" id="gb-em" maxlength="2" value="${esc(f.em)}"
                style="flex:0 0 62px; text-align:center; font-size:20px">
-        <textarea class="invoer groeit" id="gb-naam" maxlength="46" rows="1"
+        <textarea class="invoer groeit" id="gb-naam" rows="1"
                   placeholder="Bijv. pasta pesto">${esc(f.naam)}</textarea>
       </div>
     </div>
