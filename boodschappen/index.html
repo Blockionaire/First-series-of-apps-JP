@@ -398,6 +398,11 @@ button{border:none; background:none; padding:0; cursor:pointer;}
 .invoer::placeholder{color:var(--muted);}
 .invoer:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-zacht);}
 textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
+/* een veld van één regel dat meegroeit zodra de tekst langer wordt,
+   zodat je altijd ziet wat je hebt getypt */
+textarea.invoer.groeit{
+  min-height:0; height:48px; overflow:hidden; line-height:1.3; padding-top:13px;
+}
 .veld-rij{display:flex; gap:10px;}
 .veld-rij > *{flex:1; min-width:0;}
 
@@ -706,13 +711,26 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
 .dagrij.vandaag .dagkop b{color:var(--accent-ink); opacity:.75;}
 .dagrij.vandaag .dagkop span{color:var(--accent-ink);}
 .dagrij .tk{flex:1; min-width:0;}
-.dagrij .tk b{display:block; font-size:15.5px; font-weight:650; letter-spacing:-.005em;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+/* een lange gerechtnaam mag op twee regels, daarna pas afgekapt */
+.dagrij .tk b{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  font-size:15.5px; font-weight:650; letter-spacing:-.005em; line-height:1.25;
+  overflow:hidden; overflow-wrap:anywhere;}
 .dagrij .tk b.stil{color:var(--muted); font-weight:500;}
-.dagrij .tk span{font-size:12.5px; color:var(--muted);}
+.dagrij .tk span{font-size:12.5px; color:var(--muted); display:block;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .dagrij .na{color:var(--line-2); flex:none; display:grid; place-items:center;}
 .dagrij .na svg{width:18px; height:18px; stroke-width:2.2;}
 .dagrij.vrijedag .na{color:var(--accent);}
+
+/* slepen naar een andere dag */
+.dagrij.opgepakt{opacity:.3;}
+.dagrij.sleepdoel{background:var(--accent-zacht); box-shadow:inset 0 0 0 2px var(--accent);}
+.sleepgeest{
+  position:fixed; left:0; top:0; z-index:90; pointer-events:none;
+  border-radius:var(--r-m); border:1px solid var(--accent);
+  box-shadow:0 14px 30px -8px rgba(60,42,20,.5); opacity:.97;
+}
+body.sleepbezig{cursor:grabbing; user-select:none; -webkit-user-select:none;}
 
 .gerechtrij{
   display:flex; align-items:center; gap:13px; padding:11px 14px; width:100%;
@@ -722,8 +740,9 @@ textarea.invoer{resize:none; line-height:1.45; min-height:74px;}
 .gerechtrij:last-child{border-bottom:none;}
 .gerechtrij:active{background:var(--card-2);}
 .gerechtrij .tk{flex:1; min-width:0;}
-.gerechtrij .tk b{display:block; font-size:15.5px; font-weight:650;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.gerechtrij .tk b{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  font-size:15.5px; font-weight:650; line-height:1.25;
+  overflow:hidden; overflow-wrap:anywhere;}
 .gerechtrij .tk span{font-size:12.5px; color:var(--muted);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;}
 .gerechtrij .na{color:var(--line-2); flex:none; display:grid; place-items:center;}
@@ -4909,17 +4928,21 @@ const DAGNAMEN = ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag
 const datumSleutel = d =>
   d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
 
-/* de zeven dagen van de week waar je nu naar kijkt (maandag eerst) */
+/* de zeven dagen van de week waar je nu naar kijkt (zondag eerst) */
 function weekDagen(offset){
   const n = new Date(); n.setHours(12,0,0,0);
-  const verschuif = (n.getDay() + 6) % 7;          // zondag is 0, wij beginnen op maandag
-  const maandag = new Date(n);
-  maandag.setDate(n.getDate() - verschuif + (offset||0) * 7);
+  const verschuif = n.getDay();                    // zondag is 0 en staat bovenaan
+  const zondag = new Date(n);
+  zondag.setDate(n.getDate() - verschuif + (offset||0) * 7);
   return [...Array(7)].map((_, i) => {
-    const d = new Date(maandag); d.setDate(maandag.getDate() + i); return d;
+    const d = new Date(zondag); d.setDate(zondag.getDate() + i); return d;
   });
 }
 const isVandaag = d => datumSleutel(d) === datumSleutel(new Date());
+/* DAGNAMEN begint op maandag, dus de dag van de week wordt omgerekend */
+const dagNaamVan = d => DAGNAMEN[(d.getDay()+6)%7];
+const dagNaamBij = sleutel => dagNaamVan(new Date(sleutel + "T12:00"));
+const eenRegel = t => String(t||"").replace(/\s+/g, " ").trim();
 const menuVan = sleutel => S.menu.find(m => m.id === sleutel) || null;
 const gerechtVan = id => S.gerechten.find(g => g.id === id) || null;
 
@@ -5019,9 +5042,10 @@ function schermEten(){
             const naam = g ? g.naam : (m && m.tekst ? m.tekst : null);
             const nodig = g ? nogTeHalen(g, m.personen || g.personen || 2).length : 0;
             return `
-            <button class="dagrij ${isVandaag(d)?"vandaag":""} ${naam?"":"vrijedag"}" data-dag="${sleutel}">
+            <button class="dagrij ${isVandaag(d)?"vandaag":""} ${naam?"":"vrijedag"}" data-dag="${sleutel}"
+                    ${naam ? `data-sleep="${sleutel}"` : ""}>
               <span class="dagkop">
-                <b>${DAGNAMEN[(d.getDay()+6)%7].slice(0,2)}</b>
+                <b>${dagNaamVan(d).slice(0,2)}</b>
                 <span>${d.getDate()}</span>
               </span>
               <span class="tk">
@@ -5036,7 +5060,10 @@ function schermEten(){
         </div>
 
         ${gepland ? `
-          <button class="knop vol" id="e-weeklijst" style="margin-top:14px">
+          <div class="hint" style="text-align:center; margin-top:8px">
+            ${IK.sorteer} Houd een dag vast om het gerecht naar een andere dag te slepen.
+          </div>
+          <button class="knop vol" id="e-weeklijst" style="margin-top:12px">
             ${IK.kar} Boodschappen voor deze week</button>
           <div class="hint" style="text-align:center">Alles van de geplande dagen bij elkaar, zonder dubbele.</div>` : ""}
 
@@ -5110,6 +5137,8 @@ function bindEten(){
     if(b) b.onclick = () => { tril(); sheetGerechtBewerk(null); };
   });
   $$("[data-dag]").forEach(b => b.onclick = () => {
+    /* de tik die aan het eind van een sleep binnenkomt, mag het paneel niet openen */
+    if(nu() - sleepKlaarOp < 400) return;
     const sleutel = b.dataset.dag;
     const m = menuVan(sleutel);
     const g = m && m.gerechtId ? gerechtVan(m.gerechtId) : null;
@@ -5117,6 +5146,7 @@ function bindEten(){
     if(g) sheetGerecht(g, sleutel);
     else sheetPlan(sleutel);
   });
+  sleepDagen();
   $$("[data-gerecht]").forEach(b => b.onclick = () => {
     const g = gerechtVan(b.dataset.gerecht);
     if(g){ tril(); sheetGerecht(g, null); }
@@ -5124,6 +5154,131 @@ function bindEten(){
   const wl = $("#e-weeklijst");
   if(wl) wl.onclick = () => sheetWeekBoodschappen();
   volgScroll();
+}
+
+/* =====================================================================
+   ETEN · een gerecht naar een andere dag slepen
+   =====================================================================
+   Houd een geplande dag even vast: de regel komt los en volgt je vinger.
+   De dag waar je boven hangt licht op; laat je los, dan verhuist het
+   gerecht daarheen. Stond daar al iets, dan wisselen de twee van plek. */
+let sleep = null;          // {rij, van, geest, pakX, pakY, actief, doel, wacht}
+let sleepKlaarOp = 0;      // wanneer de laatste sleep eindigde
+let sleepGebonden = false;
+
+function sleepDagen(){
+  $$("[data-sleep]").forEach(rij => {
+    rij.addEventListener("pointerdown", e => {
+      if(e.button) return;
+      sleepStop();
+      sleep = {rij, van: rij.dataset.sleep, startX: e.clientX, startY: e.clientY,
+               actief:false, doel:null, geest:null, wacht:null};
+      sleep.wacht = setTimeout(() => sleepOppakken(e.clientX, e.clientY), 320);
+    });
+  });
+
+  if(sleepGebonden) return;
+  sleepGebonden = true;
+  document.addEventListener("pointermove", e => {
+    if(!sleep) return;
+    if(!sleep.actief){
+      /* beweeg je voordat hij loskomt, dan wil je scrollen en geen slepen */
+      if(Math.abs(e.clientX - sleep.startX) + Math.abs(e.clientY - sleep.startY) > 10) sleepStop();
+      return;
+    }
+    sleepVolg(e.clientX, e.clientY);
+  }, {passive:true});
+  /* zolang je sleept mag de pagina niet meescrollen */
+  document.addEventListener("touchmove", e => {
+    if(sleep && sleep.actief) e.preventDefault();
+  }, {passive:false});
+  document.addEventListener("pointerup", () => { if(sleep) sleepLoslaten(); });
+  document.addEventListener("pointercancel", () => sleepStop());
+}
+
+function sleepOppakken(x, y){
+  if(!sleep) return;
+  sleep.wacht = null;
+  sleep.actief = true;
+  sleepKlaarOp = nu();
+  tril(16);
+  const vak = sleep.rij.getBoundingClientRect();
+  const geest = sleep.rij.cloneNode(true);
+  geest.removeAttribute("data-dag");
+  geest.removeAttribute("data-sleep");
+  geest.classList.add("sleepgeest");
+  geest.style.width = vak.width + "px";
+  geest.style.transform = `translate(${vak.left}px, ${vak.top}px)`;
+  document.body.appendChild(geest);
+  sleep.geest = geest;
+  sleep.pakX = x - vak.left;
+  sleep.pakY = y - vak.top;
+  sleep.rij.classList.add("opgepakt");
+  document.body.classList.add("sleepbezig");
+  sleepVolg(x, y);
+}
+
+function sleepVolg(x, y){
+  sleep.geest.style.transform = `translate(${x - sleep.pakX}px, ${y - sleep.pakY}px)`;
+  /* even wegkijken, anders vind je alleen de geest onder je vinger */
+  sleep.geest.style.visibility = "hidden";
+  const onder = document.elementFromPoint(x, y);
+  sleep.geest.style.visibility = "";
+  const rij = onder && onder.closest ? onder.closest(".dagrij") : null;
+  const doel = rij && rij.dataset.dag ? rij.dataset.dag : null;
+  if(doel === sleep.doel) return;
+  sleep.doel = doel;
+  $$(".dagrij").forEach(r =>
+    r.classList.toggle("sleepdoel", !!doel && r.dataset.dag === doel && doel !== sleep.van));
+  if(doel && doel !== sleep.van) tril(5);
+}
+
+function sleepLoslaten(){
+  const {actief, van, doel} = sleep;
+  sleepStop();
+  if(actief) sleepKlaarOp = nu();
+  if(actief && doel && doel !== van) menuVerplaats(van, doel);
+}
+
+function sleepStop(){
+  if(!sleep) return;
+  clearTimeout(sleep.wacht);
+  if(sleep.geest) sleep.geest.remove();
+  sleep.rij.classList.remove("opgepakt");
+  $$(".dagrij").forEach(r => r.classList.remove("sleepdoel"));
+  document.body.classList.remove("sleepbezig");
+  sleep = null;
+}
+
+/* alleen de velden die een menu-dag echt heeft; de id is de datum zelf,
+   dus verplaatsen is wegschrijven op de nieuwe dag en de oude leegmaken */
+const menuKaal = m => ({
+  gerechtId: m.gerechtId || null,
+  tekst: m.tekst || "",
+  personen: m.personen == null ? null : m.personen,
+  door: m.door || (S.ik ? S.ik.id : null),
+  gemaakt: m.gemaakt || nu()
+});
+const menuNaam = m => {
+  const g = m && m.gerechtId ? gerechtVan(m.gerechtId) : null;
+  return g ? g.naam : ((m && m.tekst) || "Het gerecht");
+};
+
+async function menuVerplaats(van, naar){
+  const a = menuVan(van), b = menuVan(naar);
+  if(!a) return;
+  tril(14);
+  try{
+    if(b){
+      await DB.zet(PAD.menu + "/" + naar, menuKaal(a));
+      await DB.zet(PAD.menu + "/" + van,  menuKaal(b));
+      toast(menuNaam(a) + " gewisseld met " + dagNaamBij(naar).toLowerCase(), "🔀");
+    }else{
+      await DB.zet(PAD.menu + "/" + naar, menuKaal(a));
+      await DB.wis(PAD.menu + "/" + van);
+      toast(menuNaam(a) + " naar " + dagNaamBij(naar).toLowerCase(), "🍽️");
+    }
+  }catch(e){ console.error("verplaatsen", e); toast("Verplaatsen lukte niet"); }
 }
 
 
@@ -5168,7 +5323,7 @@ function sheetGerecht(g, dagSleutel){
     </div>
 
     ${dagSleutel ? `<div class="banner info">${IK.kalender}<span>Gepland voor
-      ${esc(DAGNAMEN[(new Date(dagSleutel + "T12:00").getDay()+6)%7].toLowerCase())}
+      ${esc(dagNaamBij(dagSleutel).toLowerCase())}
       ${new Date(dagSleutel + "T12:00").getDate()} ${new Date(dagSleutel + "T12:00").toLocaleDateString("nl-NL",{month:"long"})}</span></div>` : ""}
 
     <div class="veld" style="margin-top:16px">
@@ -5276,7 +5431,7 @@ function sheetGerecht(g, dagSleutel){
 /* ---------- een dag inplannen ---------- */
 function sheetPlan(dagSleutel){
   const d = new Date(dagSleutel + "T12:00");
-  const dagNaam = DAGNAMEN[(d.getDay()+6)%7];
+  const dagNaam = dagNaamVan(d);
   const m = menuVan(dagSleutel);
   const body = `
     <p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
@@ -5346,7 +5501,7 @@ function sheetDagKiezen(g){
         return `<button class="rij" data-dagkies="${sleutel}">
           <span class="ik" style="${isVandaag(d)?"background:var(--accent);color:var(--accent-ink)":""}">
             <b style="font-size:13px">${d.getDate()}</b></span>
-          <div class="tk"><b>${DAGNAMEN[(d.getDay()+6)%7]}${isVandaag(d)?" · vandaag":""}</b>
+          <div class="tk"><b>${dagNaamVan(d)}${isVandaag(d)?" · vandaag":""}</b>
             <span>${bezet ? "nu: " + esc(bezet) : "nog niets gepland"}</span></div>
         </button>`;
       }).join("")}
@@ -5359,7 +5514,7 @@ function sheetDagKiezen(g){
       });
       const d = new Date(sleutel + "T12:00");
       tril(12); sluitSheet();
-      toast(g.naam + " op " + DAGNAMEN[(d.getDay()+6)%7].toLowerCase(), "🍽️");
+      toast(g.naam + " op " + dagNaamVan(d).toLowerCase(), "🍽️");
     });
   }});
 }
@@ -5397,7 +5552,8 @@ function sheetGerechtBewerk(bestaand, concept){
       <div class="veld-rij">
         <input class="invoer" id="gb-em" maxlength="2" value="${esc(f.em)}"
                style="flex:0 0 62px; text-align:center; font-size:20px">
-        <input class="invoer" id="gb-naam" maxlength="46" placeholder="Bijv. pasta pesto" value="${esc(f.naam)}">
+        <textarea class="invoer groeit" id="gb-naam" maxlength="46" rows="1"
+                  placeholder="Bijv. pasta pesto">${esc(f.naam)}</textarea>
       </div>
     </div>
     <div class="veld">
@@ -5445,7 +5601,21 @@ function sheetGerechtBewerk(bestaand, concept){
 
   sheet({titel: nieuw ? "Nieuw gerecht" : "Gerecht aanpassen", body, voet, naTeken:() => {
     vulFotos($(".sheet"));
-    if(nieuw) setTimeout(() => $("#gb-naam").focus(), 250);
+
+    /* het naamveld groeit mee met wat je typt, zodat een lange naam niet
+       half uit beeld loopt. Enter hoort hier niet thuis: het is één naam. */
+    const naamIn = $("#gb-naam");
+    const groeiMee = () => {
+      naamIn.style.height = "auto";
+      /* met border-box telt de rand mee in de hoogte, scrollHeight niet:
+         die twee pixels erbij, anders blijft er een regel half verborgen */
+      const rand = naamIn.offsetHeight - naamIn.clientHeight;
+      naamIn.style.height = Math.max(48, naamIn.scrollHeight + rand) + "px";
+    };
+    naamIn.addEventListener("input", groeiMee);
+    naamIn.addEventListener("keydown", e => { if(e.key === "Enter") e.preventDefault(); });
+    groeiMee();
+    if(nieuw) setTimeout(() => naamIn.focus(), 250);
 
     const hertekenIng = () => {
       const vak = $("#gb-ing");
@@ -5492,7 +5662,7 @@ function sheetGerechtBewerk(bestaand, concept){
 
     /* alles wat je in de velden hebt staan even veiligstellen */
     const bewaarConcept = () => {
-      f.naam = $("#gb-naam").value;
+      f.naam = eenRegel($("#gb-naam").value);
       f.em = $("#gb-em").value;
       f.notitie = $("#gb-notitie").value;
     };
@@ -5522,7 +5692,8 @@ function sheetGerechtBewerk(bestaand, concept){
 
     $("#gb-annuleer").onclick = () => bestaand ? sheetGerecht(bestaand, null) : sluitSheet();
     $("#gb-opslaan").onclick = async () => {
-      const naam = $("#gb-naam").value.trim();
+      /* geplakte tekst kan regeleindes meebrengen; een naam is één regel */
+      const naam = eenRegel($("#gb-naam").value);
       if(naam.length < 2){ $("#gb-naam").focus(); $("#gb-naam").style.borderColor = "var(--rood)"; return; }
       const knop = $("#gb-opslaan");
       knop.disabled = true; knop.innerHTML = `<span class="spinner"></span> Opslaan…`;

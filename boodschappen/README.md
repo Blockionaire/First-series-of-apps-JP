@@ -111,14 +111,23 @@ Een eigen tabblad voor de weekplanning en jullie gerechten. **De app komt zonder
 aan** — alles wat erin staat, hebben jullie zelf gemaakt.
 
 **Gerechten maken.** Naam, een emoji, voor hoeveel personen het recept is, een foto en de
-bereiding. Daaronder zet je de ingrediënten met hun hoeveelheid. Bij dingen die je
+bereiding. Het naamveld **groeit mee** terwijl je typt, dus een lange naam als *Ovenschotel
+met zoete aardappel en geitenkaas* loopt niet half uit beeld. Daaronder zet je de
+ingrediënten met hun hoeveelheid. Bij dingen die je
 **meestal in huis hebt** (olie, zout) tik je het groene vinkje aan; die worden later niet
 vanzelf op de boodschappenlijst gezet. Met *Van mijn lijst* pluk je ingrediënten zo van je
 boodschappenlijst — handig als je al aan het typen was.
 
-**De week plannen.** Bovenin staan de zeven dagen met vandaag gemarkeerd; met de pijltjes
-bladert je naar een andere week. Tik een dag aan en kies een gerecht, of noteer iets vrijs
-("uit eten", "restjes"). Bij een geplande dag zie je meteen *3 personen · 2 nog te halen*.
+**De week plannen.** Bovenin staan de zeven dagen, **van zondag tot en met zaterdag**, met
+vandaag gemarkeerd; met de pijltjes blader je naar een andere week. Tik een dag aan en kies
+een gerecht, of noteer iets vrijs ("uit eten", "restjes"). Bij een geplande dag zie je
+meteen *3 personen · 2 nog te halen*. Past de naam niet op één regel, dan loopt hij door op
+een tweede.
+
+**Slepen naar een andere dag.** Toch liever dinsdag? Houd een geplande dag even vast: de
+regel komt los en volgt je vinger. De dag waar je boven hangt licht op; laat je los, dan
+verhuist het gerecht daarheen. Stond daar al iets, dan wisselen de twee gewoon van plek.
+Een korte tik opent nog steeds het gerecht zelf.
 
 **Halen of in huis?** Bij een geopend gerecht staat achter elk ingrediënt *halen* of
 *in huis*. Tik het ingrediënt aan om te wisselen — je hebt die courgette misschien toch
