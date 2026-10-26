@@ -718,6 +718,13 @@ textarea.invoer.groeit{
 .dagrij .tk b.stil{color:var(--muted); font-weight:500;}
 .dagrij .tk span{font-size:12.5px; color:var(--muted); display:block;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+/* wie er die dag mee-eten, klein onder de titel */
+.dagrij .tk .mee{
+  display:flex; align-items:center; gap:4px; margin-top:2px;
+  font-size:12px; font-weight:600; color:var(--accent);
+  white-space:normal; overflow:visible; line-height:1.3;
+}
+.dagrij .tk .mee svg{width:12px; height:12px; stroke-width:2.2; flex:none;}
 .dagrij .na{color:var(--line-2); flex:none; display:grid; place-items:center;}
 .dagrij .na svg{width:18px; height:18px; stroke-width:2.2;}
 .dagrij.vrijedag .na{color:var(--accent);}
@@ -1421,7 +1428,7 @@ function toonSyncFout(e){
 const S = {
   ik:null,                 // {id, naam}
   leden:[], items:[], winkels:[], vast:[], bonnen:[], geleerd:[], cats:[],
-  gerechten:[], menu:[],
+  gerechten:[], menu:[], meeNamen:[],
   weekOffset:0,             // 0 = deze week, 1 = volgende week
   gerechtZoek:"",
   geladen:false,
@@ -4948,6 +4955,35 @@ const eenRegel = t => String(t||"").replace(/\s+/g, " ").trim();
 const menuVan = sleutel => S.menu.find(m => m.id === sleutel) || null;
 const gerechtVan = id => S.gerechten.find(g => g.id === id) || null;
 
+/* ---------- mee-eters ----------
+   Komt er iemand mee-eten, dan noteer je dat bij die dag. De namen staan
+   klein onder het gerecht en tellen mee voor hoeveel personen je kookt. */
+const meeEtersVan = m => (m && Array.isArray(m.meeEters) ? m.meeEters.filter(Boolean) : []);
+/* "Sanne", "Sanne en Tim", "Sanne, Tim en Joris" */
+function namenRij(namen){
+  if(namen.length <= 1) return namen[0] || "";
+  return namen.slice(0, -1).join(", ") + " en " + namen[namen.length - 1];
+}
+/* wie er eerder meegegeten hebben, voor de snelknoppen. Komt uit de
+   planning zelf plus een kort lijstje in de database, zodat een naam die
+   je weghaalt niet meteen vergeten is — en je huisgenoot hem ook ziet. */
+function eerdereMeeEters(){
+  const tel = new Map();
+  S.menu.forEach(m => meeEtersVan(m).forEach(n => tel.set(n, (tel.get(n)||0) + 1)));
+  const uit = [...tel.entries()].sort((a,b) => b[1] - a[1]).map(e => e[0]);
+  (S.meeNamen || []).forEach(n => { if(!uit.some(x => x.toLowerCase() === n.toLowerCase())) uit.push(n); });
+  return uit;
+}
+/* onthoud een naam voor de volgende keer (hoogstens twintig) */
+async function onthoudMeeEter(naam){
+  const n = eenRegel(naam);
+  if(n.length < 2) return;
+  const lijst = [n, ...(S.meeNamen || []).filter(x => x.toLowerCase() !== n.toLowerCase())].slice(0, 20);
+  S.meeNamen = lijst;
+  try{ await DB.zet(PAD.meta + "/meeEters", {namen: lijst}); }
+  catch(e){ console.error("mee-eters onthouden", e); }
+}
+
 /* wanneer aten we dit voor het laatst, en hoe vaak? */
 function gerechtHistorie(gerechtId){
   const vandaag = datumSleutel(new Date());
@@ -5043,6 +5079,7 @@ function schermEten(){
             const g = m && m.gerechtId ? gerechtVan(m.gerechtId) : null;
             const naam = g ? g.naam : (m && m.tekst ? m.tekst : null);
             const nodig = g ? nogTeHalen(g, m.personen || g.personen || 2).length : 0;
+            const mee = meeEtersVan(m);
             return `
             <button class="dagrij ${isVandaag(d)?"vandaag":""} ${naam?"":"vrijedag"}" data-dag="${sleutel}"
                     ${naam ? `data-sleep="${sleutel}"` : ""}>
@@ -5055,6 +5092,7 @@ function schermEten(){
                   ? `<b>${esc(naam)}</b><span>${m.personen ? m.personen + " personen" : ""}${
                        g && nodig ? (m.personen ? " · " : "") + nodig + " nog te halen" : (g ? (m.personen ? " · " : "") + "alles in huis" : "")}</span>`
                   : `<b class="stil">Niets gepland</b><span>tik om een gerecht te kiezen</span>`}
+                ${mee.length ? `<span class="mee">${IK.persoon} ${esc(namenRij(mee))} ${mee.length === 1 ? "eet" : "eten"} mee</span>` : ""}
               </span>
               <span class="na">${naam ? IK.pijl : IK.plus}</span>
             </button>`;
@@ -5258,6 +5296,7 @@ const menuKaal = m => ({
   gerechtId: m.gerechtId || null,
   tekst: m.tekst || "",
   personen: m.personen == null ? null : m.personen,
+  meeEters: meeEtersVan(m),
   door: m.door || (S.ik ? S.ik.id : null),
   gemaakt: m.gemaakt || nu()
 });
@@ -5306,6 +5345,7 @@ function ingRijenHtml(g, personen){
 function sheetGerecht(g, dagSleutel){
   const m = dagSleutel ? menuVan(dagSleutel) : null;
   const personen = (m && m.personen) || g.personen || 2;
+  const mee = meeEtersVan(m);
   const factor = personen / (g.personen || 2);
   const h = gerechtHistorie(g.id);
   const ing = g.ingredienten || [];
@@ -5337,6 +5377,16 @@ function sheetGerecht(g, dagSleutel){
         <span class="hint" style="margin:0 0 0 10px; padding:0">recept is voor ${g.personen || 2}</span>
       </div>
     </div>
+
+    ${dagSleutel ? `
+    <div class="lijst" style="margin-top:12px">
+      <button class="rij" id="g-mee">
+        <span class="ik" style="${mee.length ? "background:var(--accent-zacht); color:var(--accent)" : ""}">${IK.persoon}</span>
+        <div class="tk"><b>Mee-eters</b>
+          <span id="g-meetekst">${mee.length ? esc(namenRij(mee)) : "niemand, alleen jullie"}</span></div>
+        <span class="na">${IK.pijl}</span>
+      </button>
+    </div>` : ""}
 
     <div class="sectie" style="margin-top:6px">
       <div class="sectie-kop"><h2>Ingrediënten</h2><span class="lijn"></span></div>
@@ -5412,6 +5462,8 @@ function sheetGerecht(g, dagSleutel){
     $("#g-min").onclick = () => { if(pers > 1){ pers--; tril(6); bijwerken(); } };
     $("#g-plus").onclick = () => { if(pers < 20){ pers++; tril(6); bijwerken(); } };
     $("#g-naarlijst").onclick = () => sheetNaarLijst(g, pers, dagSleutel);
+    const gm = $("#g-mee");
+    if(gm) gm.onclick = () => sheetMeeEters(dagSleutel, () => sheetGerecht(g, dagSleutel));
     const ga = $("#g-ander"); if(ga) ga.onclick = () => sheetPlan(dagSleutel);
     const gaf = $("#g-afhalen");
     if(gaf) gaf.onclick = async () => {
@@ -5461,7 +5513,16 @@ function sheetPlan(dagSleutel){
         <button class="knop" id="pl-tekstok" style="flex:0 0 auto">${IK.vink}</button>
       </div>
     </div>
-    ${m ? `<button class="knop stil vol" id="pl-leeg" style="margin-top:14px">${IK.kruis} Dag leegmaken</button>` : ""}`;
+    ${m ? `
+    <div class="lijst" style="margin-top:14px">
+      <button class="rij" id="pl-mee">
+        <span class="ik" style="${meeEtersVan(m).length ? "background:var(--accent-zacht); color:var(--accent)" : ""}">${IK.persoon}</span>
+        <div class="tk"><b>Mee-eters</b>
+          <span>${meeEtersVan(m).length ? esc(namenRij(meeEtersVan(m))) : "niemand, alleen jullie"}</span></div>
+        <span class="na">${IK.pijl}</span>
+      </button>
+    </div>
+    <button class="knop stil vol" id="pl-leeg" style="margin-top:14px">${IK.kruis} Dag leegmaken</button>` : ""}`;
 
   sheet({titel: dagNaam + " " + d.getDate(), body, naTeken:() => {
     const nw = $("#pl-nieuw");
@@ -5481,10 +5542,96 @@ function sheetPlan(dagSleutel){
     };
     $("#pl-tekstok").onclick = bewaarTekst;
     $("#pl-tekst").onkeydown = e => { if(e.key === "Enter") bewaarTekst(); };
+    const pm = $("#pl-mee");
+    if(pm) pm.onclick = () => sheetMeeEters(dagSleutel, () => sheetPlan(dagSleutel));
     const leeg = $("#pl-leeg");
     if(leeg) leeg.onclick = async () => {
       await DB.wis(PAD.menu + "/" + dagSleutel); sluitSheet(); toast("Dag leeggemaakt");
     };
+  }});
+}
+
+/* ---------- wie eten er mee ---------- */
+function sheetMeeEters(dagSleutel, terug){
+  const m = menuVan(dagSleutel);
+  if(!m) return;
+  const d = new Date(dagSleutel + "T12:00");
+  const mee = meeEtersVan(m);
+  const heeftGerecht = !!m.gerechtId;
+  const personen = m.personen || 2;
+  /* namen die je eerder gebruikte en vandaag nog niet aanstaan */
+  const eerder = eerdereMeeEters().filter(n => !mee.includes(n)).slice(0, 8);
+
+  const body = `
+    <p style="margin:0 0 14px; color:var(--ink-2); font-size:14.5px; line-height:1.5">
+      Wie schuiven er ${esc(dagNaamVan(d).toLowerCase())} aan bij <b>${esc(menuNaam(m))}</b>?
+    </p>
+
+    <div class="lijst" id="me-lijst">${
+      mee.length
+        ? mee.map((n, i) => `
+          <div class="rij">
+            <span class="ik" style="background:var(--accent-zacht); color:var(--accent)">${IK.persoon}</span>
+            <div class="tk"><b style="color:var(--ink)">${esc(n)}</b><span>eet mee</span></div>
+            <button class="mini" data-meeweg="${i}" style="color:var(--rood)">Weghalen</button>
+          </div>`).join("")
+        : `<div style="padding:16px 15px; color:var(--muted); font-size:14px">
+             Nog niemand. ${heeftGerecht ? `Je kookt voor ${personen} ${personen === 1 ? "persoon" : "personen"}.` : "Alleen jullie twee."}
+           </div>`
+    }</div>
+
+    <div class="veld" style="margin-top:16px; margin-bottom:0">
+      <label>Naam erbij</label>
+      <div class="veld-rij">
+        <input class="invoer" id="me-naam" placeholder="Bijv. Sanne" autocomplete="off" autocapitalize="words">
+        <button class="knop" id="me-ok" style="flex:0 0 auto">${IK.plus}</button>
+      </div>
+      ${eerder.length ? `<div class="sugg" id="me-sugg">
+        ${eerder.map(n => `<button type="button" data-meesnel="${esc(n)}">${esc(n)}</button>`).join("")}
+      </div>` : ""}
+      ${heeftGerecht ? `<div class="hint">Elke mee-eter telt mee voor de boodschappen.
+        Je kookt nu voor <b id="me-pers">${personen}</b>; met de stepper zet je dat alsnog anders.</div>` : ""}
+    </div>`;
+
+  const voet = `<button class="knop" id="me-klaar" style="flex:1">Klaar</button>`;
+
+  sheet({titel:"Mee-eters", body, voet, naTeken:() => {
+    const veld = $("#me-naam");
+    setTimeout(() => veld.focus(), 250);
+
+    /* schrijft de nieuwe lijst weg en tekent dit paneel opnieuw */
+    const bewaar = async (namen, nieuwePersonen, melding, em) => {
+      const velden = {meeEters: namen};
+      if(nieuwePersonen != null) velden.personen = nieuwePersonen;
+      try{
+        await DB.zet(PAD.menu + "/" + dagSleutel, velden);
+        if(melding) toast(melding, em);
+        sheetMeeEters(dagSleutel, terug);
+      }catch(e){ console.error("mee-eters", e); toast("Opslaan lukte niet"); }
+    };
+
+    const erbij = naam => {
+      const n = eenRegel(naam);
+      if(n.length < 2){ veld.focus(); return; }
+      if(mee.some(x => x.toLowerCase() === n.toLowerCase())){ toast(n + " staat er al bij"); return; }
+      tril(12);
+      onthoudMeeEter(n);
+      bewaar([...mee, n], heeftGerecht ? personen + 1 : null,
+             n + " eet mee" + (heeftGerecht ? " · " + (personen + 1) + " personen" : ""), "🙌");
+    };
+
+    $("#me-ok").onclick = () => erbij(veld.value);
+    veld.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); erbij(veld.value); } };
+    $$("#me-sugg [data-meesnel]").forEach(b => b.onclick = () => erbij(b.dataset.meesnel));
+    $$("[data-meeweg]").forEach(b => b.onclick = () => {
+      const i = +b.dataset.meeweg;
+      const weg = mee[i];
+      tril(10);
+      bewaar(mee.filter((_, x) => x !== i),
+             heeftGerecht ? Math.max(1, personen - 1) : null,
+             weg + " eet toch niet mee", "👋");
+    });
+    $("#me-klaar").onclick = () => { if(terug) terug(); else sluitSheet(); };
   }});
 }
 
@@ -6068,6 +6215,8 @@ function startLuisteren(){
   DB.luister(PAD.bonnen, l => { S.bonnen = l; if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu(); });
   DB.luister(PAD.meta, l => {
     const b = l.find(x => x.id === "budget");
+    const mn = l.find(x => x.id === "meeEters");
+    S.meeNamen = (mn && Array.isArray(mn.namen)) ? mn.namen : [];
     S.budget = b ? {standaard: Number(b.standaard)||0, perMaand: b.perMaand || {}, startDag: Number(b.startDag)||1}
                  : {standaard:0, perMaand:{}, startDag:1};
     if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu();

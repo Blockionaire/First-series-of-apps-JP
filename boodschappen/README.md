@@ -124,6 +124,13 @@ een gerecht, of noteer iets vrijs ("uit eten", "restjes"). Bij een geplande dag 
 meteen *3 personen · 2 nog te halen*. Past de naam niet op één regel, dan loopt hij door op
 een tweede.
 
+**Mee-eters.** Schuift er iemand aan? Open de dag en tik *Mee-eters*: je typt een naam
+(of tikt er een aan die eerder meegegeten heeft) en hij staat klein onder het gerecht in de
+weekplanning — *Sanne en Tim eten mee*. Elke mee-eter telt meteen mee voor hoeveel personen
+je kookt, dus de hoeveelheden en de boodschappen schalen mee; met de stepper zet je dat
+alsnog anders. Werkt ook bij een vrije dag ("uit eten"), daar blijft het aantal personen
+gewoon leeg. Namen worden onthouden voor jullie allebei.
+
 **Slepen naar een andere dag.** Toch liever dinsdag? Houd een geplande dag even vast: de
 regel komt los en volgt je vinger. De dag waar je boven hangt licht op; laat je los, dan
 verhuist het gerecht daarheen. Stond daar al iets, dan wisselen de twee gewoon van plek.
@@ -224,7 +231,7 @@ ovs_fotos    de foto's (verkleind, als data-url; `<id>_k` is de miniatuur)
 ovs_winkels  de winkels
 ovs_vast     de vaste boodschappen
 ovs_bonnen   de uitgaven
-ovs_meta     instellingen, waaronder het maandbudget
+ovs_meta     instellingen: het budget en de namen van eerdere mee-eters
 ovs_geleerd  categorieën die jullie zelf hebben rechtgezet (id = de naam)
 ovs_cats     de categorieën zelf (naam, icoon, volgorde)
 ovs_gerechten jullie eigen gerechten, met de ingrediënten erin
