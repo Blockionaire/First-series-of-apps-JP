@@ -786,6 +786,9 @@ body.sleepbezig{cursor:grabbing; user-select:none; -webkit-user-select:none;}
 .ingrij:last-child{border-bottom:none;}
 .ingrij .invoer{padding:9px 11px; font-size:15px; border-radius:var(--r-s);}
 .ingrij .invoer.hoev{flex:0 0 62px; text-align:center; padding-left:4px; padding-right:4px;}
+/* het ingrediëntveld groeit mee, maar blijft lager dan een los veld */
+.ingrij textarea.invoer.groeit{height:38px; padding-top:9px; line-height:1.25;}
+.ingrij .invoer.hoev{align-self:stretch;}
 .vastknop{
   width:32px; height:32px; border-radius:50%; flex:none; display:grid; place-items:center;
   border:1.5px solid var(--line-2); color:transparent; transition:all var(--vt);
@@ -2679,6 +2682,33 @@ function bindKeuze(naam, opZet){
     opZet(b.dataset.waarde);
   });
 }
+
+/* ---------- velden van één regel die meegroeien ----------
+   Een naam heeft geen maximum, dus hij moet ook niet half uit beeld
+   lopen: het veld krijgt er een regel bij zodra de tekst niet meer past.
+   Enter hoort er niet in — het blijft één regel. */
+function laatGroeien(el, bijEnter){
+  if(!el || el.dataset.groeit) return;
+  el.dataset.groeit = "1";
+  const basis = el.offsetHeight || 48;
+  const groei = () => {
+    el.style.height = "auto";
+    /* met border-box telt de rand mee in de hoogte, scrollHeight niet:
+       die paar pixels erbij, anders blijft er een regel half verborgen */
+    const rand = el.offsetHeight - el.clientHeight;
+    el.style.height = Math.max(basis, el.scrollHeight + rand) + "px";
+  };
+  el.addEventListener("input", groei);
+  el.addEventListener("keydown", e => {
+    if(e.key !== "Enter") return;
+    e.preventDefault();
+    if(bijEnter) bijEnter();
+  });
+  groei();
+}
+/* alle meegroeiende velden binnen een stuk pagina in één keer */
+const laatAllesGroeien = wortel =>
+  (wortel || document).querySelectorAll("textarea.invoer.groeit").forEach(el => laatGroeien(el));
 
 /* =====================================================================
    10 · SHEET: item toevoegen / bewerken
@@ -5508,8 +5538,8 @@ function sheetPlan(dagSleutel){
     <div class="veld" style="margin-bottom:0">
       <label>Of iets anders</label>
       <div class="veld-rij">
-        <input class="invoer" id="pl-tekst" maxlength="40" placeholder="Bijv. uit eten, restjes"
-               value="${esc(m && m.tekst ? m.tekst : "")}">
+        <textarea class="invoer groeit" id="pl-tekst" rows="1"
+                  placeholder="Bijv. uit eten, restjes">${esc(m && m.tekst ? m.tekst : "")}</textarea>
         <button class="knop" id="pl-tekstok" style="flex:0 0 auto">${IK.vink}</button>
       </div>
     </div>
@@ -5535,13 +5565,13 @@ function sheetPlan(dagSleutel){
       tril(12); sluitSheet(); toast(g.naam + " op " + dagNaam.toLowerCase(), "🍽️");
     });
     const bewaarTekst = async () => {
-      const t = $("#pl-tekst").value.trim();
+      const t = eenRegel($("#pl-tekst").value);
       if(!t) return;
       await DB.zet(PAD.menu + "/" + dagSleutel, {gerechtId:null, tekst:t, personen:null, door:S.ik.id, gemaakt:nu()});
       sluitSheet(); toast("Genoteerd", "✓");
     };
     $("#pl-tekstok").onclick = bewaarTekst;
-    $("#pl-tekst").onkeydown = e => { if(e.key === "Enter") bewaarTekst(); };
+    laatGroeien($("#pl-tekst"), bewaarTekst);
     const pm = $("#pl-mee");
     if(pm) pm.onclick = () => sheetMeeEters(dagSleutel, () => sheetPlan(dagSleutel));
     const leeg = $("#pl-leeg");
@@ -5688,7 +5718,7 @@ function sheetGerechtBewerk(bestaand, concept){
     : `<div class="lijst">${f.ingredienten.map((i, idx) => `
         <div class="ingrij">
           <input class="invoer hoev" data-ihoev="${idx}" placeholder="1" maxlength="12" value="${esc(i.hoeveelheid||"")}">
-          <input class="invoer" data-inaam="${idx}" placeholder="Ingrediënt" maxlength="40" value="${esc(i.naam||"")}">
+          <textarea class="invoer groeit" data-inaam="${idx}" rows="1" placeholder="Ingrediënt">${esc(i.naam||"")}</textarea>
           <button type="button" class="vastknop ${i.vast?"aan":""}" data-ivast="${idx}"
                   title="Heb ik meestal in huis">${IK.vink}</button>
           <button type="button" class="ikoonknop" data-iwis="${idx}"
@@ -5751,19 +5781,8 @@ function sheetGerechtBewerk(bestaand, concept){
   sheet({titel: nieuw ? "Nieuw gerecht" : "Gerecht aanpassen", body, voet, naTeken:() => {
     vulFotos($(".sheet"));
 
-    /* het naamveld groeit mee met wat je typt, zodat een lange naam niet
-       half uit beeld loopt. Enter hoort hier niet thuis: het is één naam. */
     const naamIn = $("#gb-naam");
-    const groeiMee = () => {
-      naamIn.style.height = "auto";
-      /* met border-box telt de rand mee in de hoogte, scrollHeight niet:
-         die twee pixels erbij, anders blijft er een regel half verborgen */
-      const rand = naamIn.offsetHeight - naamIn.clientHeight;
-      naamIn.style.height = Math.max(48, naamIn.scrollHeight + rand) + "px";
-    };
-    naamIn.addEventListener("input", groeiMee);
-    naamIn.addEventListener("keydown", e => { if(e.key === "Enter") e.preventDefault(); });
-    groeiMee();
+    laatGroeien(naamIn);
     if(nieuw) setTimeout(() => naamIn.focus(), 250);
 
     const hertekenIng = () => {
@@ -5774,8 +5793,9 @@ function sheetGerechtBewerk(bestaand, concept){
       bindIng();
     };
     const bindIng = () => {
+      laatAllesGroeien($("#gb-ing"));
       $$("[data-inaam]").forEach(el => el.oninput = () => {
-        f.ingredienten[+el.dataset.inaam].naam = el.value;
+        f.ingredienten[+el.dataset.inaam].naam = eenRegel(el.value);
         const geraden = raadCategorie(el.value);
         if(geraden) f.ingredienten[+el.dataset.inaam].cat = geraden;
       });

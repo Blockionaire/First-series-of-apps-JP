@@ -111,9 +111,11 @@ Een eigen tabblad voor de weekplanning en jullie gerechten. **De app komt zonder
 aan** — alles wat erin staat, hebben jullie zelf gemaakt.
 
 **Gerechten maken.** Naam, een emoji, voor hoeveel personen het recept is, een foto en de
-bereiding. Het naamveld **groeit mee** terwijl je typt, dus een lange naam als *Ovenschotel
-met zoete aardappel en geitenkaas* loopt niet half uit beeld. Daaronder zet je de
-ingrediënten met hun hoeveelheid. Bij dingen die je
+bereiding. Er zit **geen maximum** op de naam en het veld **groeit mee** terwijl je typt,
+dus *Ovenschotel met zoete aardappel, geitenkaas en gekarameliseerde rode ui* past gewoon en
+blijft in beeld. Daaronder zet je de ingrediënten met hun hoeveelheid; die naamvelden groeien
+net zo mee, en het vakje *Of iets anders* bij een dag ("uit eten bij de Italiaan met Sanne en
+Tim") ook. Bij dingen die je
 **meestal in huis hebt** (olie, zout) tik je het groene vinkje aan; die worden later niet
 vanzelf op de boodschappenlijst gezet. Met *Van mijn lijst* pluk je ingrediënten zo van je
 boodschappenlijst — handig als je al aan het typen was.
