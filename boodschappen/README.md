@@ -26,6 +26,22 @@ wie welke bon betaalde.
 
 ## Wat kan de app?
 
+### Thuis
+Het eerste scherm als je de app opent: alles wat je wilt weten zonder te zoeken.
+
+- **Vanavond** — wat er vandaag gepland staat, voor hoeveel personen en wie er mee-eten.
+  Ontbreken er ingrediënten, dan zet één knop ze op de lijst. Niets gepland? Dan staan je
+  meest gegeten gerechten klaar om in één tik te kiezen.
+- **Boodschappen** — hoeveel er te halen is, wat er met spoed bij staat, hoeveel er per
+  winkel ligt, en een knop *Winkelen bij …* voor de winkel met de meeste boodschappen.
+- **Budget** — wat er over is, hoeveel dagen de periode nog loopt en wat de laatste uitgave was.
+- **Deze week** — zeven dagpillen met een stip bij geplande dagen; tik er een aan en je kunt
+  meteen plannen.
+- **Snel erbij** — wat jullie vaak kopen, met één tik op de lijst.
+- **Net gebeurd** — wie wat heeft toegevoegd, afgevinkt, gepland of betaald.
+
+De eerste keer staat er in plaats daarvan een startkaart met drie stappen om op gang te komen.
+
 ### De lijst
 - **Boodschap toevoegen** met naam, hoeveelheid ("2 pakken", "500 g"), winkel, categorie,
   notitie en een **foto** — handig om het juiste merk of de verpakking te laten zien.
@@ -56,6 +72,10 @@ wie welke bon betaalde.
   Afgevinkte boodschappen zakken naar *In de kar*, met wie het gehaald heeft en hoe laat.
   Per ongeluk afgevinkt? Nog een tik zet hem terug.
 - **Opruimen** wist de kar in één keer, of alleen wat ouder is dan een week.
+- **Eén regel per boodschap.** Je ziet in één oogopslag je hele lijst: naam, hoeveelheid,
+  de categorie als emoji en wie het erop zette. Wil je er meer bij — categorie voluit,
+  wie en wanneer — zet dan *Toon details* aan in de filters. Die keuze blijft op jouw
+  telefoon staan.
 - **Groeperen** op winkel (standaard) of op categorie. De volgorde van de categorieën
   stel je in bij *Meer → Categorieën*.
 - **Meerdere tegelijk aanpassen** ☑️ — zet je iets snel op de lijst zonder erbij te

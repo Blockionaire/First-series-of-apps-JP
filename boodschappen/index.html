@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Boodschappen">
 <meta name="theme-color" content="#F2EDE4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#191713" media="(prefers-color-scheme: dark)">
-<meta name="description" content="De boodschappenlijst van Huisje OVS — voor Merel en Jelle samen.">
+<meta name="description" content="De gedeelde boodschappenlijst, weekplanning en het maandbudget van Huisje OVS.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.png">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -43,6 +43,7 @@
   --r-s:10px; --r-m:14px; --r-l:20px; --r-xl:26px;
   --kop:-0.02em;
   --nav-h:64px;
+  --kolom:620px;        /* breedte van de leeskolom */
   --vt:.22s cubic-bezier(.32,.72,0,1);
 }
 html[data-thema="donker"]{
@@ -91,7 +92,7 @@ button{border:none; background:none; padding:0; cursor:pointer;}
   flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
   padding:0 16px calc(var(--nav-h) + 96px + env(safe-area-inset-bottom));
 }
-.wrap{max-width:620px; margin:0 auto; width:100%;}
+.wrap{max-width:var(--kolom); margin:0 auto; width:100%;}
 
 /* ---------- kop ---------- */
 .kop{
@@ -104,7 +105,7 @@ button{border:none; background:none; padding:0; cursor:pointer;}
   transition:border-color .2s ease;
 }
 .kop.geplakt{border-bottom-color:var(--line);}
-.kop-rij{max-width:620px; margin:0 auto; display:flex; align-items:center; gap:12px;}
+.kop-rij{max-width:var(--kolom); margin:0 auto; display:flex; align-items:center; gap:12px;}
 .kop-titel{flex:1; min-width:0;}
 .kop-titel h1{
   margin:0; font-size:22px; font-weight:700; letter-spacing:var(--kop);
@@ -158,8 +159,11 @@ button{border:none; background:none; padding:0; cursor:pointer;}
 
 /* ---------- chips ---------- */
 .chiprij{
-  display:flex; gap:7px; overflow-x:auto; padding:10px 16px 2px;
-  margin:0 -16px; scrollbar-width:none;
+  display:flex; gap:7px; overflow-x:auto; scrollbar-width:none;
+  /* loopt van rand tot rand, maar blijft met de rest meebewegen op een
+     breed scherm — anders plakt hij tegen de linkerkant */
+  margin:0 -16px;
+  padding:10px max(16px, calc((100vw - var(--kolom)) / 2)) 2px;
 }
 .chiprij::-webkit-scrollbar{display:none;}
 .chiprij .rek{flex:none; width:0;}
@@ -259,14 +263,26 @@ button{border:none; background:none; padding:0; cursor:pointer;}
 .item-titelrij{display:flex; align-items:baseline; gap:7px; flex-wrap:wrap;}
 .item-tekst{font-size:16px; font-weight:600; letter-spacing:-.005em; word-break:break-word;}
 .item-hoev{
-  font-size:12.5px; font-weight:700; color:var(--accent);
-  background:var(--accent-zacht); padding:1px 7px; border-radius:7px; flex:none;
+  font-size:12.5px; font-weight:700; color:var(--ink-2);
+  background:var(--bg-2); padding:1px 7px; border-radius:7px; flex:none;
 }
 .item-meta{
   display:flex; align-items:center; gap:8px; flex-wrap:wrap;
   margin-top:4px; font-size:12.5px; color:var(--muted);
 }
 .item-meta .stuk{display:inline-flex; align-items:center; gap:4px;}
+/* de krappe weergave: alles op één regel */
+.item.krap{padding:9px 14px; align-items:center;}
+.item.krap .item-titelrij{flex-wrap:nowrap; min-width:0;}
+.item.krap .item-tekst{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.item-kort{
+  display:flex; align-items:center; gap:7px; flex:none; margin-left:2px;
+  font-size:15px; line-height:1;
+}
+.item-kort .em{opacity:.9;}
+.item-kort .puntje{display:grid; place-items:center; color:var(--line-2);}
+.item-kort .puntje svg{width:13px; height:13px; stroke-width:2.2;}
+.item.af .item-kort{opacity:.45;}
 .item-meta svg{width:12px; height:12px; stroke-width:2.2;}
 .item-notitie{
   margin-top:5px; font-size:13.5px; color:var(--ink-2); line-height:1.4;
@@ -319,6 +335,8 @@ button{border:none; background:none; padding:0; cursor:pointer;}
   transition:transform var(--vt), box-shadow var(--vt);
 }
 .fab:active{transform:scale(.94);}
+/* scrol je naar beneden, dan gaat de knop uit de weg */
+.fab.weg{transform:translateY(calc(100% + var(--nav-h) + 24px)); opacity:0; pointer-events:none;}
 .fab svg{width:22px; height:22px; stroke-width:2.4;}
 @media(min-width:660px){ .fab{right:calc(50vw - 310px);} }
 
@@ -333,11 +351,12 @@ button{border:none; background:none; padding:0; cursor:pointer;}
 }
 .nav-rij{display:flex; max-width:620px; margin:0 auto; height:var(--nav-h);}
 .nav-knop{
-  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
-  color:var(--muted); font-size:10.5px; font-weight:650; letter-spacing:.01em;
+  flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  color:var(--muted); font-size:10px; font-weight:650; letter-spacing:0;
   transition:color var(--vt); position:relative;
 }
-.nav-knop svg{width:23px; height:23px; stroke-width:1.9; transition:transform var(--vt);}
+.nav-knop span:not(.bel){max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.nav-knop svg{width:22px; height:22px; stroke-width:1.9; transition:transform var(--vt);}
 .nav-knop:active svg{transform:scale(.86);}
 .nav-knop.aan{color:var(--accent);}
 .nav-knop .bel{
@@ -468,6 +487,99 @@ textarea.invoer.groeit{
 }
 .sugg button:active{transform:scale(.94);}
 .sugg button.aan{background:var(--accent); color:var(--accent-ink);}
+
+/* ---------- thuis: het dashboard ---------- */
+.thuis{display:flex; flex-direction:column; gap:12px; padding-top:14px;}
+.kaart{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r-l);
+  padding:15px 16px; box-shadow:var(--schaduw); width:100%; text-align:left;
+  transition:background var(--vt);
+}
+.kaart.klikbaar:active{background:var(--card-2);}
+.kaart-kop{display:flex; align-items:center; gap:8px; margin-bottom:9px;}
+.kaart-kop h2{
+  margin:0; flex:1; font-size:12px; font-weight:700; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--muted);
+  display:flex; align-items:center; gap:7px;
+}
+.kaart-kop h2 svg{width:14px; height:14px; stroke-width:2.2;}
+.kaart-kop .mini{font-size:12px; font-weight:600; color:var(--accent); flex:none;}
+.kaart .groot{
+  font-size:22px; font-weight:700; letter-spacing:var(--kop); line-height:1.2;
+  overflow-wrap:anywhere;
+}
+.kaart .groot.rood{color:var(--rood);}
+.kaart .onderschrift{font-size:13px; color:var(--muted); margin-top:3px; line-height:1.4;}
+.kaart .onderschrift.spoedig{
+  color:var(--rood); font-weight:600;
+  display:flex; align-items:center; gap:5px;
+}
+.kaart .onderschrift.spoedig svg{width:13px; height:13px; stroke-width:2.4; flex:none;}
+.kaart .goedzo{
+  display:flex; align-items:center; gap:7px; margin-top:2px;
+  font-size:15px; font-weight:650; color:var(--groen);
+}
+.kaart .goedzo svg{width:17px; height:17px; stroke-width:2.6;}
+.kaart .staaf{margin-top:10px;}
+
+.winkelbalkjes{display:flex; flex-wrap:wrap; gap:6px; margin-top:11px;}
+.winkelbalkjes .wb{
+  display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:999px;
+  background:var(--bg-2); font-size:12.5px; font-weight:600; color:var(--ink-2);
+}
+.winkelbalkjes .wb b{font-variant-numeric:tabular-nums; color:var(--ink);}
+.winkelbalkjes .wb.stil{color:var(--muted);}
+
+.weekpillen{display:flex; gap:6px;}
+.weekpil{
+  flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px;
+  padding:8px 2px 7px; border-radius:13px; background:var(--bg-2);
+  transition:transform var(--vt), background var(--vt);
+}
+.weekpil:active{transform:scale(.93);}
+.weekpil b{font-size:9.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--muted);}
+.weekpil span{font-size:15px; font-weight:700; letter-spacing:-.02em; line-height:1.1;}
+.weekpil i{width:5px; height:5px; border-radius:50%; background:var(--accent); margin-top:2px;}
+/* let op: niet "leeg" noemen, die klasse is al de lege-staat van een scherm */
+.weekpil i.geenplan{background:transparent; border:1px solid var(--line-2);}
+.weekpil.nu{background:var(--accent);}
+.weekpil.nu b{color:var(--accent-ink); opacity:.75;}
+.weekpil.nu span{color:var(--accent-ink);}
+.weekpil.nu i{background:var(--accent-ink);}
+.weekpil.nu i.geenplan{background:transparent; border-color:color-mix(in srgb, var(--accent-ink) 50%, transparent);}
+
+/* de startkaart bij het allereerste gebruik */
+.kaart.welkom{background:var(--card); border-color:var(--accent-zacht);}
+.kaart.welkom .groot{font-size:20px;}
+.stappen{display:flex; flex-direction:column; gap:8px; margin-top:14px;}
+.stap{
+  display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+  padding:11px 12px; border-radius:var(--r-m); background:var(--bg-2);
+  transition:transform var(--vt);
+}
+.stap:active{transform:scale(.98);}
+.stap .nr{
+  width:26px; height:26px; flex:none; border-radius:50%; display:grid; place-items:center;
+  background:var(--accent); color:var(--accent-ink); font-size:13px; font-weight:700;
+}
+.stap .tk{flex:1; min-width:0;}
+.stap .tk b{display:block; font-size:14.5px; font-weight:650;}
+.stap .tk span{font-size:12.5px; color:var(--muted); line-height:1.35;}
+.stap .na{color:var(--line-2); flex:none; display:grid; place-items:center;}
+.stap .na svg{width:16px; height:16px; stroke-width:2.2;}
+
+.tijdlijn{display:flex; flex-direction:column; gap:10px;}
+.tijdlijn .tl{display:flex; align-items:flex-start; gap:10px;}
+.tijdlijn .tl .em{font-size:15px; line-height:1.3; flex:none;}
+.tijdlijn .tl .tk{flex:1; min-width:0;}
+.tijdlijn .tl .tk b{display:block; font-size:14px; font-weight:600; line-height:1.35; overflow-wrap:anywhere;}
+.tijdlijn .tl .tk span{font-size:12px; color:var(--muted);}
+
+/* op een breed scherm staan de kaarten naast elkaar */
+@media(min-width:900px){
+  :root{--kolom:880px;}
+  .thuis{display:grid; grid-template-columns:1fr 1fr; align-items:start;}
+}
 
 /* ---------- winkelmodus ---------- */
 .wm-kop{
@@ -727,6 +839,10 @@ textarea.invoer.groeit{
 .dagrij .tk .mee svg{width:12px; height:12px; stroke-width:2.2; flex:none;}
 .dagrij .na{color:var(--line-2); flex:none; display:grid; place-items:center;}
 .dagrij .na svg{width:18px; height:18px; stroke-width:2.2;}
+.dagrij.vrijedag{padding:7px 14px;}
+.dagrij.vrijedag .dagkop{padding:2px 0; width:38px;}
+.dagrij.vrijedag .dagkop span{font-size:14px;}
+.dagrij.vrijedag .tk b.stil{font-size:14px;}
 .dagrij.vrijedag .na{color:var(--accent);}
 
 /* slepen naar een andere dag */
@@ -750,8 +866,8 @@ body.sleepbezig{cursor:grabbing; user-select:none; -webkit-user-select:none;}
 .gerechtrij .tk b{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
   font-size:15.5px; font-weight:650; line-height:1.25;
   overflow:hidden; overflow-wrap:anywhere;}
-.gerechtrij .tk span{font-size:12.5px; color:var(--muted);
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;}
+.gerechtrij .tk span{font-size:12.5px; color:var(--muted); display:-webkit-box;
+  -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.3;}
 .gerechtrij .na{color:var(--line-2); flex:none; display:grid; place-items:center;}
 .gerechtrij .na svg{width:18px; height:18px; stroke-width:2.2;}
 .gfoto{
@@ -1331,6 +1447,7 @@ const IK = {
   later:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v10.2"/><path d="m8.2 10.2 3.8 3.8 3.8-3.8"/><path d="M4.5 19.5h15"/></svg>',
   omhoog:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5V10.3"/><path d="m8.2 14.1 3.8-3.8 3.8 3.8"/><path d="M4.5 4.5h15"/></svg>',
   vlam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c3.6 0 6.2-2.4 6.2-5.7 0-4.4-4.3-5.6-3.4-10.8C11.3 6 9 8.6 9.4 11.6c-1-.5-1.7-1.6-1.9-2.9-1.1 1.3-1.7 3.2-1.7 5.1C5.8 18 8.4 21 12 21Z"/></svg>',
+  huis:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19z"/><path d="M9.5 20.5v-6h5v6"/></svg>',
   kiezen:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6.5h9.5M11 12h9.5M11 17.5h9.5"/><path d="m3 6.3 1.5 1.5L7.3 5"/><path d="m3 11.8 1.5 1.5L7.3 10.5"/><path d="m3 17.3 1.5 1.5L7.3 16"/></svg>'
 };
 
@@ -1435,10 +1552,11 @@ const S = {
   weekOffset:0,             // 0 = deze week, 1 = volgende week
   gerechtZoek:"",
   geladen:false,
-  tab:"lijst",
+  tab:"thuis",
   syncFout:null,
   fotoCache:{},
-  filter:{winkel:null, cat:null, door:null, urgent:false, zoek:"", groep:"winkel", toonAf:true},
+  filter:{winkel:null, cat:null, door:null, urgent:false, zoek:"", groep:"winkel", toonAf:true,
+          details:false},     // details: wie, wanneer en categorie bij elke regel
   winkelSessie:null,       // {winkelId, gestart}
   kies:null,               // Set met item-id's zolang je meerdere tegelijk kiest
   maand:null,                    // welke maand het budgetscherm laat zien
@@ -1468,7 +1586,16 @@ const naarBoven = (zacht) => window.scrollTo(zacht ? {top:0, behavior:"smooth"} 
 function volgScroll(){
   const kop = $("#kop");
   if(!kop) return;
-  const bij = () => kop.classList.toggle("geplakt", scrollNu() > 4);
+  let vorige = scrollNu();
+  const bij = () => {
+    const y = scrollNu();
+    kop.classList.toggle("geplakt", y > 4);
+    /* scrol je naar beneden, dan gaat de zwevende knop uit de weg;
+       ga je omhoog of sta je bovenaan, dan komt hij meteen terug */
+    const fab = $(".fab");
+    if(fab) fab.classList.toggle("weg", y > vorige + 6 && y > 120);
+    if(Math.abs(y - vorige) > 6) vorige = y;
+  };
   window.onscroll = bij;
   bij();
 }
@@ -2042,7 +2169,7 @@ function uitloggen(){
   LS.weg("boodschappen_ik_" + P);
   S.ik = null; IN.stap = "kies"; IN.lid = null; IN.pin = ""; IN.pin2 = "";
   /* wie hierna inlogt begint gewoon weer bovenaan de lijst */
-  S.tab = "lijst"; S.winkelSessie = null; S.maand = null;
+  S.tab = "thuis"; S.winkelSessie = null; S.maand = null;
   S.filter = Object.assign(S.filter, {winkel:null, cat:null, door:null, urgent:false, zoek:"", zoekOpen:false});
   clearInterval(hartslagTimer);
   houdSchermAan(false);
@@ -2343,6 +2470,10 @@ function legeLijst(aantalOpen){
   </div>`;
 }
 
+/* Standaard staat een boodschap op één regel: dat is wat je nodig hebt om
+   je lijst te overzien. Wie het erop zette blijft als klein bolletje zichtbaar,
+   en de categorie (of winkel) als één emoji. Wil je het hele verhaal, dan zet
+   je "Toon details" aan in de filters. */
 function itemHtml(i){
   const lid = lidVan(i.door);
   const w = winkelVan(i.winkel);
@@ -2350,22 +2481,26 @@ function itemHtml(i){
   const afLid = i.af ? lidVan(i.afDoor) : null;
   const kiesModus = !!S.kies;
   const gek = kiesModus && S.kies.has(i.id);
-  return `
-  <div class="item ${i.af?"af":""} ${kiesModus?"kiesbaar":""} ${gek?"gekozen":""}" data-item="${esc(i.id)}"
-       ${kiesModus ? `data-kies="${esc(i.id)}"` : ""}>
-    ${kiesModus
-      ? `<span class="vink kiesbol">${IK.vink}</span>`
-      : `<button class="vink" data-vink="${esc(i.id)}" aria-label="Afvinken">${IK.vink}</button>`}
-    <div class="item-mid" ${kiesModus ? "" : `data-open="${esc(i.id)}"`}>
+  /* de emoji van de andere indeling: op winkel gegroepeerd zie je de
+     categorie, op categorie gegroepeerd de winkel */
+  const anders = S.filter.groep === "cat" ? w : c;
+  const titel = `
       <div class="item-titelrij">
         ${i.hoeveelheid ? `<span class="item-hoev">${esc(i.hoeveelheid)}</span>` : ""}
         <span class="item-tekst">${esc(i.tekst)}</span>
         ${i.urgent && !i.af ? `<span class="vlag">spoed</span>` : ""}
-      </div>
+      </div>`;
+  return `
+  <div class="item ${i.af?"af":""} ${S.filter.details?"":"krap"} ${kiesModus?"kiesbaar":""} ${gek?"gekozen":""}"
+       data-item="${esc(i.id)}" ${kiesModus ? `data-kies="${esc(i.id)}"` : ""}>
+    ${kiesModus
+      ? `<span class="vink kiesbol">${IK.vink}</span>`
+      : `<button class="vink" data-vink="${esc(i.id)}" aria-label="Afvinken">${IK.vink}</button>`}
+    <div class="item-mid" ${kiesModus ? "" : `data-open="${esc(i.id)}"`}>
+      ${titel}
+      ${S.filter.details ? `
       <div class="item-meta">
-        ${S.filter.groep === "cat"
-          ? `<span class="stuk">${w.em} ${esc(w.naam)}</span>`
-          : `<span class="stuk">${c.em} ${esc(c.naam)}</span>`}
+        <span class="stuk">${anders.em} ${esc(anders.naam)}</span>
         ${i.nutri ? `<span class="stuk">${nutriHtml(i.nutri)}</span>` : ""}
         ${lid ? `<span class="stuk">${AV.html(lid,"mini")} ${esc(lid.naam.split(" ")[0])}</span>` : ""}
         ${i.gerecht ? `<span class="stuk">${IK.pan} ${esc(i.gerecht)}</span>` : ""}
@@ -2373,8 +2508,16 @@ function itemHtml(i){
           ? `<span class="stuk">${IK.vink} ${esc(afLid.naam.split(" ")[0])} · ${datumKort(i.afOp)}</span>`
           : `<span class="stuk">${IK.klok} ${datumKort(i.gemaakt)}</span>`}
       </div>
-      ${i.notitie ? `<div class="item-notitie">${esc(i.notitie)}</div>` : ""}
+      ${i.notitie ? `<div class="item-notitie">${esc(i.notitie)}</div>` : ""}` : ""}
     </div>
+    ${S.filter.details ? "" : `
+      <span class="item-kort">
+        ${i.notitie ? `<span class="puntje" title="met notitie">${IK.potlood}</span>` : ""}
+        ${i.gerecht ? `<span class="puntje" title="${esc(i.gerecht)}">${IK.pan}</span>` : ""}
+        ${i.nutri ? nutriHtml(i.nutri) : ""}
+        <span class="em" title="${esc(anders.naam)}">${anders.em}</span>
+        ${lid ? AV.html(lid, "mini") : ""}
+      </span>`}
     ${i.fotoId ? `<img class="item-thumb laden" data-foto="${esc(i.fotoId)}_k" data-groot="${esc(i.fotoId)}" alt="">` : ""}
   </div>`;
 }
@@ -3251,8 +3394,13 @@ function sheetFilters(){
       ${catsMetItems.length === 0 ? `<div class="hint">Er staat nog niets op de lijst om op te filteren.</div>` : ""}
     </div>
     <div class="veld">
-      <label>Afgevinkte boodschappen</label>
-      <button type="button" class="schakel" id="ff-af" style="width:100%">
+      <label>Weergave</label>
+      <button type="button" class="schakel" id="ff-details" style="width:100%">
+        <span class="tk"><b>Toon details</b>
+          <span>categorie, wie het erop zette en wanneer</span></span>
+        <span class="tuimel ${f.details?"aan":""}"></span>
+      </button>
+      <button type="button" class="schakel" id="ff-af" style="width:100%; margin-top:8px">
         <span class="tk"><b>Toon “in de kar”</b><span>wat er al afgevinkt is</span></span>
         <span class="tuimel ${f.toonAf?"aan":""}"></span>
       </button>
@@ -3266,6 +3414,11 @@ function sheetFilters(){
     bindKeuze("cat",   v => { S.filter.cat = v || null; });
     $("#ff-urgent").onclick = () => { S.filter.urgent = !S.filter.urgent; tril(); $("#ff-urgent .tuimel").classList.toggle("aan", S.filter.urgent); };
     $("#ff-af").onclick = () => { S.filter.toonAf = !S.filter.toonAf; tril(); $("#ff-af .tuimel").classList.toggle("aan", S.filter.toonAf); };
+    $("#ff-details").onclick = () => {
+      S.filter.details = !S.filter.details; tril();
+      $("#ff-details .tuimel").classList.toggle("aan", S.filter.details);
+      LS.zet("boodschappen_details_" + P, S.filter.details);
+    };
     $("#ff-wis").onclick = () => {
       S.filter = Object.assign(S.filter, {winkel:null, cat:null, door:null, urgent:false, zoek:"", zoekOpen:false});
       sluitSheet(); tekenNu();
@@ -3969,7 +4122,7 @@ function maandenSectie(huidigeMaand){
         }).join("")}
       </div>
       <div class="hint" style="padding:0 15px 13px; text-align:center">
-        De stippellijn is het budget van die maand.
+        De stippellijn is het budget van die ${periodeWoord()}.
       </div>
     </div>
   </div>`;
@@ -4253,6 +4406,265 @@ function sheetUitgaveDetail(bon){
 }
 
 /* =====================================================================
+   14b · SCHERM: THUIS
+   =====================================================================
+   Het eerste wat je ziet als je de app opent. Alles wat je 's ochtends
+   wilt weten staat hier bij elkaar: wat eten we vandaag, wat moet er
+   gehaald worden, hoeveel budget is er nog, en wat heeft je huisgenoot
+   gedaan. Elk blok is een snelkoppeling naar het tabblad erachter. */
+function groet(){
+  const u = new Date().getHours();
+  if(u < 6)  return "Goedenacht";
+  if(u < 12) return "Goedemorgen";
+  if(u < 18) return "Goedemiddag";
+  return "Goedenavond";
+}
+
+/* de laatste dingen die er in huis gebeurd zijn, door elkaar op tijd */
+function recenteActiviteit(n = 4){
+  const uit = [];
+  S.items.forEach(i => {
+    if(i.af && i.afOp) uit.push({op:i.afOp, wie:i.afDoor, em:"✅", tekst:esc(i.tekst) + " gehaald"});
+    else if(i.gemaakt) uit.push({op:i.gemaakt, wie:i.door, em:"📝", tekst:esc(i.tekst) + " op de lijst"});
+  });
+  S.bonnen.forEach(b => uit.push({op:b.gemaakt || b.datum, wie:b.door, em:"🧾",
+    tekst:euro(b.bedrag) + " bij " + esc(winkelVan(b.winkel).naam)}));
+  S.menu.forEach(m => { if(m.gemaakt) uit.push({op:m.gemaakt, wie:m.door, em:"🍽️",
+    tekst:esc(menuNaam(m)) + " op " + dagNaamBij(m.id).toLowerCase()}); });
+  return uit.filter(x => x.op && nu() - x.op < 7*864e5)
+            .sort((a,b) => b.op - a.op).slice(0, n);
+}
+
+function schermThuis(){
+  const open = openItems();
+  const spoed = open.filter(i => i.urgent);
+  const vandaag = datumSleutel(new Date());
+  const m = menuVan(vandaag);
+  const g = m && m.gerechtId ? gerechtVan(m.gerechtId) : null;
+  const personen = (m && m.personen) || (g && g.personen) || 2;
+  const teHalen = g ? nogTeHalen(g, personen) : [];
+  const mee = meeEtersVan(m);
+
+  /* per winkel hoeveel er nog ligt, grootste eerst */
+  const perWinkel = new Map();
+  open.forEach(i => {
+    const w = winkelVan(i.winkel);
+    perWinkel.set(w.id, {w, n:(perWinkel.get(w.id)?.n || 0) + 1});
+  });
+  const winkels = [...perWinkel.values()].filter(v => v.w.id !== "nvt").sort((a,b) => b.n - a.n);
+  const grootste = winkels[0] || null;
+
+  const maand = maandSleutel(nu());
+  const budget = budgetVoor(maand);
+  const uitgegeven = bonnenVan(maand).reduce((s,b) => s + (Number(b.bedrag)||0), 0);
+  const over = budget - uitgegeven;
+  const info = maandInfo(maand);
+  const laatsteBon = [...S.bonnen].sort((a,b) => (b.datum||0) - (a.datum||0))[0];
+
+  const week = weekDagen(0);
+  const vaak = vaakGekocht(4);
+  const activiteit = recenteActiviteit(4);
+  /* helemaal nieuw huis: dan helpt een startkaart meer dan lege vakjes */
+  const kaal = !open.length && !S.gerechten.length && budget <= 0 && !S.bonnen.length;
+
+  return `
+  <div class="scherm">
+    <div class="kop" id="kop">
+      <div class="kop-rij">
+        <div class="kop-titel">
+          <h1>${groet()}${S.ik ? ", " + esc((lidVan(S.ik.id)?.naam || "").split(" ")[0]) : ""}</h1>
+          <div class="sub">${new Date().toLocaleDateString("nl-NL",{weekday:"long", day:"numeric", month:"long"})}</div>
+        </div>
+        <button id="t-leden" style="display:flex; align-items:center; padding-left:4px">
+          <span class="av-stapel">${S.leden.slice(0,3).map(l => AV.html(l, "", isOnline(l))).join("")}</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="inhoud" id="inhoud">
+      <div class="wrap thuis">
+        ${S.syncFout ? `<div class="banner">${IK.waarsch}<span>${esc(S.syncFout)}</span></div>` : ""}
+        ${DB && DB.demo ? `<div class="banner info">${IK.info}<span>Demo-modus — deze lijst staat alleen op dit apparaat.</span></div>` : ""}
+
+        ${kaal ? `
+        <!-- eerste keer: laat zien waar je begint in plaats van drie lege kaarten -->
+        <div class="kaart welkom">
+          <div class="groot">Welkom in ${esc(CFG.huisNaam)} 👋</div>
+          <div class="onderschrift">Drie dingen om mee te beginnen. Je hoeft ze niet op volgorde te doen.</div>
+          <div class="stappen">
+            <button class="stap" id="t-stap1">
+              <span class="nr">1</span>
+              <span class="tk"><b>Zet iets op de lijst</b><span>wat jullie binnenkort nodig hebben</span></span>
+              <span class="na">${IK.pijl}</span>
+            </button>
+            <button class="stap" id="t-stap2">
+              <span class="nr">2</span>
+              <span class="tk"><b>Maak een gerecht</b><span>dan staan de ingrediënten met één tik op je lijst</span></span>
+              <span class="na">${IK.pijl}</span>
+            </button>
+            <button class="stap" id="t-stap3">
+              <span class="nr">3</span>
+              <span class="tk"><b>Stel een budget in</b><span>dan zie je hier wat er nog over is</span></span>
+              <span class="na">${IK.pijl}</span>
+            </button>
+          </div>
+        </div>` : ""}
+
+        <!-- vanavond -->
+        ${kaal ? "" : `
+        <div class="kaart" id="t-eten">
+          <div class="kaart-kop"><h2>${IK.pan} Vanavond</h2>
+            <span class="mini">${m ? "Bekijken ›" : "Plannen ›"}</span></div>
+          ${g ? `
+            <div class="groot">${esc(g.naam)}</div>
+            <div class="onderschrift">${personen} personen${mee.length ? " · " + esc(namenRij(mee)) + " " + (mee.length===1?"eet":"eten") + " mee" : ""}</div>
+            ${teHalen.length
+              ? `<button class="knop zacht klein vol" id="t-ingredienten" style="margin-top:12px">
+                   ${IK.kar} ${teHalen.length} ${teHalen.length===1?"ingrediënt":"ingrediënten"} op de lijst zetten</button>`
+              : `<div class="goedzo">${IK.vink} Alles in huis</div>`}`
+          : m && m.tekst ? `
+            <div class="groot">${esc(m.tekst)}</div>
+            <div class="onderschrift">genoteerd voor vandaag</div>`
+          : `<div class="onderschrift" style="margin-top:2px">Nog niets gepland voor vandaag.</div>
+             ${S.gerechten.length ? `<div class="sugg" style="margin-top:10px">
+               ${[...S.gerechten].sort((a,b) => gerechtHistorie(b.id).keer - gerechtHistorie(a.id).keer).slice(0,3)
+                 .map(x => `<button type="button" data-vandaag="${esc(x.id)}">${x.em || "🍽️"} ${esc(x.naam)}</button>`).join("")}
+             </div>` : `<button class="knop zacht klein vol" id="t-nieuwgerecht" style="margin-top:12px">${IK.plus} Eerste gerecht maken</button>`}`}
+        </div>`}
+
+        <!-- boodschappen -->
+        ${kaal ? "" : `
+        <div class="kaart" id="t-lijst">
+          <div class="kaart-kop"><h2>${IK.lijst} Boodschappen</h2>
+            <span class="mini">Naar de lijst ›</span></div>
+          ${open.length === 0
+            ? `<div class="goedzo">${IK.vink} De lijst is leeg</div>`
+            : `<div class="groot">${open.length} te halen</div>
+               ${spoed.length ? `<div class="onderschrift spoedig">${IK.bliksem} ${spoed.slice(0,3).map(i => esc(i.tekst)).join(", ")}${spoed.length>3 ? " en nog " + (spoed.length-3) : ""}</div>` : ""}
+               <div class="winkelbalkjes">
+                 ${winkels.slice(0,4).map(v => `
+                   <span class="wb"><span>${v.w.em}</span>${esc(v.w.naam)}<b>${v.n}</b></span>`).join("")}
+                 ${perWinkel.get("nvt") ? `<span class="wb stil"><span>❓</span>Nog te kiezen<b>${perWinkel.get("nvt").n}</b></span>` : ""}
+               </div>`}
+          ${grootste ? `<button class="knop vol" id="t-winkelen" style="margin-top:12px">
+            ${IK.kar} Winkelen bij ${esc(grootste.w.naam)}</button>` : ""}
+        </div>`}
+
+        <!-- budget -->
+        ${kaal ? "" : `
+        <button class="kaart klikbaar" id="t-budget">
+          <div class="kaart-kop"><h2>${IK.euro} Budget</h2><span class="mini">Details ›</span></div>
+          ${budget > 0 ? `
+            <div class="groot ${over < 0 ? "rood" : ""}">${over < 0 ? "−" : ""}${euro(Math.abs(over))}${over < 0 ? " te veel" : " over"}</div>
+            <div class="staaf"><div style="width:${Math.min(100, budget ? uitgegeven/budget*100 : 0).toFixed(1)}%;
+              background:${uitgegeven > budget ? "var(--rood)" : uitgegeven/budget > .85 ? "var(--geel)" : "var(--groen)"}"></div></div>
+            <div class="onderschrift">${euro(uitgegeven)} van ${euro(budget)} · nog ${info.dagenOver} ${info.dagenOver===1?"dag":"dagen"} tot ${dagMaand(info.tot)}</div>
+            ${laatsteBon ? `<div class="onderschrift">laatst: ${euro(laatsteBon.bedrag)} bij ${esc(winkelVan(laatsteBon.winkel).naam)}</div>` : ""}`
+          : `<div class="onderschrift" style="margin-top:2px">Nog geen budget ingesteld — stel er een in en je ziet hier wat er over is.</div>`}
+        </button>`}
+
+        <!-- de week -->
+        <div class="kaart" id="t-week">
+          <div class="kaart-kop"><h2>${IK.kalender} Deze week</h2><span class="mini">Naar Eten ›</span></div>
+          <div class="weekpillen">
+            ${week.map(d => {
+              const sl = datumSleutel(d);
+              const mm = menuVan(sl);
+              return `<button class="weekpil ${isVandaag(d)?"nu":""} ${mm?"gevuld":""}" data-weekdag="${sl}">
+                <b>${dagNaamVan(d).slice(0,2)}</b>
+                <span>${d.getDate()}</span>
+                <i class="${mm ? "" : "geenplan"}"></i>
+              </button>`;
+            }).join("")}
+          </div>
+        </div>
+
+        <!-- snel -->
+        ${vaak.length ? `
+        <div class="kaart">
+          <div class="kaart-kop"><h2>${IK.ster} Snel erbij</h2></div>
+          <div class="sugg">
+            ${vaak.map(v => `<button type="button" data-snelitem="${esc(v.tekst)}">${IK.plus} ${esc(v.tekst)}</button>`).join("")}
+          </div>
+        </div>` : ""}
+
+        <!-- wat er gebeurd is -->
+        ${activiteit.length ? `
+        <div class="kaart">
+          <div class="kaart-kop"><h2>${IK.klok} Net gebeurd</h2></div>
+          <div class="tijdlijn">
+            ${activiteit.map(a => `
+              <div class="tl">
+                <span class="em">${a.em}</span>
+                <span class="tk"><b>${a.tekst}</b>
+                  <span>${esc(naamVan(a.wie).split(" ")[0])} · ${datumKort(a.op)}</span></span>
+              </div>`).join("")}
+          </div>
+        </div>` : ""}
+      </div>
+    </div>
+
+    <button class="fab" id="t-fab">${IK.plus}<span>Toevoegen</span></button>
+  </div>`;
+}
+
+function bindThuis(){
+  const ga = (tab, extra) => () => { tril(); if(extra) extra(); S.tab = tab; tekenNu(); naarBoven(); };
+  const kl = $("#t-leden");   if(kl) kl.onclick = ga("meer");
+  const ke = $("#t-eten");    if(ke) ke.onclick = e => { if(!e.target.closest("button")) ga("eten")(); };
+  const kli = $("#t-lijst");  if(kli) kli.onclick = e => { if(!e.target.closest("button")) ga("lijst")(); };
+  const kb = $("#t-budget");  if(kb) kb.onclick = ga("budget");
+  const kw = $("#t-week");    if(kw) kw.onclick = e => { if(!e.target.closest("button")) ga("eten")(); };
+
+  const fab = $("#t-fab");    if(fab) fab.onclick = () => { tril(); sheetToevoegen(); };
+
+  const ti = $("#t-ingredienten");
+  if(ti) ti.onclick = () => {
+    const mm = menuVan(datumSleutel(new Date()));
+    const gg = mm && mm.gerechtId ? gerechtVan(mm.gerechtId) : null;
+    if(gg) sheetNaarLijst(gg, (mm.personen) || gg.personen || 2, datumSleutel(new Date()));
+  };
+  const tw = $("#t-winkelen");
+  if(tw) tw.onclick = () => {
+    const open = openItems();
+    const tel = new Map();
+    open.forEach(i => { const w = winkelVan(i.winkel); if(w.id !== "nvt") tel.set(w.id, (tel.get(w.id)||0)+1); });
+    const beste = [...tel.entries()].sort((a,b) => b[1] - a[1])[0];
+    if(!beste) return;
+    S.winkelSessie = {winkelId: beste[0], gestart: nu()};
+    S.tab = "winkelen"; tril(); tekenNu(); naarBoven();
+  };
+  const tn = $("#t-nieuwgerecht");
+  if(tn) tn.onclick = () => { tril(); sheetGerechtBewerk(null); };
+  const s1 = $("#t-stap1"); if(s1) s1.onclick = () => { tril(); sheetToevoegen(); };
+  const s2 = $("#t-stap2"); if(s2) s2.onclick = () => { tril(); sheetGerechtBewerk(null); };
+  const s3 = $("#t-stap3"); if(s3) s3.onclick = () => { tril(); S.maand = maandSleutel(nu()); sheetBudgetInstellen(); };
+
+  $$("[data-vandaag]").forEach(b => b.onclick = async () => {
+    const gg = gerechtVan(b.dataset.vandaag); if(!gg) return;
+    tril(12);
+    await DB.zet(PAD.menu + "/" + datumSleutel(new Date()), {
+      gerechtId: gg.id, tekst:"", personen: gg.personen || 2, meeEters:[], door:S.ik.id, gemaakt:nu()});
+    toast(gg.naam + " staat voor vandaag", "🍽️");
+  });
+  $$("[data-weekdag]").forEach(b => b.onclick = () => {
+    const sl = b.dataset.weekdag;
+    const mm = menuVan(sl);
+    const gg = mm && mm.gerechtId ? gerechtVan(mm.gerechtId) : null;
+    tril();
+    if(gg) sheetGerecht(gg, sl); else sheetPlan(sl);
+  });
+  $$("[data-snelitem]").forEach(b => b.onclick = async () => {
+    const t = b.dataset.snelitem;
+    const vorig = LS.get("boodschappen_vaak_" + P, {})[t.toLowerCase()] || {};
+    tril(12);
+    await nieuwItem({tekst:t, winkel:vorig.winkel || "nvt", cat:vorig.cat || raadCategorie(t) || "overig"});
+    toast(t + " staat op de lijst", "✓");
+  });
+  volgScroll();
+}
+
+/* =====================================================================
    15 · SCHERM: MEER
    ===================================================================== */
 function schermMeer(){
@@ -4368,7 +4780,7 @@ function schermMeer(){
         </div>
 
         <div class="hint" style="text-align:center; margin-top:26px; opacity:.8">
-          ${esc(CFG.huisNaam)} · Boodschappen<br>gemaakt voor Merel &amp; Jelle
+          ${esc(CFG.huisNaam)} · Boodschappen${S.leden.length ? `<br>voor ${esc(namenRij(S.leden.map(l => l.naam)))} samen` : ""}
         </div>
       </div>
     </div>
@@ -5121,7 +5533,7 @@ function schermEten(){
                 ${naam
                   ? `<b>${esc(naam)}</b><span>${m.personen ? m.personen + " personen" : ""}${
                        g && nodig ? (m.personen ? " · " : "") + nodig + " nog te halen" : (g ? (m.personen ? " · " : "") + "alles in huis" : "")}</span>`
-                  : `<b class="stil">Niets gepland</b><span>tik om een gerecht te kiezen</span>`}
+                  : `<b class="stil">Niets gepland</b>`}
                 ${mee.length ? `<span class="mee">${IK.persoon} ${esc(namenRij(mee))} ${mee.length === 1 ? "eet" : "eten"} mee</span>` : ""}
               </span>
               <span class="na">${naam ? IK.pijl : IK.plus}</span>
@@ -5162,8 +5574,7 @@ function schermEten(){
                     : `<span class="gfoto geenfoto">${esc(g.em || "🍽️")}</span>`}
                   <span class="tk">
                     <b>${esc(g.naam)}</b>
-                    <span>${n} ${n===1?"ingrediënt":"ingrediënten"} · ${g.personen||2} pers.${
-                      h.keer ? " · " + geledenTekst(h.laatst) : ""}</span>
+                    <span>${n} ingr. · ${g.personen||2} pers.${h.keer ? " · " + geledenTekst(h.laatst) : ""}</span>
                   </span>
                   <span class="na">${IK.pijl}</span>
                 </button>`;
@@ -6112,11 +6523,12 @@ function sheetWeekBoodschappen(){
 function navHtml(){
   const open = openItems().length;
   const tabs = [
-    {id:"lijst",    naam:"Lijst",    ik:IK.lijst, bel:open},
-    {id:"eten",     naam:"Eten",     ik:IK.pan},
-    {id:"winkelen", naam:"Winkelen", ik:IK.kar},
-    {id:"budget",   naam:"Budget",   ik:IK.euro},
-    {id:"meer",     naam:"Meer",     ik:IK.meer}
+    {id:"thuis",    naam:"Thuis",   ik:IK.huis},
+    {id:"lijst",    naam:"Lijst",   ik:IK.lijst, bel:open},
+    {id:"eten",     naam:"Eten",    ik:IK.pan},
+    {id:"winkelen", naam:"Winkel",  ik:IK.kar},
+    {id:"budget",   naam:"Budget",  ik:IK.euro},
+    {id:"meer",     naam:"Meer",    ik:IK.meer}
   ];
   return `<nav class="nav"><div class="nav-rij">
     ${tabs.map(t => `
@@ -6138,7 +6550,8 @@ function tekenNu(){
   if(S.ik && !lidVan(S.ik.id)){ uitloggen(); return; }
 
   let scherm = "";
-  if(S.tab === "lijst")         scherm = schermLijst();
+  if(S.tab === "thuis")         scherm = schermThuis();
+  else if(S.tab === "lijst")    scherm = schermLijst();
   else if(S.tab === "winkelen") scherm = schermWinkelen();
   else if(S.tab === "eten")     scherm = schermEten();
   else if(S.tab === "budget")   scherm = schermBudget();
@@ -6148,7 +6561,7 @@ function tekenNu(){
   app.innerHTML = scherm + (inWinkelSessie ? "" : navHtml());
 
   $$("[data-tab]").forEach(b => b.onclick = () => {
-    if(S.tab === b.dataset.tab && b.dataset.tab === "lijst"){
+    if(S.tab === b.dataset.tab && (b.dataset.tab === "lijst" || b.dataset.tab === "thuis")){
       naarBoven(true);
       return;
     }
@@ -6158,7 +6571,8 @@ function tekenNu(){
     tekenNu(); naarBoven();
   });
 
-  if(S.tab === "lijst")         bindLijst();
+  if(S.tab === "thuis")         bindThuis();
+  else if(S.tab === "lijst")    bindLijst();
   else if(S.tab === "winkelen") bindWinkelen();
   else if(S.tab === "eten")     bindEten();
   else if(S.tab === "budget")   bindBudget();
@@ -6220,28 +6634,32 @@ function startLuisteren(){
     S.winkels = l.length ? l : S.winkels;
     if(S.geladen) tekenNu();
   });
-  DB.luister(PAD.vast,   l => { S.vast = l;   if(S.geladen && S.tab === "meer") tekenNu(); });
+  DB.luister(PAD.vast,   l => { S.vast = l;   if(S.geladen && raakt("meer")) tekenNu(); });
   DB.luister(PAD.geleerd, l => { S.geleerd = l; });
   DB.luister(PAD.gerechten, l => {
     S.gerechten = l.sort((a,b) => (a.naam||"").localeCompare(b.naam||""));
-    if(S.geladen && S.tab === "eten") tekenNu();
+    if(S.geladen && raakt("eten")) tekenNu();
   });
-  DB.luister(PAD.menu, l => { S.menu = l; if(S.geladen && S.tab === "eten") tekenNu(); });
+  DB.luister(PAD.menu, l => { S.menu = l; if(S.geladen && raakt("eten")) tekenNu(); });
   DB.luister(PAD.cats, l => {
     if(!l.length) return;
     S.cats = l.sort((a,b) => (a.volgorde||50) - (b.volgorde||50));
     if(S.geladen) tekenNu();
   });
-  DB.luister(PAD.bonnen, l => { S.bonnen = l; if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu(); });
+  DB.luister(PAD.bonnen, l => { S.bonnen = l; if(S.geladen && raakt("budget","meer")) tekenNu(); });
   DB.luister(PAD.meta, l => {
     const b = l.find(x => x.id === "budget");
     const mn = l.find(x => x.id === "meeEters");
     S.meeNamen = (mn && Array.isArray(mn.namen)) ? mn.namen : [];
     S.budget = b ? {standaard: Number(b.standaard)||0, perMaand: b.perMaand || {}, startDag: Number(b.startDag)||1}
                  : {standaard:0, perMaand:{}, startDag:1};
-    if(S.geladen && (S.tab === "budget" || S.tab === "meer")) tekenNu();
+    if(S.geladen && raakt("budget","meer")) tekenNu();
   });
 }
+
+/* Het dashboard laat van alles tegelijk zien, dus elke verandering raakt
+   hem. Verder hertekenen we alleen het tabblad waar je naar kijkt. */
+const raakt = (...tabs) => S.tab === "thuis" || tabs.includes(S.tab);
 
 async function zetCatsKlaar(){
   /* meteen bruikbaar, ook als de database nog niet geantwoord heeft */
@@ -6312,6 +6730,8 @@ async function start(){
   }
 
   S.geladen = true;
+  /* weergavevoorkeuren staan op dit apparaat, niet in de gedeelde database */
+  S.filter.details = !!LS.get("boodschappen_details_" + P, false);
   tekenNu();
 
   /* installeerbaar maken */
