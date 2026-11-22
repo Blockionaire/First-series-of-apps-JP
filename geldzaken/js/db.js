@@ -11,7 +11,7 @@
    ===================================================================== */
 
 const DB_NAAM = "geldzaken";
-const DB_VERSIE = 1;
+const DB_VERSIE = 2;
 
 export const STORES = [
   "transacties",   // losse boekingen (inkomsten, uitgaven, sparen, overboekingen)
@@ -24,6 +24,16 @@ export const STORES = [
   "instellingen",  // één document met de voorkeuren
 ];
 
+/* Wat hier in gaat blijft op dít apparaat. Het staat bewust buiten
+   STORES, want alles daarin wordt door store.js ingeladen én door
+   sync.js naar de cloud gespiegeld. De sleutels van je bankkoppeling
+   horen nergens anders dan in de browser waarin je ze intikt — ook niet
+   in je eigen Firestore, waar ze bij een verkeerd gezette regel door
+   een ander te lezen zouden zijn. */
+export const LOKAAL = "apparaat";
+
+const ALLE_STORES = [...STORES, LOKAAL];
+
 let dbBelofte = null;
 
 function open() {
@@ -34,7 +44,7 @@ function open() {
 
     verzoek.onupgradeneeded = () => {
       const db = verzoek.result;
-      for (const naam of STORES) {
+      for (const naam of ALLE_STORES) {
         if (!db.objectStoreNames.contains(naam)) {
           db.createObjectStore(naam, { keyPath: "id" });
         }

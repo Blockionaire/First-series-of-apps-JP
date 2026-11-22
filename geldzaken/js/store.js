@@ -299,6 +299,10 @@ export function legeTransactie(velden = {}) {
     doel: "",
     persoon: "",
     terugkerendId: "",
+    /* Het kenmerk dat de bank zelf aan deze boeking gaf, als hij
+       rechtstreeks is opgehaald. Hierop herkennen we bij een volgende
+       ronde dat hij er al in staat. */
+    bankRef: "",
     notitie: "",
     aangemaakt: nu(),
     bijgewerkt: nu(),

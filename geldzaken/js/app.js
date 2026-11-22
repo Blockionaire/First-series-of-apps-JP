@@ -12,6 +12,7 @@
 
 import { state, abonneer, start, Sync, magBewerken, eenvoudig } from "./store.js";
 import { $, zetValuta, zetPrivacy, melding } from "./util.js";
+import * as Bank from "./bank.js";
 
 import * as Dashboard   from "./views/dashboard.js";
 import * as Overzicht   from "./views/overzicht.js";
@@ -302,6 +303,12 @@ async function opstarten() {
 
   await start();
 
+  /* Kom je net terug van je bank, dan staat het sessienummer in het
+     anker van het adres. Dat moet opgeruimd zijn vóór de router het
+     als route leest, en vóór er iets getekend wordt. */
+  await Bank.laad();
+  const bankTerugkomst = await Bank.verwerkTerugkomst();
+
   const laden = $("#laden");
   if (laden) {
     laden.classList.add("is-weg");
@@ -310,6 +317,12 @@ async function opstarten() {
 
   if (!location.hash) ga("#/start", { vervang: true });
   teken();
+
+  if (bankTerugkomst === "gekoppeld") {
+    melding("Je bankrekening is gekoppeld.", "goed");
+  } else if (bankTerugkomst) {
+    melding(Bank.bank.fout || "Het koppelen is niet gelukt.", "fout");
+  }
 
   regelServiceWorker();
 }

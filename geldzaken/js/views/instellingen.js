@@ -8,11 +8,12 @@
    #/instellingen/categorieen opent het categorieënscherm.
    ===================================================================== */
 
-import { esc, geld, melding, bevestig, dialoog, downloadTekst, maandLabel,
+import { esc, geld, melding, bevestig, dialoog, downloadTekst, maandLabel, datumNL,
          kiesBestand, leesTekst, leesBedrag, debounce } from "../util.js";
 import { state, zetInstelling, zetKoppeling, Sync, Koppeling, magBewerken, isBeheerder,
          legeCategorie, bewaarCategorie, wisCategorie, alsBackup,
-         herstelBackup, alsCSV, wisAlles, duwAllesOmhoog } from "../store.js";
+         herstelBackup, alsCSV, wisAlles, duwAllesOmhoog, meld } from "../store.js";
+import * as Bank from "../bank.js";
 import { perCategorie, externeUitgaven, externeMaanden } from "../bereken.js";
 import { ICONEN, KLEUREN } from "../data/standaard.js";
 import { potjeOpties } from "./onderdelen.js";
@@ -154,6 +155,8 @@ export function html(params) {
       <span class="rij__rechts dof">›</span>
     </a>
 
+    ${bankBlok()}
+
     ${koppelingBlok()}
 
     ${accountBlok(s)}
@@ -193,6 +196,99 @@ export function html(params) {
     <button class="knop knop--rand knop--breed" data-wis-alles style="margin-top:8px;color:var(--fout);border-color:color-mix(in srgb, var(--fout) 40%, transparent)">
       Alles wissen
     </button>`;
+}
+
+/* ---------------------------- Bankkoppeling ------------------------- */
+/* De gegevens hiervan staan alleen op dit apparaat. Dat is geen
+   beperking maar de bedoeling: een adres en een woord waarmee je je
+   eigen bankgegevens kunt opvragen horen niet in een cloud die je met
+   anderen deelt. Op je telefoon vul je ze dus opnieuw in.
+
+   Let op wat hier wél en niet van afhangt: niets in dit blok verandert
+   doordat je in de velden tikt. Zou dat wel zo zijn, dan moest het
+   scherm tijdens het typen opnieuw getekend worden, en dan verdwijnt
+   de knop onder je vinger. De knoppen staan er dus altijd; of ze
+   aanklikbaar zijn regelt `stemBankKnoppenAf` rechtstreeks. */
+function bankBlok() {
+  const b = Bank.bank;
+  const dagen = Bank.dagenGeldig();
+
+  return `
+    <div class="sectiekop"><h2>Je bank</h2></div>
+    <div class="kaart">
+      ${!Bank.gekoppeld() ? `
+        <p style="font-size:.86rem;color:var(--tekst-zacht);margin:0 0 12px">
+          Je kunt je bankafschrift automatisch laten ophalen in plaats van een bestand
+          te downloaden. Daar hoort een klein dienstje bij dat je zelf neerzet — hoe,
+          staat in <code>bank/README.md</code>. Zonder dat blijft het bestand inlezen
+          gewoon werken.
+        </p>` : ""}
+
+      <div class="veld">
+        <label for="bankadres">Adres van je bankdienst</label>
+        <input type="url" id="bankadres" value="${esc(b.adres)}"
+               placeholder="https://geldzaken-bank.jouwnaam.workers.dev" autocomplete="off">
+      </div>
+      <div class="veld">
+        <label for="bankwoord">Afgesproken woord</label>
+        <input type="password" id="bankwoord" value="${esc(b.woord)}"
+               placeholder="hetzelfde woord als in de dienst" autocomplete="off">
+        <div class="veld__hint">
+          Dit woord staat alleen in deze browser en in je eigen dienst. Het gaat niet mee
+          naar de cloud en staat nergens in de app zelf.
+        </div>
+      </div>
+
+      ${!Bank.gekoppeld() ? `
+        <div class="knoprij knoprij--gelijk" style="margin-top:4px">
+          <button class="knop" data-bank-proef>Verbinding testen</button>
+          <button class="knop knop--primair" data-bank-koppel>Rekening koppelen</button>
+        </div>
+      ` : `
+          <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-top:4px">
+            <span class="dof">Gekoppeld met</span>
+            <strong>${esc(b.bankNaam || "je bank")}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.85rem">
+            <span class="dof">Rekening</span>
+            <strong>${esc(b.rekeningNaam || "nog niet gekozen")}</strong>
+          </div>
+          ${dagen != null ? `
+            <div style="display:flex;justify-content:space-between;font-size:.85rem">
+              <span class="dof">Toestemming</span>
+              <strong class="${dagen <= 14 ? "af" : ""}">
+                ${dagen > 0 ? `nog ${dagen} ${dagen === 1 ? "dag" : "dagen"}` : "verlopen"}
+              </strong>
+            </div>` : ""}
+          ${b.laatst ? `
+            <div style="display:flex;justify-content:space-between;font-size:.85rem">
+              <span class="dof">Laatst opgehaald</span>
+              <strong>${esc(datumNL(new Date(b.laatst).toISOString().slice(0, 10), { kort: true }))}</strong>
+            </div>` : ""}
+
+          ${dagen != null && dagen <= 14 ? `
+            <div class="signaal signaal--let-op" style="margin-top:10px">
+              <span class="signaal__icoon">⏳</span>
+              <span>
+                <span class="signaal__titel">${dagen > 0 ? "Bijna verlopen" : "Verlopen"}</span>
+                <span class="signaal__tekst">Je bank vraagt elk half jaar opnieuw om in te loggen. Koppel opnieuw om door te gaan.</span>
+              </span>
+            </div>` : ""}
+
+          <div class="knoprij knoprij--gelijk" style="margin-top:12px">
+            <a class="knop knop--primair" href="#/importeren">Transacties ophalen</a>
+            <button class="knop" data-bank-rekening>Andere rekening</button>
+          </div>
+          <button class="knop knop--rand knop--breed" data-bank-los style="margin-top:9px">Koppeling verbreken</button>
+      `}
+
+      ${b.fout ? `<div class="veld__fout">${esc(b.fout)}</div>` : ""}
+
+      <div class="veld__hint" style="margin-top:12px">
+        De dienst bewaart niets: hij haalt op, geeft door en vergeet. Je transacties
+        komen in deze app terecht, op dit apparaat — en pas nadat jij ze hebt nagekeken.
+      </div>
+    </div>`;
 }
 
 /* ---------------------------- Koppelingen --------------------------- */
@@ -406,6 +502,29 @@ export function koppel(wortel, params) {
     zetInstelling({ huisNaam: netjes || "Mijn huishouden" }, { hertekenen: false });
   });
 
+  /* Adres en woord van de bankdienst gaan dezelfde kant op als de
+     huisnaam: opslaan terwijl je typt, en níét hertekenen, zodat de
+     knop eronder blijft staan waar je hem aantikt. Of die knoppen
+     aanklikbaar zijn zetten we daarom met de hand. */
+  const bankAdres = wortel.querySelector("#bankadres");
+  const bankWoord = wortel.querySelector("#bankwoord");
+
+  const stemBankKnoppenAf = () => {
+    const klaar = !!(bankAdres?.value.trim() && bankWoord?.value.trim());
+    wortel.querySelectorAll("[data-bank-proef], [data-bank-koppel]")
+      .forEach(knop => { knop.disabled = !klaar; });
+  };
+
+  /* Elk veld zijn eigen uitgestelde opslag. Deelden ze er één, dan zou
+     het tikken in het tweede veld het nog wachtende opslaan van het
+     eerste wegstrepen — en was je het adres kwijt zodra je door naar
+     het woord ging. */
+  const bewaarAdres = debounce(adres => Bank.zetInstellingen({ adres }), 500);
+  const bewaarWoord = debounce(woord => Bank.zetInstellingen({ woord }), 500);
+  bankAdres?.addEventListener("input", e => { bewaarAdres(e.target.value); stemBankKnoppenAf(); });
+  bankWoord?.addEventListener("input", e => { bewaarWoord(e.target.value); stemBankKnoppenAf(); });
+  stemBankKnoppenAf();
+
   wortel.addEventListener("change", e => {
     if (e.target.matches("[data-privacy]")) zetInstelling({ privacy: e.target.checked });
     if (e.target.matches("[data-koppeling]")) zetKoppeling({ aan: e.target.checked });
@@ -430,6 +549,11 @@ export function koppel(wortel, params) {
 
     if (e.target.closest("[data-nieuw-persoon]")) return voegPersoonToe();
 
+    if (e.target.closest("[data-bank-proef]")) return bankProef();
+    if (e.target.closest("[data-bank-koppel]")) return bankKoppelen();
+    if (e.target.closest("[data-bank-rekening]")) return bankRekeningKiezen();
+    if (e.target.closest("[data-bank-los]")) return bankLoskoppelen();
+
     const wisPersoon = e.target.closest("[data-wis-persoon]");
     if (wisPersoon) {
       const naam = wisPersoon.dataset.wisPersoon;
@@ -448,8 +572,7 @@ export function koppel(wortel, params) {
       return melding("CSV gedownload.", "goed");
     }
 
-    if (e.target.closest("[data-koppeling-test]")) {
-      try {
+    if (e.target.closest("[data-koppeling-test]")) {      try {
         const aantal = await Koppeling.haalNu();
         melding(aantal
           ? `Verbonden. ${aantal} ${aantal === 1 ? "bon" : "bonnen"} gevonden.`
@@ -478,6 +601,136 @@ function koppelCategorieen(wortel) {
     const rij = e.target.closest("[data-categorie]");
     if (rij) bewerkCategorie(state.categorieen.find(c => c.id === rij.dataset.categorie));
   });
+}
+
+/* ------------------------- Bank: de knoppen ------------------------- */
+/* Wat je in de velden hebt staan is misschien nog niet opgeslagen — het
+   opslaan wacht een halve seconde. Voor een knop die er meteen iets mee
+   doet nemen we daarom de veldwaarde zelf. */
+async function bankVeldenNu(wortel) {
+  const adres = document.querySelector("#bankadres")?.value;
+  const woord = document.querySelector("#bankwoord")?.value;
+  if (adres !== undefined || woord !== undefined) await Bank.zetInstellingen({ adres, woord });
+}
+
+async function bankProef() {
+  await bankVeldenNu();
+  try {
+    await Bank.proefVerbinding();
+    melding("De dienst antwoordt. Je kunt koppelen.", "goed");
+  } catch (fout) {
+    Bank.bank.fout = fout.message;
+    melding(fout.message, "fout");
+  }
+  meld();
+}
+
+async function bankKoppelen() {
+  if (!eisBewerkrecht()) return;
+  await bankVeldenNu();
+
+  let banken;
+  try {
+    banken = await Bank.welkeBanken("NL");
+  } catch (fout) {
+    Bank.bank.fout = fout.message;
+    melding(fout.message, "fout");
+    return meld();
+  }
+  if (!banken.length) return melding("De dienst gaf geen banken terug.", "fout");
+
+  const keuze = await dialoog({
+    titel: "Bij welke bank?",
+    onderaan: true,
+    inhoud: `
+      <p class="dialoog__vraag">
+        Je gaat straks naar je eigen bank om in te loggen. Geldzaken krijgt daarna
+        alleen leesrechten op je afschrift — betalen kan er niet mee.
+      </p>
+      <div class="lijst">
+        ${banken.map(b => `
+          <button class="rij" data-kies="${esc(b.naam)}">
+            <span class="rij__icoon">🏦</span>
+            <span class="rij__midden">
+              <span class="rij__titel">${esc(b.naam)}</span>
+              ${b.maxDagen ? `<span class="rij__sub">toestemming geldt ${b.maxDagen} dagen</span>` : ""}
+            </span>
+            <span class="rij__rechts dof">›</span>
+          </button>`).join("")}
+      </div>`,
+    knoppen: [{ label: "Annuleren", waarde: null }],
+    opOpenen: (laag, sluit) => {
+      laag.addEventListener("click", e => {
+        const kies = e.target.closest("[data-kies]");
+        if (kies) sluit(kies.dataset.kies);
+      });
+    },
+  });
+
+  if (!keuze) return;
+  try {
+    melding("Je gaat naar je bank…");
+    await Bank.koppelStarten(keuze);        // dit verlaat de pagina
+  } catch (fout) {
+    Bank.bank.fout = fout.message;
+    melding(fout.message, "fout");
+    meld();
+  }
+}
+
+async function bankRekeningKiezen() {
+  if (!eisBewerkrecht()) return;
+  let gegevens;
+  try {
+    gegevens = await Bank.haalRekeningen();
+  } catch (fout) {
+    Bank.bank.fout = fout.message;
+    melding(fout.message, "fout");
+    return meld();
+  }
+
+  if (!gegevens.rekeningen.length) {
+    return melding("Er zitten geen rekeningen in deze koppeling.", "fout");
+  }
+
+  const keuze = await dialoog({
+    titel: "Welke rekening volgen?",
+    inhoud: `
+      <div class="lijst">
+        ${gegevens.rekeningen.map(r => `
+          <button class="rij" data-kies="${esc(r.id)}">
+            <span class="rij__icoon">💳</span>
+            <span class="rij__midden">
+              <span class="rij__titel">${esc(r.naam || r.iban || "Rekening")}</span>
+              ${r.iban ? `<span class="rij__sub">${esc(r.iban)}</span>` : ""}
+            </span>
+            <span class="rij__rechts dof">${Bank.bank.rekening === r.id ? "✓" : "›"}</span>
+          </button>`).join("")}
+      </div>`,
+    knoppen: [{ label: "Annuleren", waarde: null }],
+    opOpenen: (laag, sluit) => {
+      laag.addEventListener("click", e => {
+        const kies = e.target.closest("[data-kies]");
+        if (kies) sluit(kies.dataset.kies);
+      });
+    },
+  });
+
+  if (!keuze) return;
+  const gekozen = gegevens.rekeningen.find(r => r.id === keuze);
+  await Bank.kiesRekening(keuze, gekozen?.iban || gekozen?.naam || "");
+  melding("Rekening gekozen.", "goed");
+  meld();
+}
+
+async function bankLoskoppelen() {
+  const zeker = await bevestig(
+    "De toestemming bij je bank wordt ingetrokken. Wat je al hebt opgehaald blijft gewoon staan.",
+    { titel: "Koppeling verbreken?", bevestigLabel: "Verbreken", gevaar: true });
+  if (!zeker) return;
+  await Bank.loskoppelen();
+  melding("Koppeling verbroken.");
+  meld();
 }
 
 /* ------------------------------ Acties ------------------------------ */

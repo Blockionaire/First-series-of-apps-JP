@@ -1,0 +1,10 @@
+name = "geldzaken-bank"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# Geen database, geen opslag, geen gebonden diensten. Dat is met opzet:
+# wat er niet ligt, kan ook niet uitlekken.
+
+# De vier instellingen staan NIET in dit bestand. Drie ervan zijn geheim
+# en horen in `wrangler secret`; het vierde zet je er met `wrangler
+# secret` of in het Cloudflare-scherm bij. Zie README.md.

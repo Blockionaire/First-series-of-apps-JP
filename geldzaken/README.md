@@ -79,6 +79,14 @@ erbij:
   worden herkend en uitgevinkt, dus niets komt dubbel binnen. Op hoofdlijnen hang
   je elke uitgave meteen aan een potje — bij een potje *vrij te besteden* zie je
   daarna precies wat er deze maand nog over is.
+- **Je bank rechtstreeks uitlezen** — in plaats van elke maand een bestand downloaden
+  kan Geldzaken je afschrift zelf ophalen, via Enable Banking (Rabobank, ING, ABN AMRO
+  en zo'n 2500 andere Europese banken). Daar hoort een klein dienstje bij dat je zelf
+  neerzet, want de sleutel die je bank daarvoor wil hoort niet in een openbare app:
+  zie [`bank/README.md`](bank/README.md). Dat dienstje bewaart niets, kan geen
+  betalingen doen en praat alleen met jouw app. Wat binnenkomt gaat eerst door
+  hetzelfde nakijkscherm als een CSV, en elke boeking draagt het kenmerk van de bank
+  zelf, dus dubbel binnenhalen kan niet.
 - **Meelezen met de boodschappenapp** — zet je onder ⚙️ → Koppelingen aan. Geldzaken
   leest dan live mee met de bonnen uit de boodschappenapp van het huisje en laat zien
   wat er deze maand is afgerekend. Hang het aan je potje Boodschappen en je ziet
@@ -219,6 +227,9 @@ js/bereken.js           alle afgeleide cijfers
 js/db.js                IndexedDB
 js/sync.js              inloggen, lidmaatschap en Firestore
 js/koppeling.js         meelezen met de boodschappenapp (Firestore REST)
+js/bank.js              je bank uitlezen — praat met bank/worker.js
+bank/worker.js          het dienstje dat de sleutel bewaart (Cloudflare)
+bank/README.md          hoe je dat opzet
 js/util.js              opmaak, maanden, dialogen, grafiekjes
 js/data/standaard.js    categorieën, potjesvoorstellen, bankprofielen
 js/views/overzicht.js   de taart: inkomen en verdeling

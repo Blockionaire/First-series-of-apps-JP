@@ -26,9 +26,10 @@
    ===================================================================== */
 
 import { esc, geld, datumNL, melding, kiesBestand, leesTekst,
-         normaliseer } from "../util.js";
+         normaliseer, vandaagISO } from "../util.js";
 import { state, bewaarVeelTransacties, raadCategorie, standaardRekening,
          meld, eenvoudig } from "../store.js";
+import * as Bank from "../bank.js";
 import { BANKPROFIELEN } from "../data/standaard.js";
 import { leeg, rekeningOpties, categorieOpties, potjeOpties } from "./onderdelen.js";
 import { ga, eisBewerkrecht } from "../app.js";
@@ -61,7 +62,28 @@ export function html() {
 }
 
 function kiesScherm() {
+  const b = Bank.bank;
+
   return `
+    ${Bank.gekoppeld() ? `
+      <div class="kaart">
+        <div class="kaart__kop"><h2>🏦 Rechtstreeks van je bank</h2></div>
+        <p style="font-size:.86rem;color:var(--tekst-zacht);margin:0 0 12px">
+          ${esc(b.bankNaam || "Je bank")}${b.rekeningNaam ? ` · ${esc(b.rekeningNaam)}` : ""}.
+          ${b.laatst
+            ? `Laatst opgehaald op ${esc(datumNL(new Date(b.laatst).toISOString().slice(0, 10), { kort: true }))}.
+               We beginnen een week daarvóór, zodat er niets tussenuit valt.`
+            : `De eerste keer halen we zoveel historie op als je bank geeft — meestal negentig dagen.`}
+        </p>
+        <button class="knop knop--primair knop--breed" data-bank-haal ${b.bezig ? "disabled" : ""}>
+          ${b.bezig ? "Bezig met ophalen…" : "Transacties ophalen"}
+        </button>
+        ${b.fout ? `<div class="veld__fout">${esc(b.fout)}</div>` : ""}
+      </div>
+
+      <div class="sectiekop"><h2>Of een bestand</h2></div>
+    ` : ""}
+
     <div class="kaart">
       <div class="kaart__kop"><h2>Zo werkt het</h2></div>
       <ol style="margin:0;padding-left:20px;font-size:.88rem;color:var(--tekst-zacht);line-height:1.6">
@@ -81,7 +103,13 @@ function kiesScherm() {
       <select id="ibank">${rekeningOpties(rekeningKeuze, { leegLabel: "— geen rekening —" })}</select>
     </div>
 
-    <button class="knop knop--primair knop--breed" data-kies-bestand>Kies een bestand</button>
+    <button class="knop ${Bank.gekoppeld() ? "" : "knop--primair"} knop--breed" data-kies-bestand>Kies een bestand</button>
+
+    ${!Bank.ingesteld() ? `
+      <p class="veld__hint" style="margin-top:14px">
+        Liever niet elke maand downloaden? Je bank kan ook rechtstreeks worden uitgelezen.
+        Dat zet je aan onder <a href="#/instellingen">⚙️ → Je bank</a>.
+      </p>` : ""}
 
     ${eenvoudig() ? `
       <p class="veld__hint" style="margin-top:14px">
@@ -246,6 +274,7 @@ export function koppel(wortel) {
   });
 
   wortel.addEventListener("click", e => {
+    if (e.target.closest("[data-bank-haal]")) return haalVanBank();
     if (e.target.closest("[data-kies-bestand]")) return leesBestand();
     if (e.target.closest("[data-opnieuw]")) { herstart(); return meld(); }
     if (e.target.closest("[data-verder]")) return maakVoorstellen();
@@ -495,21 +524,7 @@ function verwerkRuwe(ruwe) {
      omdat je op één dag twee keer hetzelfde bedrag kunt uitgeven — maar
      zelden bij dezelfde winkel. De bank schrijft er meestal een
      pasnummer of plaats achter, dus we vergelijken alleen het begin. */
-  for (const v of voorstellen) {
-    const t = v.transactie;
-    v.dubbel = state.transacties.some(bestaand => {
-      if (bestaand.datum !== t.datum) return false;
-      if (Math.abs((Number(bestaand.bedrag) || 0) - t.bedrag) >= 0.005) return false;
-      if ((bestaand.soort === "inkomst") !== (t.soort === "inkomst")) return false;
-
-      const a = normaliseer(bestaand.omschrijving);
-      const b = normaliseer(t.omschrijving);
-      if (!a || !b) return true;                       // geen naam: dan telt dag en bedrag
-      const lengte = Math.min(12, a.length, b.length);
-      return lengte >= 4 && a.slice(0, lengte) === b.slice(0, lengte);
-    });
-    if (v.dubbel) v.kies = false;
-  }
+  markeerDubbel();
 
   if (!voorstellen.length) {
     melding("Er kwamen geen bruikbare regels uit dit bestand.", "fout");
@@ -518,6 +533,108 @@ function verwerkRuwe(ruwe) {
   }
 
   voorstellen.sort((a, b) => b.transactie.datum.localeCompare(a.transactie.datum));
+  stap = "controleren";
+  meld();
+}
+
+/* ---------------------------------------------------------------
+   Welke regels staan er al in?
+   ---------------------------------------------------------------
+   Komt een regel rechtstreeks van de bank, dan heeft hij een kenmerk
+   dat de bank zelf heeft gegeven. Dat is hard bewijs: hetzelfde kenmerk
+   is dezelfde boeking, ook als de omschrijving later anders is gaan
+   luiden. Alleen zonder zo'n kenmerk vallen we terug op gokken op dag,
+   bedrag en het begin van de omschrijving.
+   --------------------------------------------------------------- */
+function markeerDubbel() {
+  const kenmerken = new Set(state.transacties.map(t => t.bankRef).filter(Boolean));
+
+  for (const v of voorstellen) {
+    const t = v.transactie;
+
+    if (t.bankRef) {
+      v.dubbel = kenmerken.has(t.bankRef);
+    } else {
+      v.dubbel = state.transacties.some(bestaand => {
+        if (bestaand.datum !== t.datum) return false;
+        if (Math.abs((Number(bestaand.bedrag) || 0) - t.bedrag) >= 0.005) return false;
+        if ((bestaand.soort === "inkomst") !== (t.soort === "inkomst")) return false;
+
+        const a = normaliseer(bestaand.omschrijving);
+        const b = normaliseer(t.omschrijving);
+        if (!a || !b) return true;                     // geen naam: dan telt dag en bedrag
+        const lengte = Math.min(12, a.length, b.length);
+        return lengte >= 4 && a.slice(0, lengte) === b.slice(0, lengte);
+      });
+    }
+    if (v.dubbel) v.kies = false;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Rechtstreeks bij de bank ophalen
+   ---------------------------------------------------------------
+   Levert precies hetzelfde op als een bestand inlezen: een lijst
+   voorstellen die jij eerst nakijkt. Het verschil is dat de bank een
+   eigen kenmerk per boeking meestuurt, zodat dubbel binnenhalen echt
+   onmogelijk wordt in plaats van onwaarschijnlijk.
+   --------------------------------------------------------------- */
+async function haalVanBank() {
+  if (!eisBewerkrecht()) return;
+
+  /* Een week terug vanaf de vorige keer: banken boeken wel eens met
+     vertraging, en een regel die we al hebben valt er toch uit. */
+  let vanaf = null;
+  if (Bank.bank.laatst) {
+    vanaf = new Date(Bank.bank.laatst - 7 * 86400_000).toISOString().slice(0, 10);
+  }
+
+  meld();
+  let uit;
+  try {
+    uit = await Bank.haalTransacties({ vanaf, alles: !Bank.bank.laatst });
+  } catch (fout) {
+    melding(fout.message, "fout");
+    return meld();
+  }
+
+  if (!uit.transacties.length) {
+    melding("Er stonden geen nieuwe boekingen klaar.", "goed");
+    return meld();
+  }
+
+  voorstellen = uit.transacties.map(r => {
+    const soort = r.soort === "inkomst" ? "inkomst" : "uitgave";
+    const omschrijving = r.omschrijving || r.tegenpartij || "Bankboeking";
+    const categorie = raadCategorie(omschrijving, soort);
+    return {
+      transactie: {
+        datum: r.datum || vandaagISO(),
+        bedrag: Math.abs(Number(r.bedrag) || 0),
+        soort,
+        omschrijving,
+        categorie,
+        potje: soort === "uitgave" ? raadPotje(omschrijving, categorie) : "",
+        rekening: rekeningKeuze,
+        /* Het kenmerk van de bank. Hierop ontdubbelen we voortaan. */
+        bankRef: r.ref || "",
+      },
+      dubbel: false,
+      kies: true,
+    };
+  }).filter(v => v.transactie.bedrag > 0);
+
+  markeerDubbel();
+  voorstellen.sort((a, b) => b.transactie.datum.localeCompare(a.transactie.datum));
+
+  const nieuw = voorstellen.filter(v => !v.dubbel).length;
+  if (uit.afgekapt) {
+    melding("Er was meer dan in één ronde paste. Haal zo nog een keer op.", "let-op");
+  }
+  melding(nieuw
+    ? `${nieuw} nieuwe ${nieuw === 1 ? "boeking" : "boekingen"} gevonden.`
+    : "Alles stond er al in.", "goed");
+
   stap = "controleren";
   meld();
 }
