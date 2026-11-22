@@ -179,14 +179,23 @@ td.bedrag, .staaf__waarde { font-variant-numeric: tabular-nums; }
   position: sticky; top: 0; z-index: 40;
   display: flex; align-items: center; gap: 10px;
   padding: 10px 16px;
-  background: color-mix(in srgb, var(--achtergrond) 82%, transparent);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  /* Een doorschijnende balk leest prettig, maar niet als de titel
+     erdoorheen begint te vervagen. Vandaar minder doorzicht, en geen
+     saturate: dat laatste kost op de iPhone scherpte zonder dat je er
+     iets voor terugkrijgt. */
+  background: color-mix(in srgb, var(--achtergrond) 94%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--rand-zacht);
   min-height: 56px;
 }
 .kop__titel { flex: 1; min-width: 0; }
-.kop__titel h1 { font-size: 1.2rem; }
+.kop__titel h1 {
+  /* 700 en niet het 660 van de andere koppen: een tussengewicht laat
+     de iPhone zelf verdikken, en dat wordt een vlekkerige letter. */
+  font-size: 1.24rem; font-weight: 700; color: var(--tekst);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .kop__sub {
   font-size: .76rem; color: var(--tekst-dof); margin-top: 1px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -357,6 +366,9 @@ button.maandkiezer__nu { color: var(--accent); }
   background: var(--vlak-hoog); border: 1px solid var(--rand-zacht);
   border-radius: 12px; font-size: 1rem;
   -webkit-tap-highlight-color: transparent;
+  /* Sommige van deze knopjes zijn links (⚙️, 💬). Zonder dit krijgen
+     juist díe een groen streepje eronder en de rest niet. */
+  text-decoration: none; color: inherit;
 }
 .icoonknop--kaal { background: none; border: 0; }
 .icoonknop--actief { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
