@@ -243,6 +243,8 @@ js/koppeling.js         meelezen met de boodschappenapp (Firestore REST)
 js/bank.js              je bank uitlezen — praat met bank/worker.js
 js/vraag.js             vragen over je cijfers beantwoorden, op je apparaat
 js/views/vragen.js      het gespreksvenster
+test/vragen.html        testpagina: doen alle vraagvormen het nog?
+test/vragen.js          de testvragen zelf — hier zet je er een bij
 bank/worker.js          het dienstje dat de sleutel bewaart (Cloudflare)
 bank/README.md          hoe je dat opzet
 js/util.js              opmaak, maanden, dialogen, grafiekjes
@@ -308,6 +310,13 @@ Dat klopt: een potje van het soort *vaste last* houdt geen saldo bij. Het bedrag
 gaat er elke maand af en telt mee in je verdeling, meer valt er niet over te
 zeggen. Wil je het toch volgen, zet het potje dan op *sparen* of *vrij te
 besteden*.
+
+**Begrijpt de vraagbalk mijn vraag niet?**
+Open `test/vragen.html` in je browser. Daar staan alle vraagvormen die de app kent, met
+een vinkje of ze het nog doen. Onderaan kun je je eigen vraag intikken: je ziet dan welke
+herkenner hem oppakt, en krijgt een regel die je in `test/vragen.js` kunt plakken zodat
+hij voortaan meegetest wordt. Een nieuwe vraagvorm maken is één item in de lijst
+`HERKENNERS` in `js/vraag.js`.
 
 **Ik zie een oude versie van de app.**
 Dat hoort niet meer te gebeuren. Staat de app op je beginscherm, dan sluit je hem

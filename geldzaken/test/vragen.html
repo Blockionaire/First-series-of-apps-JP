@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geldzaken — testvragen</title>
+<link rel="icon" href="../icons/icon-192.png" type="image/png">
+<link rel="stylesheet" href="../css/app.css">
+<style>
+  body { padding: 0; }
+  main { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+  .uitslag { display: flex; gap: 10px; margin: 16px 0; }
+  .uitslag .cijfer { flex: 1; }
+  .rijtje {
+    display: grid; grid-template-columns: 1.6em 1fr auto;
+    gap: 10px; align-items: baseline;
+    padding: 9px 2px; border-bottom: 1px solid var(--rand-zacht);
+    font-size: .88rem;
+  }
+  .rijtje:last-child { border-bottom: 0; }
+  .rijtje__merk { font-size: 1rem; }
+  .rijtje__uitleg { grid-column: 2 / -1; font-size: .8rem; color: var(--tekst-dof); }
+  .rijtje__uitleg code { font-size: .78rem; }
+  .is-fout { color: var(--fout); }
+  .is-goed .rijtje__merk { color: var(--goed); }
+  details > summary { cursor: pointer; padding: 10px 0; font-weight: 620; }
+  .proefbalk { display: flex; gap: 8px; margin-top: 10px; }
+  .proefbalk input { flex: 1; padding: 11px 13px; border-radius: var(--radius-s);
+                     background: var(--vlak-diep); border: 1px solid var(--rand); }
+  pre.regel {
+    background: var(--vlak-diep); border: 1px solid var(--rand);
+    border-radius: var(--radius-s); padding: 10px 12px; margin: 10px 0 0;
+    font-size: .8rem; overflow-x: auto; white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Testvragen</h1>
+  <p style="color:var(--tekst-zacht);font-size:.9rem">
+    Elke vraag hieronder gaat door de vraagbalk van de app, met een verzonnen huishouden
+    als proefkonijn. Staat er een vinkje, dan pakt de juiste herkenner hem op.
+  </p>
+
+  <div class="signaal signaal--info">
+    <span class="signaal__icoon">🔒</span>
+    <span>
+      <span class="signaal__titel">Je eigen cijfers blijven buiten schot</span>
+      <span class="signaal__tekst">Deze pagina zet een verzonnen huishouden in het geheugen
+        en slaat niets op. Er wordt niets uit je database gelezen en niets naar geschreven.</span>
+    </span>
+  </div>
+
+  <div id="uitslag"></div>
+  <div id="lijst"></div>
+
+  <div class="sectiekop"><h2>Zelf een vraag proberen</h2></div>
+  <div class="kaart">
+    <p style="font-size:.86rem;color:var(--tekst-zacht);margin:0">
+      Tik een vraag in en kijk welke herkenner hem oppakt. Werkt hij zoals je wilt, dan
+      krijg je de regel die je in <code>test/vragen.js</code> kunt plakken.
+    </p>
+    <div class="proefbalk">
+      <input type="text" id="proef" placeholder="Bijvoorbeeld: wat kost mijn auto per maand?" autocomplete="off">
+      <button class="knop knop--primair" id="proefknop">Proberen</button>
+    </div>
+    <div id="proefuit"></div>
+  </div>
+</main>
+
+<script type="module">
+import { maandNu, maandPlus, esc } from "../js/util.js";
+import { state } from "../js/store.js";
+import { beantwoord } from "../js/vraag.js";
+import { TESTVRAGEN, proefHuishouden } from "./vragen.js";
+
+/* Het verzonnen huishouden in het geheugen zetten. `start()` uit
+   store.js roepen we met opzet niet aan, dus er komt niets uit de
+   database en er gaat niets naar toe. */
+proefHuishouden(state, maandNu, maandPlus);
+
+const uitkomsten = TESTVRAGEN.map(t => {
+  let antwoord = null, stuk = null;
+  try { antwoord = beantwoord(t.vraag); } catch (e) { stuk = e.message; }
+  const kreeg = antwoord?.herkenner ?? null;
+  return { ...t, antwoord, kreeg, stuk, goed: !stuk && kreeg === t.hoort };
+});
+
+const fout = uitkomsten.filter(u => !u.goed);
+const goed = uitkomsten.length - fout.length;
+
+document.querySelector("#uitslag").innerHTML = `
+  <div class="uitslag">
+    <div class="cijfer">
+      <div class="cijfer__waarde ${fout.length ? "" : "op"}">${goed}</div>
+      <div class="cijfer__label">goed</div>
+    </div>
+    <div class="cijfer">
+      <div class="cijfer__waarde ${fout.length ? "af" : "dof"}">${fout.length}</div>
+      <div class="cijfer__label">fout</div>
+    </div>
+    <div class="cijfer">
+      <div class="cijfer__waarde">${uitkomsten.length}</div>
+      <div class="cijfer__label">vragen</div>
+    </div>
+  </div>`;
+
+const rij = u => {
+  const uitleg = u.stuk
+    ? `liep stuk: ${esc(u.stuk)}`
+    : u.goed
+      ? esc(u.antwoord?.tekst || "geen antwoord, en dat hoort zo")
+      : u.hoort === null
+        ? `hier hoorde niets op te komen, maar <code>${esc(u.kreeg)}</code> antwoordde: ${esc(u.antwoord.tekst)}`
+        : u.kreeg === null
+          ? `niet herkend — verwacht <code>${esc(u.hoort)}</code>`
+          : `opgepakt door <code>${esc(u.kreeg)}</code> in plaats van <code>${esc(u.hoort)}</code>`;
+
+  return `
+    <div class="rijtje ${u.goed ? "is-goed" : "is-fout"}">
+      <span class="rijtje__merk">${u.goed ? "✓" : "✗"}</span>
+      <span>${esc(u.vraag)}</span>
+      <span class="dof" style="font-size:.76rem">${esc(u.hoort ?? "— niets —")}</span>
+      <span class="rijtje__uitleg">${uitleg}</span>
+    </div>`;
+};
+
+document.querySelector("#lijst").innerHTML = `
+  ${fout.length ? `
+    <div class="sectiekop"><h2 class="is-fout">Deze gaan mis</h2></div>
+    <div class="kaart">${fout.map(rij).join("")}</div>` : `
+    <div class="signaal signaal--goed">
+      <span class="signaal__icoon">✅</span>
+      <span><span class="signaal__titel">Alles klopt</span>
+      <span class="signaal__tekst">Alle ${uitkomsten.length} vragen komen bij de juiste herkenner terecht.</span></span>
+    </div>`}
+
+  <details ${fout.length ? "" : "open"}>
+    <summary>Alle ${uitkomsten.length} vragen</summary>
+    <div class="kaart">${uitkomsten.map(rij).join("")}</div>
+  </details>`;
+
+/* ------------------------- Zelf proberen ------------------------- */
+const veld = document.querySelector("#proef");
+const uit = document.querySelector("#proefuit");
+
+function probeer() {
+  const vraag = veld.value.trim();
+  if (!vraag) { uit.innerHTML = ""; return; }
+
+  let a = null, stuk = null;
+  try { a = beantwoord(vraag); } catch (e) { stuk = e.message; }
+
+  if (stuk) {
+    uit.innerHTML = `<div class="veld__fout">Liep stuk: ${esc(stuk)}</div>`;
+    return;
+  }
+  if (!a) {
+    uit.innerHTML = `
+      <p style="font-size:.88rem;margin:12px 0 0">
+        Niemand pakt deze vraag op. In de app zegt hij dan eerlijk dat hij het niet weet.
+      </p>
+      <pre class="regel">  { vraag: ${JSON.stringify(vraag)}, hoort: null },</pre>`;
+    return;
+  }
+  uit.innerHTML = `
+    <p style="font-size:.88rem;margin:12px 0 0">
+      Opgepakt door <code>${esc(a.herkenner)}</code>:<br>
+      <strong>${esc(a.tekst)}</strong>
+    </p>
+    ${a.regels?.length ? `<div class="veld__hint">${a.regels.length} regels eronder.</div>` : ""}
+    <pre class="regel">  { vraag: ${JSON.stringify(vraag)}, hoort: ${JSON.stringify(a.herkenner)} },</pre>`;
+}
+
+document.querySelector("#proefknop").addEventListener("click", probeer);
+veld.addEventListener("keydown", e => { if (e.key === "Enter") probeer(); });
+</script>
+</body>
+</html>
