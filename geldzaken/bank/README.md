@@ -125,6 +125,36 @@ opnieuw in.
 
 ---
 
+## Vrij vragen met Claude (optioneel)
+
+In de app zit een vraagbalk (💬 rechtsboven) die je gegevens doorzoekt **op je eigen
+apparaat**: direct, gratis, offline, en er verlaat geen cijfer je telefoon. Dat vangt de
+gewone vragen af — uitgaven per potje, wat er nog over is, waar je geld heen gaat, je
+inkomen, je spaardoelen, je budget.
+
+Wil je ook vragen kunnen stellen die ik niet heb voorzien, dan kan de app ze doorgeven
+aan Claude. Dat gaat via dezelfde dienst, met jouw eigen sleutel:
+
+```sh
+npx wrangler secret put CLAUDE_SLEUTEL      # een sleutel van console.anthropic.com
+```
+
+Zet het daarna aan onder **⚙️ → Je bank → Vrij vragen met Claude**. Zonder sleutel
+bestaat dat pad niet: de dienst weigert de vraag gewoon.
+
+**Wat er dan wordt verstuurd:** een samenvatting in cijfers. Je inkomen, per potje het
+maandbedrag en wat eruit ging, je spaarsaldo's, je doelen, en hoeveel boekingen je nog
+niet hebt ingedeeld. **Niet** je losse boekingen, niet de namen van winkels, niet je
+rekeningnummers. Je kunt precies nalezen wat eroverheen gaat in `samenvatting()` in
+`js/vraag.js`.
+
+Staat het uit, dan zegt de vraagbalk bij een onbekende vraag gewoon dat hij het niet
+weet. Er wordt dan niets verstuurd.
+
+Kosten zijn een paar cent per vraag, rechtstreeks bij Anthropic op jouw account.
+
+---
+
 ## Wat je mag verwachten
 
 | | |

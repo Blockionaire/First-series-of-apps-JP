@@ -92,6 +92,19 @@ erbij:
   wat er deze maand is afgerekend. Hang het aan je potje Boodschappen en je ziet
   meteen wat er nog over is. Er wordt alleen gelezen: er komen geen boekingen bij, dus
   er telt ook niets dubbel als je daarnaast je bankafschrift inleest.
+- **Gepland tegenover besteed** — op de Cijfers-tab staat per potje wat je ervoor had
+  gezet naast wat er werkelijk uitging, met de overschrijdingen eruit gelicht. Wat aan
+  geen enkel potje hangt krijgt een eigen regel, zodat een bankafschrift vol
+  ongesorteerde boekingen niet stilletjes verdwijnt.
+- **De app leert van je correcties** — zet je een boeking onder een ander potje of een
+  andere categorie, dan onthoudt hij dat en staat dezelfde winkel de volgende keer
+  vanzelf goed. Bij een boeking van de bank leert hij op de tegenpartij, want die naam
+  is schoner dan de omschrijving.
+- **Vragen stellen** (💬 rechtsboven) — "hoeveel gaf ik uit aan boodschappen", "wat is er
+  nog over", "ga ik over mijn budget". De app rekent het antwoord uit op je eigen
+  apparaat: direct, gratis, offline, en er verlaat niets je telefoon. Wie vrijer wil
+  kunnen vragen kan Claude aanzetten via zijn eigen dienst; dan gaat er een samenvatting
+  in cijfers mee, geen losse boekingen. Zie [`bank/README.md`](bank/README.md).
 - **Spaardoelen** met streefbedrag en datum: wat moet er per maand bij, en lig je
   op schema?
 - **Rekeningen en vermogen**, met saldo gelijkzetten met je bank.
@@ -228,6 +241,8 @@ js/db.js                IndexedDB
 js/sync.js              inloggen, lidmaatschap en Firestore
 js/koppeling.js         meelezen met de boodschappenapp (Firestore REST)
 js/bank.js              je bank uitlezen — praat met bank/worker.js
+js/vraag.js             vragen over je cijfers beantwoorden, op je apparaat
+js/views/vragen.js      het gespreksvenster
 bank/worker.js          het dienstje dat de sleutel bewaart (Cloudflare)
 bank/README.md          hoe je dat opzet
 js/util.js              opmaak, maanden, dialogen, grafiekjes

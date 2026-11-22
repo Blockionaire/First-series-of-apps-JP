@@ -288,6 +288,22 @@ function bankBlok() {
         De dienst bewaart niets: hij haalt op, geeft door en vergeet. Je transacties
         komen in deze app terecht, op dit apparaat — en pas nadat jij ze hebt nagekeken.
       </div>
+
+      <div class="schakelrij" style="margin-top:4px">
+        <span class="schakelrij__tekst">
+          <span class="schakelrij__titel">Vrij vragen met Claude</span>
+          <span class="schakelrij__uitleg">
+            Bij ⚙️ → 💬 kun je vragen stellen over je geld. Dat rekent de app zelf uit,
+            op dit apparaat. Zet dit aan en vragen die hij niet herkent gaan via je eigen
+            dienst naar Claude — met een samenvatting in cijfers, geen losse boekingen.
+            Je hebt er een Claude-sleutel in je dienst voor nodig.
+          </span>
+        </span>
+        <label class="schakelaar">
+          <input type="checkbox" data-bank-ai ${b.aiAan ? "checked" : ""}>
+          <span class="schakelaar__spoor"></span>
+        </label>
+      </div>
     </div>`;
 }
 
@@ -530,6 +546,7 @@ export function koppel(wortel, params) {
     if (e.target.matches("[data-koppeling]")) zetKoppeling({ aan: e.target.checked });
     if (e.target.id === "koppelpot") zetKoppeling({ potje: e.target.value });
     if (e.target.matches("[data-potjes]")) zetInstelling({ potjesAutomatisch: e.target.checked });
+    if (e.target.matches("[data-bank-ai]")) Bank.zetInstellingen({ aiAan: e.target.checked });
   });
 
   wortel.addEventListener("click", async e => {

@@ -28,6 +28,7 @@ import * as Cijfers     from "./views/cijfers.js";
 import * as Instellingen from "./views/instellingen.js";
 import * as Beheer      from "./views/beheer.js";
 import * as Importeren  from "./views/importeren.js";
+import * as Vragen      from "./views/vragen.js";
 import * as Toegang     from "./views/toegang.js";
 
 /* ---------------------------------------------------------------
@@ -52,12 +53,14 @@ const SCHERMEN = {
   instellingen: Instellingen,
   beheer:       Beheer,
   importeren:   Importeren,
+  vragen:       Vragen,
 };
 
 const TAB_VAN_SCHERM = {
   start: "start", overzicht: "start", instellingen: "start", beheer: "start",
   rekeningen: "start", inkomen: "start",
   maand: "maand", importeren: "maand",
+  vragen: "cijfers",
   boeken: "boeken",
   verdelen: "verdelen",
   potjes: "potjes", doelen: "potjes",

@@ -524,17 +524,62 @@ export function raadCategorie(omschrijving, soort = "uitgave") {
   return "";
 }
 
-/* Onthoudt de eerste twee woorden van een omschrijving als trefwoord.
-   "Albert Heijn 1234 Amsterdam" wordt dus "albert heijn". */
-function leerRegel(omschrijving, categorieId) {
-  const kern = normaliseer(omschrijving).replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 2).slice(0, 2).join(" ");
+/* Onthoudt waar je iets onder hebt gezet, zodat het de volgende keer
+   vanzelf goed staat.
+
+   Het trefwoord is de kern van de naam: "Albert Heijn 1234 Amsterdam"
+   wordt "albert heijn". Komt de boeking van de bank, geef dan de
+   tegenpartij mee — die is veel schoner dan de omschrijving, waar de
+   bank pasnummers en plaatsnamen in kwijt wil.
+
+   Een regel kan een categorie bevatten, een potje, of allebei. Alleen
+   wat je meegeeft wordt bijgewerkt; de rest blijft staan. */
+export function leerRegel(omschrijving, { categorie = null, potje = null } = {}) {
+  if (categorie == null && potje == null) return;
+
+  const kern = normaliseer(omschrijving)
+    .replace(/[^a-z0-9 ]/g, " ")
+    .split(/\s+/).filter(w => w.length > 2).slice(0, 2).join(" ");
   if (kern.length < 4) return;
+
   const bestaand = state.regels.find(r => normaliseer(r.trefwoord) === kern);
+  const velden = {};
+  if (categorie != null) velden.categorie = categorie;
+  if (potje != null) velden.potje = potje;
+
   if (bestaand) {
-    if (bestaand.categorie !== categorieId) bewaar("regels", { ...bestaand, categorie: categorieId });
+    const anders = Object.entries(velden).some(([k, v]) => bestaand[k] !== v);
+    if (anders) bewaar("regels", { ...bestaand, ...velden });
     return;
   }
-  bewaar("regels", { id: nieuweId(), trefwoord: kern, categorie: categorieId, aangemaakt: nu(), bijgewerkt: nu() });
+  bewaar("regels", { id: nieuweId(), trefwoord: kern, categorie: "", potje: "", ...velden,
+                     aangemaakt: nu(), bijgewerkt: nu() });
+}
+
+/* Bij welk potje hoort deze uitgave? Eerst je eigen regels, dan de naam
+   van het potje zelf, dan via de categorie. */
+export function raadPotje(omschrijving, categorieId = "") {
+  const potjes = state.potjes.filter(p => p.actief !== false);
+  if (!potjes.length) return "";
+
+  const tekst = normaliseer(omschrijving);
+  if (!tekst) return "";
+
+  const eigen = state.regels
+    .filter(r => r.potje && r.trefwoord && tekst.includes(normaliseer(r.trefwoord)))
+    .sort((a, b) => b.trefwoord.length - a.trefwoord.length)[0];
+  if (eigen && potjes.some(p => p.id === eigen.potje)) return eigen.potje;
+
+  const direct = potjes.find(p => p.naam.length > 3 && tekst.includes(normaliseer(p.naam)));
+  if (direct) return direct.id;
+
+  const cat = state.categorieen.find(c => c.id === categorieId);
+  if (cat) {
+    const kern = normaliseer(cat.naam).split(/[^a-z0-9]+/)[0];
+    const viaCategorie = potjes.find(p => kern.length > 3 && normaliseer(p.naam).includes(kern));
+    if (viaCategorie) return viaCategorie.id;
+  }
+  return "";
 }
 
 export const bewaarRegel = r => bewaar("regels", r);

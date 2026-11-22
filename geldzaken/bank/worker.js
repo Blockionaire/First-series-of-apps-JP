@@ -90,6 +90,9 @@ export default {
       if (url.pathname === "/loskoppelen" && verzoek.method === "POST") {
         return antwoord(await loskoppelen(verzoek, omgeving), 200, herkomst);
       }
+      if (url.pathname === "/vraag" && verzoek.method === "POST") {
+        return antwoord(await vraag(verzoek, omgeving), 200, herkomst);
+      }
 
       return antwoord({ fout: "Onbekend pad." }, 404, herkomst);
     } catch (e) {
@@ -494,4 +497,68 @@ async function loskoppelen(verzoek, omgeving) {
   const sessie = sessieUit(await lijf(verzoek));
   await bij(omgeving, `/sessions/${encodeURIComponent(sessie)}`, { method: "DELETE" });
   return { losgekoppeld: true };
+}
+
+/* ---------------------------------------------------------------
+   Een vraag voorleggen aan Claude
+   ---------------------------------------------------------------
+   Optioneel, en standaard niet aan: zonder CLAUDE_SLEUTEL bestaat dit
+   pad niet. De app stuurt een samenvatting in cijfers mee die hij zelf
+   heeft samengesteld — geen losse boekingen, geen tegenpartijen, geen
+   rekeningnummers. Wij geven die ongewijzigd door en sturen het
+   antwoord terug. Ook hier wordt niets bewaard.
+   --------------------------------------------------------------- */
+const CLAUDE = "https://api.anthropic.com/v1/messages";
+const MODEL = "claude-sonnet-5-5";
+
+async function vraag(verzoek, omgeving) {
+  if (!omgeving.CLAUDE_SLEUTEL) {
+    throw mis("Er is geen Claude-sleutel ingesteld in je bankdienst.", 501);
+  }
+
+  const { vraag: tekst, samenvatting, eerder = [] } = await lijf(verzoek);
+  if (!tekst || String(tekst).length > 2000) throw mis("Geen bruikbare vraag.");
+  if (!samenvatting || typeof samenvatting !== "object") throw mis("Geen samenvatting meegestuurd.");
+
+  /* Het gesprek tot nu toe, maar met een rem erop: een lang gesprek
+     kost geld en zegt zelden meer dan de laatste paar beurten. */
+  const beurten = (Array.isArray(eerder) ? eerder : []).slice(-6)
+    .filter(b => b && typeof b.tekst === "string" && b.tekst.length < 2000)
+    .map(b => ({ role: b.rol === "assistant" ? "assistant" : "user", content: String(b.tekst) }));
+
+  const opdracht =
+    "Je helpt iemand met zijn eigen huishoudboekje in de app Geldzaken. " +
+    "Antwoord in het Nederlands, in twee of drie zinnen, nuchter en zonder opsmuk. " +
+    "Reken alleen met de cijfers hieronder; verzin er niets bij en zeg het als iets er niet in staat. " +
+    "Bedragen in euro's met een komma als decimaalteken. " +
+    "Geef geen financieel advies over beleggen, leningen of verzekeringen — " +
+    "verwijs daarvoor naar een echte adviseur.\n\n" +
+    "De cijfers van deze maand:\n" + JSON.stringify(samenvatting);
+
+  const antw = await fetch(CLAUDE, {
+    method: "POST",
+    headers: {
+      "x-api-key": omgeving.CLAUDE_SLEUTEL,
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: omgeving.CLAUDE_MODEL || MODEL,
+      max_tokens: 400,
+      system: opdracht,
+      messages: [...beurten, { role: "user", content: String(tekst) }],
+    }),
+  });
+
+  if (!antw.ok) {
+    if (antw.status === 401) throw mis("De Claude-sleutel wordt niet geaccepteerd.", 502);
+    if (antw.status === 429) throw mis("Even te veel vragen achter elkaar. Probeer het zo weer.", 429);
+    throw mis("Claude is nu niet bereikbaar.", 502);
+  }
+
+  const gegevens = await antw.json();
+  const tekstUit = (gegevens?.content || [])
+    .filter(d => d?.type === "text").map(d => d.text).join("").trim();
+
+  return { antwoord: tekstUit || "Daar kan ik niets zinnigs over zeggen." };
 }

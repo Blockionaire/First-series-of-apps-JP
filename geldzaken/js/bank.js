@@ -32,6 +32,7 @@ export const bank = {
   rekeningNaam: "",
   geldigTot: "",        // wanneer de toestemming verloopt
   laatst: 0,            // wanneer er voor het laatst is opgehaald
+  aiAan: false,         // mag een niet-herkende vraag naar Claude?
   bezig: false,
   fout: null,
 };
@@ -67,9 +68,10 @@ async function bewaar() {
   catch { /* zonder opslag blijft het bij deze sessie */ }
 }
 
-export async function zetInstellingen({ adres, woord }) {
+export async function zetInstellingen({ adres, woord, aiAan }) {
   if (adres !== undefined) bank.adres = String(adres).trim().replace(/\/+$/, "");
   if (woord !== undefined) bank.woord = String(woord).trim();
+  if (aiAan !== undefined) bank.aiAan = !!aiAan;
   bank.fout = null;
   await bewaar();
 }
@@ -78,7 +80,7 @@ export async function zetInstellingen({ adres, woord }) {
 export async function vergeetAlles() {
   Object.assign(bank, {
     adres: "", woord: "", sessie: "", bankNaam: "", rekening: "",
-    rekeningNaam: "", geldigTot: "", laatst: 0, fout: null,
+    rekeningNaam: "", geldigTot: "", laatst: 0, aiAan: false, fout: null,
   });
   try { await dbWis(LOKAAL, SLEUTEL); } catch { /* niets aan te doen */ }
 }
@@ -226,4 +228,24 @@ export async function haalTransacties({ vanaf = null, alles = false } = {}) {
   } finally {
     bank.bezig = false;
   }
+}
+
+/* ---------------------------------------------------------------
+   Een vraag voorleggen aan Claude
+   ---------------------------------------------------------------
+   Alleen als jij dat hebt aangezet, en alleen met de samenvatting die
+   vraag.js maakt: cijfers per potje, je inkomen, je doelen. Geen losse
+   boekingen, geen namen van winkels, geen rekeningnummers. Wat er
+   precies overheen gaat kun je nalezen in `samenvatting()`.
+   --------------------------------------------------------------- */
+export async function vraagAanAI(vraag, eerder = []) {
+  if (!bank.aiAan) throw new Error("Claude staat uit.");
+  const { samenvatting } = await import("./vraag.js");
+
+  const uit = await roep("/vraag", {
+    methode: "POST",
+    lijf: { vraag, eerder, samenvatting: samenvatting() },
+  });
+  if (!uit.antwoord) throw new Error("Er kwam geen antwoord terug.");
+  return uit.antwoord;
 }

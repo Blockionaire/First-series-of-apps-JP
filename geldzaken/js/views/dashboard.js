@@ -26,6 +26,7 @@ export function kopActies() {
   const s = Sync.sync;
   const stipSoort = !s.beschikbaar ? "" : s.fout ? "fout" : s.bezig ? "bezig" : s.actief ? "aan" : "";
   return `
+    <a class="icoonknop" href="#/vragen" aria-label="Vragen over je geld">💬</a>
     <button class="icoonknop ${state.instellingen.privacy ? "icoonknop--actief" : ""}"
             data-privacy aria-label="Bedragen verbergen">${state.instellingen.privacy ? "🙈" : "👁️"}</button>
     <a class="icoonknop" href="#/instellingen" aria-label="Instellingen">⚙️</a>

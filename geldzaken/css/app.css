@@ -1022,3 +1022,86 @@ hr.scheiding { border: 0; border-top: 1px solid var(--rand-zacht); margin: 18px 
 .soortkeuze__icoon { font-size: 1.25rem; flex: none; }
 .soortkeuze__titel { display: block; font-weight: 640; font-size: .92rem; }
 .soortkeuze__uitleg { display: block; font-size: .77rem; color: var(--tekst-dof); margin-top: 1px; }
+
+/* ---------------- Gepland tegenover besteed (Cijfers) --------------- */
+/* Twee balken over elkaar: de lichte is wat je had gepland, de volle
+   wat eruit ging. Steekt de volle erbovenuit, dan zie je dat meteen. */
+.planrij {
+  display: grid; grid-template-columns: minmax(84px, 1.1fr) 1.3fr auto;
+  align-items: center; gap: 10px; width: 100%;
+  padding: 9px 2px; text-align: left; color: inherit;
+  background: none; border: 0;
+}
+.planrij:active { opacity: .6; }
+.planrij__naam {
+  font-size: .84rem; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.planrij__spoor { position: relative; height: 18px; }
+.planrij__budget {
+  position: absolute; left: 0; top: 4px; height: 10px;
+  border-radius: 999px; background: var(--vlak-diep);
+  border: 1px dashed var(--rand);
+}
+.planrij__besteed {
+  position: absolute; left: 0; top: 6px; height: 6px;
+  border-radius: 999px; background: var(--accent);
+  transition: width .4s ease;
+}
+.planrij__besteed.is-over { background: var(--uitgave); top: 4px; height: 10px; }
+.planrij__cijfers { text-align: right; }
+.planrij__bedrag { display: block; font-size: .84rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.planrij__bij { display: block; font-size: .7rem; }
+
+/* --------------------------- Vragen stellen ------------------------- */
+.gesprek { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+.bericht { display: flex; }
+.bericht--jij { justify-content: flex-end; }
+.bericht--app { justify-content: flex-start; }
+.bericht__bel {
+  max-width: 85%;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  font-size: .9rem; line-height: 1.45;
+}
+.bericht--jij .bericht__bel {
+  background: var(--accent); color: var(--op-accent);
+  border-bottom-right-radius: 6px; font-weight: 580;
+}
+.bericht--app .bericht__bel {
+  background: var(--vlak); border: 1px solid var(--rand-zacht);
+  border-bottom-left-radius: 6px;
+}
+.bericht__regels { margin-top: 9px; border-top: 1px solid var(--rand-zacht); padding-top: 7px; }
+.bericht__regel {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 3px 0; font-size: .84rem;
+}
+.bericht__regel-naam { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bericht__link { display: inline-block; margin-top: 8px; font-size: .82rem; font-weight: 620; }
+.bericht__bron { font-size: .68rem; margin-top: 7px; }
+
+.suggesties { display: flex; flex-wrap: wrap; gap: 7px; margin: 14px 0 4px; }
+.chip--vraag { font-size: .8rem; }
+
+/* De vraagbalk plakt onderaan, net boven de tabbalk. */
+.vraagbalk {
+  position: sticky; bottom: calc(var(--balk-hoogte) + var(--veilig-onder) + 8px);
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 14px; padding: 7px;
+  background: var(--vlak-hoog);
+  border: 1px solid var(--rand);
+  border-radius: 999px;
+  box-shadow: var(--schaduw);
+}
+.vraagbalk input {
+  flex: 1; min-width: 0;
+  background: none; border: 0; padding: 6px 10px;
+  font-size: .92rem;
+}
+.vraagbalk input:focus { outline: none; }
+.icoonknop--primair {
+  background: var(--accent); color: var(--op-accent);
+  border-radius: 50%; font-weight: 700;
+}
+.icoonknop--primair:disabled { opacity: .45; }

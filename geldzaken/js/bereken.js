@@ -493,6 +493,67 @@ export function potMaandDetail(state, potje, maand) {
   };
 }
 
+/* ---------------------------------------------------------------
+   Eén maand langs alle potjes
+   ---------------------------------------------------------------
+   Het maandbedrag van een potje ís je budget: dat is wat je erin wilde
+   stoppen. Hier zetten we daar naast wat er werkelijk uitging, zodat je
+   in één blik ziet waar het schuurt.
+
+   Wat nergens bij hoort krijgt een eigen plek. Dat is belangrijker dan
+   het lijkt: een bankafschrift zit vol boekingen die je nooit hebt
+   ingedeeld, en die horen niet stilletjes te verdwijnen.
+   --------------------------------------------------------------- */
+export function potAnalyse(state, maand = maandNu()) {
+  const potjes = state.potjes
+    .filter(p => p.actief !== false && (p.startMaand || "2000-01") <= maand)
+    .map(p => {
+      const stand = potSaldo(state, p, maand);
+      const budget = stand.maandbedrag;
+      const besteed = stand.ditUit;
+      return {
+        id: p.id,
+        potje: p,
+        naam: p.naam,
+        icoon: p.icoon || POTSOORTEN[stand.soort].icoon,
+        kleur: p.kleur || POTSOORTEN[stand.soort].kleur,
+        soort: stand.soort,
+        budget,
+        besteed,
+        over: budget - besteed,
+        deel: budget > 0 ? besteed / budget : null,
+        /* Een vaste last hoef je niet te volgen: die gaat er sowieso af.
+           Alleen als je er tóch boekingen aan hangt is er iets te zien. */
+        telt: stand.soort !== "vast" || besteed > 0,
+      };
+    });
+
+  /* Uitgaven die aan geen enkel potje hangen. */
+  const los = state.transacties.filter(t =>
+    t.soort === "uitgave" && !t.potje && maandVan(t.datum) === maand);
+
+  const nergens = {
+    aantal: los.length,
+    totaal: los.reduce((s, t) => s + (Number(t.bedrag) || 0), 0),
+    transacties: los.sort((a, b) => (Number(b.bedrag) || 0) - (Number(a.bedrag) || 0)),
+  };
+
+  const tellend = potjes.filter(p => p.telt);
+  const budget = tellend.reduce((s, p) => s + p.budget, 0);
+  const besteed = tellend.reduce((s, p) => s + p.besteed, 0);
+
+  return {
+    maand,
+    potjes: potjes.sort((a, b) => b.besteed - a.besteed || b.budget - a.budget),
+    nergens,
+    budget,
+    besteed,
+    /* Potjes waar je overheen ging, duurste eerst. */
+    overschreden: tellend.filter(p => p.budget > 0 && p.besteed > p.budget)
+      .sort((a, b) => (b.besteed - b.budget) - (a.besteed - a.budget)),
+  };
+}
+
 export const potjesMetSaldo = (state, totMaand = maandNu()) =>
   state.potjes
     .map(p => ({ ...p, ...potSaldo(state, p, totMaand) }))

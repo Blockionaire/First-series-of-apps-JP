@@ -13,7 +13,7 @@ import { esc, geld, procent, maandLabel, maandPlus, maandNu, maandVan,
          balken, maandStaven, lijn, ring, datumNL } from "../util.js";
 import { state, meld, categorieNaam } from "../store.js";
 import { maandReeks, maandOverzicht, gemiddelden, vermogenVerloop,
-         vasteLastenPerMaand, vermogen } from "../bereken.js";
+         vasteLastenPerMaand, vermogen, potAnalyse } from "../bereken.js";
 import { leeg } from "./onderdelen.js";
 import { ga } from "../app.js";
 
@@ -21,6 +21,7 @@ export const titel = () => "Cijfers";
 export const ondertitel = () => `Laatste ${periode} maanden`;
 
 let periode = 12;
+let toonNergens = false;
 
 export function html() {
   if (!state.transacties.length) {
@@ -44,6 +45,7 @@ export function html() {
 
     ${staafBlok(reeks)}
     ${kerncijfers(reeks, gem)}
+    ${potAnalyseBlok()}
     ${categorieBlok()}
     ${vasteVerhouding()}
     ${grootsteUitgaven()}
@@ -116,6 +118,88 @@ function kerncijfers(reeks, gem) {
             <span class="${slechtste.saldo < 0 ? "af" : "dof"} bedrag">${geld(slechtste.saldo, { teken: true })}</span></span>
         </div>
       </div>` : ""}`;
+}
+
+/* --------------------- Potjes tegenover de praktijk ----------------- */
+/* Je maandbedrag is je budget. Hier staat ernaast wat er werkelijk
+   uitging. Wat nergens bij hoort komt er expres onder: een
+   bankafschrift zit vol boekingen die je nooit hebt ingedeeld, en die
+   horen niet stilletjes te verdwijnen. */
+function potAnalyseBlok() {
+  const a = potAnalyse(state, state.maand);
+  const metIets = a.potjes.filter(p => p.telt && (p.budget > 0 || p.besteed > 0));
+  if (!metIets.length && !a.nergens.aantal) return "";
+
+  const top = Math.max(...metIets.map(p => Math.max(p.budget, p.besteed)), a.nergens.totaal, 1);
+
+  return `
+    <div class="sectiekop">
+      <h2>Gepland tegenover besteed</h2>
+      <a class="sectiekop__actie" href="#/verdelen">Aanpassen</a>
+    </div>
+    <div class="kaart">
+      <div class="veld__hint" style="margin:0 0 12px">
+        <span style="text-transform:capitalize">${esc(maandLabel(state.maand))}</span> —
+        de lichte balk is wat je ervoor had gezet, de volle wat eruit ging.
+      </div>
+
+      ${metIets.map(p => {
+        const teveel = p.budget > 0 && p.besteed > p.budget;
+        return `
+        <button class="planrij" data-potje="${esc(p.id)}">
+          <span class="planrij__naam">${esc(p.icoon)} ${esc(p.naam)}</span>
+          <span class="planrij__spoor">
+            <span class="planrij__budget" style="width:${((p.budget / top) * 100).toFixed(1)}%"></span>
+            <span class="planrij__besteed ${teveel ? "is-over" : ""}"
+                  style="width:${((p.besteed / top) * 100).toFixed(1)}%;${teveel ? "" : `background:${esc(p.kleur)}`}"></span>
+          </span>
+          <span class="planrij__cijfers">
+            <span class="planrij__bedrag">${geld(p.besteed)}</span>
+            <span class="planrij__bij dof">${p.budget > 0 ? `van ${geld(p.budget)}` : "geen budget"}</span>
+          </span>
+        </button>`;
+      }).join("")}
+
+      ${a.nergens.aantal ? `
+        <button class="planrij" data-nergens aria-expanded="${toonNergens}">
+          <span class="planrij__naam dof">❓ Nergens bij</span>
+          <span class="planrij__spoor">
+            <span class="planrij__besteed" style="width:${((a.nergens.totaal / top) * 100).toFixed(1)}%;background:var(--tekst-dof)"></span>
+          </span>
+          <span class="planrij__cijfers">
+            <span class="planrij__bedrag">${geld(a.nergens.totaal)}</span>
+            <span class="planrij__bij dof">${a.nergens.aantal} ${a.nergens.aantal === 1 ? "boeking" : "boekingen"}</span>
+          </span>
+        </button>
+
+        ${toonNergens ? `
+          <div class="maanddetail" style="padding-left:12px">
+            ${a.nergens.transacties.slice(0, 12).map(t => `
+              <div class="maanddetail__rij">
+                <span class="maanddetail__naam">${esc(t.omschrijving || "Zonder omschrijving")}</span>
+                <span class="maanddetail__bij dof">${esc(datumNL(t.datum, { kort: true, metJaar: false }))}</span>
+                <span class="maanddetail__bedrag bedrag">${geld(t.bedrag)}</span>
+              </div>`).join("")}
+            ${a.nergens.aantal > 12 ? `<div class="veld__hint">…en nog ${a.nergens.aantal - 12}.</div>` : ""}
+            <a class="knop knop--rand knop--breed" href="#/maand" style="margin-top:10px">Indelen bij Boekingen</a>
+          </div>` : ""}
+      ` : ""}
+
+      <div class="deelsom">
+        <span>Samen</span>
+        <span class="bedrag ${a.budget > 0 && a.besteed > a.budget ? "af" : ""}">
+          ${geld(a.besteed)}${a.budget > 0 ? ` van ${geld(a.budget)}` : ""}
+        </span>
+      </div>
+
+      ${a.overschreden.length ? `
+        <div class="veld__hint" style="margin-top:8px">
+          Over het budget heen bij
+          ${a.overschreden.slice(0, 3).map(p =>
+            `<strong>${esc(p.naam)}</strong> (${geld(p.besteed - p.budget)} te veel)`).join(", ")}.
+        </div>` : a.budget > 0 && a.besteed > 0 ? `
+        <div class="veld__hint" style="margin-top:8px">Alles binnen de lijnen deze maand.</div>` : ""}
+    </div>`;
 }
 
 /* -------------------------- Categorieën ----------------------------- */
@@ -277,6 +361,11 @@ export function koppel(wortel) {
   wortel.addEventListener("click", e => {
     const knop = e.target.closest("[data-periode]");
     if (knop) { periode = Number(knop.dataset.periode); return meld(); }
+
+    if (e.target.closest("[data-nergens]")) { toonNergens = !toonNergens; return meld(); }
+
+    const planPot = e.target.closest(".planrij[data-potje]");
+    if (planPot) return ga(`#/potjes/${planPot.dataset.potje}`);
 
     if (e.target.closest("[data-jaar]")) {
       periode = Number(maandNu().slice(5, 7));

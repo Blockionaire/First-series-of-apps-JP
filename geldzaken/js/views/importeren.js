@@ -27,8 +27,8 @@
 
 import { esc, geld, datumNL, melding, kiesBestand, leesTekst,
          normaliseer, vandaagISO } from "../util.js";
-import { state, bewaarVeelTransacties, raadCategorie, standaardRekening,
-         meld, eenvoudig } from "../store.js";
+import { state, bewaarVeelTransacties, raadCategorie, raadPotje, leerRegel,
+         standaardRekening, meld, eenvoudig } from "../store.js";
 import * as Bank from "../bank.js";
 import { BANKPROFIELEN } from "../data/standaard.js";
 import { leeg, rekeningOpties, categorieOpties, potjeOpties } from "./onderdelen.js";
@@ -260,12 +260,20 @@ export function koppel(wortel) {
       voorstellen[Number(e.target.dataset.kies)].kies = e.target.checked;
       return meld();
     }
+    /* Zet jij iets ergens anders onder, dan onthoudt de app dat. De
+       volgende keer staat dezelfde winkel vanzelf goed. Bij een boeking
+       van de bank leren we op de tegenpartij: die naam is schoon,
+       terwijl er in de omschrijving pasnummers en plaatsen staan. */
     if (e.target.matches("[data-cat]")) {
-      voorstellen[Number(e.target.dataset.cat)].transactie.categorie = e.target.value;
+      const v = voorstellen[Number(e.target.dataset.cat)];
+      v.transactie.categorie = e.target.value;
+      if (e.target.value) leerRegel(v.leersleutel || v.transactie.omschrijving, { categorie: e.target.value });
       return;
     }
     if (e.target.matches("[data-pot]")) {
-      voorstellen[Number(e.target.dataset.pot)].transactie.potje = e.target.value;
+      const v = voorstellen[Number(e.target.dataset.pot)];
+      v.transactie.potje = e.target.value;
+      if (e.target.value) leerRegel(v.leersleutel || v.transactie.omschrijving, { potje: e.target.value });
       return;
     }
     if (["kdatum", "komschrijving", "kbedrag", "krichting"].includes(e.target.id)) {
@@ -619,6 +627,9 @@ async function haalVanBank() {
         /* Het kenmerk van de bank. Hierop ontdubbelen we voortaan. */
         bankRef: r.ref || "",
       },
+      /* De naam van de tegenpartij is een veel betere haak om op te
+         leren dan de volledige omschrijving. */
+      leersleutel: r.tegenpartij || omschrijving,
       dubbel: false,
       kies: true,
     };
@@ -639,25 +650,6 @@ async function haalVanBank() {
   meld();
 }
 
-/* Bij welk potje hoort deze uitgave? Eerst kijken of de naam van een
-   potje in de omschrijving voorkomt, daarna of er een potje is dat op
-   de geraden categorie lijkt. Vindt hij niets, dan kies je zelf. */
-function raadPotje(omschrijving, categorieId) {
-  const potjes = state.potjes.filter(p => p.actief !== false);
-  if (!potjes.length) return "";
-
-  const tekst = normaliseer(omschrijving);
-  const direct = potjes.find(p => p.naam.length > 3 && tekst.includes(normaliseer(p.naam)));
-  if (direct) return direct.id;
-
-  const categorie = state.categorieen.find(c => c.id === categorieId);
-  if (categorie) {
-    const kern = normaliseer(categorie.naam).split(/[^a-z0-9]+/)[0];
-    const viaCategorie = potjes.find(p => kern.length > 3 && normaliseer(p.naam).includes(kern));
-    if (viaCategorie) return viaCategorie.id;
-  }
-  return "";
-}
 
 /* Datums komen in alle smaken binnen. */
 function leesDatum(waarde) {
