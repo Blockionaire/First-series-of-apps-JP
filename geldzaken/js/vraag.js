@@ -50,6 +50,15 @@ export function leesMaand(vraag) {
   return { maand: state.maand, expliciet: false };
 }
 
+/* Noemt iemand een winkel of tegenpartij? "bij Albert Heijn", "van
+   Vattenfall". Alleen als het geen potje is — dat gaat voor. */
+export function leesTegenpartij(vraag) {
+  const m = normaliseer(vraag).match(/\b(?:bij|van)\s+([a-z0-9][a-z0-9 .'&-]{2,30}?)\s*\??$/);
+  const naam = (m?.[1] || "").trim();
+  if (!naam || /maand|jaar|week|mij|mezelf|plan|budget/.test(naam)) return "";
+  return naam;
+}
+
 /* Welk potje bedoelt iemand? Op naam, ook als er maar een deel staat. */
 export function leesPotje(vraag) {
   const t = normaliseer(vraag);
@@ -71,6 +80,37 @@ const maandenVan = jaar => Array.from({ length: 12 }, (_, i) => `${jaar}-${Strin
    die iets teruggeeft wint, dus de specifieke staan boven.
    --------------------------------------------------------------- */
 const HERKENNERS = [
+
+  /* "is dat meer dan vorige maand" — vergelijken met de maand ervoor */
+  {
+    naam: "vergelijken met vorige maand",
+    kan: t => /meer dan|minder dan|vergelek|vergelijk|tegenover|dan vorige|dan vorig/.test(t),
+    doe: (t, vraag) => {
+      const potje = leesPotje(vraag);
+      const nu = state.maand;
+      const eerder = maandPlus(nu, -1);
+
+      const som = m => potje
+        ? potSaldo(state, potje, m).ditUit
+        : (() => { const a = potAnalyse(state, m); return a.besteed + a.nergens.totaal; })();
+
+      const a = som(nu), b = som(eerder);
+      const waarover = potje ? potje.naam : "Bij elkaar";
+      if (b === 0 && a === 0) return zin(`In ${maandLabel(nu)} en ${maandLabel(eerder)} staat er niets geboekt om te vergelijken.`);
+
+      const verschil = a - b;
+      return {
+        tekst: `${waarover}: ${geld(a)} in ${maandLabel(nu)}, tegen ${geld(b)} in ${maandLabel(eerder)}. ` +
+          (Math.abs(verschil) < 0.5 ? "Vrijwel gelijk."
+            : verschil > 0 ? `Dat is ${geld(verschil)} méér.` : `Dat is ${geld(-verschil)} minder.`),
+        regels: [
+          { naam: maandLabel(nu, { kort: true }), bedrag: a },
+          { naam: maandLabel(eerder, { kort: true }), bedrag: b },
+        ],
+        route: potje ? `#/potjes/${potje.id}` : "#/cijfers",
+      };
+    },
+  },
 
   {
     naam: "budget",
@@ -117,8 +157,13 @@ const HERKENNERS = [
   /* "hoeveel gaf ik uit aan boodschappen in september" */
   {
     naam: "uitgave per potje",
-    kan: t => /hoeveel|wat/.test(t) &&
-      /uitgegeven|uitgeven|gaf|besteed|kwijt|opgegaan|ging er|gaat er ?uit|op ?gegaan/.test(t),
+    kan: (t, vraag) => /hoeveel|wat/.test(t) && (
+      /uitgegeven|uitgeven|gaf|besteed|kwijt|opgegaan|ging er|gaat er ?uit|op ?gegaan/.test(t) ||
+      /* "Hoeveel aan boodschappen deze maand?" — zonder werkwoord, maar
+         met een potje erin is het duidelijk genoeg. Een naam alléén is
+         dat níét: "wat vind jij van bitcoin" gaat niet over je geld, en
+         zo'n vraag hoort eerlijk onbeantwoord te blijven. */
+      (!!leesPotje(vraag) && !/over|spaar|verdien|budget/.test(t))),
     doe: (t, vraag) => {
       const potje = leesPotje(vraag);
       const tijd = leesMaand(vraag);
@@ -146,6 +191,41 @@ const HERKENNERS = [
                 : ` Dat is ${geld(-verschil)} méér dan de ${geld(budget)} die je ervoor had gezet.`
               : ""),
           route: `#/potjes/${potje.id}`,
+        };
+      }
+
+      /* Geen potje, maar wel een winkel genoemd? Dan zoeken we daarop
+         in de omschrijvingen. Beter dan het maandtotaal teruggeven op
+         een vraag die daar niet over ging. */
+      const wie = leesTegenpartij(vraag);
+      if (wie) {
+        const raak = state.transacties.filter(x =>
+          x.soort === "uitgave" && normaliseer(x.omschrijving).includes(wie) &&
+          (tijd.jaar ? x.datum.startsWith(tijd.jaar) : maandVan(x.datum) === tijd.maand));
+        const wanneer = tijd.jaar || maandLabel(tijd.maand);
+        if (!raak.length) {
+          return zin(`Ik vind in ${wanneer} geen uitgaven bij iets dat op "${wie}" lijkt.`);
+        }
+        const totaal = raak.reduce((sm, x) => sm + (Number(x.bedrag) || 0), 0);
+        return {
+          tekst: `In ${wanneer} ging er ${geld(totaal)} naar ${raak[0].omschrijving || wie}, verdeeld over ${raak.length} ${raak.length === 1 ? "boeking" : "boekingen"}.`,
+          regels: raak.slice(0, 8).map(x => ({ naam: x.omschrijving || wie, bij: x.datum.slice(8) + "-" + x.datum.slice(5, 7), bedrag: Number(x.bedrag) || 0 })),
+          route: "#/maand",
+        };
+      }
+
+      /* Een heel jaar overzien: alle maanden bij elkaar. */
+      if (tijd.jaar) {
+        const rijen = maandenVan(tijd.jaar).map(m => {
+          const x = potAnalyse(state, m);
+          return { maand: m, totaal: x.besteed + x.nergens.totaal };
+        }).filter(r => r.totaal > 0);
+        if (!rijen.length) return zin(`In ${tijd.jaar} staat er nog niets geboekt.`);
+        const totaal = rijen.reduce((sm, r) => sm + r.totaal, 0);
+        return {
+          tekst: `In ${tijd.jaar} ging er ${geld(totaal)} uit, over ${rijen.length} ${rijen.length === 1 ? "maand" : "maanden"} — gemiddeld ${geld(totaal / rijen.length)} per maand.`,
+          regels: rijen.map(r => ({ naam: maandLabel(r.maand, { kort: true }), bedrag: r.totaal })),
+          route: "#/cijfers",
         };
       }
 
@@ -223,7 +303,7 @@ const HERKENNERS = [
   /* "hoeveel spaar ik per maand" */
   {
     naam: "sparen",
-    kan: t => /spaar|sparen|gespaard|opzij/.test(t),
+    kan: t => /spaar|sparen|gespaard|opzij/.test(t) && !/doel|streef/.test(t),
     doe: (t, vraag) => {
       const tijd = leesMaand(vraag);
       const v = verdeling(state, tijd.maand);
@@ -241,7 +321,7 @@ const HERKENNERS = [
   /* "hoeveel verdien ik" */
   {
     naam: "inkomen",
-    kan: t => /verdien|inkomen|salaris|binnen ?kom|binnenkomt/.test(t),
+    kan: t => /verdien|inkomen|salaris|binnen ?kom|binnenkomt|komt er binnen|krijg ik/.test(t),
     doe: (t, vraag) => {
       const tijd = leesMaand(vraag);
       if (tijd.jaar) {
@@ -298,7 +378,7 @@ const HERKENNERS = [
         return { tekst: `${potje.naam} is één bedrag van ${geld(stand.maandbedrag)} per maand; je hebt het niet opgesplitst.`, route: `#/potjes/${potje.id}` };
       }
       return {
-        tekst: `${potje.naam} bestaat uit ${delen.length} onderdelen.`,
+        tekst: `${potje.naam} bestaat uit ${delen.length} ${delen.length === 1 ? "onderdeel" : "onderdelen"}.`,
         regels: delen.map(d => ({ naam: d.naam, bedrag: Number(d.bedrag) || 0 })),
         route: `#/potjes/${potje.id}`,
       };
