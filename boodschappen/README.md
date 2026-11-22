@@ -177,6 +177,12 @@ vaak jullie het gegeten hebben en hoe lang geleden. Zoeken kan op gerecht én op
 ("waar zat ook alweer pesto in?").
 
 ### Budget
+**Geen zin in geldzaken?** In *Meer → App → Geld bijhouden* zet je het hele budgetgedeelte
+uit: het tabblad Budget verdwijnt, de budgetkaart op Thuis ook, en na het winkelen vraagt de
+app niet meer wat je hebt uitgegeven — dan is het gewoon een boodschappenlijst. Wat jullie al
+genoteerd hebben blijft bewaard en staat er weer zodra je het aanzet. De keuze geldt voor het
+hele huis, dus je huisgenoot ziet hetzelfde.
+
 Het budgettabblad houdt jullie **maandbudget** bij — geen verrekening onderling,
 gewoon: hoeveel is er deze periode nog over? Die periode is standaard de kalendermaand,
 maar je kunt hem laten resetten op je salarisdatum (zie hieronder).
@@ -253,7 +259,8 @@ ovs_fotos    de foto's (verkleind, als data-url; `<id>_k` is de miniatuur)
 ovs_winkels  de winkels
 ovs_vast     de vaste boodschappen
 ovs_bonnen   de uitgaven
-ovs_meta     instellingen: het budget en de namen van eerdere mee-eters
+ovs_meta     instellingen: het budget, de namen van eerdere mee-eters en of
+             jullie geld bijhouden
 ovs_geleerd  categorieën die jullie zelf hebben rechtgezet (id = de naam)
 ovs_cats     de categorieën zelf (naam, icoon, volgorde)
 ovs_gerechten jullie eigen gerechten, met de ingrediënten erin

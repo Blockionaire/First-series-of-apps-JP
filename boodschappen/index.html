@@ -1357,6 +1357,9 @@ function datumLang(ts){
    de teller van 24 september tot en met 23 oktober. De sleutel blijft
    "JJJJ-MM" — die van de maand waarin de periode begint. */
 function budgetStartDag(){
+  /* geen geld bijhouden? Dan is een maand gewoon weer een kalendermaand;
+     de ingestelde dag blijft bewaard voor als je het weer aanzet */
+  if(!geldAan()) return 1;
   const d = Math.round(Number(S.budget && S.budget.startDag) || 1);
   return Math.min(28, Math.max(1, d));
 }
@@ -1567,6 +1570,7 @@ const S = {
   kies:null,               // Set met item-id's zolang je meerdere tegelijk kiest
   maand:null,                    // welke maand het budgetscherm laat zien
   budget:{standaard:0, perMaand:{}, startDag:1},   // startDag: op welke dag de budgetteller reset
+  instellingen:{financien:true},   // staat het hele geldgedeelte aan?
   laatsteItemIds:null,     // om nieuwe items van de ander te herkennen
   sheet:null,
   kijker:null
@@ -1579,6 +1583,10 @@ const AV = {
     return `<span class="av ${klas}" style="background:${esc(k)}" title="${esc(lid.naam||"")}">${esc(initialen(lid.naam))}${online?'<i class="stip"></i>':""}</span>`;
   }
 };
+/* Houden jullie het geld bij? Staat dit uit, dan verdwijnt het hele
+   budgetgedeelte: het tabblad, de kaart op Thuis, de uitgaven bij Meer en
+   de vraag na het winkelen. De bonnen die er al zijn blijven staan. */
+const geldAan = () => S.instellingen.financien !== false;
 const lidVan = idd => S.leden.find(l => l.id === idd) || null;
 const naamVan = idd => (lidVan(idd)?.naam) || "Iemand";
 const isOnline = lid => lid && lid.laatstGezien && (nu() - lid.laatstGezien < 3*60*1000);
@@ -3653,7 +3661,7 @@ function schermWinkelen(){
         <button class="knop ${klaar?"groen":"stil"} vol" id="w-klaar" style="margin-top:24px">
           ${IK.bon} Klaar met winkelen
         </button>
-        <div class="hint" style="text-align:center">Je kunt daarna meteen noteren wat je hebt uitgegeven.</div>` : ""}
+        ${geldAan() ? `<div class="hint" style="text-align:center">Je kunt daarna meteen noteren wat je hebt uitgegeven.</div>` : ""}` : ""}
       </div>
     </div>
   </div>`;
@@ -3786,7 +3794,17 @@ function bindWinkelen(){
     if(it) openKijker(it.fotoId, it.tekst);
   });
   const k = $("#w-klaar");
-  if(k) k.onclick = () => sheetAfrekenen();
+  if(k) k.onclick = () => {
+    /* houden jullie geen uitgaven bij, dan is "klaar" gewoon klaar */
+    if(!geldAan()){
+      if(S.winkelSessie) ritWissen(S.winkelSessie.winkelId);
+      S.winkelSessie = null; houdSchermAan(false);
+      S.tab = "lijst"; tril(12); tekenNu();
+      toast("Klaar met winkelen", "✅");
+      return;
+    }
+    sheetAfrekenen();
+  };
   volgScroll();
 }
 
@@ -4433,7 +4451,7 @@ function recenteActiviteit(n = 4){
     if(i.af && i.afOp) uit.push({op:i.afOp, wie:i.afDoor, em:"✅", tekst:esc(i.tekst) + " gehaald"});
     else if(i.gemaakt) uit.push({op:i.gemaakt, wie:i.door, em:"📝", tekst:esc(i.tekst) + " op de lijst"});
   });
-  S.bonnen.forEach(b => uit.push({op:b.gemaakt || b.datum, wie:b.door, em:"🧾",
+  if(geldAan()) S.bonnen.forEach(b => uit.push({op:b.gemaakt || b.datum, wie:b.door, em:"🧾",
     tekst:euro(b.bedrag) + " bij " + esc(winkelVan(b.winkel).naam)}));
   S.menu.forEach(m => { if(m.gemaakt) uit.push({op:m.gemaakt, wie:m.door, em:"🍽️",
     tekst:esc(menuNaam(m)) + " op " + dagNaamBij(m.id).toLowerCase()}); });
@@ -4471,7 +4489,7 @@ function schermThuis(){
   const vaak = vaakGekocht(4);
   const activiteit = recenteActiviteit(4);
   /* helemaal nieuw huis: dan helpt een startkaart meer dan lege vakjes */
-  const kaal = !open.length && !S.gerechten.length && budget <= 0 && !S.bonnen.length;
+  const kaal = !open.length && !S.gerechten.length && (!geldAan() || (budget <= 0 && !S.bonnen.length));
 
   return `
   <div class="scherm">
@@ -4508,11 +4526,12 @@ function schermThuis(){
               <span class="tk"><b>Maak een gerecht</b><span>dan staan de ingrediënten met één tik op je lijst</span></span>
               <span class="na">${IK.pijl}</span>
             </button>
+            ${geldAan() ? `
             <button class="stap" id="t-stap3">
               <span class="nr">3</span>
               <span class="tk"><b>Stel een budget in</b><span>dan zie je hier wat er nog over is</span></span>
               <span class="na">${IK.pijl}</span>
-            </button>
+            </button>` : ""}
           </div>
         </div>` : ""}
 
@@ -4557,7 +4576,7 @@ function schermThuis(){
         </div>`}
 
         <!-- budget -->
-        ${kaal ? "" : `
+        ${kaal || !geldAan() ? "" : `
         <button class="kaart klikbaar" id="t-budget">
           <div class="kaart-kop"><h2>${IK.euro} Budget</h2><span class="mini">Details ›</span></div>
           ${budget > 0 ? `
@@ -4705,9 +4724,9 @@ function schermMeer(){
           <div class="stat-rij" style="margin-top:0">
             <div class="stat"><b>${open.length}</b><span>op de lijst</span></div>
             <div class="stat"><b>${S.items.filter(i => i.af && maandSleutel(i.afOp||0) === maandSleutel(nu())).length}</b><span>gehaald</span></div>
-            <div class="stat"><b>${euro(uitgegevenNu)}</b><span>uitgegeven</span></div>
+            ${geldAan() ? `<div class="stat"><b>${euro(uitgegevenNu)}</b><span>uitgegeven</span></div>` : ""}
           </div>
-          ${budgetNu > 0 ? `
+          ${!geldAan() ? "" : budgetNu > 0 ? `
             <div class="staaf" style="margin-top:10px">
               <div style="width:${Math.min(100, budgetNu ? uitgegevenNu/budgetNu*100 : 0).toFixed(1)}%;
                           background:${uitgegevenNu > budgetNu ? "var(--rood)" : "var(--groen)"}"></div>
@@ -4772,6 +4791,14 @@ function schermMeer(){
               <div class="tk"><b>Thema</b><span>licht, donker of meebewegen met je telefoon</span></div>
               <span class="na">${themaNaam}${IK.pijl}</span>
             </button>
+            <button class="rij" id="m-financien">
+              <span class="ik" style="${geldAan() ? "background:var(--accent-zacht); color:var(--accent)" : ""}">${IK.euro}</span>
+              <div class="tk"><b>Geld bijhouden</b>
+                <span>${geldAan()
+                  ? "budget, uitgaven en de vraag na het winkelen"
+                  : "staat uit — de app is nu alleen een boodschappenlijst"}</span></div>
+              <span class="tuimel ${geldAan()?"aan":""}"></span>
+            </button>
             <div class="rij">
               <span class="ik" style="background:${DB && DB.demo ? "var(--rood-zacht)" : "var(--groen-zacht)"}; color:${DB && DB.demo ? "var(--rood)" : "var(--groen)"}">${IK.wolk}</span>
               <div class="tk"><b>${DB && DB.demo ? "Demo-modus" : "Gedeelde lijst"}</b>
@@ -4801,6 +4828,17 @@ function bindMeer(){
   $("#m-cats").onclick = sheetCategorieen;
   $("#m-delen").onclick = deelLijst;
   $("#m-thema").onclick = sheetThema;
+  const mf = $("#m-financien");
+  if(mf) mf.onclick = async () => {
+    const aan = !geldAan();
+    tril();
+    if(!aan && !confirm("Het hele geldgedeelte uitzetten?\n\nHet tabblad Budget, de budgetkaart op Thuis en de vraag na het winkelen verdwijnen. Jullie bonnen blijven bewaard en komen terug zodra je dit weer aanzet.")) return;
+    S.instellingen = {financien: aan};
+    tekenNu();
+    try{ await DB.zet(PAD.meta + "/instellingen", {financien: aan, gewijzigdDoor:S.ik.id, gewijzigdOp:nu()}); }
+    catch(e){ console.error("instellingen", e); toast("Opslaan lukte niet"); }
+    toast(aan ? "Geld bijhouden staat weer aan" : "Geld bijhouden staat uit", aan ? "💶" : "🙈");
+  };
   $("#m-over").onclick = sheetOver;
   $$("[data-lidbeheer]").forEach(b => b.onclick = () => sheetLid(lidVan(b.dataset.lidbeheer)));
   const mb = $("#m-budget");
@@ -6533,9 +6571,9 @@ function navHtml(){
     {id:"lijst",    naam:"Lijst",   ik:IK.lijst, bel:open},
     {id:"eten",     naam:"Eten",    ik:IK.pan},
     {id:"winkelen", naam:"Winkel",  ik:IK.kar},
-    {id:"budget",   naam:"Budget",  ik:IK.euro},
+    {id:"budget",   naam:"Budget",  ik:IK.euro, uit:!geldAan()},
     {id:"meer",     naam:"Meer",    ik:IK.meer}
-  ];
+  ].filter(t => !t.uit);
   return `<nav class="nav"><div class="nav-rij">
     ${tabs.map(t => `
       <button class="nav-knop ${S.tab===t.id?"aan":""}" data-tab="${t.id}">
@@ -6554,6 +6592,9 @@ function tekenNu(){
   }
   if(!S.ik){ tekenInlog(); return; }
   if(S.ik && !lidVan(S.ik.id)){ uitloggen(); return; }
+
+  /* geld uitgezet terwijl je op het budgetscherm stond? Dan terug naar huis */
+  if(S.tab === "budget" && !geldAan()) S.tab = "thuis";
 
   let scherm = "";
   if(S.tab === "thuis")         scherm = schermThuis();
@@ -6656,6 +6697,8 @@ function startLuisteren(){
   DB.luister(PAD.meta, l => {
     const b = l.find(x => x.id === "budget");
     const mn = l.find(x => x.id === "meeEters");
+    const inst = l.find(x => x.id === "instellingen");
+    S.instellingen = {financien: !(inst && inst.financien === false)};
     S.meeNamen = (mn && Array.isArray(mn.namen)) ? mn.namen : [];
     S.budget = b ? {standaard: Number(b.standaard)||0, perMaand: b.perMaand || {}, startDag: Number(b.startDag)||1}
                  : {standaard:0, perMaand:{}, startDag:1};
