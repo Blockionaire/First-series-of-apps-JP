@@ -18,7 +18,10 @@
 import { normaliseer, geld, maandLabel, maandVan, maandNu, maandPlus, MAANDEN } from "./util.js";
 import { state } from "./store.js";
 import { potAnalyse, potGeschiedenis, maandOverzicht, verdeling, potSaldo,
-         doelenMetStand, externeUitgaven, subpotjesVan } from "./bereken.js";
+         doelenMetStand, externeUitgaven, subpotjesVan, potMaandDetail,
+         vermogen, rekeningenMetSaldo, maandReeks, gemiddelden, aankomend,
+         signalen, vasteLastenPerMaand, perCategorie, POTSOORTEN,
+         heeftSubpotjes, potSoort } from "./bereken.js";
 
 /* ---------------------------------------------------------------
    De vraag ontleden
@@ -81,10 +84,373 @@ const maandenVan = jaar => Array.from({ length: 12 }, (_, i) => `${jaar}-${Strin
    --------------------------------------------------------------- */
 const HERKENNERS = [
 
+  /* "wat kan ik vragen" */
+  {
+    naam: "hulp",
+    kan: t => /wat kan ik vragen|wat kun je|wat weet je|^help$|hoe werkt dit|wat snap je/.test(t),
+    doe: () => ({
+      tekst: "Vraag me naar je uitgaven (per potje, per winkel, per maand of per jaar), " +
+        "wat er nog over is, waar je geld heen gaat, je inkomen, je sparen en spaardoelen, " +
+        "je vaste lasten, je vermogen, of je binnen je budget blijft, hoe deze maand zich " +
+        "verhoudt tot de vorige, en of je het tot het eind van de maand redt.",
+      regels: voorbeelden().map(v => ({ naam: v, bedrag: null })),
+    }),
+  },
+
+  /* "red ik het tot het eind van de maand" */
+  {
+    naam: "vooruitblik",
+    kan: t => /red ik|haal ik het|kom ik (ermee )?uit|houd ik .*over|eind van de maand|rest van de maand|tekort/.test(t),
+    doe: (t, vraag) => {
+      const tijd = leesMaand(vraag);
+      const o = maandOverzicht(state, tijd.maand);
+      if (!o.isDezeMaand) {
+        return zin(`${hoofd(maandLabel(tijd.maand))} is niet de lopende maand; er valt dan weinig vooruit te kijken. ` +
+          `Toen hield je ${geld(o.saldo)} over.`);
+      }
+      const tempo = o.perDag > 0
+        ? ` Je geeft nu gemiddeld ${geld(o.perDag)} per dag uit aan losse dingen.` : "";
+      return {
+        tekst: (o.prognoseSaldo >= 0
+          ? `Met dit tempo houd je deze maand ongeveer ${geld(o.prognoseSaldo)} over.`
+          : `Met dit tempo kom je deze maand ongeveer ${geld(-o.prognoseSaldo)} tekort.`) +
+          ` Er zijn nog ${o.dagenOver} ${o.dagenOver === 1 ? "dag" : "dagen"} te gaan.` + tempo,
+        route: "#/start",
+      };
+    },
+  },
+
+  /* "hoeveel kan ik nog per dag uitgeven" */
+  {
+    naam: "per dag",
+    kan: t => /per dag|dagelijks|elke dag/.test(t),
+    doe: () => {
+      const o = maandOverzicht(state, maandNu());
+      if (o.dagenOver <= 0) return zin("Deze maand is al om, dus er valt niets meer over de dagen te verdelen.");
+      const ruimte = o.vrijTeBesteden;
+      return {
+        tekst: ruimte > 0
+          ? `Er is nog ${geld(ruimte)} vrij en ${o.dagenOver} ${o.dagenOver === 1 ? "dag" : "dagen"} te gaan — dat is ${geld(ruimte / o.dagenOver)} per dag.`
+          : `Er is niets meer vrij deze maand; je zit ${geld(-ruimte)} in de min op wat er nog aankomt.`,
+        route: "#/start",
+      };
+    },
+  },
+
+  /* "hoeveel ben ik kwijt aan vaste lasten" */
+  {
+    naam: "vaste lasten",
+    /* Heet je potje óók "Vaste lasten", dan is dit nog steeds de vraag
+       die je stelt: wat ben ik maandelijks kwijt. Alleen bij een potje
+       van een andere soort laten we het aan die herkenner over. */
+    kan: (t, vraag) => /vaste lasten|vaste kosten|vaste uitgaven/.test(t) &&
+      /* Vraag je naar de ópbouw van je potje Vaste lasten, dan is dat
+         een andere vraag; die laten we aan de herkenner verderop. */
+      !(/waaruit|opgebouwd|bestaat|zit er in|onderdelen/.test(t) && heeftSubpotjes(leesPotje(vraag) || {})) &&
+      (!leesPotje(vraag) || potSoort(leesPotje(vraag)) === "vast"),
+    doe: (t, vraag) => {
+      const tijd = leesMaand(vraag);
+      const v = verdeling(state, tijd.maand);
+      const los = vasteLastenPerMaand(state);
+      const potten = v.potjes.filter(p => p.soort === "vast");
+      const totaal = v.vast;
+      if (!totaal) return zin("Er staan nog geen vaste lasten in.");
+      return {
+        tekst: `Je vaste lasten zijn ${geld(totaal)} per maand` +
+          (v.inkomen > 0 ? `, oftewel ${procentVan(totaal, v.inkomen)} van je inkomen.` : "."),
+        regels: [
+          ...potten.map(p => ({ naam: `${p.icoon} ${p.naam}`, bedrag: p.bedrag })),
+          ...(los > 0 ? [{ naam: "🔁 Losse vaste posten", bedrag: los }] : []),
+        ],
+        route: "#/vast",
+      };
+    },
+  },
+
+  /* "wat is mijn vermogen" */
+  {
+    naam: "vermogen",
+    kan: t => /vermogen|netto waarde|in totaal (heb|staat)|hoeveel bezit/.test(t),
+    doe: () => {
+      const totaal = vermogen(state);
+      const rek = rekeningenMetSaldo(state);
+      if (!rek.length) return zin("Je hebt nog geen rekeningen ingevoerd, dus je vermogen is niet te berekenen.");
+      return {
+        tekst: `Alles bij elkaar staat er ${geld(totaal)}.`,
+        regels: rek.map(r => ({ naam: r.naam, bedrag: r.saldo })),
+        route: "#/rekeningen",
+      };
+    },
+  },
+
+  /* "hoeveel staat er op mijn betaalrekening" */
+  {
+    naam: "rekeningsaldo",
+    kan: t => /saldo|rekening|staat er op/.test(t),
+    doe: (t, vraag) => {
+      const rek = rekeningenMetSaldo(state);
+      if (!rek.length) return zin("Je hebt nog geen rekeningen ingevoerd.");
+      const genoemd = rek.find(r => normaliseer(r.naam).length > 2 && normaliseer(vraag).includes(normaliseer(r.naam)));
+      if (genoemd) {
+        return { tekst: `Op ${genoemd.naam} staat ${geld(genoemd.saldo)}.`, route: "#/rekeningen" };
+      }
+      return {
+        tekst: `Je hebt ${rek.length} ${rek.length === 1 ? "rekening" : "rekeningen"}, samen ${geld(vermogen(state))}.`,
+        regels: rek.map(r => ({ naam: r.naam, bedrag: r.saldo })),
+        route: "#/rekeningen",
+      };
+    },
+  },
+
+  /* "welke potjes heb ik" */
+  {
+    naam: "lijst potjes",
+    kan: t => /welke potjes|hoeveel potjes|mijn potjes|alle potjes|lijst van potjes/.test(t),
+    doe: () => {
+      const v = verdeling(state, state.maand);
+      if (!v.potjes.length) return zin("Je hebt nog geen potjes. Je maakt ze bij Verdelen.");
+      return {
+        tekst: `Je hebt ${v.potjes.length} ${v.potjes.length === 1 ? "potje" : "potjes"}, samen ${geld(v.verdeeld)} per maand.`,
+        regels: v.potjes.map(p => ({
+          naam: `${p.icoon} ${p.naam}`, bedrag: p.bedrag, bij: POTSOORTEN[p.soort]?.label.toLowerCase(),
+        })),
+        route: "#/potjes",
+      };
+    },
+  },
+
+  /* "hoeveel zit er in vakantie" — het saldo van één potje */
+  {
+    naam: "opbouw van een potje",
+    /* Alleen als er echt onderdelen zijn; anders is de saldovraag
+       hieronder een beter antwoord op "wat zit er in". */
+    kan: (t, vraag) => !!leesPotje(vraag) && heeftSubpotjes(leesPotje(vraag)) &&
+      /waaruit|opgebouwd|bestaat|zit er in|onderdelen/.test(t),
+    doe: (t, vraag) => {
+      const potje = leesPotje(vraag);
+      const delen = subpotjesVan(potje);
+      if (!delen.length) {
+        const stand = potSaldo(state, potje);
+        return { tekst: `${potje.naam} is één bedrag van ${geld(stand.maandbedrag)} per maand; je hebt het niet opgesplitst.`, route: `#/potjes/${potje.id}` };
+      }
+      return {
+        tekst: `${potje.naam} bestaat uit ${delen.length} ${delen.length === 1 ? "onderdeel" : "onderdelen"}.`,
+        regels: delen.map(d => ({ naam: d.naam, bedrag: Number(d.bedrag) || 0 })),
+        route: `#/potjes/${potje.id}`,
+      };
+    },
+  },
+  {
+    naam: "saldo van een potje",
+    kan: (t, vraag) => !!leesPotje(vraag) && /zit er in|staat er in|saldo|gespaard in|hoeveel heb ik in/.test(t),
+    doe: (t, vraag) => {
+      const potje = leesPotje(vraag);
+      const stand = potSaldo(state, potje, state.maand);
+      if (stand.soort === "sparen") {
+        const d = potje.doelBedrag > 0 ? ` Je streefbedrag is ${geld(potje.doelBedrag)}.` : "";
+        return { tekst: `In ${potje.naam} staat ${geld(stand.saldo)} gespaard.${d}`, route: `#/potjes/${potje.id}` };
+      }
+      if (stand.soort === "vrij") {
+        return { tekst: `${potje.naam} is een potje om op te maken: van ${geld(stand.maandbedrag)} deze maand is nog ${geld(stand.ditOver)} over.`, route: `#/potjes/${potje.id}` };
+      }
+      return { tekst: `${potje.naam} is een vaste last van ${geld(stand.maandbedrag)} per maand; daar bouwt zich geen saldo op.`, route: `#/potjes/${potje.id}` };
+    },
+  },
+
+  /* "welke maand was het duurst" */
+  {
+    naam: "duurste maand",
+    kan: t => /welke maand|duurste maand|goedkoopste maand|beste maand|slechtste maand/.test(t),
+    doe: t => {
+      const reeks = maandReeks(state, 12).filter(m => m.uit > 0 || m.in > 0);
+      if (reeks.length < 2) return zin("Er zijn nog te weinig maanden om te vergelijken.");
+      const goedkoop = /goedkoop|minste|beste/.test(t);
+      const op = [...reeks].sort((a, b) => goedkoop ? a.uit - b.uit : b.uit - a.uit)[0];
+      return {
+        tekst: `${hoofd(maandLabel(op.maand))} was de ${goedkoop ? "goedkoopste" : "duurste"} maand: ${geld(op.uit)} eruit.`,
+        regels: [...reeks].sort((a, b) => b.uit - a.uit).slice(0, 6)
+          .map(m => ({ naam: maandLabel(m.maand, { kort: true }), bedrag: m.uit })),
+        route: "#/cijfers",
+      };
+    },
+  },
+
+  /* "wat geef ik gemiddeld uit" */
+  {
+    naam: "gemiddeld",
+    kan: t => /gemiddeld|normaal gesproken|doorgaans/.test(t),
+    doe: (t, vraag) => {
+      const potje = leesPotje(vraag);
+      if (potje) {
+        const rijen = potGeschiedenis(state, potje, { maanden: 12 });
+        if (!rijen.length) return zin(`Er staat nog niets geboekt bij ${potje.naam}.`);
+        const totaal = rijen.reduce((sm, r) => sm + r.totaal, 0);
+        return {
+          tekst: `Gemiddeld gaat er ${geld(totaal / rijen.length)} per maand uit ${potje.naam}, gemeten over ${rijen.length} ${rijen.length === 1 ? "maand" : "maanden"}.`,
+          regels: rijen.map(r => ({ naam: maandLabel(r.maand, { kort: true }), bedrag: r.totaal })),
+          route: `#/potjes/${potje.id}`,
+        };
+      }
+      const g = gemiddelden(state, 6);
+      if (!g.maanden) return zin("Er zijn nog te weinig maanden om een gemiddelde uit te rekenen.");
+      return {
+        tekst: `Over de laatste ${g.maanden} ${g.maanden === 1 ? "maand" : "maanden"} kwam er gemiddeld ${geld(g.in)} binnen en ging er ${geld(g.uit)} uit — ${geld(g.saldo)} over per maand.`,
+        route: "#/cijfers",
+      };
+    },
+  },
+
+  /* "welk deel spaar ik" */
+  {
+    naam: "spaarquote",
+    kan: t => /procent|percentage|quote|welk deel|hoeveel deel/.test(t),
+    doe: (t, vraag) => {
+      const tijd = leesMaand(vraag);
+      const v = verdeling(state, tijd.maand);
+      if (!v.inkomen) return zin("Zonder inkomen valt er geen percentage uit te rekenen.");
+      return {
+        tekst: `Van ${geld(v.inkomen)} gaat ${procentVan(v.sparen, v.inkomen)} naar sparen, ` +
+          `${procentVan(v.vast, v.inkomen)} naar vaste lasten en ${procentVan(v.vrij, v.inkomen)} naar vrij besteden.`,
+        regels: [
+          { naam: "🐖 Sparen", bedrag: v.sparen },
+          { naam: "🏠 Vaste lasten", bedrag: v.vast },
+          { naam: "🛒 Vrij te besteden", bedrag: v.vrij },
+          ...(v.over > 0.5 ? [{ naam: "Nog te verdelen", bedrag: v.over }] : []),
+        ],
+        route: "#/start",
+      };
+    },
+  },
+
+  /* "wat heb ik nog niet ingedeeld" */
+  {
+    naam: "niet ingedeeld",
+    kan: t => /niet ingedeeld|nergens bij|zonder potje|ongesorteerd|niet gesorteerd|rest van de boekingen/.test(t),
+    doe: (t, vraag) => {
+      const tijd = leesMaand(vraag);
+      const a = potAnalyse(state, tijd.maand);
+      if (!a.nergens.aantal) return zin(`In ${maandLabel(tijd.maand)} hangt elke uitgave aan een potje.`);
+      return {
+        tekst: `In ${maandLabel(tijd.maand)} ${a.nergens.aantal === 1 ? "hangt" : "hangen"} ${a.nergens.aantal} ${a.nergens.aantal === 1 ? "boeking" : "boekingen"} aan geen enkel potje, samen ${geld(a.nergens.totaal)}.`,
+        regels: a.nergens.transacties.slice(0, 8).map(x => ({ naam: x.omschrijving || "Zonder omschrijving", bedrag: Number(x.bedrag) || 0 })),
+        route: "#/maand",
+      };
+    },
+  },
+
+  /* "wat komt er binnenkort af" */
+  {
+    naam: "wat komt eraan",
+    kan: t => /komt eraan|binnenkort|aankomend|deze week|staat te gebeuren|moet ik nog betalen/.test(t),
+    doe: () => {
+      const lijst = aankomend(state, 21);
+      if (!lijst.length) return zin("Er staan de komende weken geen vaste posten gepland.");
+      const totaal = lijst.filter(p => p.soort !== "inkomst").reduce((sm, p) => sm + p.verwacht, 0);
+      return {
+        tekst: `De komende drie weken staat er ${geld(totaal)} aan vaste posten gepland.`,
+        regels: lijst.slice(0, 8).map(p => ({
+          naam: p.naam, bedrag: p.verwacht,
+          bij: p.telaat ? "te laat" : `over ${p.overDagen} ${p.overDagen === 1 ? "dag" : "dagen"}`,
+        })),
+        route: "#/vast",
+      };
+    },
+  },
+
+  /* "hoe sta ik ervoor" */
+  {
+    naam: "hoe sta ik ervoor",
+    kan: t => /hoe sta ik|hoe gaat het|hoe staat het ervoor|alles goed|samenvatting|overzicht/.test(t),
+    doe: () => {
+      const v = verdeling(state, state.maand);
+      const a = potAnalyse(state, state.maand);
+      const sig = signalen(state, state.maand);
+      const kop = sig.length
+        ? sig[0].titel + ". " + sig[0].tekst
+        : `Je verdeelt ${geld(v.verdeeld)} van ${geld(v.inkomen)}, en je zit overal binnen je budget.`;
+      return {
+        tekst: kop,
+        regels: [
+          { naam: "Inkomen deze maand", bedrag: v.inkomen },
+          { naam: "Verdeeld", bedrag: v.verdeeld },
+          { naam: "Uitgegeven", bedrag: a.besteed + a.nergens.totaal },
+          { naam: "Gespaard in totaal", bedrag: v.gespaard },
+        ],
+        route: "#/start",
+      };
+    },
+  },
+
+  /* "bij welke winkel geef ik het meeste uit" */
+  {
+    naam: "per winkel",
+    kan: t => /welke winkel|per winkel|welke winkels|waar koop ik/.test(t),
+    doe: (t, vraag) => {
+      const tijd = leesMaand(vraag);
+      const koppeling = state.instellingen.koppeling || {};
+      const potje = state.potjes.find(p => p.id === koppeling.potje);
+      if (koppeling.aan && potje) {
+        const d = potMaandDetail(state, potje, tijd.maand);
+        if (d.winkels.length) {
+          return {
+            tekst: `In ${maandLabel(tijd.maand)} ging er het meeste naar ${d.winkels[0].naam} (${geld(d.winkels[0].bedrag)}).`,
+            regels: d.winkels.map(w => ({ naam: w.naam, bedrag: w.bedrag, bij: `${w.aantal} ${w.aantal === 1 ? "bon" : "bonnen"}` })),
+            route: `#/potjes/${potje.id}`,
+          };
+        }
+      }
+      /* Zonder koppeling: op omschrijving groeperen. */
+      const per = new Map();
+      for (const x of state.transacties) {
+        if (x.soort !== "uitgave" || maandVan(x.datum) !== tijd.maand) continue;
+        const sleutel = (x.omschrijving || "Zonder omschrijving").split(/[—\-,]/)[0].trim().slice(0, 30);
+        per.set(sleutel, (per.get(sleutel) || 0) + (Number(x.bedrag) || 0));
+      }
+      const lijst = [...per.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+      if (!lijst.length) return zin(`Er staan geen uitgaven in ${maandLabel(tijd.maand)}.`);
+      return {
+        tekst: `In ${maandLabel(tijd.maand)} ging er het meeste naar ${lijst[0][0]} (${geld(lijst[0][1])}).`,
+        regels: lijst.map(([naam, bedrag]) => ({ naam, bedrag })),
+        route: "#/maand",
+      };
+    },
+  },
+
+  /* "hoeveel boekingen heb ik" */
+  {
+    naam: "aantal boekingen",
+    kan: t => /hoeveel boekingen|hoeveel transacties|hoe vaak heb ik|aantal boekingen/.test(t),
+    doe: (t, vraag) => {
+      const tijd = leesMaand(vraag);
+      const lijst = state.transacties.filter(x => tijd.jaar
+        ? x.datum.startsWith(tijd.jaar) : maandVan(x.datum) === tijd.maand);
+      const uitgaven = lijst.filter(x => x.soort === "uitgave");
+      return zin(`In ${tijd.jaar || maandLabel(tijd.maand)} staan ${lijst.length} ${lijst.length === 1 ? "boeking" : "boekingen"}, waarvan ${uitgaven.length} ${uitgaven.length === 1 ? "uitgave" : "uitgaven"}.`);
+    },
+  },
+
+  /* "hoeveel aan vervoer" — per categorie, voor wie categorieën gebruikt */
+  {
+    naam: "per categorie",
+    kan: (t, vraag) => !leesPotje(vraag) && !!leesCategorie(vraag) &&
+      /hoeveel|wat|uitgegeven|besteed|kwijt/.test(t),
+    doe: (t, vraag) => {
+      const cat = leesCategorie(vraag);
+      const tijd = leesMaand(vraag);
+      const lijst = perCategorie(state, tijd.maand).find(c => c.id === cat.id);
+      if (!lijst) return zin(`In ${maandLabel(tijd.maand)} staat er niets onder ${cat.naam}.`);
+      return {
+        tekst: `In ${maandLabel(tijd.maand)} ging er ${geld(lijst.bedrag)} naar ${cat.naam}.` +
+          (cat.budget > 0 ? ` Je budget is ${geld(cat.budget)}.` : ""),
+        route: "#/cijfers",
+      };
+    },
+  },
+
   /* "is dat meer dan vorige maand" — vergelijken met de maand ervoor */
   {
     naam: "vergelijken met vorige maand",
-    kan: t => /meer dan|minder dan|vergelek|vergelijk|tegenover|dan vorige|dan vorig/.test(t),
+    kan: t => /meer dan|minder dan|vergelek|vergelijk|verhoud|tegenover|dan vorige|dan vorig/.test(t),
     doe: (t, vraag) => {
       const potje = leesPotje(vraag);
       const nu = state.maand;
@@ -137,7 +503,7 @@ const HERKENNERS = [
   },
   {
     naam: "grootste uitgaven",
-    kan: t => /grootste|duurste|meeste uitgegeven|hoogste/.test(t),
+    kan: t => /grootste|duurste|hoogste|meeste uitgegeven|in (een|1) keer/.test(t),
     doe: (t, vraag) => {
       const tijd = leesMaand(vraag);
       const lijst = state.transacties
@@ -163,7 +529,7 @@ const HERKENNERS = [
          met een potje erin is het duidelijk genoeg. Een naam alléén is
          dat níét: "wat vind jij van bitcoin" gaat niet over je geld, en
          zo'n vraag hoort eerlijk onbeantwoord te blijven. */
-      (!!leesPotje(vraag) && !/over|spaar|verdien|budget/.test(t))),
+      (!!leesPotje(vraag) && !/over|ruimte|resteert|restant|spaar|verdien|budget/.test(t))),
     doe: (t, vraag) => {
       const potje = leesPotje(vraag);
       const tijd = leesMaand(vraag);
@@ -367,23 +733,6 @@ const HERKENNERS = [
   /* "waar heb ik het meest besteed" — grootste losse uitgaven */
 
   /* "wat zit er in mijn potje vaste lasten" */
-  {
-    naam: "opbouw van een potje",
-    kan: (t, vraag) => !!leesPotje(vraag) && /waaruit|opgebouwd|bestaat|zit er in|onderdelen/.test(t),
-    doe: (t, vraag) => {
-      const potje = leesPotje(vraag);
-      const delen = subpotjesVan(potje);
-      if (!delen.length) {
-        const stand = potSaldo(state, potje);
-        return { tekst: `${potje.naam} is één bedrag van ${geld(stand.maandbedrag)} per maand; je hebt het niet opgesplitst.`, route: `#/potjes/${potje.id}` };
-      }
-      return {
-        tekst: `${potje.naam} bestaat uit ${delen.length} ${delen.length === 1 ? "onderdeel" : "onderdelen"}.`,
-        regels: delen.map(d => ({ naam: d.naam, bedrag: Number(d.bedrag) || 0 })),
-        route: `#/potjes/${potje.id}`,
-      };
-    },
-  },
 
   /* "hoeveel boodschappen deze maand" via de gekoppelde app */
   {
@@ -402,6 +751,18 @@ const HERKENNERS = [
 ];
 
 const zin = tekst => ({ tekst });
+const hoofd = t => t.charAt(0).toUpperCase() + t.slice(1);
+const procentVan = (deel, geheel) => geheel > 0 ? `${Math.round((deel / geheel) * 100)}%` : "0%";
+
+/* Welke categorie bedoelt iemand? Alleen als de naam er letterlijk in
+   staat — categorieën zijn in de eenvoudige modus verborgen, dus we
+   gaan er niet naar raden. */
+export function leesCategorie(vraag) {
+  const t = normaliseer(vraag);
+  return state.categorieen
+    .filter(c => normaliseer(c.naam).length > 3 && t.includes(normaliseer(c.naam)))
+    .sort((a, b) => b.naam.length - a.naam.length)[0] || null;
+}
 
 /* ---------------------------------------------------------------
    Antwoorden
@@ -425,13 +786,15 @@ export function beantwoord(vraag) {
 /* Wat de vraagbalk voorstelt als je nog niets hebt getikt. Alleen
    vragen waar in jouw gegevens ook echt een antwoord op is. */
 export function voorbeelden() {
-  const uit = ["Waar gaat mijn geld heen?", "Wat is er nog over?"];
+  const uit = ["Hoe sta ik ervoor?", "Waar gaat mijn geld heen?"];
   const vrij = state.potjes.find(p => p.soort === "vrij" && p.actief !== false);
   if (vrij) uit.push(`Hoeveel gaf ik uit aan ${vrij.naam.toLowerCase()}?`);
+  if (state.transacties.some(t => t.soort === "uitgave")) {
+    uit.push("Red ik het tot het eind van de maand?", "Is dat meer dan vorige maand?");
+  }
   if (state.potjes.some(p => p.soort === "sparen")) uit.push("Hoeveel spaar ik per maand?");
   if (state.terugkerend.some(p => p.soort === "inkomst")) uit.push("Hoeveel verdien ik?");
-  if (state.transacties.some(t => t.soort === "uitgave")) uit.push("Wat was mijn grootste uitgave?");
-  uit.push("Ga ik over mijn budget?");
+  uit.push("Ga ik over mijn budget?", "Wat kan ik vragen?");
   return uit.slice(0, 6);
 }
 

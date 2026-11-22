@@ -150,7 +150,7 @@ async function stel(vraag) {
   if (!Bank.bank.aiAan || !Bank.ingesteld()) {
     gesprek.push({
       van: "app",
-      tekst: "Die vraag begrijp ik niet. Ik kan wel uit de voeten met vragen over je uitgaven per potje, wat er nog over is, waar je geld heen gaat, je inkomen, je spaardoelen en je budget." +
+      tekst: "Die vraag begrijp ik niet. Vraag \"wat kan ik vragen?\" voor een lijstje van wat ik wél weet." +
         (Bank.ingesteld() ? " Wil je vrijer kunnen vragen, dan kun je Claude aanzetten onder ⚙️ → Je bank." : ""),
     });
     return meld();
