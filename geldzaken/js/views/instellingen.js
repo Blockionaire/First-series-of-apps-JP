@@ -715,6 +715,14 @@ export function koppel(wortel, params) {
     e.rechtstreeks = true;
     codePlakken();
   });
+  wortel.querySelector("[data-bank-rekening]")?.addEventListener("click", e => {
+    e.rechtstreeks = true;
+    bankRekeningKiezen();
+  });
+  wortel.querySelector("[data-bank-los]")?.addEventListener("click", e => {
+    e.rechtstreeks = true;
+    bankLoskoppelen();
+  });
 
   wortel.addEventListener("click", async e => {
     /* Wat ziet deze afhandeling eigenlijk, en hoort hij nog bij het
@@ -752,8 +760,8 @@ export function koppel(wortel, params) {
     if (e.target.closest("[data-code-plak]")) return e.rechtstreeks || codePlakken();
     if (e.target.closest("[data-bank-uitleg]")) return e.rechtstreeks || bankUitleg();
     if (e.target.closest("[data-bank-vergeet]")) return e.rechtstreeks || bankVergeten();
-    if (e.target.closest("[data-bank-rekening]")) return bankRekeningKiezen();
-    if (e.target.closest("[data-bank-los]")) return bankLoskoppelen();
+    if (e.target.closest("[data-bank-rekening]")) return e.rechtstreeks || bankRekeningKiezen();
+    if (e.target.closest("[data-bank-los]")) return e.rechtstreeks || bankLoskoppelen();
 
     const wisPersoon = e.target.closest("[data-wis-persoon]");
     if (wisPersoon) {
@@ -936,18 +944,37 @@ async function bankKoppelen() {
 }
 
 async function bankRekeningKiezen() {
-  if (!eisBewerkrecht()) return;
+  spoorBij("rekening kiezen: begonnen");
+  if (!eisBewerkrecht()) return spoorBij("rekening kiezen: gestopt, alleen leesrechten");
+
+  /* Hierachter zit een verzoek aan je bank, en dat duurt even. Zolang
+     er niets te zien is lijkt deze knop stuk — hetzelfde als bij de
+     verbindingstest, alleen was het hier blijven staan. */
+  const knop = document.querySelector("[data-bank-rekening]");
+  const oud = knop?.textContent;
+  if (knop) { knop.disabled = true; knop.textContent = "Bezig…"; }
+  const herstel = () => { if (knop) { knop.disabled = false; knop.textContent = oud; } };
+
   let gegevens;
   try {
     gegevens = await Bank.haalRekeningen();
   } catch (fout) {
+    herstel();
     Bank.bank.fout = fout.message;
     melding(fout.message, "fout");
     return meld();
   }
+  herstel();
+  spoorBij(`rekeningen terug: ${gegevens.rekeningen.length}`);
 
   if (!gegevens.rekeningen.length) {
-    return melding("Er zitten geen rekeningen in deze koppeling.", "fout");
+    /* Een melding van vijf tellen is hier te weinig: dit vraagt iets
+       van je, en bij Enable Banking nog wel. Dus blijft het staan. */
+    Bank.bank.fout = "Je bank gaf geen rekeningen terug. In de beperkte modus van Enable Banking "
+      + "moet je je rekeningen daar eerst zelf koppelen (Applications → je app → Activate by "
+      + "linking accounts). Koppel daarna hier opnieuw.";
+    melding("Geen rekeningen in deze koppeling.", "fout");
+    return meld();
   }
 
   const keuze = await dialoog({

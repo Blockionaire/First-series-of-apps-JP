@@ -199,15 +199,28 @@ export function melding(tekst, soort = "info") {
     bak.id = "meldingen";
     document.body.appendChild(bak);
   }
+  /* Staat dezelfde zin er al, dan krijgt die er tijd bij in plaats van
+     dat er een tweede naast komt. Twee keer hetzelfde lezen voegt niets
+     toe en ziet eruit alsof er twee dingen mis zijn. */
+  const zelfde = [...bak.children].find(k => k.textContent === tekst);
+  if (zelfde) {
+    clearTimeout(Number(zelfde.dataset.klok));
+    zelfde.dataset.klok = String(setTimeout(() => {
+      zelfde.classList.remove("is-zichtbaar");
+      setTimeout(() => zelfde.remove(), 300);
+    }, soort === "fout" ? 5200 : 2800));
+    return;
+  }
+
   const el = document.createElement("div");
   el.className = `melding melding--${soort}`;
   el.textContent = tekst;
   bak.appendChild(el);
   requestAnimationFrame(() => el.classList.add("is-zichtbaar"));
-  setTimeout(() => {
+  el.dataset.klok = String(setTimeout(() => {
     el.classList.remove("is-zichtbaar");
     setTimeout(() => el.remove(), 300);
-  }, soort === "fout" ? 5200 : 2800);
+  }, soort === "fout" ? 5200 : 2800));
 }
 
 /* ---------------------------------------------------------------
