@@ -494,6 +494,15 @@ textarea.invoer.groeit{
 .sugg button:active{transform:scale(.94);}
 .sugg button.aan{background:var(--accent); color:var(--accent-ink);}
 
+/* Het schap: wat de app zelf kent, maar wat jullie nog nooit kochten.
+   Rustiger dan jullie eigen suggesties, want die weten het beter. */
+.sugg.schap{margin-top:7px;}
+.sugg.schap button{
+  background:transparent; color:var(--ink-2);
+  border:1px solid var(--line-2); font-weight:500;
+}
+.sugg.schap button i{font-style:normal; opacity:.6; font-size:12.5px;}
+
 /* ---------- thuis: het dashboard ---------- */
 .thuis{display:flex; flex-direction:column; gap:12px; padding-top:14px;}
 .kaart{
@@ -1387,6 +1396,14 @@ function stam(w){
   s = s.replace(/aa([bdfgklmnprstz])$/, "a$1");   // tomaten → tomat → tomaat-achtig
   return s;
 }
+/* zoekvorm: kleine letters, zonder accenten of leestekens, woorden
+   gescheiden door één spatie. "Crème fraîche" wordt "creme fraiche",
+   zodat je het kunt vinden zonder die accenten te typen. */
+function zoekbaar(tekst){
+  return String(tekst||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, " ").trim();
+}
+
 const RAAD_STAM = {};
 for(const [cat, woorden] of Object.entries(RAAD)){
   for(const w of woorden){
@@ -1395,6 +1412,175 @@ for(const [cat, woorden] of Object.entries(RAAD)){
       if(s.length >= 3 && !(s in RAAD_STAM)) RAAD_STAM[s] = cat;
     }
   }
+}
+
+/* =====================================================================
+   HET SCHAP · gangbare Nederlandse boodschappen
+   Typ je een paar letters, dan stelt de app hieruit iets voor, met de
+   verpakking die je normaal koopt en de goede categorie erbij. Dat
+   scheelt typen en het raadt daardoor ook beter.
+
+   Dit is met opzet een lijst in de app zelf en geen koppeling met een
+   supermarkt: geen van beide heeft een open API, en wat eraan vastzit
+   breekt zodra zij iets veranderen. Deze lijst werkt offline, meteen,
+   en voor iedereen met wie je de app deelt. Hij is niet compleet —
+   dat hoeft ook niet, want wat jullie zélf kopen onthoudt de app al.
+   "naam|verpakking", en de verpakking mag leeg blijven.
+   ===================================================================== */
+const SCHAP = {
+  groente: ["Aardappels|2 kg","Kruimige aardappels|2,5 kg","Zoete aardappel|1 kg",
+    "Appels|1 kg","Elstar appels|1 kg","Peren|1 kg","Bananen|1 bos","Sinaasappels|1 net",
+    "Mandarijnen|1 kg","Citroenen|3 st","Limoenen|2 st","Druiven|500 g","Aardbeien|400 g",
+    "Blauwe bessen|125 g","Frambozen|125 g","Kiwi's|4 st","Mango|1 st","Ananas|1 st",
+    "Meloen|1 st","Avocado's|2 st","Tomaten|500 g","Cherrytomaatjes|250 g","Trostomaten|500 g",
+    "Komkommer|1 st","Paprika's|3 st","Rode paprika|2 st","Uien|1 kg","Rode uien|500 g",
+    "Sjalotjes|250 g","Knoflook|1 bol","Wortels|1 kg","Winterpeen|1 kg","Bospeen|1 bos",
+    "Prei|500 g","Broccoli|1 st","Bloemkool|1 st","Spruitjes|500 g","Sperziebonen|400 g",
+    "Haricots verts|300 g","Courgette|1 st","Aubergine|1 st","Spinazie|300 g","Andijvie|400 g",
+    "Boerenkool|400 g","Rucola|75 g","Veldsla|75 g","IJsbergsla|1 krop","Little gem|2 st",
+    "Gemengde sla|200 g","Champignons|250 g","Kastanjechampignons|250 g","Pompoen|1 st",
+    "Bleekselderij|1 st","Venkel|1 st","Radijs|1 bos","Rode kool|1 st","Witte kool|1 st",
+    "Verse kruiden|1 bakje","Basilicum|1 plant","Peterselie|1 bos","Rabarber|500 g"],
+
+  brood: ["Volkorenbrood|1 heel","Bruinbrood|1 heel","Witbrood|1 heel","Tijgerbrood|1 heel",
+    "Meergranenbrood|1 heel","Speltbrood|1 heel","Afbakbroodjes|6 st","Pistolets|6 st",
+    "Croissants|4 st","Krentenbollen|6 st","Bolletjes|6 st","Stokbrood|1 st","Beschuit|1 rol",
+    "Crackers|1 pak","Knäckebröd|1 pak","Rijstwafels|1 pak","Ontbijtkoek|1 st","Wraps|8 st",
+    "Tortilla's|8 st","Pitabroodjes|6 st","Naanbrood|2 st","Bagels|4 st","Appeltaart|1 st",
+    "Cake|1 st","Koeken|1 pak","Matzes|1 pak","Paneermeel|1 pak"],
+
+  zuivel: ["Halfvolle melk|1 L","Volle melk|1 L","Magere melk|1 L","Karnemelk|1 L",
+    "Havermelk|1 L","Amandelmelk|1 L","Sojamelk|1 L","Chocolademelk|1 L",
+    "Yoghurt naturel|1 L","Griekse yoghurt|500 g","Magere yoghurt|1 L","Skyr|500 g",
+    "Kwark|500 g","Vla|1 L","Slagroom|250 ml","Kookroom|250 ml","Crème fraîche|125 g",
+    "Zure room|125 g","Roomboter|250 g","Halvarine|500 g","Margarine|500 g",
+    "Eieren|10 st","Scharreleieren|12 st","Jonge kaas|plakken","Belegen kaas|plakken",
+    "Oude kaas|1 stuk","Geraspte kaas|200 g","Mozzarella|125 g","Feta|200 g",
+    "Geitenkaas|150 g","Brie|200 g","Roomkaas|200 g","Smeerkaas|125 g",
+    "Parmezaanse kaas|100 g","Hüttenkäse|200 g","Custard|1 pak"],
+
+  vlees: ["Kipfilet|500 g","Kipdijfilet|500 g","Kipgehakt|400 g","Half-om-half gehakt|500 g",
+    "Rundergehakt|500 g","Gehaktballen|4 st","Hamburgers|4 st","Biefstuk|2 st",
+    "Riblappen|500 g","Speklapjes|500 g","Spekblokjes|200 g","Bacon|150 g","Rookworst|1 st",
+    "Braadworst|4 st","Shoarmavlees|500 g","Kipreepjes|300 g","Ham|100 g","Achterham|150 g",
+    "Salami|100 g","Rosbief|100 g","Zalmfilet|2 st","Gerookte zalm|100 g","Kabeljauw|2 st",
+    "Tonijn in blik|2 blik","Garnalen|200 g","Haring|2 st","Vissticks|10 st","Tofu|200 g",
+    "Tempeh|200 g","Vegaburgers|2 st","Vegetarisch gehakt|200 g","Falafel|6 st"],
+
+  maaltijd: ["Spaghetti|500 g","Penne|500 g","Macaroni|500 g","Fusilli|500 g",
+    "Lasagnebladen|250 g","Verse pasta|250 g","Tagliatelle|250 g","Witte rijst|1 kg",
+    "Zilvervliesrijst|500 g","Basmatirijst|1 kg","Risottorijst|500 g","Couscous|400 g",
+    "Bulgur|400 g","Quinoa|400 g","Noedels|250 g","Mihoen|250 g","Bami|250 g","Nasi|250 g",
+    "Pizza|1 st","Pizzabodems|2 st","Gnocchi|500 g","Aardappelpuree|1 pak","Rösti|1 pak",
+    "Wokgroenten|400 g","Roerbakmix|400 g","Maaltijdsalade|1 st"],
+
+  voorraad: ["Olijfolie|500 ml","Zonnebloemolie|1 L","Bakboter|250 g","Azijn|500 ml",
+    "Balsamicoazijn|250 ml","Zout|1 pak","Peper|1 potje","Suiker|1 kg","Basterdsuiker|500 g",
+    "Bloem|1 kg","Zelfrijzend bakmeel|500 g","Gist|1 zakje","Bakpoeder|1 pakje",
+    "Vanillesuiker|1 pakje","Tomatenblokjes|2 blik","Tomatenpuree|1 tube","Passata|500 g",
+    "Pastasaus|1 pot","Pesto|1 pot","Kokosmelk|1 blik","Bruine bonen|1 blik",
+    "Kidneybonen|1 blik","Kikkererwten|1 blik","Linzen|500 g","Mais|1 blik","Doperwten|1 blik",
+    "Soep|1 blik","Bouillonblokjes|1 doosje","Ketchup|1 fles","Mayonaise|1 pot","Mosterd|1 pot",
+    "Curryketchup|1 fles","Sambal|1 potje","Sojasaus|250 ml","Ketjap|250 ml",
+    "Currypasta|1 potje","Kerriepoeder|1 potje","Paprikapoeder|1 potje",
+    "Italiaanse kruiden|1 potje","Oregano|1 potje","Komijn|1 potje","Kaneel|1 potje",
+    "Pindakaas|1 pot","Hagelslag|1 pak","Chocoladepasta|1 pot","Jam|1 pot","Appelstroop|1 pot",
+    "Honing|1 pot","Muesli|500 g","Cruesli|500 g","Cornflakes|375 g","Havermout|500 g",
+    "Koffie|500 g","Koffiepads|36 st","Koffiecups|10 st","Thee|20 zakjes",
+    "Groene thee|20 zakjes","Rozijnen|250 g","Gemengde noten|200 g","Amandelen|200 g",
+    "Kokosrasp|100 g","Custardpoeder|1 pak"],
+
+  diepvries: ["Diepvriespizza|1 st","Friet|1 kg","Aardappelpartjes|750 g","Kroketten|10 st",
+    "Frikandellen|10 st","Loempia's|4 st","Diepvriesspinazie|450 g","Doperwten diepvries|450 g",
+    "Tuinbonen|450 g","Diepvriesfruit|300 g","Diepvriesgroenten|750 g","Roomijs|1 L",
+    "IJsjes|6 st","Bladerdeeg|10 plakjes"],
+
+  snacks: ["Chips|1 zak","Paprikachips|1 zak","Naturel chips|1 zak","Nachos|200 g",
+    "Zoutjes|1 zak","Borrelnootjes|200 g","Pinda's|300 g","Popcorn|1 zak","Chocoladereep|1 st",
+    "Melkchocolade|200 g","Pure chocolade|200 g","Stroopwafels|10 st","Koekjes|1 pak",
+    "Speculaas|1 pak","Gevulde koeken|4 st","Drop|300 g","Winegums|300 g","Snoep|1 zak",
+    "Toffees|200 g","Pepernoten|1 zak","Kauwgom|1 pak"],
+
+  drinken: ["Water|6 flessen","Spa blauw|1,5 L","Bruisend water|1,5 L","Cola|1,5 L",
+    "Cola zero|1,5 L","Sinas|1,5 L","Seven-up|1,5 L","Ice tea|1,5 L","Appelsap|1 L",
+    "Sinaasappelsap|1 L","Multivruchtensap|1 L","Tomatensap|1 L","Limonadesiroop|750 ml",
+    "Ranja|750 ml","Bier|1 krat","Speciaalbier|6 st","Alcoholvrij bier|6 st","Radler|6 st",
+    "Witte wijn|1 fles","Rode wijn|1 fles","Rosé|1 fles","Prosecco|1 fles","Tonic|4 st",
+    "Energiedrank|4 st","Sportdrank|500 ml"],
+
+  huis: ["Afwasmiddel|500 ml","Vaatwastabletten|40 st","Vaatwaszout|1 kg",
+    "Glansspoelmiddel|500 ml","Wasmiddel|1 L","Wasmiddel gekleurd|1 L","Wasverzachter|750 ml",
+    "Vlekkenverwijderaar|1 st","Allesreiniger|1 L","Badkamerreiniger|750 ml",
+    "WC-reiniger|750 ml","Toiletblokjes|2 st","Groene zeep|1 L","Schuursponsjes|3 st",
+    "Vaatdoekjes|5 st","Microvezeldoekjes|3 st","Keukenrol|4 rollen","Toiletpapier|8 rollen",
+    "Tissues|1 doos","Vuilniszakken|20 st","Pedaalemmerzakken|40 st","Aluminiumfolie|1 rol",
+    "Vershoudfolie|1 rol","Bakpapier|1 rol","Diepvrieszakjes|1 pak","Boterhamzakjes|1 pak",
+    "Batterijen AA|4 st","Batterijen AAA|4 st","Lampen|1 st","Kaarsen|6 st",
+    "Waxinelichtjes|50 st","Lucifers|1 doosje","Afwasborstel|1 st","Theedoeken|2 st"],
+
+  verzorg: ["Tandpasta|75 ml","Tandenborstel|1 st","Flosdraad|1 st","Mondwater|500 ml",
+    "Shampoo|300 ml","Conditioner|300 ml","Douchegel|250 ml","Handzeep|250 ml",
+    "Bodylotion|400 ml","Deodorant|150 ml","Scheermesjes|4 st","Scheerschuim|200 ml",
+    "Zonnebrand|200 ml","Aftersun|200 ml","Handcrème|75 ml","Lippenbalsem|1 st",
+    "Wattenstaafjes|200 st","Watten|1 pak","Maandverband|1 pak","Tampons|1 pak",
+    "Pleisters|1 doosje","Paracetamol|20 st","Ibuprofen|20 st","Keelpastilles|1 rol",
+    "Neusspray|1 st","Luiers|1 pak","Billendoekjes|1 pak"],
+
+  klus: ["Schroeven|1 doosje","Spijkers|1 doosje","Pluggen|1 doosje","Verf|1 blik",
+    "Grondverf|1 blik","Kwast|1 st","Verfroller|1 st","Afplaktape|1 rol","Ducttape|1 rol",
+    "Schuurpapier|1 pak","Kit|1 koker","Lijm|1 tube","Werkhandschoenen|1 paar",
+    "Tuinaarde|40 L","Potgrond|20 L","Plantenvoeding|1 fles"]
+};
+
+/* één platte lijst, met de zoeksleutel er alvast bij: dat scheelt werk
+   bij elke toetsaanslag */
+const SCHAPLIJST = [];
+for(const [cat, regels] of Object.entries(SCHAP)){
+  for(const regel of regels){
+    const [naam, hoeveelheid = ""] = regel.split("|");
+    SCHAPLIJST.push({naam, hoeveelheid, cat, sleutel: zoekbaar(naam)});
+  }
+}
+
+/* Wat in het schap staat, weet de app meteen ook te categoriseren: typ je
+   "kastanjechampignons" dan hoeft niemand "groente" nog aan te wijzen. */
+for(const p of SCHAPLIJST){
+  for(const deel of p.naam.split(/[\s'-]+/)){
+    const s = stam(deel);
+    if(s.length >= 3 && !(s in RAAD_STAM)) RAAD_STAM[s] = p.cat;
+  }
+}
+
+/* Hoe goed past wat je typte bij deze naam? Lager is beter.
+   Een heel woord weegt zwaarder dan het begin van een langer woord:
+   typ "melk" en je bedoelt "Volle melk", niet "Melkchocolade". */
+function rangSchap(naam, z){
+  if(naam === z) return 0;
+  if(naam.startsWith(z + " ")) return 1;                                 // "Melk halfvol"
+  if(naam.endsWith(" " + z) || naam.includes(" " + z + " ")) return 2;   // "Volle melk"
+  if(naam.startsWith(z)) return 3;                                       // "Melkchocolade"
+  return 4;                                                              // "Karnemelk"
+}
+
+/* Zoeken in het schap. Ieder woord van wat je typt moet ergens voorkomen,
+   zodat "volle melk" ook "Halfvolle melk" vindt. */
+function zoekSchap(tekst, n = 5, overslaan = []){
+  const z = zoekbaar(tekst);
+  if(z.length < 2) return [];
+  const delen = z.split(" ").filter(Boolean);
+  const weg = new Set(overslaan.map(t => zoekbaar(t)).filter(Boolean));
+  const treffers = [];
+  for(const p of SCHAPLIJST){
+    if(weg.has(p.sleutel)) continue;
+    if(!delen.every(d => p.sleutel.includes(d))) continue;
+    const score = rangSchap(p.sleutel, z);
+    /* bij twee of drie letters levert "ergens in het midden" vooral ruis op */
+    if(score === 4 && z.length < 4) continue;
+    treffers.push({...p, score});
+  }
+  treffers.sort((a, b) => (a.score - b.score) || (a.naam.length - b.naam.length)
+                                              || a.naam.localeCompare(b.naam, "nl"));
+  return treffers.slice(0, n);
 }
 /* sleutel waaronder een boodschap in de database staat: kleine letters,
    zonder accenten en leestekens, zodat "Kleine tomaatjes!" altijd op
@@ -3311,6 +3497,7 @@ function sheetToevoegen(voorinvul){
       </div>
       <div class="hint verborgen" id="f-code"></div>
       <div class="sugg" id="f-sugg"></div>
+      <div class="sugg schap verborgen" id="f-schap"></div>
     </div>
     <div class="veld-rij">
       <div class="veld">
@@ -3368,6 +3555,27 @@ function sheetToevoegen(voorinvul){
           if(bron.winkel && !S.filter.winkel) zetKeuze("winkel", bron.winkel), f.winkel = bron.winkel;
         }
         tril(6); tekenSugg(); $("#f-hoev").focus();
+      });
+
+      /* En wat er nog meer bestaat. Wat jullie zelf vaak kopen staat
+         hierboven en telt zwaarder, dus dat laten we hier weg. */
+      const vak = $("#f-schap");
+      const uitSchap = zoekSchap(ti.value, 5, [
+        ...s.map(v => v.tekst),
+        ...openItems().map(i => i.tekst || "")
+      ]);
+      vak.classList.toggle("verborgen", !uitSchap.length);
+      vak.innerHTML = uitSchap.map((p, i) =>
+        `<button type="button" data-schap="${i}">${esc(p.naam)}${
+          p.hoeveelheid ? `<i>${esc(p.hoeveelheid)}</i>` : ""}</button>`).join("");
+      $$("#f-schap [data-schap]").forEach(b => b.onclick = () => {
+        const p = uitSchap[Number(b.dataset.schap)];
+        ti.value = p.naam; f.tekst = p.naam;
+        if(p.hoeveelheid && !$("#f-hoev").value.trim()){
+          $("#f-hoev").value = p.hoeveelheid; f.hoeveelheid = p.hoeveelheid;
+        }
+        if(!f.catHandmatig && catBestaat(p.cat)){ f.cat = p.cat; zetKeuze("cat", p.cat); }
+        tril(6); tekenSugg(); toonGeleerd(ti.value); $("#f-hoev").focus();
       });
     };
     const zetKeuze = (naam, waarde) => {
@@ -5323,6 +5531,7 @@ function sheetVast(){
         <input class="invoer" id="v-tekst" placeholder="Bijvoorbeeld koffie" maxlength="40">
         <button class="knop" id="v-add" style="flex:0 0 auto">${IK.plus}</button>
       </div>
+      <div class="sugg schap verborgen" id="v-schap"></div>
     </div>`;
   const voet = `${S.vast.length ? `<button class="knop vol" id="v-alles">${IK.plus} Alles op de lijst zetten</button>` : ""}`;
   sheet({titel:"Vaste boodschappen", body, voet, naTeken:() => {
@@ -5335,12 +5544,30 @@ function sheetVast(){
       await DB.wis(PAD.vast + "/" + b.dataset.vastwis); sheetVast();
     });
     const inp = $("#v-tekst");
+    /* koos je iets uit het schap, dan hoort de verpakking erbij — tot je
+       de naam weer verandert, want dan slaat die maat nergens meer op */
+    let gekozen = null;
     const voegToe = async () => {
       const t = inp.value.trim(); if(t.length < 2) return;
-      const cat = raadCategorie(t) || "overig";
-      await DB.voegToe(PAD.vast, {tekst:t, hoeveelheid:"", winkel:"nvt", cat, door:S.ik.id, gemaakt:nu()});
-      inp.value = ""; sheetVast();
+      const past = gekozen && zoekbaar(gekozen.naam) === zoekbaar(t);
+      const cat = (past && catBestaat(gekozen.cat) ? gekozen.cat : null) || raadCategorie(t) || "overig";
+      await DB.voegToe(PAD.vast, {tekst:t, hoeveelheid: past ? gekozen.hoeveelheid : "",
+        winkel:"nvt", cat, door:S.ik.id, gemaakt:nu()});
+      inp.value = ""; gekozen = null; sheetVast();
     };
+    const tekenSchap = () => {
+      const vak = $("#v-schap");
+      const uit = zoekSchap(inp.value, 5, S.vast.map(v => v.tekst || ""));
+      vak.classList.toggle("verborgen", !uit.length);
+      vak.innerHTML = uit.map((p, i) =>
+        `<button type="button" data-schap="${i}">${esc(p.naam)}${
+          p.hoeveelheid ? `<i>${esc(p.hoeveelheid)}</i>` : ""}</button>`).join("");
+      $$("#v-schap [data-schap]").forEach(b => b.onclick = () => {
+        gekozen = uit[Number(b.dataset.schap)];
+        inp.value = gekozen.naam; tril(6); tekenSchap(); inp.focus();
+      });
+    };
+    inp.oninput = tekenSchap;
     $("#v-add").onclick = voegToe;
     inp.onkeydown = e => { if(e.key === "Enter") voegToe(); };
     const alles = $("#v-alles");
