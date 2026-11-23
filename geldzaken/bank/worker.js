@@ -46,7 +46,7 @@ const UUR = 3600;
    die je krijgt als je het adres gewoon in je browser opent.
 
    Ophogen bij elke wijziging die je moet neerzetten. */
-const VERSIE = "v26";
+const VERSIE = "v28";
 
 /* Hoe lang de toestemming bij de bank geldig is. Zes maanden is wat de
    meeste banken maximaal toestaan; is jouw bank strenger, dan nemen we
@@ -306,14 +306,25 @@ async function bij(omgeving, pad, opties = {}) {
   try { gegevens = tekst ? JSON.parse(tekst) : null; } catch { /* geen JSON */ }
 
   if (!antw.ok) {
-    const code = gegevens?.code || gegevens?.error || "";
-    throw mis(uitleg(antw.status, code), antw.status === 401 ? 502 : antw.status);
+    /* Twee verschillende dingen, en ze stonden door elkaar.
+
+       Een code is een naam waar we iets mee kunnen — EXPIRED_SESSION en
+       dergelijke, waar hieronder een nette zin bij hoort. Maar Enable
+       Banking zet in `code` soms gewoon het getal 400 neer, en dan kreeg
+       je "(400 400)" te lezen: tweemaal hetzelfde en nergens goed voor.
+       Wat je dan wél verder helpt staat in `message`, en dat gooiden we
+       weg. Dus: alleen een naam telt als code, en de tekst gaat mee. */
+    const naam = [gegevens?.code, gegevens?.error]
+      .find(w => typeof w === "string" && /[a-z]/i.test(w)) || "";
+    const zin = [gegevens?.message, gegevens?.detail, gegevens?.error_description, gegevens?.description]
+      .find(w => typeof w === "string" && w.trim()) || "";
+    throw mis(uitleg(antw.status, naam, zin), antw.status === 401 ? 502 : antw.status);
   }
   return gegevens;
 }
 
 /* De fouten die je in de praktijk tegenkomt, in gewone taal. */
-function uitleg(status, code) {
+function uitleg(status, code, zin = "") {
   if (code === "EXPIRED_SESSION" || status === 401) {
     return "De toestemming bij je bank is verlopen. Koppel je rekening opnieuw.";
   }
@@ -322,11 +333,12 @@ function uitleg(status, code) {
   }
   if (status === 403) return "Deze rekening is niet gekoppeld aan je Enable Banking-app.";
   if (status >= 500) return "Je bank of Enable Banking is even niet bereikbaar.";
-  /* Wat hier overblijft kennen we niet bij naam. Dan is de code die
-     Enable Banking zelf teruggaf het enige bruikbare dat we hebben, en
-     die verzwijgen helpt niemand — het is hun eigen foutcode, geen
+  /* Wat hier overblijft kennen we niet bij naam. Dan is wat Enable
+     Banking zelf teruggaf het enige bruikbare dat we hebben, en dat
+     verzwijgen helpt niemand — het gaat om hun foutmelding, niet om een
      gegeven van jou. */
-  return `Ophalen lukte niet (${status}${code ? ` ${code}` : ""}).`;
+  const erbij = [code, (zin || "").trim().slice(0, 200)].filter(Boolean).join(": ");
+  return `Ophalen lukte niet (${status}${erbij ? ` — ${erbij}` : ""}).`;
 }
 
 /* ---------------------------------------------------------------

@@ -67,7 +67,7 @@ export const bank = {
    mist hij reparaties die hier allang zijn gedaan en zoek je een fout op
    de verkeerde plek. Ophogen zodra de app iets nodig heeft dat alleen in
    een nieuwere dienst zit. */
-export const DIENST_NODIG = 26;
+export const DIENST_NODIG = 28;
 
 const versieNummer = v => {
   const m = /^v(\d+)$/.exec(String(v || "").trim());

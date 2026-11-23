@@ -94,6 +94,35 @@ r = await klaar("code=abc&state=verzonnen.handtekening");
 check("verzonnen terugkomst: geen omleiding", r.status !== 302, String(r.status));
 check("en die wordt geweigerd", r.status === 403, String(r.status));
 
+/* 7. Enable Banking zet een getal in `code` en de uitleg in `message`.
+      Dat gaf eerder "(400 400)": tweemaal hetzelfde en nergens goed
+      voor, terwijl de bruikbare zin werd weggegooid. */
+sessieAntwoord = () => new Response(JSON.stringify({
+  code: 400, message: "Authorization code has already been used",
+}), { status: 400 });
+r = await klaar(`code=abc&state=${encodeURIComponent(laatsteState)}`);
+heen = decodeURIComponent(r.headers.get("Location") || "");
+check("een getal in `code` wordt niet als naam herhaald", !/400 400/.test(heen), heen);
+check("en de uitleg van Enable Banking komt mee",
+  /already been used/.test(heen), heen);
+
+/* 8. Staat er wél een naam, dan hoort die er ook bij. */
+sessieAntwoord = () => new Response(JSON.stringify({
+  code: "WRONG_REQUEST", message: "Unknown authorization",
+}), { status: 400 });
+r = await klaar(`code=abc&state=${encodeURIComponent(laatsteState)}`);
+heen = decodeURIComponent(r.headers.get("Location") || "");
+check("een echte code blijft staan", /WRONG_REQUEST/.test(heen), heen);
+check("met de zin erachter", /Unknown authorization/.test(heen), heen);
+
+/* 9. Een fout die we wél bij naam kennen houdt zijn nette zin. */
+sessieAntwoord = () => new Response(JSON.stringify({
+  code: "EXPIRED_SESSION", message: "gone",
+}), { status: 400 });
+r = await klaar(`code=abc&state=${encodeURIComponent(laatsteState)}`);
+heen = decodeURIComponent(r.headers.get("Location") || "");
+check("een bekende fout houdt zijn eigen uitleg", /toestemming bij je bank is verlopen/.test(heen), heen);
+
 globalThis.fetch = echteFetch;
 console.log(`\n${goed} goed, ${mis} mis`);
 process.exit(mis ? 1 : 0);

@@ -21,6 +21,19 @@ const check = (n, ok, e = "") => ok ? (goed++, console.log(`  ok   ${n}`)) : (mi
 
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 
+/* Welke versie de app eist staat in de app zelf. Hier een getal
+   neerzetten betekent dat deze proef gaat liegen zodra die eis
+   opschuift. */
+const eis = await (async () => {
+  const p = await (await browser.newContext()).newPage();
+  await p.goto("http://127.0.0.1:8123/index.html", { waitUntil: "networkidle" });
+  const n = await p.evaluate(async () => (await import("./js/bank.js")).DIENST_NODIG);
+  await p.context().close();
+  return n;
+})();
+const NU = `v${eis}`, OUD = `v${eis - 7}`;
+console.log(`De app verwacht ${NU} of nieuwer.`);
+
 async function proef(antwoord) {
   const p = await (await browser.newContext({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true })).newPage();
   p.on("pageerror", f => console.log("PAGINAFOUT:", String(f)));
@@ -39,19 +52,19 @@ async function proef(antwoord) {
 }
 
 console.log("\n— een dienst van nu —");
-let p = await proef({ klaar: true, dienst: "v26" });
+let p = await proef({ klaar: true, dienst: NU });
 let tekst = await p.locator("#scherm").textContent();
 check("de test slaagt", /De dienst antwoordt/.test(tekst));
-check("en noemt de versie", /\(v26\)/.test(tekst), tekst.match(/De dienst antwoordt[^.]*/)?.[0]);
+check("en noemt de versie", tekst.includes(`(${NU})`), tekst.match(/De dienst antwoordt[^.]*/)?.[0]);
 check("geen waarschuwing", !/loopt achter/.test(tekst));
 
 console.log("\n— een dienst die achterloopt —");
-p = await proef({ klaar: true, dienst: "v19" });
+p = await proef({ klaar: true, dienst: OUD });
 tekst = await p.locator("#scherm").textContent();
 check("de test slaagt nog steeds", /De dienst antwoordt/.test(tekst));
 check("maar er staat een waarschuwing", /loopt achter/.test(tekst));
-check("met wat hij draait", /v19/.test(tekst));
-check("en wat er nodig is", /v26 of nieuwer/.test(tekst));
+check("met wat hij draait", tekst.includes(OUD));
+check("en wat er nodig is", tekst.includes(`${NU} of nieuwer`));
 check("en welk bestand", /worker\.js/.test(tekst));
 
 console.log("\n— een oude dienst die zijn versie niet noemt —");
