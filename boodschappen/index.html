@@ -7567,20 +7567,31 @@ async function start(){
     S.syncFout = "De gedeelde lijst kon niet geladen worden — de app draait nu op dit apparaat.";
   }
 
-  try{ await metGrens(zetWinkelsKlaar(), null); }
-  catch(e){ console.error(e); S.winkels = STANDAARD_WINKELS.map(w => ({...w})); toonSyncFout(e); }
-  try{ await metGrens(zetCatsKlaar(), null); }
-  catch(e){ console.error(e); S.cats = STANDAARD_CATS.map((c,i) => ({...c, volgorde:i+1})); }
+  /* Deze twee weten niets van elkaar, dus ze hoeven ook niet op elkaar te
+     wachten. Achter elkaar kost het twee keer een rondje naar de server. */
+  await Promise.all([
+    metGrens(zetWinkelsKlaar(), null)
+      .catch(e => { console.error(e); S.winkels = STANDAARD_WINKELS.map(w => ({...w})); toonSyncFout(e); }),
+    metGrens(zetCatsKlaar(), null)
+      .catch(e => { console.error(e); S.cats = STANDAARD_CATS.map((c,i) => ({...c, volgorde:i+1})); })
+  ]);
 
   startLuisteren();
 
-  try{ S.leden  = await metGrens(DB.haalAlles(PAD.leden), []); }catch(e){ toonSyncFout(e); }
-  try{ S.items  = await metGrens(DB.haalAlles(PAD.items), []); eersteItems = false; }catch(e){}
-  try{ S.bonnen = await metGrens(DB.haalAlles(PAD.bonnen), []); }catch(e){}
-  try{ S.vast   = await metGrens(DB.haalAlles(PAD.vast), []); }catch(e){}
-  try{ S.geleerd = await metGrens(DB.haalAlles(PAD.geleerd), []); }catch(e){}
-  try{ S.gerechten = await metGrens(DB.haalAlles(PAD.gerechten), []); }catch(e){}
-  try{ S.menu = await metGrens(DB.haalAlles(PAD.menu), []); }catch(e){}
+  /* En deze zeven al helemaal niet. Stuk voor stuk ophalen betekende zeven
+     keer heen en weer achter elkaar: op een trage of omgeleide verbinding
+     (VPN, buitenland, slecht bereik) tellen die rondjes hard op. Nu gaan ze
+     tegelijk de deur uit en duurt het geheel zo lang als de traagste. */
+  const haal = (pad, leeg = []) =>
+    metGrens(DB.haalAlles(pad), leeg).catch(e => { console.error(pad, e); return leeg; });
+  const [leden, items, bonnen, vast, geleerd, gerechten, menu] = await Promise.all([
+    metGrens(DB.haalAlles(PAD.leden), []).catch(e => { toonSyncFout(e); return []; }),
+    haal(PAD.items), haal(PAD.bonnen), haal(PAD.vast),
+    haal(PAD.geleerd), haal(PAD.gerechten), haal(PAD.menu)
+  ]);
+  S.leden = leden; S.items = items; S.bonnen = bonnen; S.vast = vast;
+  S.geleerd = geleerd; S.gerechten = gerechten; S.menu = menu;
+  eersteItems = false;
 
   const bewaard = LS.get("boodschappen_ik_" + P, null);
   if(bewaard && S.leden.some(l => l.id === bewaard.id)){

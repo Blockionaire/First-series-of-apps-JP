@@ -284,6 +284,8 @@ maar je kunt hem laten resetten op je salarisdatum (zie hieronder).
 - De terugknop van je telefoon sluit eerst het paneel of de winkelmodus, niet de app.
 - Zonder internet blijft de app gewoon werken; wat je doet wordt gesynchroniseerd
   zodra je weer verbinding hebt.
+- **Een traag netwerk laat je niet wachten.** Zie
+  [Snel opstarten, ook op een slechte verbinding](#snel-opstarten-ook-op-een-slechte-verbinding).
 
 ---
 
@@ -297,6 +299,40 @@ Eén HTML-bestand, geen bouwstap, geen framework. Openen in een browser is genoe
 | `firebase-config.js` | instellingen: Firebase-project, huisnaam, naamruimte |
 | `manifest.json`, `sw.js` | maken er een installeerbare app van die offline werkt |
 | `icon*.png` | het appicoon |
+
+### Snel opstarten, ook op een slechte verbinding
+
+Met een VPN aan bleef de app soms hangen op het opstartscherm van de telefoon. Twee
+oorzaken, allebei in deze app:
+
+**De service worker wachtte eindeloos op het net.** Netwerk-eerst met de cache als
+achtervang via `.catch()` klinkt veilig, maar `.catch()` springt alleen aan bij een
+*fout*. Een verzoek dat blijft hangen geeft geen fout — het geeft niets. Dan staar je
+naar het opstartscherm terwijl de hele app in de cache ligt. Nu krijgt het net 2,5
+seconde (`GRENS` in `sw.js`); daarna komt het uit de cache en raast het netwerk op de
+achtergrond uit, zodat de verse versie er de volgende keer staat.
+
+`index.html` houdt wél netwerk-eerst, want daar zit de hele app in en een nieuwe versie
+wil je meteen. De bestanden die nooit veranderen (`firebase-config.js`, `manifest.json`,
+de iconen) komen direct uit de cache. Dat scheelt een tweede wachttijd: de browser
+ontdekt `firebase-config.js` pas als `index.html` binnen is, dus anders wacht je twee
+keer achter elkaar.
+
+**Negen rondjes naar de server, achter elkaar.** Bij het opstarten werden winkels en
+categorieën los opgehaald, en daarna leden, items, bonnen, vaste boodschappen, geleerde
+categorieën, gerechten en menu — stuk voor stuk, elk met een grens van 5 seconden. Op een
+omgeleide verbinding (VPN, buitenland, slecht bereik) telt elke reis op. Ze weten niets
+van elkaar, dus ze gaan nu tegelijk de deur uit: negen wachtmomenten werden er twee, en
+het geheel duurt zo lang als de traagste in plaats van alle negen bij elkaar.
+
+Gemeten met een server die expres 12 seconden blijft hangen (`test/traag.mjs`): de app
+staat na 2,6 seconde in beeld in plaats van na 12+. Zonder server erbij: 92 ms. Een
+nieuwe `index.html` komt bij een normale verbinding nog steeds meteen door.
+
+Blijft het traag met een VPN aan, dan ligt de rest aan die kant: waar je uitgang staat
+(Firestore-verkeer loopt via het exitland), DNS-filtering zoals NordVPN's Threat
+Protection, en dat Firestore langlopende verbindingen gebruikt waar VPN's over
+struikelen.
 
 ### Waar staan de gegevens?
 
