@@ -320,6 +320,20 @@ function bankBlok() {
 
       ${b.fout && b.fout !== b.proef?.tekst ? `<div class="veld__fout">${esc(b.fout)}</div>` : ""}
 
+      ${/* Zolang hier een adres of een woord staat, hoort er een manier te
+            zijn om ze weer weg te halen — zonder dat je daarvoor je hele
+            boekhouding hoeft te wissen.
+
+            Hij staat er altijd, net als de knoppen hierboven, en of je
+            hem ziet regelt `stemBankKnoppenAf` rechtstreeks. Zouden we
+            hem hier laten afhangen van wat er is opgeslagen, dan kwam
+            hij pas bij de volgende hertekening tevoorschijn — en tijdens
+            het typen tekenen we juist niet opnieuw. */ ""}
+      <button class="knop knop--rand knop--breed" data-bank-vergeet style="margin-top:12px"
+              ${Bank.ingesteld() ? "" : "hidden"}>
+        Adres en woord van dit apparaat verwijderen
+      </button>
+
       <div class="veld__hint" style="margin-top:12px">
         De dienst bewaart niets: hij haalt op, geeft door en vergeet. Je transacties
         komen in deze app terecht, op dit apparaat — en pas nadat jij ze hebt nagekeken.
@@ -583,6 +597,10 @@ export function koppel(wortel, params) {
     wortel.querySelectorAll("[data-bank-proef], [data-bank-koppel]")
       .forEach(knop => { knop.disabled = !klaar; });
 
+    /* Is er iets te vergeten, dan hoort de knop daarvoor er te staan. */
+    const vergeet = wortel.querySelector("[data-bank-vergeet]");
+    if (vergeet) vergeet.hidden = !(adresIn || woordIn || Bank.gekoppeld());
+
     const waarom = wortel.querySelector("[data-bank-waarom]");
     if (waarom) {
       waarom.textContent = klaar ? ""
@@ -625,6 +643,10 @@ export function koppel(wortel, params) {
     e.rechtstreeks = true;
     bankKoppelen();
   });
+  wortel.querySelector("[data-bank-vergeet]")?.addEventListener("click", e => {
+    e.rechtstreeks = true;
+    bankVergeten();
+  });
 
   wortel.addEventListener("click", async e => {
     /* Wat ziet deze afhandeling eigenlijk, en hoort hij nog bij het
@@ -657,6 +679,7 @@ export function koppel(wortel, params) {
     /* `rechtstreeks` betekent: de knop heeft het zelf al afgehandeld. */
     if (e.target.closest("[data-bank-proef]")) return e.rechtstreeks || bankProef();
     if (e.target.closest("[data-bank-koppel]")) return e.rechtstreeks || bankKoppelen();
+    if (e.target.closest("[data-bank-vergeet]")) return e.rechtstreeks || bankVergeten();
     if (e.target.closest("[data-bank-rekening]")) return bankRekeningKiezen();
     if (e.target.closest("[data-bank-los]")) return bankLoskoppelen();
 
@@ -951,14 +974,44 @@ async function herstel() {
 async function allesWissen() {
   if (!eisBewerkrecht()) return;
   const zeker = await bevestig(
-    "Alle boekingen, vaste lasten, potjes en doelen worden gewist. Dit kan niet ongedaan gemaakt worden — maak eerst een back-up.",
+    "Alle boekingen, vaste lasten, potjes en doelen worden gewist."
+    + (Bank.ingesteld() ? " Ook je bankkoppeling wordt ingetrokken en vergeten." : "")
+    + " Dit kan niet ongedaan gemaakt worden — maak eerst een back-up.",
     { titel: "Alles wissen?", bevestigLabel: "Ja, alles wissen", gevaar: true });
   if (!zeker) return;
   const nogmaals = await bevestig("Heel zeker? Er is geen weg terug.", { titel: "Echt alles wissen", bevestigLabel: "Wissen", gevaar: true });
   if (!nogmaals) return;
   await wisAlles();
+  /* "Alles" hoort ook alles te zijn. Het adres, het woord en je sessie
+     staan in de opslag van dít apparaat, en die valt buiten de gewone
+     opruiming — dus bleven ze staan terwijl de knop iets anders beloofde. */
+  await vergeetDeBank();
   melding("Alles gewist.");
   ga("#/start");
+}
+
+/* De toestemming bij de bank intrekken, en daarna adres, woord en sessie
+   van dit apparaat halen. Lukt het intrekken niet, dan gaat het vergeten
+   gewoon door: de toestemming verloopt vanzelf, en blijven staan is hier
+   het ergere van de twee. */
+async function vergeetDeBank() {
+  if (!Bank.ingesteld()) return;
+  try { await Bank.loskoppelen(); } catch { /* verloopt vanzelf */ }
+  await Bank.vergeetAlles();
+}
+
+async function bankVergeten() {
+  if (!eisBewerkrecht()) return;
+  const zeker = await bevestig(
+    (Bank.gekoppeld()
+      ? "De toestemming bij je bank wordt ingetrokken, en het adres, het woord en je sessie verdwijnen van dit apparaat. "
+      : "Het adres en het woord verdwijnen van dit apparaat. ")
+    + "Wat je al hebt opgehaald blijft gewoon in je boekhouding staan.",
+    { titel: "Alles van je bank vergeten?", bevestigLabel: "Vergeten", gevaar: true });
+  if (!zeker) return;
+  await vergeetDeBank();
+  melding("Van dit apparaat verdwenen.", "goed");
+  meld();
 }
 
 async function wijzigWachtwoord() {
