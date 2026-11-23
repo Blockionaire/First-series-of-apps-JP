@@ -874,12 +874,9 @@ textarea.invoer.groeit{
 .dagrij.nietthuis .tk b{font-weight:550; font-style:italic;}
 .dagrij.nietthuis .na{opacity:.55;}
 
-/* komt er iemand mee-eten, dan zie je dat meteen aan de dag */
-.dagrij.gasten{background:var(--accent-zacht);}
-.dagrij.gasten:active{background:color-mix(in srgb, var(--accent-zacht) 70%, var(--accent));}
-.dagrij.gasten .dagkop{background:var(--card);}
-.dagrij.vandaag.gasten .dagkop{background:var(--accent);}
-/* het aantal mee-eters staat achter de naam; daar kan het niets raken */
+/* Komt er iemand mee-eten, dan zegt het telletje achter de naam en de
+   regel eronder dat al. De hele rij kleuren was te veel: dan springt een
+   gewone donderdag meer in het oog dan vandaag. */
 .dagrij .tk b .gastenbel{
   display:inline-block; margin-left:7px; vertical-align:1px;
   min-width:20px; padding:1px 6px; border-radius:999px;

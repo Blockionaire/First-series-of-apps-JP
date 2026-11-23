@@ -187,8 +187,9 @@ een tweede.
 
 **Mee-eters.** Schuift er iemand aan? Open de dag en tik *Mee-eters*: je typt een naam
 (of tikt er een aan die eerder meegegeten heeft) en hij staat klein onder het gerecht in de
-weekplanning — *Sanne en Tim eten mee*. De dag krijgt bovendien een eigen tintje en een
-**+2** achter de naam, zodat je dat meteen ziet als je de week overloopt. Elke mee-eter telt meteen mee voor hoeveel personen
+weekplanning — *Sanne en Tim eten mee*. Achter de naam van het gerecht staat een
+**+2**, zodat je het ziet als je de week overloopt. De rij zelf kleurt niet mee: dan zou
+een gewone donderdag meer opvallen dan vandaag. Elke mee-eter telt meteen mee voor hoeveel personen
 je kookt, dus de hoeveelheden en de boodschappen schalen mee; met de stepper zet je dat
 alsnog anders. Werkt ook bij een vrije dag ("uit eten"), daar blijft het aantal personen
 gewoon leeg. Namen worden onthouden voor jullie allebei.
