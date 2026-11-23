@@ -260,8 +260,12 @@ function bankBlok() {
           <button class="knop knop--rand" data-code-vergeet>Weggooien</button>
         </div>
         <div class="veld__hint" style="margin:9px 0 14px">
-          De code is tot je volgende koppeling geldig. Lukt het overnemen niet, koppel dan
-          opnieuw vanuit de app op je beginscherm.
+          ${b.overdracht.startsWith("c:")
+            ? `Doe dit meteen: zo'n code van je bank is maar een paar minuten geldig.
+               Lukt het niet op tijd, begin dan gewoon opnieuw vanuit de app op je beginscherm —
+               er gaat niets stuk, je logt alleen nog een keer in bij je bank.`
+            : `De code blijft geldig tot je volgende koppeling. Lukt het overnemen niet, koppel dan
+               opnieuw vanuit de app op je beginscherm.`}
         </div>` : ""}
 
       ${!Bank.gekoppeld() ? `

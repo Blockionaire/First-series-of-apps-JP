@@ -18,6 +18,9 @@
 /* Zijn geval: je koppelt vanuit de app op je beginscherm, je bank stuurt
    je browser terug, en daar staat geen adres en woord. Komt die sessie
    dan alsnog op de goede plek? */
+/* Zijn geval: je koppelt vanuit de app op je beginscherm, je bank stuurt
+   je browser terug, en daar staat geen adres en woord. Komt die sessie
+   dan alsnog op de goede plek? */
 import pw from "playwright";
 const { chromium } = pw;
 let goed = 0, mis = 0;
@@ -32,12 +35,14 @@ const safari = await (await browser.newContext(opties)).newPage();
 const beginscherm = await (await browser.newContext(opties)).newPage();
 for (const p of [safari, beginscherm]) {
   p.on("pageerror", f => console.log("PAGINAFOUT:", String(f)));
-  await p.route("**/dienst.test/**", r => r.fulfill({
-    status: 200, contentType: "application/json",
-    headers: { "Access-Control-Allow-Origin": "*" },
-    body: JSON.stringify({ rekeningen: [{ id: "rek-1", iban: "NL00TEST0123456789", naam: "Betaalrekening" }],
-                           bank: "Rabobank", geldigTot: "2027-05-01" }),
-  }));
+  await p.route("**/dienst.test/**", r => {
+    const lijf = r.request().url().endsWith("/sessie")
+      ? { sessie: "sessie-abc123" }
+      : { rekeningen: [{ id: "rek-1", iban: "NL00TEST0123456789", naam: "Betaalrekening" }],
+          bank: "Rabobank", geldigTot: "2027-05-01" };
+    r.fulfill({ status: 200, contentType: "application/json",
+                headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify(lijf) });
+  });
 }
 
 console.log("\n— in de app op je beginscherm staan adres en woord —");
@@ -49,19 +54,19 @@ await beginscherm.waitForTimeout(900);
 check("die staan er", (await beginscherm.inputValue("#bankwoord")) === "zeergeheim");
 
 console.log("\n— maar je bank stuurt Safari terug, zonder die gegevens —");
-await safari.goto("http://127.0.0.1:8123/index.html#bank=sessie-abc123", { waitUntil: "networkidle" });
+await safari.goto("http://127.0.0.1:8123/index.html#bankcode=code-xyz789", { waitUntil: "networkidle" });
 await safari.waitForTimeout(1200);
 const safariTekst = await safari.locator("#scherm").textContent();
 check("Safari klaagt niet meer dat het woord mist", !/Vul eerst het adres/.test(safariTekst));
 check("maar zegt dat het koppelen gelukt is", /koppelen is gelukt/i.test(safariTekst), safariTekst.slice(0, 200));
-check("en laat de code zien", /sessie-abc123/.test(await safari.locator("[data-overdracht]").textContent()));
+check("en laat de code zien", /code-xyz789/.test(await safari.locator("[data-overdracht]").textContent()));
 check("met een knop om te kopiëren", await safari.locator("[data-code-kopieer]").count() === 1);
 
 console.log("\n— de code overleeft een herlaad —");
 await safari.reload({ waitUntil: "networkidle" });
 await safari.waitForTimeout(1000);
 check("hij staat er na herladen nog",
-  /sessie-abc123/.test(await safari.locator("#scherm").textContent()));
+  /code-xyz789/.test(await safari.locator("#scherm").textContent()));
 
 console.log("\n— en weggooien is echt weg —");
 await safari.evaluate(async () => {
@@ -71,12 +76,12 @@ await safari.evaluate(async () => {
 await safari.reload({ waitUntil: "networkidle" });
 await safari.waitForTimeout(1000);
 check("na weggooien en herladen is hij verdwenen",
-  !/sessie-abc123/.test(await safari.locator("#scherm").textContent()));
+  !/code-xyz789/.test(await safari.locator("#scherm").textContent()));
 
 console.log("\n— die code neem je over op je beginscherm —");
 await beginscherm.locator("[data-code-plak]").click();
 await beginscherm.waitForTimeout(400);
-await beginscherm.fill("#overcode", "sessie-abc123");
+await beginscherm.fill("#overcode", "c:code-xyz789");
 await beginscherm.getByText("Overnemen", { exact: true }).click();
 await beginscherm.waitForTimeout(1200);
 

@@ -67,7 +67,7 @@ export const bank = {
    mist hij reparaties die hier allang zijn gedaan en zoek je een fout op
    de verkeerde plek. Ophogen zodra de app iets nodig heeft dat alleen in
    een nieuwere dienst zit. */
-export const DIENST_NODIG = 28;
+export const DIENST_NODIG = 29;
 
 const versieNummer = v => {
   const m = /^v(\d+)$/.exec(String(v || "").trim());
@@ -262,6 +262,38 @@ export async function koppelStarten(bankNaam, land = "NL") {
    anders blijft hij in je adresbalk en in je geschiedenis staan. */
 export async function verwerkTerugkomst() {
   const anker = location.hash || "";
+
+  /* De nieuwe weg: de dienst geeft de code van je bank door en wij
+     wisselen hem in. Dat gebeurt hier en niet bij de dienst, omdat het
+     maar één keer mag en een adres meer dan eens kan worden opgehaald. */
+  if (anker.startsWith("#bankcode=")) {
+    const code = decodeURIComponent(anker.slice(10));
+    history.replaceState(null, "", location.pathname + location.search + "#/instellingen");
+    await laad();
+
+    if (!ingesteld()) {
+      /* Geland waar het adres en het woord niet staan — meestal Safari,
+         terwijl de app op je beginscherm ze wel heeft. Inwisselen kan
+         hier dus niet; overdragen wel. Haast is geboden: zo'n code van
+         je bank is maar kort geldig. */
+      bank.overdracht = "c:" + code;
+      bank.fout = null;
+      spoorBij("code binnengekomen zonder adres en woord — over te dragen");
+      await bewaar();
+      return "overdracht";
+    }
+
+    try {
+      await wisselCodeIn(code);
+      return "gekoppeld";
+    } catch (e) {
+      bank.fout = e.message;
+      bank.proef = { gelukt: false, tekst: e.message, geenAntwoord: false, koppelen: true, tijd: Date.now() };
+      await bewaar();
+      return "mislukt";
+    }
+  }
+
   if (!anker.startsWith("#bank=")) return null;
 
   const waarde = decodeURIComponent(anker.slice(6));
@@ -334,14 +366,39 @@ async function zetSessie(sessie) {
   }
 }
 
-/* De code die je in je browser kreeg hier in gebruik nemen. */
-export async function neemOver(code) {
-  const schoon = String(code || "").trim();
-  if (!/^[\w-]{1,100}$/.test(schoon)) {
+/* De code van je bank inwisselen voor een sessie. De dienst doet de
+   aanroep; wij doen hem precies één keer. */
+async function wisselCodeIn(code) {
+  const uit = await roep("/sessie", { methode: "POST", lijf: { code } });
+  if (!uit?.sessie) throw new Error("De dienst gaf geen sessie terug.");
+  await zetSessie(uit.sessie);
+  if (bank.fout) throw new Error(bank.fout);
+}
+
+/* Wat je in je browser kreeg hier in gebruik nemen.
+
+   Er zijn twee soorten: een sessie die al is ingewisseld, en een code
+   van je bank die dat nog moet. Ze zien er hetzelfde uit, dus zetten we
+   er bij het overdragen een letter voor. Zonder die letter gaan we uit
+   van een sessie — dat is wat een oudere dienst teruggaf. */
+export async function neemOver(waarde) {
+  let schoon = String(waarde || "").trim();
+  let isCode = false;
+  if (/^[cs]:/.test(schoon)) {
+    isCode = schoon[0] === "c";
+    schoon = schoon.slice(2);
+  }
+  if (!/^[\w-]{1,200}$/.test(schoon)) {
     throw new Error("Dat lijkt geen geldige code. Neem hem helemaal over, zonder spaties.");
   }
   if (!ingesteld()) {
     throw new Error("Vul eerst het adres en het woord van je bankdienst in.");
+  }
+
+  if (isCode) {
+    spoorBij("code overgenomen uit een andere browser");
+    await wisselCodeIn(schoon);
+    return true;
   }
   spoorBij("sessie overgenomen uit een andere browser");
   await zetSessie(schoon);

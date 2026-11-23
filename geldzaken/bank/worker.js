@@ -46,7 +46,7 @@ const UUR = 3600;
    die je krijgt als je het adres gewoon in je browser opent.
 
    Ophogen bij elke wijziging die je moet neerzetten. */
-const VERSIE = "v28";
+const VERSIE = "v29";
 
 /* Hoe lang de toestemming bij de bank geldig is. Zes maanden is wat de
    meeste banken maximaal toestaan; is jouw bank strenger, dan nemen we
@@ -107,6 +107,13 @@ export default {
       }
       if (url.pathname === "/koppel" && verzoek.method === "POST") {
         return antwoord(await koppelStarten(verzoek, url, omgeving), 200, herkomst);
+      }
+      /* De code van je bank inwisselen voor een sessie. Dit hoort hier
+         en niet bij /klaar: het mag maar één keer gebeuren, en dan moet
+         de app het vragen in plaats van een browser die een adres
+         ophaalt. */
+      if (url.pathname === "/sessie" && verzoek.method === "POST") {
+        return antwoord(await maakSessie(verzoek, omgeving), 200, herkomst);
       }
       if (url.pathname === "/rekeningen" && verzoek.method === "POST") {
         return antwoord(await rekeningen(verzoek, omgeving), 200, herkomst);
@@ -456,29 +463,40 @@ async function terugVanBank(url, omgeving) {
   const gelezen = await leesState(state, omgeving);
   const terug = gelezen.t;
 
-  try {
-    if (fout) return Response.redirect(`${terug}#bank=fout:${kort(fout)}`, 302);
-    if (!code) return Response.redirect(`${terug}#bank=afgebroken`, 302);
+  if (fout) return Response.redirect(`${terug}#bank=fout:${kort(fout)}`, 302);
+  if (!code) return Response.redirect(`${terug}#bank=afgebroken`, 302);
 
-    const sessie = await bij(omgeving, "/sessions", {
-      method: "POST",
-      body: JSON.stringify({ code }),
-    });
+  /* Hier werd de code ingewisseld voor een sessie, en dat was fout.
 
-    if (!sessie?.session_id) return Response.redirect(`${terug}#bank=mislukt`, 302);
-    return Response.redirect(`${terug}#bank=${encodeURIComponent(sessie.session_id)}`, 302);
-  } catch (e) {
-    /* Hier blijven staan is het ergste wat er kan gebeuren: je bent net
-       door het hele inloggen bij je bank heen, en staat dan op een kale
-       pagina van deze dienst — zonder weg terug, en zonder dat de app
-       ooit hoort wat er misging. Dus gaan we terug naar de app, met de
-       reden erbij. */
-    return Response.redirect(`${terug}#bank=fout:${kort(e?.publiek || "Het koppelen lukte niet.")}`, 302);
-  }
+     Dit is een pagina die wordt opgehaald, en een adres mag meer dan
+     eens worden opgehaald: een app die je naar je browser doorstuurt
+     haalt hem vaak eerst zelf op, een browser herhaalt een verzoek bij
+     terugnavigeren, en verversen doet het ook. De code van je bank is
+     eenmalig. De eerste keer slaagde dus, en de keer die jij te zien
+     kreeg hoorde "ALREADY_AUTHORIZED" — terwijl er niets mis was,
+     behalve dat wij het twee keer deden.
+
+     Een adres ophalen hoort niets te veranderen. Dus geven we de code
+     door aan de app, en die wisselt hem één keer in, op een moment dat
+     zij bepaalt. Deze pagina twee keer ophalen kan nu geen kwaad. */
+  return Response.redirect(`${terug}#bankcode=${encodeURIComponent(code)}`, 302);
 }
 
 /* Een reden die in een anker past en er niets anders in smokkelt. */
 const kort = tekst => encodeURIComponent(String(tekst).slice(0, 180));
+
+/* De code inwisselen voor een sessie. Eén keer, op verzoek van de app. */
+async function maakSessie(verzoek, omgeving) {
+  const { code } = await lijf(verzoek);
+  if (!code || typeof code !== "string") throw mis("Geen code meegekregen.");
+
+  const sessie = await bij(omgeving, "/sessions", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+  if (!sessie?.session_id) throw mis("De bank gaf geen sessie terug.", 502);
+  return { sessie: sessie.session_id };
+}
 
 /* ---------------------------------------------------------------
    Rekeningen en transacties
