@@ -152,7 +152,14 @@ async function roep(pad, { methode = "GET", lijf = null } = {}) {
     spoorBij(fout?.name === "AbortError"
       ? "na 20 seconden nog geen antwoord"
       : `verzoek kwam niet aan: ${fout?.message || fout?.name || "onbekend"}`);
-    const stil = new Error(`De dienst antwoordde niet. Klopt het adres, en staat ${location.origin} in HERKOMST?`);
+    /* Drie oorzaken geven hier precies hetzelfde beeld, en de browser
+       zegt niet welke het is. Ze alle drie noemen is eerlijker dan er
+       één uitlichten — en open je het adres zelf, dan zie je het meteen. */
+    const stil = new Error(
+      "De dienst antwoordde niet. Dat kan drie dingen betekenen: het adres klopt niet, "
+      + "de dienst draait niet (opnieuw neergezet?), of "
+      + `${location.origin} staat niet in HERKOMST. Open het adres hierboven in je browser — `
+      + "dan zie je welke van de drie het is.");
     stil.geenAntwoord = true;   // er kwam écht niets terug, zie proefVerbinding
     throw stil;
   } finally {

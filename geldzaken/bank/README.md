@@ -224,9 +224,22 @@ Kosten zijn een paar cent per vraag, rechtstreeks bij Anthropic op jouw account.
 
 ## Problemen
 
-**"De bankdienst is niet bereikbaar"** — het adres klopt niet, of de dienst staat
-er nog niet. Open het adres eens in je browser: krijg je daar JSON te zien — hoe de
-melding ook luidt — dan draait hij. Zie stap 1 voor welke melding wanneer hoort.
+**"De dienst antwoordde niet"** — drie oorzaken geven hier precies hetzelfde
+beeld, want de browser vertelt niet welke het is: het adres klopt niet, de
+dienst draait niet, of je adres staat niet in `HERKOMST`.
+
+Open daarom het adres zelf in je browser, met `/status` erachter. Daar komt
+geen herkomstcontrole aan te pas, dus je ziet meteen wat er aan de hand is:
+
+| Wat je ziet | Wat het betekent |
+|---|---|
+| `{"fout":"Dit adres mag hier niet bij."}` | De dienst draait en is goed ingesteld. Dit hóórt je te zien — je browser stuurt geen herkomst mee. Staat het er, dan ligt het aan `HERKOMST`. |
+| `{"fout":"Instelling ... ontbreekt."}` | Die instelling staat er niet (meer). Zet hem opnieuw en zet de dienst opnieuw neer. |
+| Een foutpagina van Cloudflare (1101) | De code draait niet. Meestal is er bij het plakken iets misgegaan; zet hem opnieuw neer. |
+| Niets, of een 404 | Verkeerd adres, of de dienst staat er niet. |
+
+Let op: zet je de dienst opnieuw neer, controleer dan of je secrets er nog
+staan. Bij sommige manieren van neerzetten verdwijnen ze.
 
 **"Het woord klopt niet met dat van de dienst"** — goed nieuws, want dit
 betekent dat de dienst bereikbaar is en `HERKOMST` klopt: hij heeft
@@ -240,7 +253,6 @@ v18 zelf af, maar dan moet je hem wel opnieuw hebben neergezet. Twijfel
 je, zet het secret dan gewoon opnieuw: plak het woord, controleer dat er
 geen spatie achter staat, bewaar, en wacht tot Cloudflare meldt dat de
 nieuwe versie live is. Zet daarna in de app hetzelfde woord neer.
-Let op spaties aan het eind bij het plakken.
 
 **"De dienst laat dit adres niet toe"** — `HERKOMST` komt niet overeen met het
 adres waarop je de app opent. Het moet exact hetzelfde zijn, inclusief `https://`

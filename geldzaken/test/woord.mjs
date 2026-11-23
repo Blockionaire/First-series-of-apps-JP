@@ -56,5 +56,51 @@ await check("maar die spatie binnenin telt mee", "appel moes", "appelmoes", 401)
 await check("hoofdletters tellen mee", "Appelmoes", "appelmoes", 401);
 await check("leeg woord wordt geweigerd", "appelmoes", "", 401);
 
+/* ---------------------------------------------------------------
+   En: komt een fout in de instellingen wél bij de app aan?
+   ---------------------------------------------------------------
+   Zonder de juiste kopteksten houdt de browser het antwoord tegen en
+   ziet de app geen melding maar stilte — waarna hij je naar het adres
+   en HERKOMST stuurt terwijl daar niets mis mee is. Dat heeft een
+   middag gekost, dus het staat hier vast. */
+console.log("\nEen fout in de instellingen is leesbaar voor de app:");
+
+async function vraag(omg, methode = "GET") {
+  return worker.fetch(new Request("https://dienst.test/status", {
+    method: methode,
+    headers: { Origin: HERKOMST, Authorization: "Bearer appelmoes" },
+  }), omg);
+}
+
+const kaal = { EB_APP_ID: "proef", EB_SLEUTEL: "proef", GELDZAKEN_WOORD: "appelmoes", HERKOMST };
+
+for (const weg of ["GELDZAKEN_WOORD", "EB_SLEUTEL", "EB_APP_ID", "HERKOMST"]) {
+  const omg = { ...kaal };
+  delete omg[weg];
+
+  const r = await vraag(omg);
+  const lijf = await r.json();
+  const mocht = r.headers.get("Access-Control-Allow-Origin");
+  const zegtHet = String(lijf.fout || "").includes(weg);
+
+  if (mocht && zegtHet) { goed++; console.log(`  ok   zonder ${weg} — "${lijf.fout}"`); }
+  else { mis++; console.log(`  MIS  zonder ${weg} — koptekst ${mocht || "ontbreekt"}, fout "${lijf.fout}"`); }
+
+  /* En de voorvraag mag het echte verzoek niet al tegenhouden. */
+  const v = await vraag(omg, "OPTIONS");
+  if (v.headers.get("Access-Control-Allow-Origin")) { goed++; console.log(`  ok   voorvraag komt er zonder ${weg} doorheen`); }
+  else { mis++; console.log(`  MIS  voorvraag geblokkeerd zonder ${weg}`); }
+}
+
+console.log("\nMaar een onbekende herkomst blijft buiten:");
+const vreemd = await worker.fetch(new Request("https://dienst.test/status", {
+  headers: { Origin: "https://kwaadwillend.test", Authorization: "Bearer appelmoes" },
+}), kaal);
+if (vreemd.status === 403 && !vreemd.headers.get("Access-Control-Allow-Origin")) {
+  goed++; console.log("  ok   een vreemde herkomst krijgt 403 zonder kopteksten");
+} else {
+  mis++; console.log(`  MIS  vreemde herkomst kreeg ${vreemd.status}, koptekst ${vreemd.headers.get("Access-Control-Allow-Origin")}`);
+}
+
 console.log(`\n${goed} goed, ${mis} mis`);
 process.exit(mis ? 1 : 0);

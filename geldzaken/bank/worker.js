@@ -53,7 +53,9 @@ export default {
     const herkomst = verzoek.headers.get("Origin") || "";
     const mag = magHerkomst(herkomst, omgeving);
 
-    if (verzoek.method === "OPTIONS") return voorvraag(mag ? herkomst : "");
+    if (verzoek.method === "OPTIONS") {
+      return voorvraag(mag ? herkomst : instellingenCompleet(omgeving) ? "" : "*");
+    }
 
     try {
       /* Ontbreekt er iets aan de instellingen, dan doen we niets. Liever
@@ -100,8 +102,14 @@ export default {
          precies misging blijft in het logboek van Cloudflare, zonder
          bedragen of namen. */
       console.error("bank:", e?.code || e?.message || "onbekende fout");
+      /* Een fout in de instellingen gaat altijd leesbaar terug, ook naar
+         een herkomst die we niet kennen — want juist dán kán HERKOMST
+         degene zijn die ontbreekt. Het verraadt niets: het zegt alleen
+         welke instelling nog mist, en zonder die instellingen doet de
+         dienst sowieso niets. */
+      const naar = mag ? herkomst : e?.instelling ? "*" : "";
       return antwoord({ fout: e?.publiek || "Er ging iets mis bij het ophalen." },
-                      e?.status || 500, mag ? herkomst : "");
+                      e?.status || 500, naar);
     }
   },
 };
@@ -111,9 +119,23 @@ export default {
    --------------------------------------------------------------- */
 function ontbreekt(omgeving) {
   for (const naam of ["EB_APP_ID", "EB_SLEUTEL", "GELDZAKEN_WOORD", "HERKOMST"]) {
-    if (!omgeving[naam]) throw mis(`Instelling ${naam} ontbreekt.`, 500);
+    if (!omgeving[naam]) {
+      const e = mis(`Instelling ${naam} ontbreekt.`, 500);
+      /* Deze fout moet de app kunnen lézen. Zonder dat merk komt hij
+         terug zonder de kopteksten die een browser verlangt, en ziet de
+         app geen melding maar stilte — waarna hij je naar het adres en
+         HERKOMST stuurt, terwijl daar niets mis mee is. Zie `fetch`. */
+      e.instelling = true;
+      throw e;
+    }
   }
 }
+
+/* Is er aan de instellingen iets mis, dan kan de dienst toch niets
+   uitvoeren: elk pad zit achter `ontbreekt`. Een voorvraag doorlaten
+   geeft dus niets weg en levert wel een leesbare uitleg op. */
+const instellingenCompleet = omgeving =>
+  ["EB_APP_ID", "EB_SLEUTEL", "GELDZAKEN_WOORD", "HERKOMST"].every(n => !!omgeving[n]);
 
 const herkomsten = omgeving =>
   String(omgeving.HERKOMST || "").split(",").map(s => s.trim().replace(/\/$/, "")).filter(Boolean);
