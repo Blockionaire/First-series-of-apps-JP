@@ -144,6 +144,18 @@ function wachtkamer(poort) {
           <strong style="font-size:.88rem">${esc(email)}</strong>
         </div>
 
+        ${/* Wacht je op een beheerder die niet bestaat, dan hoort dat er
+              te staan. Anders blijf je kijken naar een scherm dat zegt
+              dat het vanzelf goedkomt. */ ""}
+        ${Sync.sync.klem ? `
+          <div class="signaal signaal--let-op" style="margin-top:14px;text-align:left">
+            <span class="signaal__icoon">⚠️</span>
+            <span>
+              <span class="signaal__titel">Het opzetten is nog niet af</span>
+              <span class="signaal__tekst">${esc(Sync.sync.klem)}</span>
+            </span>
+          </div>` : ""}
+
         ${poort === "wacht" && !bevestigd ? `
           <p class="veld__hint" style="margin:14px 0 8px">
             Je e-mailadres is nog niet bevestigd. Dat helpt de beheerder om te zien dat je het echt bent.

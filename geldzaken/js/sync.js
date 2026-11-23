@@ -48,6 +48,11 @@ export const sync = {
 
   /* Alleen gevuld voor een beheerder: iedereen die zich ooit meldde. */
   leden: [],
+
+  /* Zit het opzetten klem, dan staat hier waarom. Gevuld als de app je
+     tot de beheerders rekent maar de regels bij Firebase dat niet doen:
+     dan wacht je in de wachtkamer op iemand die niet bestaat. */
+  klem: "",
 };
 
 let FB = null;            // { app, auth, db, auth_, db_ }
@@ -188,7 +193,20 @@ async function volgLidmaatschap(gebruiker) {
     if (isBeheerderMail(gebruiker.email) && (lid.rol !== "beheerder" || lid.status !== "actief")) {
       try {
         await db_.setDoc(ref, { rol: "beheerder", status: "actief", bijgewerkt: Date.now() }, { merge: true });
-      } catch { /* de regels beslissen; niet erg als het niet mag */ }
+        sync.klem = "";
+      } catch {
+        /* Dit is dé val bij het opzetten, en hij was volkomen stil.
+
+           Je adres staat in firebase-config.js, dus de app rekent je tot
+           de beheerders — maar de regels bij Google kennen het niet, en
+           díé beslissen. Het rechttrekken wordt geweigerd en je belandt
+           in de wachtkamer. Daar wacht je op een beheerder die niet
+           bestaat, want jij had het moeten zijn. Zonder deze uitleg is
+           er niets wat je op het goede spoor zet. */
+        sync.klem = `Dit apparaat kent ${gebruiker.email} als beheerder, maar de `
+          + `beveiligingsregels bij Firebase niet. Zet hetzelfde adres in `
+          + `beheerderMails() in firestore.rules en publiceer ze opnieuw.`;
+      }
     }
 
     const magErin = lid.status === "actief";

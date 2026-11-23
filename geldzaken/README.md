@@ -132,6 +132,13 @@ Hiervoor heb je een gratis Firebase-project nodig. Eenmalig een kwartiertje werk
 
 ### 1. Project maken
 
+> **Neem een nieuw project, ook als je er al een hebt.** De regels in stap 5
+> eindigen met "alles wat hier niet staat, mag niet", en in de Firebase Console
+> vervangen ze álle regels van dat project. Draait er een andere app in — de
+> boodschappenapp bijvoorbeeld — dan valt die er meteen uit. De koppeling met
+> die app blijft gewoon werken vanuit een eigen project: die wijst in
+> `firebase-config.js` apart naar het hare.
+
 1. Ga naar [console.firebase.google.com](https://console.firebase.google.com) en
    maak een nieuw project (Google Analytics mag uit).
 2. Klik op het `</>`-icoontje om een web-app toe te voegen.
@@ -177,6 +184,12 @@ Open `firestore.rules` uit deze map, **zet je eigen e-mailadres in
 Dit is de belangrijkste stap. Zonder deze regels staat je database open; mét deze
 regels kan iemand die niet is goedgekeurd letterlijk niets lezen — ook niet als
 hij de app openbreekt of de database rechtstreeks aanroept.
+
+Let op dat je adres in `beheerderMails()` **precies gelijk** is aan dat in
+`firebase-config.js`. Staat het maar op één van de twee, dan rekent de app je wel
+tot de beheerders maar de database niet, en beland je in de wachtkamer — wachtend
+op een beheerder die niet bestaat, want dat had jij moeten zijn. De app zegt het
+er sinds v26 bij als dat gebeurt.
 
 ### 6. Jezelf toelaten
 
