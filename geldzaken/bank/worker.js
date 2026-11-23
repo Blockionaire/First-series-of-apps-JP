@@ -46,7 +46,7 @@ const UUR = 3600;
    die je krijgt als je het adres gewoon in je browser opent.
 
    Ophogen bij elke wijziging die je moet neerzetten. */
-const VERSIE = "v29";
+const VERSIE = "v32";
 
 /* Hoe lang de toestemming bij de bank geldig is. Zes maanden is wat de
    meeste banken maximaal toestaan; is jouw bank strenger, dan nemen we
@@ -140,8 +140,12 @@ export default {
          welke instelling nog mist, en zonder die instellingen doet de
          dienst sowieso niets. */
       const naar = mag ? herkomst : e?.instelling ? "*" : "";
-      return antwoord({ fout: e?.publiek || "Er ging iets mis bij het ophalen.", dienst: VERSIE },
-                      e?.status || 500, naar);
+      return antwoord({
+        fout: e?.publiek || "Er ging iets mis bij het ophalen.",
+        /* De app moet weten dat doorgaan geen zin heeft. */
+        ...(e?.opnieuw ? { opnieuw: true } : {}),
+        dienst: VERSIE,
+      }, e?.status || 500, naar);
     }
   },
 };
@@ -325,13 +329,26 @@ async function bij(omgeving, pad, opties = {}) {
       .find(w => typeof w === "string" && /[a-z]/i.test(w)) || "";
     const zin = [gegevens?.message, gegevens?.detail, gegevens?.error_description, gegevens?.description]
       .find(w => typeof w === "string" && w.trim()) || "";
-    throw mis(uitleg(antw.status, naam, zin), antw.status === 401 ? 502 : antw.status);
+    const e = mis(uitleg(antw.status, naam, zin), antw.status === 401 ? 502 : antw.status);
+    if (sessieWeg(antw.status, naam, zin)) e.opnieuw = true;
+    throw e;
   }
   return gegevens;
 }
 
 /* De fouten die je in de praktijk tegenkomt, in gewone taal. */
+/* Fouten waarna doorgaan geen zin heeft: de sessie die de app bewaart
+   bestaat niet meer. Dan hoort de app te stoppen met doen alsof je
+   gekoppeld bent, in plaats van bij elke poging dezelfde klacht te
+   herhalen. Vandaar een apart merk, dat meegaat in het antwoord. */
+const SESSIE_WEG = ["EXPIRED_SESSION", "SESSION_DOES_NOT_EXIST", "INVALID_SESSION"];
+const sessieWeg = (status, code, zin = "") =>
+  SESSIE_WEG.includes(code) || status === 401 || (status === 404 && /session/i.test(zin));
+
 function uitleg(status, code, zin = "") {
+  if (code === "SESSION_DOES_NOT_EXIST" || (status === 404 && /session/i.test(zin))) {
+    return "Deze koppeling bestaat niet meer bij je bank. Koppel je rekening opnieuw.";
+  }
   if (code === "EXPIRED_SESSION" || status === 401) {
     return "De toestemming bij je bank is verlopen. Koppel je rekening opnieuw.";
   }

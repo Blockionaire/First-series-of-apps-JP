@@ -67,7 +67,7 @@ export const bank = {
    mist hij reparaties die hier allang zijn gedaan en zoek je een fout op
    de verkeerde plek. Ophogen zodra de app iets nodig heeft dat alleen in
    een nieuwere dienst zit. */
-export const DIENST_NODIG = 29;
+export const DIENST_NODIG = 32;
 
 const versieNummer = v => {
   const m = /^v(\d+)$/.exec(String(v || "").trim());
@@ -207,6 +207,21 @@ async function roep(pad, { methode = "GET", lijf = null } = {}) {
         + "Kijk of GELDZAKEN_WOORD in je dienst letterlijk hetzelfde is als hierboven.");
     }
     if (antwoord.status === 403) throw new Error(gegevens?.fout || "De dienst laat dit adres niet toe.");
+
+    /* Zegt je bank dat deze sessie niet bestaat, dan hóórt de app te
+       stoppen met doen alsof je gekoppeld bent. Bleef hij dat volhouden,
+       dan stond er "Gekoppeld met Rabobank" boven een knop die bij elke
+       tik dezelfde klacht gaf, en was er niets dat je op het idee bracht
+       om gewoon opnieuw te koppelen. */
+    if (gegevens?.opnieuw) {
+      spoorBij("de sessie bestaat niet meer — koppeling losgelaten");
+      bank.sessie = "";
+      bank.rekening = "";
+      bank.rekeningNaam = "";
+      bank.geldigTot = "";
+      await bewaar();
+      meld();
+    }
     throw new Error(gegevens?.fout || "De bankdienst gaf een fout terug.");
   }
   return gegevens || {};
@@ -412,10 +427,26 @@ export async function neemOver(waarde) {
     await wisselCodeIn(schoon);
     return true;
   }
+
   spoorBij("sessie overgenomen uit een andere browser");
   await zetSessie(schoon);
-  if (bank.fout) throw new Error(bank.fout);
-  return true;
+  if (!bank.fout) return true;
+
+  /* Zonder voorvoegsel weten we niet wát je plakte, en een sessie en een
+     code zien er hetzelfde uit. Zegt je bank dat deze sessie niet
+     bestaat, dan was het waarschijnlijk een code — die wisselen we dan
+     alsnog in. Dit kan geen kwaad: bestond de sessie wel, dan komen we
+     hier niet. */
+  if (!bank.sessie) {
+    spoorBij("geen sessie — dan was het misschien een code");
+    try {
+      await wisselCodeIn(schoon);
+      return true;
+    } catch (tweede) {
+      throw new Error(`${bank.fout} En als code inwisselen lukte ook niet: ${tweede.message}`);
+    }
+  }
+  throw new Error(bank.fout);
 }
 
 export async function haalRekeningen() {
