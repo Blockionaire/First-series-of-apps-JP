@@ -54,8 +54,16 @@ de eerste vraagt niets van je computer.
 3. Bovenin staat nu het adres, iets als
    `https://geldzaken-bank.jouwnaam.workers.dev`. **Schrijf dat op.**
 
-Open het adres eens in je browser. Je hoort `{"fout":"Dit adres mag hier niet bij."}` te
-zien — dat is goed nieuws: hij draait, en hij laat je browser er niet bij.
+Open het adres eens in je browser. Je hoort nu te lezen:
+
+```json
+{"fout":"Instelling EB_APP_ID ontbreekt."}
+```
+
+Dat is goed nieuws: hij draait, en hij weigert iets te doen zolang zijn instellingen er
+niet zijn. Die zet je in stap 5. Dáárna geeft datzelfde adres in je browser
+`{"fout":"Dit adres mag hier niet bij."}` — ook goed, want je browser is dan geen
+bekende herkomst meer. Zie je iets anders, dan is er wél iets mis.
 
 **Via de opdrachtregel (als je Node al hebt)**
 
