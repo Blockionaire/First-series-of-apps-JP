@@ -282,7 +282,17 @@ function bankBlok() {
           <button class="knop knop--rand knop--breed" data-bank-los style="margin-top:9px">Koppeling verbreken</button>
       `}
 
-      ${b.fout ? `<div class="veld__fout">${esc(b.fout)}</div>` : ""}
+      ${b.proef ? `
+        <div class="signaal signaal--${b.proef.gelukt ? "goed" : "let-op"}" style="margin-top:12px">
+          <span class="signaal__icoon">${b.proef.gelukt ? "✅" : "⚠️"}</span>
+          <span>
+            <span class="signaal__titel">${b.proef.gelukt ? "De dienst antwoordt" : "Geen antwoord van de dienst"}</span>
+            <span class="signaal__tekst">${esc(b.proef.tekst)}
+              ${b.proef.gelukt ? "Je kunt je rekening koppelen." : ""}</span>
+          </span>
+        </div>` : ""}
+
+      ${b.fout && b.fout !== b.proef?.tekst ? `<div class="veld__fout">${esc(b.fout)}</div>` : ""}
 
       <div class="veld__hint" style="margin-top:12px">
         De dienst bewaart niets: hij haalt op, geeft door en vergeet. Je transacties
@@ -632,6 +642,8 @@ async function bankVeldenNu(wortel) {
 
 async function bankProef() {
   await bankVeldenNu();
+  const knop = document.querySelector("[data-bank-proef]");
+  if (knop) { knop.disabled = true; knop.textContent = "Bezig…"; }
   try {
     await Bank.proefVerbinding();
     melding("De dienst antwoordt. Je kunt koppelen.", "goed");
@@ -639,6 +651,7 @@ async function bankProef() {
     Bank.bank.fout = fout.message;
     melding(fout.message, "fout");
   }
+  /* De uitslag staat nu in het kaartje zelf; hertekenen laat hem zien. */
   meld();
 }
 

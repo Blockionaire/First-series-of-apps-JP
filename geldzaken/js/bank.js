@@ -35,6 +35,10 @@ export const bank = {
   aiAan: false,         // mag een niet-herkende vraag naar Claude?
   bezig: false,
   fout: null,
+  /* De uitslag van de laatste proef, zodat "het werkt" ook iets
+     achterlaat. Een melding die na drie tellen verdwijnt is niet te
+     onderscheiden van niets. */
+  proef: null,          // { gelukt, tekst, tijd }
 };
 
 export const ingesteld = () => !!(bank.adres && bank.woord);
@@ -69,10 +73,13 @@ async function bewaar() {
 }
 
 export async function zetInstellingen({ adres, woord, aiAan }) {
+  const voor = bank.adres + "|" + bank.woord;
   if (adres !== undefined) bank.adres = String(adres).trim().replace(/\/+$/, "");
   if (woord !== undefined) bank.woord = String(woord).trim();
   if (aiAan !== undefined) bank.aiAan = !!aiAan;
   bank.fout = null;
+  /* Verander je adres of woord, dan zegt een oude uitslag niets meer. */
+  if (voor !== bank.adres + "|" + bank.woord) bank.proef = null;
   await bewaar();
 }
 
@@ -80,7 +87,7 @@ export async function zetInstellingen({ adres, woord, aiAan }) {
 export async function vergeetAlles() {
   Object.assign(bank, {
     adres: "", woord: "", sessie: "", bankNaam: "", rekening: "",
-    rekeningNaam: "", geldigTot: "", laatst: 0, aiAan: false, fout: null,
+    rekeningNaam: "", geldigTot: "", laatst: 0, aiAan: false, fout: null, proef: null,
   });
   try { await dbWis(LOKAAL, SLEUTEL); } catch { /* niets aan te doen */ }
 }
@@ -102,7 +109,12 @@ async function roep(pad, { methode = "GET", lijf = null } = {}) {
       body: lijf ? JSON.stringify(lijf) : undefined,
     });
   } catch {
-    throw new Error("De bankdienst is niet bereikbaar. Klopt het adres?");
+    /* De browser vertelt niet óf het adres onbereikbaar was óf dat het
+       antwoord om een andere reden niet doorkwam. In de praktijk is dat
+       tweede bijna altijd HERKOMST: staat dit adres daar niet bij, dan
+       laat de browser het antwoord niet door en ziet het er hetzelfde
+       uit als een verkeerd adres. Dus noemen we ze allebei. */
+    throw new Error(`De dienst antwoordde niet. Klopt het adres, en staat ${location.origin} in HERKOMST?`);
   }
 
   let gegevens = null;
@@ -117,8 +129,16 @@ async function roep(pad, { methode = "GET", lijf = null } = {}) {
 }
 
 export async function proefVerbinding() {
-  await roep("/status");
-  return true;
+  try {
+    await roep("/status");
+    bank.proef = { gelukt: true, tekst: "De dienst antwoordt.", tijd: Date.now() };
+    await bewaar();
+    return true;
+  } catch (fout) {
+    bank.proef = { gelukt: false, tekst: fout.message, tijd: Date.now() };
+    await bewaar();
+    throw fout;
+  }
 }
 
 export async function welkeBanken(land = "NL") {

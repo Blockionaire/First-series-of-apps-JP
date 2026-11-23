@@ -765,6 +765,7 @@ input[type="date"], input[type="month"] { min-height: 46px; }
 }
 .signaal--let-op { border-left-color: var(--let-op); }
 .signaal--fout   { border-left-color: var(--fout); }
+.signaal--goed   { border-left-color: var(--goed); }
 .signaal__icoon { font-size: 1.1rem; line-height: 1.3; }
 .signaal__titel { font-weight: 640; font-size: .9rem; }
 .signaal__tekst { font-size: .8rem; color: var(--tekst-zacht); margin-top: 1px; }
