@@ -18,7 +18,7 @@ import * as Bank from "../bank.js";
 import { perCategorie, externeUitgaven, externeMaanden } from "../bereken.js";
 import { ICONEN, KLEUREN } from "../data/standaard.js";
 import { potjeOpties } from "./onderdelen.js";
-import { ga, terug, eisBewerkrecht, pasThemaToe } from "../app.js";
+import { ga, terug, eisBewerkrecht, pasThemaToe, merkVan } from "../app.js";
 
 export const terugknop = true;
 export const titel = params => params[0] === "categorieen" ? "Categorieën" : "Instellingen";
@@ -610,11 +610,28 @@ export function koppel(wortel, params) {
 
   toonVersie(wortel);
 
-  /* Elke aanraking optekenen, nog vóór de klik. Een knop die niets doet
-     heeft maar drie mogelijke oorzaken: de tik komt ergens anders aan,
-     de knop staat uit, of de code erachter loopt vast. Dit scheidt de
-     eerste twee van de derde — zonder dat je een console nodig hebt. */
+  /* De bankknoppen krijgen hun eigen luisteraar, rechtstreeks op de knop.
+     Dat scheelt een omweg langs het scherm, en juist die omweg is wat er
+     misging: reageerde er een afhandelaar die bij een al vervangen scherm
+     hoorde, dan kwam de tik nergens aan. Een luisteraar op de knop zelf
+     leeft precies zo lang als de knop. */
+  wortel.querySelector("[data-bank-proef]")?.addEventListener("click", e => {
+    e.rechtstreeks = true;
+    bankProef();
+  });
+  wortel.querySelector("[data-bank-koppel]")?.addEventListener("click", e => {
+    e.rechtstreeks = true;
+    bankKoppelen();
+  });
+
   wortel.addEventListener("click", async e => {
+    /* Wat ziet deze afhandeling eigenlijk, en hoort hij nog bij het
+       scherm dat je voor je hebt? Zo niet, dan verklaart dat een knop
+       die zwijgt. */
+    const levend = document.querySelector("#scherm");
+    spoorBij(`scherm hoort klik op ${merkVan(e.target)}`
+      + (levend === wortel ? "" : ` — LET OP: dit is ronde ${wortel.dataset.ronde}, levend is ronde ${levend?.dataset.ronde}`));
+
     if (e.target.closest("[data-spoor-wis]")) return spoorLeeg();
 
     if (e.target.closest("[data-bijwerken]")) return bijwerken();
@@ -635,8 +652,9 @@ export function koppel(wortel, params) {
 
     if (e.target.closest("[data-nieuw-persoon]")) return voegPersoonToe();
 
-    if (e.target.closest("[data-bank-proef]")) return bankProef();
-    if (e.target.closest("[data-bank-koppel]")) return bankKoppelen();
+    /* `rechtstreeks` betekent: de knop heeft het zelf al afgehandeld. */
+    if (e.target.closest("[data-bank-proef]")) return e.rechtstreeks || bankProef();
+    if (e.target.closest("[data-bank-koppel]")) return e.rechtstreeks || bankKoppelen();
     if (e.target.closest("[data-bank-rekening]")) return bankRekeningKiezen();
     if (e.target.closest("[data-bank-los]")) return bankLoskoppelen();
 

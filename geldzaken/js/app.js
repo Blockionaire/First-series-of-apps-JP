@@ -119,6 +119,7 @@ let vorigeRoute = "";
 let vorigSchermNaam = null;
 let vorigePoort = null;
 let laatsteHtml = null;      // wat er nu op het scherm staat
+let ronde = 0;               // hoeveelste hertekening dit is
 const scrollGeheugen = {};
 let opruimen = null;
 
@@ -183,6 +184,11 @@ function teken() {
   laatsteHtml = html;
 
   const wortel = $("#scherm", app);
+  /* Elke hertekening krijgt een nummer. Reageert er straks een
+     afhandelaar die bij een ouder nummer hoort, dan weten we dat het
+     scherm onder zijn handen is vervangen — en dat is precies het soort
+     stilte dat van buiten niet te zien is. */
+  if (wortel) wortel.dataset.ronde = String(++ronde);
   opruimen = scherm.koppel?.(wortel, params) || null;
 
   app.querySelector("[data-terug]")?.addEventListener("click", () => terug(scherm.terugNaar || "#/start"));
@@ -301,7 +307,7 @@ export function eisBewerkrecht() {
    Het luistert op het document, niet op het scherm: ligt er iets
    overheen dat de tik opvangt, dan noemt het spoor dat ding bij naam.
    --------------------------------------------------------------- */
-const merkVan = el => {
+export const merkVan = el => {
   if (!el || !el.tagName) return "niets";
   const merk = [...(el.attributes || [])].map(a => a.name).find(n => n.startsWith("data-"));
   const klasse = String(el.className || "").trim().split(/\s+/)[0];
