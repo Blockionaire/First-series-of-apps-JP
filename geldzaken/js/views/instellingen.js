@@ -225,7 +225,10 @@ function bankBlok() {
   const dagen = Bank.dagenGeldig();
 
   return `
-    <div class="sectiekop"><h2>Je bank</h2></div>
+    <div class="sectiekop">
+      <h2>Je bank</h2>
+      <button class="uitlegknop" data-bank-uitleg aria-label="Hoe je de koppeling weer weghaalt">i</button>
+    </div>
     <div class="kaart">
       ${!Bank.gekoppeld() ? `
         <p style="font-size:.86rem;color:var(--tekst-zacht);margin:0 0 12px">
@@ -647,6 +650,10 @@ export function koppel(wortel, params) {
     e.rechtstreeks = true;
     bankVergeten();
   });
+  wortel.querySelector("[data-bank-uitleg]")?.addEventListener("click", e => {
+    e.rechtstreeks = true;
+    bankUitleg();
+  });
 
   wortel.addEventListener("click", async e => {
     /* Wat ziet deze afhandeling eigenlijk, en hoort hij nog bij het
@@ -679,6 +686,7 @@ export function koppel(wortel, params) {
     /* `rechtstreeks` betekent: de knop heeft het zelf al afgehandeld. */
     if (e.target.closest("[data-bank-proef]")) return e.rechtstreeks || bankProef();
     if (e.target.closest("[data-bank-koppel]")) return e.rechtstreeks || bankKoppelen();
+    if (e.target.closest("[data-bank-uitleg]")) return e.rechtstreeks || bankUitleg();
     if (e.target.closest("[data-bank-vergeet]")) return e.rechtstreeks || bankVergeten();
     if (e.target.closest("[data-bank-rekening]")) return bankRekeningKiezen();
     if (e.target.closest("[data-bank-los]")) return bankLoskoppelen();
@@ -998,6 +1006,72 @@ async function vergeetDeBank() {
   if (!Bank.ingesteld()) return;
   try { await Bank.loskoppelen(); } catch { /* verloopt vanzelf */ }
   await Bank.vergeetAlles();
+}
+
+/* ------------------- Bank: hoe je er weer vanaf komt ---------------- */
+/* Drie onafhankelijke noodremmen, en de laatste twee werken ook als deze
+   app helemaal niet meewerkt. Dat hoort niet in een gesprek ergens maar
+   in de app zelf, waar je het terug kunt vinden op het moment dat je het
+   nodig hebt. */
+function bankUitleg() {
+  dialoog({
+    titel: "Hoe je er weer vanaf komt",
+    inhoud: `
+      <p class="dialoog__tekst">
+        Drie manieren om de koppeling weg te halen, en ze werken los van elkaar.
+        De tweede en de derde werken ook als deze app niets meer doet.
+      </p>
+
+      <div class="uitleg">
+        <div class="uitleg__nr">1</div>
+        <div>
+          <strong>In deze app</strong>
+          <p>De knop <em>Adres en woord van dit apparaat verwijderen</em> hierboven
+             trekt de toestemming bij je bank in en haalt het adres, het woord en je
+             sessie van dit apparaat. Wat je al had opgehaald blijft in je boekhouding
+             staan.</p>
+          <p>Wil je ook je cijfers kwijt, gebruik dan <em>Alles wissen</em> onderaan —
+             maak eerst een back-up.</p>
+        </div>
+      </div>
+
+      <div class="uitleg">
+        <div class="uitleg__nr">2</div>
+        <div>
+          <strong>Bij je bank zelf</strong>
+          <p>In de app van je bank staat welke toestemmingen er lopen, en daar kun je
+             ze intrekken. Dat is je echte noodrem: dat werkt ongeacht wat deze app
+             doet of laat. De toestemming verloopt sowieso vanzelf na 180 dagen.</p>
+        </div>
+      </div>
+
+      <div class="uitleg">
+        <div class="uitleg__nr">3</div>
+        <div>
+          <strong>Bij Enable Banking en Cloudflare</strong>
+          <p>In het Control Panel van Enable Banking kun je de hele applicatie
+             verwijderen. Bij Cloudflare kun je je dienst weghalen — dan is er geen
+             sleutel meer die ergens kan ondertekenen.</p>
+        </div>
+      </div>
+
+      <div class="uitleg">
+        <div class="uitleg__nr">＋</div>
+        <div>
+          <strong>Alles van de app wissen</strong>
+          <p>Wil je werkelijk niets overhouden: in Safari onder Instellingen →
+             Geavanceerd → Websitegegevens kun je alle gegevens van deze app
+             verwijderen, inclusief je boekhouding.</p>
+        </div>
+      </div>
+
+      <p class="dialoog__tekst dof">
+        Er kan met deze koppeling nooit geld worden overgemaakt. De toestemming bij je
+        bank geldt alleen voor lezen, en in de dienst zit geen enkel pad dat een
+        betaling kan doen.
+      </p>`,
+    knoppen: [{ label: "Duidelijk", waarde: null }],
+  });
 }
 
 async function bankVergeten() {

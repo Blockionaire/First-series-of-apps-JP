@@ -276,6 +276,35 @@ td.bedrag, .staaf__waarde { font-variant-numeric: tabular-nums; }
   text-decoration: none;
 }
 
+/* Een uitlegknop naast een kopje: klein, rustig, en pas opvallend als je
+   hem zoekt. Wat erin staat hoort in de app te staan en niet alleen in
+   een handleiding die je op dat moment niet bij de hand hebt. */
+.uitlegknop {
+  flex: 0 0 auto;
+  width: 21px; height: 21px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--rand); border-radius: 50%;
+  background: var(--vlak); color: var(--tekst-zacht);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: .78rem; font-style: italic; font-weight: 700; line-height: 1;
+  cursor: pointer; align-self: center;
+}
+.uitlegknop:active { background: var(--vlak-hoog); }
+
+/* Genummerde uitleg in een dialoogvenster. */
+.dialoog__tekst { font-size: .88rem; color: var(--tekst-zacht); line-height: 1.55; margin: 0 0 14px; }
+.dialoog__tekst.dof { font-size: .82rem; color: var(--tekst-dof); margin-top: 16px; }
+.uitleg { display: flex; gap: 11px; margin-bottom: 15px; }
+.uitleg__nr {
+  flex: 0 0 auto; width: 23px; height: 23px; margin-top: 1px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent); font-size: .78rem; font-weight: 700;
+}
+.uitleg strong { font-size: .9rem; }
+.uitleg p { font-size: .84rem; color: var(--tekst-zacht); line-height: 1.5; margin: 3px 0 0; }
+.uitleg em { font-style: normal; font-weight: 600; color: var(--tekst); }
+
 /* --------------------------- Het hoofdvlak -------------------------- */
 /* De grote kaart bovenaan het dashboard: wat is er nog over deze maand. */
 .hero {
