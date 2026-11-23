@@ -833,6 +833,19 @@ input[type="date"], input[type="month"] { min-height: 46px; }
   -webkit-user-select: text; user-select: text;
 }
 
+/* ------------------------- Code overdragen -------------------------- */
+/* De sessie die in je browser landde in plaats van in de app op je
+   beginscherm. Moet te selecteren zijn met je vinger, dus hij mag
+   afbreken en krijgt ruimte. */
+.overdrachtcode {
+  margin: 0 0 10px; padding: 11px 13px;
+  background: var(--vlak); border: 1px solid var(--rand); border-radius: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .78rem; line-height: 1.45; color: var(--tekst);
+  white-space: pre-wrap; word-break: break-all;
+  -webkit-user-select: all; user-select: all;
+}
+
 /* ----------------------------- Herkenning --------------------------- */
 /* Eén geleerde regel: het woord waar de app op let, en waar hij het
    heen stuurt. De keuzelijsten staan eronder in plaats van ernaast,

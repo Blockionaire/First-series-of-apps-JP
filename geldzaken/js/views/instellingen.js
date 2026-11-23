@@ -240,6 +240,30 @@ function bankBlok() {
       <button class="uitlegknop" data-bank-uitleg aria-label="Hoe je de koppeling weer weghaalt">i</button>
     </div>
     <div class="kaart">
+      ${b.overdracht ? `
+        ${/* Je bent net door het inloggen bij je bank heen, maar de
+              sessie is op de verkeerde plek geland: in je browser, niet
+              in de app op je beginscherm. Die twee delen hun opslag niet.
+              Weggooien zou zonde zijn — met deze code zet je hem over. */ ""}
+        <div class="signaal signaal--goed" style="margin:0 0 12px">
+          <span class="signaal__icoon">🔑</span>
+          <span>
+            <span class="signaal__titel">Het koppelen is gelukt — maar hier in je browser</span>
+            <span class="signaal__tekst">Je bank stuurde je browser terug in plaats van de app op je
+              beginscherm, en die twee delen hun gegevens niet. Neem deze code over in de app op je
+              beginscherm: open daar ⚙️ → Je bank en tik op "Ik heb een code".</span>
+          </span>
+        </div>
+        <pre class="overdrachtcode" data-overdracht>${esc(b.overdracht)}</pre>
+        <div class="knoprij knoprij--gelijk">
+          <button class="knop" data-code-kopieer>Code kopiëren</button>
+          <button class="knop knop--rand" data-code-vergeet>Weggooien</button>
+        </div>
+        <div class="veld__hint" style="margin:9px 0 14px">
+          De code is tot je volgende koppeling geldig. Lukt het overnemen niet, koppel dan
+          opnieuw vanuit de app op je beginscherm.
+        </div>` : ""}
+
       ${!Bank.gekoppeld() ? `
         <p style="font-size:.86rem;color:var(--tekst-zacht);margin:0 0 12px">
           Je kunt je bankafschrift automatisch laten ophalen in plaats van een bestand
@@ -268,6 +292,11 @@ function bankBlok() {
           <button class="knop" data-bank-proef>Verbinding testen</button>
           <button class="knop knop--primair" data-bank-koppel>Rekening koppelen</button>
         </div>
+        ${/* Koppelen vanuit een app op je beginscherm eindigt op iOS in
+              Safari. Daar krijg je een code; hiermee zet je hem over. */ ""}
+        <button class="knop knop--rand knop--breed" data-code-plak style="margin-top:9px">
+          Ik heb een code uit mijn browser
+        </button>
         ${/* Een uitgeschakelde knop doet niets als je erop tikt, en zwijgt
               daarover. Dus zeggen we erbij waarom. */ ""}
         <div class="veld__hint" data-bank-waarom style="margin-top:7px"></div>
@@ -665,6 +694,10 @@ export function koppel(wortel, params) {
     e.rechtstreeks = true;
     bankUitleg();
   });
+  wortel.querySelector("[data-code-plak]")?.addEventListener("click", e => {
+    e.rechtstreeks = true;
+    codePlakken();
+  });
 
   wortel.addEventListener("click", async e => {
     /* Wat ziet deze afhandeling eigenlijk, en hoort hij nog bij het
@@ -697,6 +730,9 @@ export function koppel(wortel, params) {
     /* `rechtstreeks` betekent: de knop heeft het zelf al afgehandeld. */
     if (e.target.closest("[data-bank-proef]")) return e.rechtstreeks || bankProef();
     if (e.target.closest("[data-bank-koppel]")) return e.rechtstreeks || bankKoppelen();
+    if (e.target.closest("[data-code-kopieer]")) return codeKopieren();
+    if (e.target.closest("[data-code-vergeet]")) return codeVergeten();
+    if (e.target.closest("[data-code-plak]")) return e.rechtstreeks || codePlakken();
     if (e.target.closest("[data-bank-uitleg]")) return e.rechtstreeks || bankUitleg();
     if (e.target.closest("[data-bank-vergeet]")) return e.rechtstreeks || bankVergeten();
     if (e.target.closest("[data-bank-rekening]")) return bankRekeningKiezen();
@@ -1083,6 +1119,71 @@ function bankUitleg() {
       </p>`,
     knoppen: [{ label: "Duidelijk", waarde: null }],
   });
+}
+
+/* ------------------- Bank: de sessie overdragen --------------------- */
+async function codeKopieren() {
+  const code = Bank.bank.overdracht;
+  if (!code) return;
+  try {
+    await navigator.clipboard.writeText(code);
+    melding("Code gekopieerd. Plak hem in de app op je beginscherm.", "goed");
+  } catch {
+    /* Zonder toestemming voor het klembord doen we het met de hand:
+       selecteren kan altijd. */
+    const vak = document.querySelector("[data-overdracht]");
+    if (vak) {
+      const bereik = document.createRange();
+      bereik.selectNodeContents(vak);
+      const keuze = getSelection();
+      keuze.removeAllRanges();
+      keuze.addRange(bereik);
+    }
+    melding("Kopiëren mocht niet. De code staat geselecteerd — houd hem vast en kies Kopiëren.", "fout");
+  }
+}
+
+async function codeVergeten() {
+  const zeker = await bevestig(
+    "De code verdwijnt. Je kunt dan alleen nog opnieuw koppelen vanuit de app op je beginscherm.",
+    { titel: "Code weggooien?", bevestigLabel: "Weggooien", gevaar: true });
+  if (!zeker) return;
+  await Bank.zetInstellingen({ overdracht: "" });
+  melding("Weg.");
+  meld();
+}
+
+async function codePlakken() {
+  if (!eisBewerkrecht()) return;
+  const code = await dialoog({
+    titel: "Code uit je browser",
+    inhoud: `
+      <p class="dialoog__tekst">
+        Koppel je vanuit de app op je beginscherm, dan stuurt je bank je browser terug in
+        plaats van deze app. Daar staat een code; neem die hier over.
+      </p>
+      <div class="veld">
+        <label for="overcode">Code</label>
+        <input id="overcode" type="text" autocomplete="off" autocapitalize="off"
+               spellcheck="false" placeholder="plak hem hier">
+      </div>`,
+    knoppen: [
+      { label: "Annuleren", waarde: null },
+      { label: "Overnemen", soort: "primair",
+        waardeUit: laag => laag.querySelector("#overcode").value.trim() || undefined },
+    ],
+    opOpenen: laag => laag.querySelector("#overcode")?.focus(),
+  });
+  if (!code) return;
+
+  try {
+    await Bank.neemOver(code);
+    melding("Gekoppeld. Je kunt transacties ophalen.", "goed");
+  } catch (fout) {
+    Bank.bank.fout = fout.message;
+    melding(fout.message, "fout");
+  }
+  meld();
 }
 
 async function bankVergeten() {

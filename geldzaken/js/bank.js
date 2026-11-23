@@ -39,6 +39,10 @@ export const bank = {
   adres: "",            // het adres van je eigen dienst
   woord: "",            // het afgesproken woord
   sessie: "",           // je sessie bij de bank, na het koppelen
+  /* Een sessie die binnenkwam op een plek zonder adres en woord — in de
+     praktijk: je bank stuurde je browser terug in plaats van de app op
+     je beginscherm. Over te dragen met een code. */
+  overdracht: "",
   bankNaam: "",
   rekening: "",         // welke rekening je volgt
   rekeningNaam: "",
@@ -98,11 +102,12 @@ async function bewaar() {
   if (voor !== bank.opslag) meld();
 }
 
-export async function zetInstellingen({ adres, woord, aiAan }) {
+export async function zetInstellingen({ adres, woord, aiAan, overdracht }) {
   const voor = bank.adres + "|" + bank.woord;
   if (adres !== undefined) bank.adres = String(adres).trim().replace(/\/+$/, "");
   if (woord !== undefined) bank.woord = String(woord).trim();
   if (aiAan !== undefined) bank.aiAan = !!aiAan;
+  if (overdracht !== undefined) bank.overdracht = String(overdracht).trim();
   bank.fout = null;
   /* Verander je adres of woord, dan zegt een oude uitslag niets meer. */
   if (voor !== bank.adres + "|" + bank.woord) bank.proef = null;
@@ -112,7 +117,7 @@ export async function zetInstellingen({ adres, woord, aiAan }) {
 /* Alles weg: de koppeling, het woord, het adres. */
 export async function vergeetAlles() {
   Object.assign(bank, {
-    adres: "", woord: "", sessie: "", bankNaam: "", rekening: "",
+    adres: "", woord: "", sessie: "", overdracht: "", bankNaam: "", rekening: "",
     rekeningNaam: "", geldigTot: "", laatst: 0, aiAan: false, fout: null, proef: null,
   });
   try { await dbWis(LOKAAL, SLEUTEL); } catch { /* niets aan te doen */ }
@@ -250,12 +255,42 @@ export async function verwerkTerugkomst() {
     return "mislukt";
   }
 
-  bank.sessie = waarde;
+  /* Hier komt bijna iedereen met een iPhone terecht.
+
+     Je begint het koppelen in de app op je beginscherm, maar je bank
+     stuurt je browser terug — en op iOS is dat Safari, met een eigen
+     opslag die niets weet van wat er in die app staat. De sessie landt
+     dus op de ene plek en het adres en het woord op de andere, en dan
+     gaat er niets meer.
+
+     Weggooien zou zonde zijn: het inloggen met je kaartlezer is gelukt
+     en deze sessie is geldig. Dus bewaren we hem als iets om over te
+     dragen, en laat het scherm zien hoe. */
+  if (!ingesteld()) {
+    bank.overdracht = waarde;
+    bank.fout = null;
+    spoorBij("sessie binnengekomen zonder adres en woord — over te dragen");
+    /* Wel bewaren: herlaad je deze pagina, dan zou de code anders weg
+       zijn en kun je alleen nog opnieuw beginnen. Hier is hij ook niets
+       waard — zonder het adres en het woord kun je er niets mee. */
+    await bewaar();
+    return "overdracht";
+  }
+
+  await zetSessie(waarde);
+  return "gekoppeld";
+}
+
+/* Een sessie in gebruik nemen: bewaren, en meteen kijken welke
+   rekeningen eraan hangen. Hoort er maar één bij, dan kiezen we die
+   vast. Dit loopt langs twee kanten binnen — recht van de bank terug,
+   en overgenomen uit een andere browser — dus staat het hier apart. */
+async function zetSessie(sessie) {
+  bank.sessie = sessie;
+  bank.overdracht = "";
   bank.fout = null;
   await bewaar();
 
-  /* Meteen ophalen welke rekeningen erbij zitten; hoort er één bij, dan
-     kiezen we die vast. */
   try {
     const { rekeningen, bank: naam, geldigTot } = await haalRekeningen();
     if (naam) bank.bankNaam = naam;
@@ -268,7 +303,21 @@ export async function verwerkTerugkomst() {
   } catch (e) {
     bank.fout = e.message;
   }
-  return "gekoppeld";
+}
+
+/* De code die je in je browser kreeg hier in gebruik nemen. */
+export async function neemOver(code) {
+  const schoon = String(code || "").trim();
+  if (!/^[\w-]{1,100}$/.test(schoon)) {
+    throw new Error("Dat lijkt geen geldige code. Neem hem helemaal over, zonder spaties.");
+  }
+  if (!ingesteld()) {
+    throw new Error("Vul eerst het adres en het woord van je bankdienst in.");
+  }
+  spoorBij("sessie overgenomen uit een andere browser");
+  await zetSessie(schoon);
+  if (bank.fout) throw new Error(bank.fout);
+  return true;
 }
 
 export async function haalRekeningen() {
