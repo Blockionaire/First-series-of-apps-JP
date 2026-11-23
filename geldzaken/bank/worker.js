@@ -37,6 +37,17 @@
 const API = "https://api.enablebanking.com";
 const UUR = 3600;
 
+/* Welke versie van dit bestand hier draait.
+   ---------------------------------------------------------------
+   De dienst wordt met de hand neergezet, dus hij kan achterlopen op de
+   app zonder dat iets dat verraadt — en dan zoek je een fout die hier
+   allang gerepareerd is. Daarom zegt hij het zelf, op de twee plekken
+   die je zonder iets in te vullen kunt zien: /status, en de weigering
+   die je krijgt als je het adres gewoon in je browser opent.
+
+   Ophogen bij elke wijziging die je moet neerzetten. */
+const VERSIE = "v26";
+
 /* Hoe lang de toestemming bij de bank geldig is. Zes maanden is wat de
    meeste banken maximaal toestaan; is jouw bank strenger, dan nemen we
    die grens over. Daarna moet je opnieuw inloggen bij de bank — dat is
@@ -81,6 +92,7 @@ export default {
       if (!mag) {
         return antwoord({
           fout: `Dit adres mag hier niet bij. Zet ${herkomst || "het adres van je app"} in HERKOMST.`,
+          dienst: VERSIE,
         }, 403, herkomst);
       }
       if (!await woordKlopt(verzoek, omgeving)) {
@@ -88,7 +100,7 @@ export default {
       }
 
       if (url.pathname === "/status" && verzoek.method === "GET") {
-        return antwoord({ klaar: true }, 200, herkomst);
+        return antwoord({ klaar: true, dienst: VERSIE }, 200, herkomst);
       }
       if (url.pathname === "/banken" && verzoek.method === "GET") {
         return antwoord(await banken(url, omgeving), 200, herkomst);
@@ -121,7 +133,7 @@ export default {
          welke instelling nog mist, en zonder die instellingen doet de
          dienst sowieso niets. */
       const naar = mag ? herkomst : e?.instelling ? "*" : "";
-      return antwoord({ fout: e?.publiek || "Er ging iets mis bij het ophalen." },
+      return antwoord({ fout: e?.publiek || "Er ging iets mis bij het ophalen.", dienst: VERSIE },
                       e?.status || 500, naar);
     }
   },

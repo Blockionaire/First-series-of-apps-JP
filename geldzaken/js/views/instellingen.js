@@ -361,6 +361,17 @@ function bankBlok() {
           </span>
         </div>` : ""}
 
+      ${Bank.dienstVerouderd() ? `
+        <div class="signaal signaal--let-op" style="margin-top:12px">
+          <span class="signaal__icoon">⬆️</span>
+          <span>
+            <span class="signaal__titel">Je dienst loopt achter</span>
+            <span class="signaal__tekst">Hij draait ${esc(b.dienstVersie)}, deze app verwacht
+              v${Bank.DIENST_NODIG} of nieuwer. Zet <code>bank/worker.js</code> opnieuw neer bij
+              Cloudflare — anders mist hij reparaties en zoek je een fout die daar al verholpen is.</span>
+          </span>
+        </div>` : ""}
+
       ${b.fout && b.fout !== b.proef?.tekst ? `<div class="veld__fout">${esc(b.fout)}</div>` : ""}
 
       ${/* Zolang hier een adres of een woord staat, hoort er een manier te

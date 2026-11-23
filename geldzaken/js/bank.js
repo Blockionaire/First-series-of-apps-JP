@@ -44,6 +44,7 @@ export const bank = {
      je beginscherm. Over te dragen met een code. */
   overdracht: "",
   bankNaam: "",
+  dienstVersie: "",     // welke versie je eigen dienst draait
   rekening: "",         // welke rekening je volgt
   rekeningNaam: "",
   geldigTot: "",        // wanneer de toestemming verloopt
@@ -59,6 +60,26 @@ export const bank = {
      privémodus van sommige browsers niet, en dan is het beter dat de
      app dat zegt dan dat alles stil blijft. */
   opslag: null,         // null = nog niet geprobeerd, true/false daarna
+};
+
+/* De dienst in bank/worker.js hoort minstens zo nieuw te zijn als dit.
+   Hij wordt met de hand neergezet en kan dus achterlopen op de app; dan
+   mist hij reparaties die hier allang zijn gedaan en zoek je een fout op
+   de verkeerde plek. Ophogen zodra de app iets nodig heeft dat alleen in
+   een nieuwere dienst zit. */
+export const DIENST_NODIG = 26;
+
+const versieNummer = v => {
+  const m = /^v(\d+)$/.exec(String(v || "").trim());
+  return m ? Number(m[1]) : null;
+};
+
+/* Alleen waar als we het zéker weten. Een dienst die zijn versie niet
+   noemt is oud, maar dat zeggen we pas als hij het zelf vertelt — en
+   anders laat de verbindingstest het vanzelf zien. */
+export const dienstVerouderd = () => {
+  const n = versieNummer(bank.dienstVersie);
+  return n !== null && n < DIENST_NODIG;
 };
 
 export const ingesteld = () => !!(bank.adres && bank.woord);
@@ -188,8 +209,16 @@ async function roep(pad, { methode = "GET", lijf = null } = {}) {
 
 export async function proefVerbinding() {
   try {
-    await roep("/status");
-    bank.proef = { gelukt: true, tekst: "De dienst antwoordt.", tijd: Date.now() };
+    const uit = await roep("/status");
+    /* De dienst zet je met de hand neer, dus hij kan achterlopen op de
+       app zonder dat iets dat verraadt — en dan zoek je een fout die
+       daar allang gerepareerd is. Dus vragen we het gewoon. */
+    bank.dienstVersie = uit?.dienst || "";
+    bank.proef = {
+      gelukt: true,
+      tekst: `De dienst antwoordt${uit?.dienst ? ` (${uit.dienst})` : ""}.`,
+      tijd: Date.now(),
+    };
     await bewaar();
     return true;
   } catch (fout) {
