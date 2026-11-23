@@ -553,6 +553,15 @@ textarea.invoer.groeit{
 .weekpil.nu span{color:var(--accent-ink);}
 .weekpil.nu i{background:var(--accent-ink);}
 .weekpil.nu i.geenplan{background:transparent; border-color:color-mix(in srgb, var(--accent-ink) 50%, transparent);}
+/* niet thuis: lichter. Gasten: het aantal in plaats van een stip. */
+.weekpil.uithuis{opacity:.5;}
+.weekpil i.gastenstip{
+  width:auto; height:auto; min-width:16px; padding:0 4px; border-radius:999px;
+  background:var(--accent); color:var(--accent-ink);
+  font-size:9.5px; font-weight:800; font-style:normal; line-height:1.5;
+  display:grid; place-items:center; font-variant-numeric:tabular-nums;
+}
+.weekpil.nu i.gastenstip{background:var(--accent-ink); color:var(--accent);}
 
 /* de startkaart bij het allereerste gebruik */
 .kaart.welkom{background:var(--card); border-color:var(--accent-zacht);}
@@ -851,6 +860,26 @@ textarea.invoer.groeit{
 .dagrij.vrijedag .tk b.stil{font-size:14px;}
 .dagrij.vrijedag .na{color:var(--accent);}
 
+/* eten jullie niet thuis, dan mag die dag rustiger in beeld staan */
+.dagrij.nietthuis .dagkop{opacity:.45;}
+.dagrij.nietthuis .tk{opacity:.5;}
+.dagrij.nietthuis .tk b{font-weight:550; font-style:italic;}
+.dagrij.nietthuis .na{opacity:.55;}
+
+/* komt er iemand mee-eten, dan zie je dat meteen aan de dag */
+.dagrij.gasten{background:var(--accent-zacht);}
+.dagrij.gasten:active{background:color-mix(in srgb, var(--accent-zacht) 70%, var(--accent));}
+.dagrij.gasten .dagkop{background:var(--card);}
+.dagrij.vandaag.gasten .dagkop{background:var(--accent);}
+/* het aantal mee-eters staat achter de naam; daar kan het niets raken */
+.dagrij .tk b .gastenbel{
+  display:inline-block; margin-left:7px; vertical-align:1px;
+  min-width:20px; padding:1px 6px; border-radius:999px;
+  background:var(--accent); color:var(--accent-ink);
+  font-size:11px; font-weight:800; font-style:normal; letter-spacing:0;
+  text-align:center; font-variant-numeric:tabular-nums;
+}
+
 /* slepen naar een andere dag */
 .dagrij.opgepakt{opacity:.3;}
 .dagrij.sleepdoel{background:var(--accent-zacht); box-shadow:inset 0 0 0 2px var(--accent);}
@@ -1103,6 +1132,47 @@ body.sleepbezig{cursor:grabbing; user-select:none; -webkit-user-select:none;}
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 .uitgaverij .eur{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em;}
+
+/* ---------- intro ---------- */
+.intro{
+  position:fixed; inset:0; z-index:130; background:var(--bg);
+  display:flex; flex-direction:column;
+  padding:calc(env(safe-area-inset-top) + 14px) 0 calc(env(safe-area-inset-bottom) + 20px);
+  opacity:0; transition:opacity .3s ease;
+}
+.intro.open{opacity:1;}
+.intro-sla{
+  align-self:flex-end; margin-right:18px; padding:8px 12px; border-radius:10px;
+  font-size:14px; font-weight:600; color:var(--muted); transition:opacity var(--vt);
+}
+.intro-baan{
+  flex:1; display:flex; overflow-x:auto; scroll-snap-type:x mandatory;
+  scrollbar-width:none; -webkit-overflow-scrolling:touch;
+}
+.intro-baan::-webkit-scrollbar{display:none;}
+.intro-plaat{
+  flex:0 0 100%; scroll-snap-align:center;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:10px 32px;
+}
+.intro-plaat .em{font-size:72px; line-height:1.2; margin-bottom:10px;}
+.intro-plaat h2{
+  margin:0; font-size:25px; font-weight:750; letter-spacing:var(--kop); max-width:14ch;
+}
+.intro-plaat p{
+  margin:8px 0 0; font-size:16px; line-height:1.55; color:var(--ink-2); max-width:32ch;
+}
+.intro-voet{
+  display:flex; flex-direction:column; align-items:center; gap:18px;
+  padding:0 24px; max-width:420px; margin:0 auto; width:100%;
+}
+.intro-stippen{display:flex; gap:7px;}
+.intro-stippen i{
+  width:7px; height:7px; border-radius:50%; background:var(--line-2);
+  transition:all var(--vt);
+}
+.intro-stippen i.aan{background:var(--accent); width:20px; border-radius:999px;}
+.intro-voet .knop{width:100%;}
 
 /* ---------- toast ---------- */
 .toast{
@@ -2159,7 +2229,9 @@ async function pinKlaar(){
         };
         const nid = await DB.voegToe(PAD.leden, lid);
         S.leden.push({id:nid, ...lid});
-        await inloggenAls(nid);
+        /* vers account: eerst even laten zien hoe de app werkt */
+        LS.weg(INTRO());
+        await inloggenAls(nid, true);
       }
     }
   }catch(e){
@@ -2168,7 +2240,7 @@ async function pinKlaar(){
   }finally{ IN.bezig = false; }
 }
 
-async function inloggenAls(lidId){
+async function inloggenAls(lidId, vers){
   const lid = lidVan(lidId);
   S.ik = {id:lidId, naam: lid ? lid.naam : "Ik"};
   LS.zet("boodschappen_ik_" + P, S.ik);
@@ -2176,7 +2248,90 @@ async function inloggenAls(lidId){
   IN.pin = ""; IN.pin2 = ""; IN.fout = false;
   startHartslag();
   tekenNu();
+  if(vers && !LS.get(INTRO(), false)){ toonIntro(); return; }
   setTimeout(() => toast("Welkom, " + (lid?.naam.split(" ")[0] || "") + "!", "👋"), 260);
+}
+
+/* =====================================================================
+   4b · INTRO — de eerste keer even laten zien wat de app doet
+   =====================================================================
+   Alleen bij een vers account, en maar één keer: daarna staat het in
+   localStorage. Je kunt hem altijd opnieuw bekijken via Meer. */
+const INTRO = () => "boodschappen_intro_" + P;
+
+function introPlaten(){
+  const naam = (lidVan(S.ik?.id)?.naam || "").split(" ")[0];
+  const platen = [
+    {em:"🧺", titel:"Eén lijst, samen",
+     tekst:`Wat jij erop zet, ziet je huisgenoot meteen — en andersom.
+            Bij elke boodschap staat wie hem erop zette.`},
+    {em:"🛒", titel:"Winkelen zonder zoeken",
+     tekst:`Kies de winkel waar je bent en je krijgt een groot afvinkscherm,
+            op de volgorde waarin je door die winkel loopt.`},
+    {em:"🍽️", titel:"Plan je week",
+     tekst:`Maak je eigen gerechten met hun ingrediënten. Zet er een op een dag
+            en de boodschappen staan er met één tik bij.`}
+  ];
+  if(geldAan()) platen.push({em:"🎯", titel:"Houd het budget in de gaten",
+     tekst:`Noteer na het winkelen wat je hebt uitgegeven, dan zie je altijd
+            wat er deze ${periodeWoord()} nog over is.`});
+  platen.push({em:"👋", titel:`Je bent klaar${naam ? ", " + naam : ""}`,
+     tekst:`Op <b>Thuis</b> zie je alles in één oogopslag. Zet je eerste
+            boodschap erop — de rest wijst zich vanzelf.`});
+  return platen;
+}
+
+function toonIntro(){
+  const platen = introPlaten();
+  const vak = document.createElement("div");
+  vak.className = "intro";
+  vak.innerHTML = `
+    <button class="intro-sla" id="intro-sla">Overslaan</button>
+    <div class="intro-baan" id="intro-baan">
+      ${platen.map(pl => `
+        <div class="intro-plaat">
+          <span class="em">${pl.em}</span>
+          <h2>${pl.titel}</h2>
+          <p>${pl.tekst}</p>
+        </div>`).join("")}
+    </div>
+    <div class="intro-voet">
+      <div class="intro-stippen">
+        ${platen.map((_, i) => `<i class="${i===0?"aan":""}"></i>`).join("")}
+      </div>
+      <button class="knop" id="intro-door">Volgende</button>
+    </div>`;
+  document.body.appendChild(vak);
+  requestAnimationFrame(() => vak.classList.add("open"));
+
+  const baan = vak.querySelector("#intro-baan");
+  const stippen = [...vak.querySelectorAll(".intro-stippen i")];
+  const door = vak.querySelector("#intro-door");
+  let nu_ = 0;
+
+  const bij = () => {
+    const i = Math.round(baan.scrollLeft / baan.clientWidth);
+    if(i === nu_) return;
+    nu_ = i;
+    stippen.forEach((d, x) => d.classList.toggle("aan", x === i));
+    door.textContent = i === platen.length - 1 ? "Aan de slag" : "Volgende";
+    vak.querySelector("#intro-sla").style.opacity = i === platen.length - 1 ? "0" : "1";
+  };
+  baan.addEventListener("scroll", bij, {passive:true});
+
+  const klaar = () => {
+    LS.zet(INTRO(), true);
+    vak.classList.remove("open");
+    setTimeout(() => vak.remove(), 300);
+    const n = (lidVan(S.ik?.id)?.naam || "").split(" ")[0];
+    setTimeout(() => toast("Welkom, " + n + "!", "👋"), 320);
+  };
+  door.onclick = () => {
+    tril(8);
+    if(nu_ >= platen.length - 1) return klaar();
+    baan.scrollTo({left: (nu_ + 1) * baan.clientWidth, behavior:"smooth"});
+  };
+  vak.querySelector("#intro-sla").onclick = () => { tril(); klaar(); };
 }
 
 function uitloggen(){
@@ -4549,7 +4704,8 @@ function schermThuis(){
               : `<div class="goedzo">${IK.vink} Alles in huis</div>`}`
           : m && m.tekst ? `
             <div class="groot">${esc(m.tekst)}</div>
-            <div class="onderschrift">genoteerd voor vandaag</div>`
+            <div class="onderschrift">${nietThuis(m) ? "jullie eten vandaag niet thuis" : "genoteerd voor vandaag"}${
+              mee.length ? " · " + esc(namenRij(mee)) + " " + (mee.length===1?"eet":"eten") + " mee" : ""}</div>`
           : `<div class="onderschrift" style="margin-top:2px">Nog niets gepland voor vandaag.</div>
              ${S.gerechten.length ? `<div class="sugg" style="margin-top:10px">
                ${[...S.gerechten].sort((a,b) => gerechtHistorie(b.id).keer - gerechtHistorie(a.id).keer).slice(0,3)
@@ -4595,10 +4751,13 @@ function schermThuis(){
             ${week.map(d => {
               const sl = datumSleutel(d);
               const mm = menuVan(sl);
-              return `<button class="weekpil ${isVandaag(d)?"nu":""} ${mm?"gevuld":""}" data-weekdag="${sl}">
+              const gasten = meeEtersVan(mm).length;
+              return `<button class="weekpil ${isVandaag(d)?"nu":""} ${mm?"gevuld":""}
+                              ${nietThuis(mm)?"uithuis":""} ${gasten?"gasten":""}" data-weekdag="${sl}">
                 <b>${dagNaamVan(d).slice(0,2)}</b>
                 <span>${d.getDate()}</span>
-                <i class="${mm ? "" : "geenplan"}"></i>
+                ${gasten ? `<i class="gastenstip">+${gasten}</i>`
+                         : `<i class="${mm ? "" : "geenplan"}"></i>`}
               </button>`;
             }).join("")}
           </div>
@@ -4804,6 +4963,11 @@ function schermMeer(){
               <div class="tk"><b>${DB && DB.demo ? "Demo-modus" : "Gedeelde lijst"}</b>
                 <span>${DB && DB.demo ? "alles staat alleen op dit apparaat" : "alles loopt live gelijk met je huisgenoten"}</span></div>
             </div>
+            <button class="rij" id="m-intro">
+              <span class="ik">${IK.hart}</span>
+              <div class="tk"><b>Rondleiding</b><span>nog eens zien hoe de app werkt</span></div>
+              <span class="na">${IK.pijl}</span>
+            </button>
             <button class="rij" id="m-over">
               <span class="ik">${IK.info}</span>
               <div class="tk"><b>Over deze app</b><span>versie ${VERSIE} · voor ${esc(CFG.huisNaam)}</span></div>
@@ -4839,6 +5003,7 @@ function bindMeer(){
     catch(e){ console.error("instellingen", e); toast("Opslaan lukte niet"); }
     toast(aan ? "Geld bijhouden staat weer aan" : "Geld bijhouden staat uit", aan ? "💶" : "🙈");
   };
+  const mi = $("#m-intro"); if(mi) mi.onclick = () => { tril(); toonIntro(); };
   $("#m-over").onclick = sheetOver;
   $$("[data-lidbeheer]").forEach(b => b.onclick = () => sheetLid(lidVan(b.dataset.lidbeheer)));
   const mb = $("#m-budget");
@@ -5445,6 +5610,9 @@ const gerechtVan = id => S.gerechten.find(g => g.id === id) || null;
    Komt er iemand mee-eten, dan noteer je dat bij die dag. De namen staan
    klein onder het gerecht en tellen mee voor hoeveel personen je kookt. */
 const meeEtersVan = m => (m && Array.isArray(m.meeEters) ? m.meeEters.filter(Boolean) : []);
+/* eten jullie die dag niet thuis? Dan hoeft de dag niet te schreeuwen om
+   aandacht in de week, en valt er ook niets te koken of te halen. */
+const nietThuis = m => !!(m && m.nietThuis);
 /* "Sanne", "Sanne en Tim", "Sanne, Tim en Joris" */
 function namenRij(namen){
   if(namen.length <= 1) return namen[0] || "";
@@ -5566,8 +5734,10 @@ function schermEten(){
             const naam = g ? g.naam : (m && m.tekst ? m.tekst : null);
             const nodig = g ? nogTeHalen(g, m.personen || g.personen || 2).length : 0;
             const mee = meeEtersVan(m);
+            const uitHuis = nietThuis(m);
             return `
-            <button class="dagrij ${isVandaag(d)?"vandaag":""} ${naam?"":"vrijedag"}" data-dag="${sleutel}"
+            <button class="dagrij ${isVandaag(d)?"vandaag":""} ${naam?"":"vrijedag"}
+                    ${uitHuis?"nietthuis":""} ${mee.length?"gasten":""}" data-dag="${sleutel}"
                     ${naam ? `data-sleep="${sleutel}"` : ""}>
               <span class="dagkop">
                 <b>${dagNaamVan(d).slice(0,2)}</b>
@@ -5575,12 +5745,12 @@ function schermEten(){
               </span>
               <span class="tk">
                 ${naam
-                  ? `<b>${esc(naam)}</b><span>${m.personen ? m.personen + " personen" : ""}${
-                       g && nodig ? (m.personen ? " · " : "") + nodig + " nog te halen" : (g ? (m.personen ? " · " : "") + "alles in huis" : "")}</span>`
+                  ? `<b>${esc(naam)}${mee.length ? `<i class="gastenbel">+${mee.length}</i>` : ""}</b><span>${uitHuis ? "niet thuis" : (m.personen ? m.personen + " personen" : "")}${
+                       !uitHuis && g && nodig ? (m.personen ? " · " : "") + nodig + " nog te halen" : (!uitHuis && g ? (m.personen ? " · " : "") + "alles in huis" : "")}</span>`
                   : `<b class="stil">Niets gepland</b>`}
                 ${mee.length ? `<span class="mee">${IK.persoon} ${esc(namenRij(mee))} ${mee.length === 1 ? "eet" : "eten"} mee</span>` : ""}
               </span>
-              <span class="na">${naam ? IK.pijl : IK.plus}</span>
+              <span class="na">${uitHuis ? IK.uit : naam ? IK.pijl : IK.plus}</span>
             </button>`;
           }).join("")}
         </div>
@@ -5782,6 +5952,7 @@ const menuKaal = m => ({
   tekst: m.tekst || "",
   personen: m.personen == null ? null : m.personen,
   meeEters: meeEtersVan(m),
+  nietThuis: nietThuis(m),
   door: m.door || (S.ik ? S.ik.id : null),
   gemaakt: m.gemaakt || nu()
 });
@@ -5997,6 +6168,15 @@ function sheetPlan(dagSleutel){
                   placeholder="Bijv. uit eten, restjes">${esc(m && m.tekst ? m.tekst : "")}</textarea>
         <button class="knop" id="pl-tekstok" style="flex:0 0 auto">${IK.vink}</button>
       </div>
+      <div class="sugg" id="pl-sugg">
+        ${[["Uit eten",true],["Bij familie",true],["Onderweg",true],["Restjes",false],["Afhalen",false]]
+          .map(([t,uit]) => `<button type="button" data-plsnel="${esc(t)}" data-pluit="${uit?1:0}">${esc(t)}</button>`).join("")}
+      </div>
+      <button type="button" class="schakel" id="pl-nietthuis" style="width:100%; margin-top:10px">
+        <span class="tk"><b>We eten niet thuis</b>
+          <span>de dag valt lichter weg in de week en er hoeft niets gehaald te worden</span></span>
+        <span class="tuimel ${nietThuis(m)?"aan":""}"></span>
+      </button>
     </div>
     ${m ? `
     <div class="lijst" style="margin-top:14px">
@@ -6015,18 +6195,30 @@ function sheetPlan(dagSleutel){
     $$("[data-kies]").forEach(b => b.onclick = async () => {
       const g = gerechtVan(b.dataset.kies); if(!g) return;
       await DB.zet(PAD.menu + "/" + dagSleutel, {
-        gerechtId: g.id, tekst:"", personen: g.personen || 2, door: S.ik.id, gemaakt: nu()
+        gerechtId: g.id, tekst:"", personen: g.personen || 2, nietThuis:false, door: S.ik.id, gemaakt: nu()
       });
       tril(12); sluitSheet(); toast(g.naam + " op " + dagNaam.toLowerCase(), "🍽️");
     });
+    let uitHuis = nietThuis(m);
     const bewaarTekst = async () => {
       const t = eenRegel($("#pl-tekst").value);
       if(!t) return;
-      await DB.zet(PAD.menu + "/" + dagSleutel, {gerechtId:null, tekst:t, personen:null, door:S.ik.id, gemaakt:nu()});
-      sluitSheet(); toast("Genoteerd", "✓");
+      await DB.zet(PAD.menu + "/" + dagSleutel, {gerechtId:null, tekst:t, personen:null,
+        nietThuis: uitHuis, door:S.ik.id, gemaakt:nu()});
+      sluitSheet(); toast(uitHuis ? "Genoteerd — niet thuis" : "Genoteerd", uitHuis ? "🚪" : "✓");
     };
     $("#pl-tekstok").onclick = bewaarTekst;
     laatGroeien($("#pl-tekst"), bewaarTekst);
+    const zetUit = aan => {
+      uitHuis = aan;
+      $("#pl-nietthuis .tuimel").classList.toggle("aan", aan);
+    };
+    $("#pl-nietthuis").onclick = () => { tril(6); zetUit(!uitHuis); };
+    $$("#pl-sugg [data-plsnel]").forEach(b => b.onclick = () => {
+      $("#pl-tekst").value = b.dataset.plsnel;
+      zetUit(b.dataset.pluit === "1");
+      tril(6); bewaarTekst();
+    });
     const pm = $("#pl-mee");
     if(pm) pm.onclick = () => sheetMeeEters(dagSleutel, () => sheetPlan(dagSleutel));
     const leeg = $("#pl-leeg");

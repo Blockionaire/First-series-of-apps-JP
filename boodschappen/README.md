@@ -19,6 +19,10 @@ apparaat, dus normaal gesproken hoef je maar één keer in te loggen.
 Je naam staat bij alles wat je doet: wie iets op de lijst zette, wie het afvinkte en
 wie welke bon betaalde.
 
+Maak je een nieuw account aan, dan krijg je eerst een **korte rondleiding**: een paar
+schermen die laten zien wat de app doet. Overslaan mag, en via *Meer → App → Rondleiding*
+kun je hem altijd terugkijken.
+
 **Pincode kwijt?** Vraag je huisgenoot om in de app naar *Meer → Huisgenoten → jouw naam
 → Pincode wissen* te gaan. Daarna kies je bij de volgende keer inloggen gewoon een nieuwe.
 
@@ -148,10 +152,16 @@ een tweede.
 
 **Mee-eters.** Schuift er iemand aan? Open de dag en tik *Mee-eters*: je typt een naam
 (of tikt er een aan die eerder meegegeten heeft) en hij staat klein onder het gerecht in de
-weekplanning — *Sanne en Tim eten mee*. Elke mee-eter telt meteen mee voor hoeveel personen
+weekplanning — *Sanne en Tim eten mee*. De dag krijgt bovendien een eigen tintje en een
+**+2** achter de naam, zodat je dat meteen ziet als je de week overloopt. Elke mee-eter telt meteen mee voor hoeveel personen
 je kookt, dus de hoeveelheden en de boodschappen schalen mee; met de stepper zet je dat
 alsnog anders. Werkt ook bij een vrije dag ("uit eten"), daar blijft het aantal personen
 gewoon leeg. Namen worden onthouden voor jullie allebei.
+
+**Niet thuis eten.** Tik een dag aan en kies *Uit eten*, *Bij familie* of *Onderweg* — of zet
+de schakelaar *We eten niet thuis* zelf om. Die dag staat dan lichter in de week, met een
+deurtje in plaats van een pijltje, zodat je in één blik ziet wanneer je thuis kookt en wanneer
+niet. *Restjes* en *Afhalen* laten de dag gewoon staan, want dan ben je er wel.
 
 **Slepen naar een andere dag.** Toch liever dinsdag? Houd een geplande dag even vast: de
 regel komt los en volgt je vinger. De dag waar je boven hangt licht op; laat je los, dan
