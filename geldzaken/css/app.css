@@ -791,13 +791,9 @@ input[type="date"], input[type="month"] { min-height: 46px; }
 /* ------------------------------- Spoor ------------------------------ */
 /* Wat de app bij je laatste tik deed. Normaal dichtgeklapt: het is er
    voor het moment dat iets niet doet wat het hoort te doen. */
-.spoorvak > summary {
-  font-size: .8rem; color: var(--tekst-zacht); cursor: pointer;
-  padding: 4px 0; list-style: none;
+.spoorvak__kop {
+  font-size: .8rem; font-weight: 600; color: var(--tekst-zacht); padding: 4px 0;
 }
-.spoorvak > summary::-webkit-details-marker { display: none; }
-.spoorvak > summary::before { content: "› "; display: inline-block; transition: transform .15s; }
-.spoorvak[open] > summary::before { content: "⌄ "; }
 .spoorvak__regels {
   margin: 6px 0 8px; padding: 9px 11px;
   background: var(--vlak); border: 1px solid var(--rand); border-radius: 10px;

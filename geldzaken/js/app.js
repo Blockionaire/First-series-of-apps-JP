@@ -286,6 +286,63 @@ export function eisBewerkrecht() {
 }
 
 /* ---------------------------------------------------------------
+   Aanrakingen volgen
+   ---------------------------------------------------------------
+   Een knop die niets doet heeft maar een handvol oorzaken, en van
+   buitenaf zien ze er alle hetzelfde uit. Dit scheidt ze.
+
+   Een klik ontstaat pas als indrukken én loslaten op hetzelfde element
+   gebeuren. Wordt het scherm daartussenin opnieuw getekend, dan bestaat
+   dat element niet meer en komt er helemaal geen klik — ook een
+   klapvakje gaat dan niet open, terwijl typen wél blijft werken, want
+   een veld krijgt zijn focus al bij het indrukken. Precies dat verschil
+   is hieronder af te lezen.
+
+   Het luistert op het document, niet op het scherm: ligt er iets
+   overheen dat de tik opvangt, dan noemt het spoor dat ding bij naam.
+   --------------------------------------------------------------- */
+const merkVan = el => {
+  if (!el || !el.tagName) return "niets";
+  const merk = [...(el.attributes || [])].map(a => a.name).find(n => n.startsWith("data-"));
+  const klasse = String(el.className || "").trim().split(/\s+/)[0];
+  return el.tagName.toLowerCase()
+    + (el.id ? `#${el.id}` : "")
+    + (merk ? ` ${merk}` : klasse ? ` .${klasse}` : "");
+};
+
+function volgAanrakingen() {
+  let ingedrukt = null;
+
+  document.addEventListener("pointerdown", e => {
+    const el = e.target.closest?.("button, summary, a, input, label, .rij, .schakelrij") || e.target;
+    ingedrukt = el;
+    let regel = `tik op ${merkVan(el)}`;
+
+    /* Een uitgeschakelde knop laat geen aanraking door: de tik landt op
+       het vakje eromheen. In het spoor zie je dan een `div` waar je een
+       knop verwachtte, dus zeggen we erbij welke knop daar uit staat. */
+    if (el.disabled) regel += " — die staat uit";
+    else if (!el.matches?.("button, summary, a, input, label")) {
+      const uit = [...(el.querySelectorAll?.("button:disabled, input:disabled") || [])].map(merkVan);
+      if (uit.length) regel += ` — hierin staat uitgeschakeld: ${uit.join(", ")}`;
+    }
+    spoorBij(regel);
+  }, true);
+
+  document.addEventListener("pointerup", e => {
+    const el = e.target.closest?.("button, summary, a, input, label, .rij, .schakelrij") || e.target;
+    if (el === ingedrukt) return;                     // gewoon goed, niets te melden
+    spoorBij(ingedrukt && !ingedrukt.isConnected
+      ? `losgelaten op ${merkVan(el)} — waar je op drukte was weg, dus geen klik`
+      : `losgelaten op ${merkVan(el)} — iets anders dan waar je op drukte`);
+  }, true);
+
+  document.addEventListener("click", e => {
+    spoorBij(`klik op ${merkVan(e.target.closest?.("button, summary, a, input, label") || e.target)}`);
+  }, true);
+}
+
+/* ---------------------------------------------------------------
    Opstarten
    --------------------------------------------------------------- */
 let laatsteInstellingen = "";
@@ -307,6 +364,8 @@ async function opstarten() {
     spoorBij(`fout zonder vangnet: ${reden}`);
     melding(`Er ging iets mis in de app: ${reden}`, "fout");
   });
+
+  volgAanrakingen();
 
   abonneer(() => {
     const stempel = `${state.instellingen.thema}|${state.instellingen.valuta}|${state.instellingen.privacy}|${state.instellingen.modus}`;
@@ -332,6 +391,16 @@ async function opstarten() {
     laden.classList.add("is-weg");
     setTimeout(() => laden.remove(), 400);
   }
+
+  /* Eén regel met de omstandigheden. Zonder dit is elk antwoord op
+     "waarom doet die knop niets" een gok over welke app, welke versie en
+     welk startscherm er eigenlijk draait. */
+  spoorBij([
+    `start · ${window.matchMedia("(display-mode: standalone)").matches || navigator.standalone ? "vanaf beginscherm" : "in de browser"}`,
+    `scherm ${window.innerWidth}×${window.innerHeight}`,
+    navigator.serviceWorker?.controller ? "servicewerker stuurt" : "geen servicewerker",
+    laden ? "laadscherm weggehaald" : "geen laadscherm aangetroffen",
+  ].join(" · "));
 
   if (!location.hash) ga("#/start", { vervang: true });
   teken();

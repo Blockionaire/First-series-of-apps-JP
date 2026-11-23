@@ -325,13 +325,18 @@ function bankBlok() {
 
       ${/* Doet een knop hier niets, dan is dit de enige manier om erachter
             te komen wat er wél gebeurde. Een telefoon heeft geen console,
-            dus staat het hier. Dichtgeklapt, want normaal hoef je het niet
-            te zien. */ ""}
-      <details class="spoorvak" style="margin-top:12px">
-        <summary>Wat deed de app bij je laatste tik?</summary>
+            dus staat het hier.
+
+            En het staat open. Het zat eerst in een klapvakje, maar juist
+            als er iets mis is met het aanraken gaat zo'n vakje ook niet
+            open — en dan is het spoor onbereikbaar op het moment dat je
+            het nodig hebt. Een diagnose mag niet afhangen van hetzelfde
+            dat kapot is. */ ""}
+      <div class="spoorvak" style="margin-top:12px">
+        <div class="spoorvak__kop">Wat deed de app bij je laatste tik?</div>
         <pre class="spoorvak__regels" data-spoor>${esc(spoorTekst()) || "nog niets"}</pre>
         <button class="knop knop--klein" data-spoor-wis>Spoor wissen</button>
-      </details>
+      </div>
 
       <div class="schakelrij" style="margin-top:4px">
         <span class="schakelrij__tekst">
@@ -609,29 +614,6 @@ export function koppel(wortel, params) {
      heeft maar drie mogelijke oorzaken: de tik komt ergens anders aan,
      de knop staat uit, of de code erachter loopt vast. Dit scheidt de
      eerste twee van de derde — zonder dat je een console nodig hebt. */
-  const merkVan = el =>
-    [...(el.attributes || [])].map(a => a.name).find(n => n.startsWith("data-"))
-    || el.id || String(el.className || "") || "";
-
-  wortel.addEventListener("pointerdown", e => {
-    const el = e.target.closest("button, a, input, label, .rij, .schakelrij") || e.target;
-    let regel = `tik op ${el.tagName.toLowerCase()}`;
-    const merk = merkVan(el);
-    if (merk) regel += ` ${merk}`;
-
-    /* Een uitgeschakelde knop laat geen enkele aanraking door — de tik
-       landt op het vakje eromheen, en in het spoor zie je dan een `div`
-       waar je een knop verwachtte. Dus kijken we meteen of daar een
-       knop in staat die uit staat. Dat is het antwoord op "er gebeurt
-       niks" dat je anders nooit krijgt. */
-    if (el.disabled) regel += " — die staat uit";
-    else if (!el.matches("button, a, input, label")) {
-      const uit = [...(el.querySelectorAll?.("button:disabled, input:disabled") || [])].map(merkVan);
-      if (uit.length) regel += ` — hierin staat uitgeschakeld: ${uit.join(", ")}`;
-    }
-    spoorBij(regel);
-  }, true);
-
   wortel.addEventListener("click", async e => {
     if (e.target.closest("[data-spoor-wis]")) return spoorLeeg();
 
