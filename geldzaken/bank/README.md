@@ -35,47 +35,29 @@ jij vraagt, en het antwoord doorgeven.
 
 ---
 
-## 1. Enable Banking
+## 1. Eerst de dienst neerzetten
 
-1. Maak een account op [enablebanking.com](https://enablebanking.com) en ga naar
-   het Control Panel.
-2. Registreer een applicatie in de **productie**-omgeving. Je browser maakt dan
-   een privésleutel aan en zet die in je downloadmap, als `<app-id>.pem`.
-   **Bewaar dat bestand goed — je krijgt hem niet opnieuw.**
-3. Noteer het **Application ID**.
-4. Koppel je eigen rekening onder **"Activate by linking accounts"**. Zonder dat
-   blijft de applicatie inactief. Hiermee wordt het een *restricted* applicatie:
-   hij kan uitsluitend bij rekeningen die jij zelf hebt gekoppeld. Precies wat je
-   wil, en het is de route die Enable Banking aanwijst voor *"individual
-   non-commercial use"*.
+Dit moet als eerste, want je hebt het adres ervan nodig bij Enable Banking.
 
-Zet de sleutel zo nodig om naar de vorm die browsers en Workers kunnen lezen:
+Je hebt een gratis Cloudflare-account nodig, zonder creditcard. Er zijn twee wegen;
+de eerste vraagt niets van je computer.
 
-```sh
-openssl pkcs8 -topk8 -nocrypt -in <app-id>.pem -out sleutel.pk8.pem
-```
+**Via de website (geen installatie nodig)**
 
-Begint je bestand met `-----BEGIN PRIVATE KEY-----`, dan is het al goed.
-Staat er `BEGIN RSA PRIVATE KEY`, dan heb je bovenstaande regel nodig.
+1. Maak een account op [dash.cloudflare.com](https://dash.cloudflare.com) en ga naar
+   **Compute (Workers)** → **Create** → **Start with Hello World** → **Deploy**.
+   Noem hem `geldzaken-bank`. De eerste keer vraagt Cloudflare je een naam voor je
+   `workers.dev`-adres te kiezen; die mag je zelf verzinnen.
+2. Klik op **Edit code**, gooi alles weg wat erin staat, en plak de volledige inhoud van
+   [`worker.js`](worker.js) erin. Dat is één bestand zonder afhankelijkheden, dus meer is
+   er niet. **Deploy.**
+3. Bovenin staat nu het adres, iets als
+   `https://geldzaken-bank.jouwnaam.workers.dev`. **Schrijf dat op.**
 
----
+Open het adres eens in je browser. Je hoort `{"fout":"Dit adres mag hier niet bij."}` te
+zien — dat is goed nieuws: hij draait, en hij laat je browser er niet bij.
 
-## 2. Verzin een woord
-
-Een lang, willekeurig woord dat alleen jij kent. Bijvoorbeeld:
-
-```sh
-openssl rand -base64 32
-```
-
-Dit is wat de dienst en de app aan elkaar herkent. Zonder dit woord krijgt niemand
-iets te zien.
-
----
-
-## 3. De dienst neerzetten
-
-Je hebt een (gratis) Cloudflare-account nodig. Geen creditcard.
+**Via de opdrachtregel (als je Node al hebt)**
 
 ```sh
 cd geldzaken/bank
@@ -83,29 +65,95 @@ npx wrangler login
 npx wrangler deploy
 ```
 
-Daarna de vier instellingen erin. De eerste drie zijn geheim:
+---
+
+## 2. Verzin een woord
+
+Een lang, willekeurig woord dat alleen jij kent:
 
 ```sh
-npx wrangler secret put EB_APP_ID          # het Application ID
-npx wrangler secret put EB_SLEUTEL         # de hele inhoud van sleutel.pk8.pem
-npx wrangler secret put GELDZAKEN_WOORD    # het woord uit stap 2
-npx wrangler secret put HERKOMST           # https://jouwnaam.github.io
+openssl rand -base64 32
 ```
 
-`HERKOMST` is het adres waarop jouw Geldzaken draait — alleen het begin, dus
-zónder pad. Meerdere adressen scheid je met een komma, bijvoorbeeld als je ook
-lokaal wilt testen:
-
-```
-https://jouwnaam.github.io,http://127.0.0.1:8123
-```
-
-Na `wrangler deploy` krijg je het adres van je dienst te zien, zoiets als
-`https://geldzaken-bank.jouwnaam.workers.dev`.
+Geen zin in een opdrachtregel? Elk willekeurig wachtwoord van twintig tekens of meer
+voldoet, als je het maar nergens anders gebruikt. Dit is wat de dienst en de app aan
+elkaar herkent.
 
 ---
 
-## 4. In de app
+## 3. Enable Banking
+
+1. Maak een account op [enablebanking.com](https://enablebanking.com) en ga naar het
+   Control Panel, naar **Applications**.
+2. **Add a new application**, en kies **Production**. Let op: sandbox en productie zijn
+   niet uitwisselbaar — een sandbox-app kun je later niet omzetten, en met je echte
+   Rabobank heb je productie nodig.
+3. Vul in:
+   - **Name** — bijvoorbeeld `Geldzaken`.
+   - **Redirect URLs** — hier komt het adres van je dienst met `/klaar` erachter:
+     `https://geldzaken-bank.jouwnaam.workers.dev/klaar`
+     Dit is de stap waar het misgaat als je hem vergeet: Enable Banking weigert dan
+     het inloggen met `REDIRECT_URI_NOT_ALLOWED`.
+   - **Description, data protection email, privacy policy URL, terms of service URL** —
+     productie-registratie vraagt hier om, ook als je de app alleen voor jezelf gebruikt.
+     Volgens hun eigen FAQ wordt er in deze modus niet op gecontroleerd, dus iets
+     redelijks volstaat; je eigen e-mailadres en de link naar deze repo bijvoorbeeld.
+4. Je browser maakt bij het aanmaken een **privésleutel** en zet die in je downloadmap,
+   als `<app-id>.pem`. **Bewaar dat bestand goed — je krijgt hem niet opnieuw.**
+5. Noteer het **Application ID**.
+
+Zet de sleutel zo nodig om naar de vorm die Workers kan lezen:
+
+```sh
+openssl pkcs8 -topk8 -nocrypt -in <app-id>.pem -out sleutel.pk8.pem
+```
+
+Begint je bestand met `-----BEGIN PRIVATE KEY-----`, dan is het al goed. Staat er
+`BEGIN RSA PRIVATE KEY`, dan heb je die regel nodig. De dienst zegt het trouwens ook
+gewoon als het de verkeerde vorm is.
+
+---
+
+## 4. Je rekening koppelen bij Enable Banking
+
+Je nieuwe app staat op **Inactive**. Klik op **Activate by linking accounts**. Je gaat
+dan langs Enable Banking's eigen toestemmingsscherm, daarna naar je bank, en autoriseert
+daar de toegang. Daarna staat de app op **Active** in *restricted mode*: hij kan
+uitsluitend bij rekeningen die jij zo hebt gekoppeld.
+
+Koppel elke rekening die je wilt gebruiken. Autoriseer je later een rekening die hier
+niet bij zat, dan krijgt de app een lege lijst terug.
+
+---
+
+## 5. De vier instellingen in de dienst
+
+Terug bij Cloudflare, bij je Worker: **Settings** → **Variables and Secrets** →
+**Add**, type **Secret**. Vier stuks:
+
+| Naam | Waarde |
+|---|---|
+| `EB_APP_ID` | het Application ID uit stap 3 |
+| `EB_SLEUTEL` | de hele inhoud van je `.pem`-bestand, inclusief de `-----BEGIN`- en `-----END`-regels |
+| `GELDZAKEN_WOORD` | het woord uit stap 2 |
+| `HERKOMST` | het adres waarop jouw Geldzaken draait, bijvoorbeeld `https://jouwnaam.github.io` |
+
+`HERKOMST` is alléén het begin van het adres: geen pad erachter, geen schuine streep aan
+het eind. Meerdere adressen scheid je met een komma, bijvoorbeeld als je ook lokaal wilt
+testen: `https://jouwnaam.github.io,http://127.0.0.1:8123`
+
+Met de opdrachtregel gaat hetzelfde zo:
+
+```sh
+npx wrangler secret put EB_APP_ID
+npx wrangler secret put EB_SLEUTEL
+npx wrangler secret put GELDZAKEN_WOORD
+npx wrangler secret put HERKOMST
+```
+
+---
+
+## 6. In de app
 
 Ga naar **⚙️ → Je bank** en vul in:
 
@@ -186,7 +234,16 @@ en zonder schuine streep aan het eind.
 bank. Een paar uur wachten.
 
 **Een fout over de privésleutel** — die staat waarschijnlijk nog in de oude vorm.
-Zie de `openssl`-regel in stap 1.
+Zie de `openssl`-regel in stap 3.
+
+**`REDIRECT_URI_NOT_ALLOWED` of een foutmelding bij het inloggen bij je bank** — het
+terugkeeradres staat niet (of niet precies zo) bij je Enable Banking-app. Het moet exact
+`https://<jouw-dienst>/klaar` zijn. Je kunt het in het Control Panel alsnog bijzetten via
+**Edit** bij je applicatie.
+
+**De bank accepteert de taal niet** — de dienst vraagt om Nederlands (`language: "nl"`).
+Documentatie noemt geen lijst van ondersteunde talen. Klaagt je bank hierover, haal dan
+de regel `language: "nl",` uit `worker.js` en zet hem opnieuw neer.
 
 ---
 
