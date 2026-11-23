@@ -101,6 +101,11 @@ De eerste keer staat er in plaats daarvan een startkaart met drie stappen om op 
   aan om de verpakking alsnog te scannen.
 - **Snelknoppen**: dingen die je vaker koopt staan als suggestie onder het invoerveld,
   met de winkel en categorie van de vorige keer er meteen bij.
+- **Het schap** — daaronder staat een tweede, rustiger rij: bijna 400 gangbare Nederlandse
+  boodschappen die de app zelf kent, met de verpakking die je normaal koopt. Typ `halfvolle`
+  en je krijgt *Halfvolle melk · 1 L*; één tik vult naam, hoeveelheid én categorie. Wat
+  jullie zelf vaak kopen staat altijd bovenaan, want dat weet het beter. Werkt ook bij de
+  vaste boodschappen. Zie [Waarom geen AH- of Jumbo-assortiment?](#waarom-geen-ah--of-jumbo-assortiment)
 - **Spoed** ⚡ zet iets bovenaan de lijst.
 - **Afvinken** met één tik: het bolletje loopt groen vol en de tekst wordt doorgestreept.
   Afgevinkte boodschappen zakken naar *In de kar*, met wie het gehaald heeft en hoe laat.
@@ -333,10 +338,36 @@ scannen. De beeldjes gaan via een eigen canvas naar de lezer; de ingebouwde vide
 ZXing wachtte op een startsignaal dat niet meer komt als de video al loopt, en draaide het
 beeld om waardoor een gewone donkere code op lichte verpakking juist niet gelezen werd.
 
-**Geen koppeling met Albert Heijn of Jumbo.** Geen van beide heeft een openbare API voor
-productgegevens, en een pagina op GitHub Pages mag hun site sowieso niet rechtstreeks
-bevragen (dat blokkeert de browser). Open Food Facts is wel vrij toegankelijk en bedoeld
-voor dit soort gebruik.
+### Waarom geen AH- of Jumbo-assortiment?
+
+Dit is de meest gestelde vraag, dus hier staat wat er is nagelopen en wat eruit kwam.
+
+| Route | Uitkomst |
+|---|---|
+| Officiële API van AH of Jumbo | Bestaat niet. Geen developerportaal, geen publiek programma. |
+| Afgekeken endpoints van hun mobiele app | Bestaan wel (community-wrappers op GitHub), maar zijn niet gesanctioneerd, gaan in tegen hun voorwaarden en breken zodra zij iets veranderen. |
+| Live zoeken bij Open Food Facts | `search.openfoodfacts.org` stuurt geen `Access-Control-Allow-Origin`, dus de browser blokkeert het. |
+| De zoek-endpoints die dát wél doen | `world.openfoodfacts.org/cgi/search.pl` en `/api/v2/search` geven 503; die worden uitgefaseerd. |
+| Vooraf een lijst bouwen uit hun zoek-API | De `countries`-filter werkt niet (er komen Franse en Bulgaarse producten terug) en de teller loopt vast op 10.000. |
+| De hele dataset downloaden | 13,8 GB ingepakt, en er is geen Nederlandse deelverzameling. |
+
+De gemene deler: alles wat live is, vraagt een eigen tussenserver, en deze app is met opzet
+één HTML-bestand op GitHub Pages — niets dat kan omvallen, niets dat draaiend gehouden moet
+worden.
+
+Wat wél werkt, werkt dan ook:
+
+- **Streepjescodes** → `world.openfoodfacts.org/api/v2/product/<code>.json` stuurt
+  `Access-Control-Allow-Origin: *` en mag dus rechtstreeks vanuit de browser. Scannen vult
+  naam, merk, verpakking en voedingswaarden in.
+- **Het schap** → de lijst in `SCHAP` in `index.html`: bijna 400 gangbare Nederlandse
+  boodschappen met verpakking en categorie, ongeveer 8 KB. Offline, direct, en meteen goed
+  voor iedereen met wie je de app deelt. Hij is met opzet niet compleet: wat jullie zelf
+  kopen onthoudt de app al, en die eigen geschiedenis staat altijd bóven het schap.
+- Elk woord uit het schap voedt ook het **raden van categorieën**, dus "kastanjechampignons"
+  en "vaatwastabletten" landen nu vanzelf goed — ook in de ingrediënten van een gerecht.
+
+Iets toevoegen aan het schap is één regel `"Naam|verpakking"` in de juiste categorie.
 
 ### Demo-modus
 
