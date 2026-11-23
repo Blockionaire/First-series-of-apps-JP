@@ -310,7 +310,11 @@ function uitleg(status, code) {
   }
   if (status === 403) return "Deze rekening is niet gekoppeld aan je Enable Banking-app.";
   if (status >= 500) return "Je bank of Enable Banking is even niet bereikbaar.";
-  return "Ophalen lukte niet.";
+  /* Wat hier overblijft kennen we niet bij naam. Dan is de code die
+     Enable Banking zelf teruggaf het enige bruikbare dat we hebben, en
+     die verzwijgen helpt niemand — het is hun eigen foutcode, geen
+     gegeven van jou. */
+  return `Ophalen lukte niet (${status}${code ? ` ${code}` : ""}).`;
 }
 
 /* ---------------------------------------------------------------
@@ -423,21 +427,34 @@ async function terugVanBank(url, omgeving) {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
 
+  /* Zonder een geldige handtekening weten we niet waar we je veilig heen
+     mogen sturen. Dán, en alleen dán, blijft het bij een melding hier. */
   const gelezen = await leesState(state, omgeving);
   const terug = gelezen.t;
 
-  if (fout || !code) {
-    return Response.redirect(`${terug}#bank=afgebroken`, 302);
+  try {
+    if (fout) return Response.redirect(`${terug}#bank=fout:${kort(fout)}`, 302);
+    if (!code) return Response.redirect(`${terug}#bank=afgebroken`, 302);
+
+    const sessie = await bij(omgeving, "/sessions", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    });
+
+    if (!sessie?.session_id) return Response.redirect(`${terug}#bank=mislukt`, 302);
+    return Response.redirect(`${terug}#bank=${encodeURIComponent(sessie.session_id)}`, 302);
+  } catch (e) {
+    /* Hier blijven staan is het ergste wat er kan gebeuren: je bent net
+       door het hele inloggen bij je bank heen, en staat dan op een kale
+       pagina van deze dienst — zonder weg terug, en zonder dat de app
+       ooit hoort wat er misging. Dus gaan we terug naar de app, met de
+       reden erbij. */
+    return Response.redirect(`${terug}#bank=fout:${kort(e?.publiek || "Het koppelen lukte niet.")}`, 302);
   }
-
-  const sessie = await bij(omgeving, "/sessions", {
-    method: "POST",
-    body: JSON.stringify({ code }),
-  });
-
-  if (!sessie?.session_id) return Response.redirect(`${terug}#bank=mislukt`, 302);
-  return Response.redirect(`${terug}#bank=${encodeURIComponent(sessie.session_id)}`, 302);
 }
+
+/* Een reden die in een anker past en er niets anders in smokkelt. */
+const kort = tekst => encodeURIComponent(String(tekst).slice(0, 180));
 
 /* ---------------------------------------------------------------
    Rekeningen en transacties

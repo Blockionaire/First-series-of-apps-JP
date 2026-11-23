@@ -314,6 +314,7 @@ function bankBlok() {
           <span class="signaal__icoon">${b.proef.gelukt ? "✅" : "⚠️"}</span>
           <span>
             <span class="signaal__titel">${b.proef.gelukt ? "De dienst antwoordt"
+              : b.proef.koppelen ? "Het koppelen lukte niet"
               : b.proef.geenAntwoord ? "Geen antwoord van de dienst"
               : "De dienst wees het verzoek af"}</span>
             <span class="signaal__tekst">${esc(b.proef.tekst)}

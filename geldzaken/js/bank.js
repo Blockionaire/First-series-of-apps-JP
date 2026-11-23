@@ -238,6 +238,18 @@ export async function verwerkTerugkomst() {
   if (waarde === "afgebroken") { bank.fout = "Het koppelen is bij de bank afgebroken."; return "afgebroken"; }
   if (waarde === "mislukt" || !waarde) { bank.fout = "De bank gaf geen sessie terug."; return "mislukt"; }
 
+  /* Ging het onderweg mis, dan komt de reden mee terug. Zonder dat zou
+     je op een kale pagina van de dienst zijn blijven staan, zonder weg
+     terug en zonder te weten waarom — net nadat je het hele inloggen
+     bij je bank hebt doorlopen. */
+  if (waarde.startsWith("fout:")) {
+    bank.fout = waarde.slice(5) || "Het koppelen lukte niet.";
+    bank.proef = { gelukt: false, tekst: bank.fout, geenAntwoord: false, koppelen: true, tijd: Date.now() };
+    spoorBij(`terug van de bank met een fout: ${bank.fout}`);
+    await bewaar();
+    return "mislukt";
+  }
+
   bank.sessie = waarde;
   bank.fout = null;
   await bewaar();
