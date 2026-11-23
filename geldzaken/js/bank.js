@@ -39,6 +39,10 @@ export const bank = {
      achterlaat. Een melding die na drie tellen verdwijnt is niet te
      onderscheiden van niets. */
   proef: null,          // { gelukt, tekst, tijd }
+  /* Kon er op dit apparaat überhaupt iets bewaard worden? In de
+     privémodus van sommige browsers niet, en dan is het beter dat de
+     app dat zegt dan dat alles stil blijft. */
+  opslag: null,         // null = nog niet geprobeerd, true/false daarna
 };
 
 export const ingesteld = () => !!(bank.adres && bank.woord);
@@ -61,15 +65,21 @@ export async function laad() {
   try {
     const bewaard = await dbHaal(LOKAAL, SLEUTEL);
     if (bewaard) Object.assign(bank, bewaard, { bezig: false, fout: null });
-  } catch { /* geen opslag: dan werkt de koppeling deze sessie niet */ }
+    bank.opslag = true;
+  } catch {
+    /* Geen opslag — bijvoorbeeld een database die nog op de oude versie
+       staat omdat de app ergens anders nog openstaat. Alles werkt dan
+       nog wel, maar alleen tot je de app sluit. */
+    bank.opslag = false;
+  }
   bank.geladen = true;
   return bank;
 }
 
 async function bewaar() {
-  const { geladen, bezig, fout, ...rest } = bank;
-  try { await dbZet(LOKAAL, { id: SLEUTEL, ...rest }); }
-  catch { /* zonder opslag blijft het bij deze sessie */ }
+  const { geladen, bezig, fout, opslag, ...rest } = bank;
+  try { await dbZet(LOKAAL, { id: SLEUTEL, ...rest }); bank.opslag = true; }
+  catch { bank.opslag = false; }
 }
 
 export async function zetInstellingen({ adres, woord, aiAan }) {

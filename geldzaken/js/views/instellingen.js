@@ -244,6 +244,19 @@ function bankBlok() {
           <button class="knop" data-bank-proef>Verbinding testen</button>
           <button class="knop knop--primair" data-bank-koppel>Rekening koppelen</button>
         </div>
+        ${/* Een uitgeschakelde knop doet niets als je erop tikt, en zwijgt
+              daarover. Dus zeggen we erbij waarom. */ ""}
+        <div class="veld__hint" data-bank-waarom style="margin-top:7px"></div>
+        ${Bank.bank.opslag === false ? `
+          <div class="signaal signaal--let-op" style="margin-top:10px">
+            <span class="signaal__icoon">⚠️</span>
+            <span>
+              <span class="signaal__titel">Dit apparaat kan niets bewaren</span>
+              <span class="signaal__tekst">Het adres en het woord blijven alleen staan zolang de app
+                open is. Staat Geldzaken ergens anders nog open — een ander tabblad, of de app op je
+                beginscherm — sluit dat dan helemaal af en open hem opnieuw.</span>
+            </span>
+          </div>` : ""}
       ` : `
           <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-top:4px">
             <span class="dof">Gekoppeld met</span>
@@ -536,9 +549,19 @@ export function koppel(wortel, params) {
   const bankWoord = wortel.querySelector("#bankwoord");
 
   const stemBankKnoppenAf = () => {
-    const klaar = !!(bankAdres?.value.trim() && bankWoord?.value.trim());
+    const adresIn = !!bankAdres?.value.trim();
+    const woordIn = !!bankWoord?.value.trim();
+    const klaar = adresIn && woordIn;
     wortel.querySelectorAll("[data-bank-proef], [data-bank-koppel]")
       .forEach(knop => { knop.disabled = !klaar; });
+
+    const waarom = wortel.querySelector("[data-bank-waarom]");
+    if (waarom) {
+      waarom.textContent = klaar ? ""
+        : !adresIn && !woordIn ? "Vul hierboven het adres en het woord in; dan kun je testen en koppelen."
+        : !adresIn ? "Het adres ontbreekt nog, dus de knoppen hierboven doen nog niets."
+        : "Het woord ontbreekt nog, dus de knoppen hierboven doen nog niets.";
+    }
   };
 
   /* Elk veld zijn eigen uitgestelde opslag. Deelden ze er één, dan zou
