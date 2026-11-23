@@ -19,9 +19,11 @@ apparaat, dus normaal gesproken hoef je maar één keer in te loggen.
 Je naam staat bij alles wat je doet: wie iets op de lijst zette, wie het afvinkte en
 wie welke bon betaalde.
 
-Maak je een nieuw account aan, dan krijg je eerst een **korte rondleiding**: een paar
-schermen die laten zien wat de app doet. Overslaan mag, en via *Meer → App → Rondleiding*
-kun je hem altijd terugkijken.
+Maak je een nieuw account aan, dan krijg je eerst een **rondleiding dóór de app**: hij
+springt van tabblad naar tabblad en zet telkens een spotlight op het stuk waar het over
+gaat, zodat je weet waar wat staat. Hij eindigt bij *Winkels & looproutes*, met een knop
+om meteen je eerste supermarkt en looproute toe te voegen. Overslaan mag, en via
+*Meer → App → Rondleiding* kun je hem altijd terugkijken.
 
 **Pincode kwijt?** Vraag je huisgenoot om in de app naar *Meer → Huisgenoten → jouw naam
 → Pincode wissen* te gaan. Daarna kies je bij de volgende keer inloggen gewoon een nieuwe.
@@ -158,8 +160,9 @@ je kookt, dus de hoeveelheden en de boodschappen schalen mee; met de stepper zet
 alsnog anders. Werkt ook bij een vrije dag ("uit eten"), daar blijft het aantal personen
 gewoon leeg. Namen worden onthouden voor jullie allebei.
 
-**Niet thuis eten.** Tik een dag aan en kies *Uit eten*, *Bij familie* of *Onderweg* — of zet
-de schakelaar *We eten niet thuis* zelf om. Die dag staat dan lichter in de week, met een
+**Niet thuis eten.** Tik een dag aan en kies *Uit eten*, *Bij familie* of *Onderweg* — die
+vullen het veld in en zetten de schakelaar om; met **Opslaan** onderin leg je het vast. Je
+kunt de schakelaar *We eten niet thuis* ook zelf omzetten. Die dag staat dan lichter in de week, met een
 deurtje in plaats van een pijltje, zodat je in één blik ziet wanneer je thuis kookt en wanneer
 niet. *Restjes* en *Afhalen* laten de dag gewoon staan, want dan ben je er wel.
 

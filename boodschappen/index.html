@@ -826,8 +826,9 @@ textarea.invoer.groeit{
 .dagrij:last-child{border-bottom:none;}
 .dagrij:active{background:var(--card-2);}
 .dagrij .dagkop{
-  width:42px; flex:none; display:grid; place-items:center; gap:1px;
-  padding:5px 0; border-radius:11px; background:var(--bg-2);
+  /* elk datumvakje even groot, ook op een dag zonder plan */
+  width:42px; height:42px; flex:none; display:grid; place-items:center; gap:1px;
+  border-radius:11px; background:var(--bg-2);
 }
 .dagrij .dagkop b{
   font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
@@ -854,9 +855,7 @@ textarea.invoer.groeit{
 .dagrij .tk .mee svg{width:12px; height:12px; stroke-width:2.2; flex:none;}
 .dagrij .na{color:var(--line-2); flex:none; display:grid; place-items:center;}
 .dagrij .na svg{width:18px; height:18px; stroke-width:2.2;}
-.dagrij.vrijedag{padding:7px 14px;}
-.dagrij.vrijedag .dagkop{padding:2px 0; width:38px;}
-.dagrij.vrijedag .dagkop span{font-size:14px;}
+.dagrij.vrijedag{padding:6px 14px;}
 .dagrij.vrijedag .tk b.stil{font-size:14px;}
 .dagrij.vrijedag .na{color:var(--accent);}
 
@@ -1133,46 +1132,45 @@ body.sleepbezig{cursor:grabbing; user-select:none; -webkit-user-select:none;}
 }
 .uitgaverij .eur{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em;}
 
-/* ---------- intro ---------- */
-.intro{
-  position:fixed; inset:0; z-index:130; background:var(--bg);
-  display:flex; flex-direction:column;
-  padding:calc(env(safe-area-inset-top) + 14px) 0 calc(env(safe-area-inset-bottom) + 20px);
-  opacity:0; transition:opacity .3s ease;
+/* ---------- rondleiding ---------- */
+.rond{
+  position:fixed; inset:0; z-index:130; pointer-events:auto;
+  opacity:0; transition:opacity .28s ease;
 }
-.intro.open{opacity:1;}
-.intro-sla{
-  align-self:flex-end; margin-right:18px; padding:8px 12px; border-radius:10px;
-  font-size:14px; font-weight:600; color:var(--muted); transition:opacity var(--vt);
+.rond.open{opacity:1;}
+/* het "gat": een doorzichtig vlak met een enorme schaduw eromheen,
+   zodat alleen het aangewezen stuk app oplicht */
+.rond-gat{
+  position:absolute; left:0; top:0; width:0; height:0; border-radius:14px;
+  box-shadow:0 0 0 9999px rgba(28,20,8,.68);
+  transition:all .3s cubic-bezier(.32,.72,0,1);
+  outline:2px solid var(--accent); outline-offset:0;
 }
-.intro-baan{
-  flex:1; display:flex; overflow-x:auto; scroll-snap-type:x mandatory;
-  scrollbar-width:none; -webkit-overflow-scrolling:touch;
+.rond-kaart{
+  position:absolute; left:16px; right:16px; max-width:420px; margin:0 auto;
+  background:var(--card); border-radius:var(--r-l); padding:17px 18px 15px;
+  box-shadow:0 18px 44px -10px rgba(20,14,4,.55);
+  transition:top .3s cubic-bezier(.32,.72,0,1), bottom .3s cubic-bezier(.32,.72,0,1);
 }
-.intro-baan::-webkit-scrollbar{display:none;}
-.intro-plaat{
-  flex:0 0 100%; scroll-snap-align:center;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  text-align:center; padding:10px 32px;
+.rond-kaart.midden{top:50%; bottom:auto; transform:translateY(-50%);}
+.rond-kaart .em{font-size:30px; line-height:1;}
+.rond-kaart h2{
+  margin:9px 0 0; font-size:19px; font-weight:750; letter-spacing:var(--kop);
 }
-.intro-plaat .em{font-size:72px; line-height:1.2; margin-bottom:10px;}
-.intro-plaat h2{
-  margin:0; font-size:25px; font-weight:750; letter-spacing:var(--kop); max-width:14ch;
+.rond-kaart p{
+  margin:6px 0 0; font-size:14.5px; line-height:1.5; color:var(--ink-2);
 }
-.intro-plaat p{
-  margin:8px 0 0; font-size:16px; line-height:1.55; color:var(--ink-2); max-width:32ch;
+.rond-voet{
+  display:flex; align-items:center; gap:10px 12px; margin-top:15px; flex-wrap:wrap;
 }
-.intro-voet{
-  display:flex; flex-direction:column; align-items:center; gap:18px;
-  padding:0 24px; max-width:420px; margin:0 auto; width:100%;
+.rond-teller{
+  font-size:12.5px; font-weight:600; color:var(--muted);
+  font-variant-numeric:tabular-nums; white-space:nowrap;
 }
-.intro-stippen{display:flex; gap:7px;}
-.intro-stippen i{
-  width:7px; height:7px; border-radius:50%; background:var(--line-2);
-  transition:all var(--vt);
-}
-.intro-stippen i.aan{background:var(--accent); width:20px; border-radius:999px;}
-.intro-voet .knop{width:100%;}
+/* een lange knoptekst zakt naar een eigen regel in plaats van eruit te lopen */
+.rond-knoppen{display:flex; gap:8px; flex:1 1 auto; justify-content:flex-end; min-width:0;}
+.rond-knoppen .knop{padding:9px 14px; font-size:14px; white-space:nowrap;}
+.rond-teller{flex:0 0 auto;}
 
 /* ---------- toast ---------- */
 .toast{
@@ -2259,79 +2257,146 @@ async function inloggenAls(lidId, vers){
    localStorage. Je kunt hem altijd opnieuw bekijken via Meer. */
 const INTRO = () => "boodschappen_intro_" + P;
 
-function introPlaten(){
+/* De stappen van de rondleiding. Elke stap wijst een echt stuk van de app
+   aan: we springen naar het goede tabblad, zoeken het element op en zetten
+   er een spotlight omheen. Ontbreekt een element (lege app, geld uit), dan
+   slaat de stap zichzelf over. */
+function rondleidingStappen(){
   const naam = (lidVan(S.ik?.id)?.naam || "").split(" ")[0];
-  const platen = [
-    {em:"🧺", titel:"Eén lijst, samen",
-     tekst:`Wat jij erop zet, ziet je huisgenoot meteen — en andersom.
-            Bij elke boodschap staat wie hem erop zette.`},
-    {em:"🛒", titel:"Winkelen zonder zoeken",
+  const stappen = [
+    {tab:"thuis", kies:null, em:"👋",
+     titel:`Welkom${naam ? ", " + naam : ""}`,
+     tekst:`Even een rondje door de app — het duurt een halve minuut.
+            Je ziet steeds waar iets staat.`},
+    {tab:"thuis", kies:"#t-eten, .kaart.welkom", em:"🍽️",
+     titel:"Thuis is je startpunt",
+     tekst:`Hier staat alles bij elkaar: wat jullie vanavond eten, wat er te halen is
+            en hoeveel budget er nog over is.`},
+    {tab:"thuis", kies:'[data-tab="lijst"]', em:"🧺",
+     titel:"De lijst",
+     tekst:`Alles wat jullie nodig hebben, gegroepeerd per winkel. Wat jij erop zet,
+            ziet je huisgenoot meteen.`},
+    {tab:"lijst", kies:"#fab", em:"➕",
+     titel:"Iets toevoegen",
+     tekst:`Met deze knop. De app raadt zelf de categorie, en met het streepjescode-knopje
+            scan je de verpakking.`},
+    {tab:"lijst", kies:"#k-kies, #k-filter", em:"☑️",
+     titel:"Meerdere tegelijk",
+     tekst:`Tik dit aan (of houd een boodschap ingedrukt) en je zet in één keer
+            een hele stapel bij dezelfde winkel.`},
+    {tab:"lijst", kies:'[data-tab="eten"]', em:"🍲",
+     titel:"Eten",
+     tekst:`Maak je eigen gerechten en plan ze op een dag. De ingrediënten staan er
+            dan met één tik bij op de lijst.`},
+    {tab:"eten", kies:".lijst, .weekkop", em:"📅",
+     titel:"Je week in één blik",
+     tekst:`Sleep een gerecht naar een andere dag door hem even vast te houden.
+            En noteer wanneer jullie niet thuis eten.`},
+    {tab:"eten", kies:'[data-tab="winkelen"]', em:"🛒",
+     titel:"Als je in de winkel staat",
      tekst:`Kies de winkel waar je bent en je krijgt een groot afvinkscherm,
-            op de volgorde waarin je door die winkel loopt.`},
-    {em:"🍽️", titel:"Plan je week",
-     tekst:`Maak je eigen gerechten met hun ingrediënten. Zet er een op een dag
-            en de boodschappen staan er met één tik bij.`}
+            op de volgorde waarin je door die winkel loopt.`}
   ];
-  if(geldAan()) platen.push({em:"🎯", titel:"Houd het budget in de gaten",
+  if(geldAan()) stappen.push({tab:"eten", kies:'[data-tab="budget"]', em:"🎯",
+     titel:"Het budget",
      tekst:`Noteer na het winkelen wat je hebt uitgegeven, dan zie je altijd
             wat er deze ${periodeWoord()} nog over is.`});
-  platen.push({em:"👋", titel:`Je bent klaar${naam ? ", " + naam : ""}`,
-     tekst:`Op <b>Thuis</b> zie je alles in één oogopslag. Zet je eerste
-            boodschap erop — de rest wijst zich vanzelf.`});
-  return platen;
+  stappen.push({tab:"meer", kies:"#m-winkels", em:"🗺️",
+     titel:"Nog één ding",
+     tekst:`Zet jullie supermarkten klaar en leg per winkel de <b>looproute</b> vast —
+            de volgorde waarin je er doorheen loopt. Daarna staat je lijst in de
+            winkel precies op volgorde.`,
+     knop:"Winkel & route toevoegen", doe:() => sheetWinkels()});
+  return stappen;
 }
 
 function toonIntro(){
-  const platen = introPlaten();
+  const stappen = rondleidingStappen();
   const vak = document.createElement("div");
-  vak.className = "intro";
+  vak.className = "rond";
   vak.innerHTML = `
-    <button class="intro-sla" id="intro-sla">Overslaan</button>
-    <div class="intro-baan" id="intro-baan">
-      ${platen.map(pl => `
-        <div class="intro-plaat">
-          <span class="em">${pl.em}</span>
-          <h2>${pl.titel}</h2>
-          <p>${pl.tekst}</p>
-        </div>`).join("")}
-    </div>
-    <div class="intro-voet">
-      <div class="intro-stippen">
-        ${platen.map((_, i) => `<i class="${i===0?"aan":""}"></i>`).join("")}
+    <div class="rond-gat" id="rond-gat"></div>
+    <div class="rond-kaart" id="rond-kaart">
+      <span class="em" id="rond-em"></span>
+      <h2 id="rond-titel"></h2>
+      <p id="rond-tekst"></p>
+      <div class="rond-voet">
+        <span class="rond-teller" id="rond-teller"></span>
+        <div class="rond-knoppen">
+          <button class="knop stil klein" id="rond-sla">Overslaan</button>
+          <button class="knop klein" id="rond-door">Volgende</button>
+        </div>
       </div>
-      <button class="knop" id="intro-door">Volgende</button>
     </div>`;
   document.body.appendChild(vak);
   requestAnimationFrame(() => vak.classList.add("open"));
 
-  const baan = vak.querySelector("#intro-baan");
-  const stippen = [...vak.querySelectorAll(".intro-stippen i")];
-  const door = vak.querySelector("#intro-door");
-  let nu_ = 0;
-
-  const bij = () => {
-    const i = Math.round(baan.scrollLeft / baan.clientWidth);
-    if(i === nu_) return;
-    nu_ = i;
-    stippen.forEach((d, x) => d.classList.toggle("aan", x === i));
-    door.textContent = i === platen.length - 1 ? "Aan de slag" : "Volgende";
-    vak.querySelector("#intro-sla").style.opacity = i === platen.length - 1 ? "0" : "1";
-  };
-  baan.addEventListener("scroll", bij, {passive:true});
+  const gat = vak.querySelector("#rond-gat");
+  const kaart = vak.querySelector("#rond-kaart");
+  const teller = vak.querySelector("#rond-teller");
+  const door = vak.querySelector("#rond-door");
+  let i = 0;
 
   const klaar = () => {
     LS.zet(INTRO(), true);
     vak.classList.remove("open");
-    setTimeout(() => vak.remove(), 300);
-    const n = (lidVan(S.ik?.id)?.naam || "").split(" ")[0];
-    setTimeout(() => toast("Welkom, " + n + "!", "👋"), 320);
+    setTimeout(() => vak.remove(), 280);
+    window.removeEventListener("resize", teken);
   };
+
+  const teken = () => {
+    const st = stappen[i];
+    teller.textContent = (i + 1) + " van " + stappen.length;
+    vak.querySelector("#rond-em").textContent = st.em;
+    vak.querySelector("#rond-titel").textContent = st.titel;
+    vak.querySelector("#rond-tekst").innerHTML = st.tekst;
+    door.textContent = st.knop || (i === stappen.length - 1 ? "Klaar" : "Volgende");
+    vak.querySelector("#rond-sla").style.visibility = i === stappen.length - 1 ? "hidden" : "";
+
+    const el = st.kies ? document.querySelector(st.kies) : null;
+    if(!el){
+      /* niets om aan te wijzen: kaart in het midden, geen gat */
+      gat.style.opacity = "0";
+      kaart.style.top = ""; kaart.style.bottom = "";
+      kaart.classList.add("midden");
+      return;
+    }
+    kaart.classList.remove("midden");
+    el.scrollIntoView({block:"center", behavior:"auto"});
+    const r = el.getBoundingClientRect();
+    const rand = 8;
+    gat.style.opacity = "1";
+    gat.style.left   = (r.left - rand) + "px";
+    gat.style.top    = (r.top - rand) + "px";
+    gat.style.width  = (r.width + rand*2) + "px";
+    gat.style.height = (r.height + rand*2) + "px";
+    gat.style.borderRadius = (getComputedStyle(el).borderRadius === "0px" ? "14px" : "calc(" + getComputedStyle(el).borderRadius + " + 8px)");
+    /* kaart aan de kant met de meeste ruimte */
+    const onder = window.innerHeight - r.bottom;
+    if(onder > 260 || onder > r.top){
+      kaart.style.top = (r.bottom + rand + 14) + "px"; kaart.style.bottom = "auto";
+    }else{
+      kaart.style.bottom = (window.innerHeight - r.top + rand + 14) + "px"; kaart.style.top = "auto";
+    }
+  };
+
+  const naar = n => {
+    i = n;
+    const st = stappen[i];
+    if(st.tab && S.tab !== st.tab){ S.tab = st.tab; S.kies = null; tekenNu(); }
+    setTimeout(teken, st.tab && S.tab !== st.tab ? 120 : 60);
+  };
+
   door.onclick = () => {
     tril(8);
-    if(nu_ >= platen.length - 1) return klaar();
-    baan.scrollTo({left: (nu_ + 1) * baan.clientWidth, behavior:"smooth"});
+    const st = stappen[i];
+    if(st.doe){ klaar(); setTimeout(st.doe, 320); return; }
+    if(i >= stappen.length - 1) return klaar();
+    naar(i + 1);
   };
-  vak.querySelector("#intro-sla").onclick = () => { tril(); klaar(); };
+  vak.querySelector("#rond-sla").onclick = () => { tril(); klaar(); };
+  window.addEventListener("resize", teken);
+  naar(0);
 }
 
 function uitloggen(){
@@ -6166,7 +6231,6 @@ function sheetPlan(dagSleutel){
       <div class="veld-rij">
         <textarea class="invoer groeit" id="pl-tekst" rows="1"
                   placeholder="Bijv. uit eten, restjes">${esc(m && m.tekst ? m.tekst : "")}</textarea>
-        <button class="knop" id="pl-tekstok" style="flex:0 0 auto">${IK.vink}</button>
       </div>
       <div class="sugg" id="pl-sugg">
         ${[["Uit eten",true],["Bij familie",true],["Onderweg",true],["Restjes",false],["Afhalen",false]]
@@ -6187,9 +6251,13 @@ function sheetPlan(dagSleutel){
         <span class="na">${IK.pijl}</span>
       </button>
     </div>
-    <button class="knop stil vol" id="pl-leeg" style="margin-top:14px">${IK.kruis} Dag leegmaken</button>` : ""}`;
+    ` : ""}`;
 
-  sheet({titel: dagNaam + " " + d.getDate(), body, naTeken:() => {
+  const voet = `
+    ${m ? `<button class="knop stil" id="pl-leeg2" style="flex:0 0 auto">${IK.kruis} Leegmaken</button>` : ""}
+    <button class="knop groen" id="pl-opslaan" style="flex:1">${IK.vink} Opslaan</button>`;
+
+  sheet({titel: dagNaam + " " + d.getDate(), body, voet, naTeken:() => {
     const nw = $("#pl-nieuw");
     if(nw) nw.onclick = () => sheetGerechtBewerk(null);
     $$("[data-kies]").forEach(b => b.onclick = async () => {
@@ -6200,15 +6268,30 @@ function sheetPlan(dagSleutel){
       tril(12); sluitSheet(); toast(g.naam + " op " + dagNaam.toLowerCase(), "🍽️");
     });
     let uitHuis = nietThuis(m);
-    const bewaarTekst = async () => {
+    /* Opslaan regelt alles wat je hier kunt wijzigen: de vrije tekst én de
+       schakelaar. Staat er al een gerecht en typ je niets, dan bewaart hij
+       alleen of jullie die dag wel of niet thuis eten. */
+    const bewaren = async () => {
       const t = eenRegel($("#pl-tekst").value);
-      if(!t) return;
-      await DB.zet(PAD.menu + "/" + dagSleutel, {gerechtId:null, tekst:t, personen:null,
-        nietThuis: uitHuis, door:S.ik.id, gemaakt:nu()});
-      sluitSheet(); toast(uitHuis ? "Genoteerd — niet thuis" : "Genoteerd", uitHuis ? "🚪" : "✓");
+      const knop = $("#pl-opslaan");
+      if(!t && !m){ $("#pl-tekst").focus(); return; }
+      knop.disabled = true; knop.innerHTML = `<span class="spinner"></span> Opslaan…`;
+      try{
+        if(t){
+          await DB.zet(PAD.menu + "/" + dagSleutel, {gerechtId:null, tekst:t, personen:null,
+            nietThuis: uitHuis, door:S.ik.id, gemaakt:nu()});
+          sluitSheet(); toast(uitHuis ? "Genoteerd — niet thuis" : "Genoteerd", uitHuis ? "🚪" : "✓");
+        }else{
+          await DB.zet(PAD.menu + "/" + dagSleutel, {nietThuis: uitHuis});
+          sluitSheet(); toast(uitHuis ? "Niet thuis deze dag" : "Opgeslagen", uitHuis ? "🚪" : "✓");
+        }
+      }catch(e){
+        console.error("dag opslaan", e); toast("Opslaan lukte niet");
+        knop.disabled = false; knop.innerHTML = `${IK.vink} Opslaan`;
+      }
     };
-    $("#pl-tekstok").onclick = bewaarTekst;
-    laatGroeien($("#pl-tekst"), bewaarTekst);
+    $("#pl-opslaan").onclick = bewaren;
+    laatGroeien($("#pl-tekst"), bewaren);
     const zetUit = aan => {
       uitHuis = aan;
       $("#pl-nietthuis .tuimel").classList.toggle("aan", aan);
@@ -6216,12 +6299,14 @@ function sheetPlan(dagSleutel){
     $("#pl-nietthuis").onclick = () => { tril(6); zetUit(!uitHuis); };
     $$("#pl-sugg [data-plsnel]").forEach(b => b.onclick = () => {
       $("#pl-tekst").value = b.dataset.plsnel;
+      laatGroeien($("#pl-tekst"));          /* het veld meteen op maat */
+      $("#pl-tekst").dispatchEvent(new Event("input"));
       zetUit(b.dataset.pluit === "1");
-      tril(6); bewaarTekst();
+      tril(6);
     });
     const pm = $("#pl-mee");
     if(pm) pm.onclick = () => sheetMeeEters(dagSleutel, () => sheetPlan(dagSleutel));
-    const leeg = $("#pl-leeg");
+    const leeg = $("#pl-leeg2");
     if(leeg) leeg.onclick = async () => {
       await DB.wis(PAD.menu + "/" + dagSleutel); sluitSheet(); toast("Dag leeggemaakt");
     };
