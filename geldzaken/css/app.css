@@ -833,6 +833,30 @@ input[type="date"], input[type="month"] { min-height: 46px; }
   -webkit-user-select: text; user-select: text;
 }
 
+/* ----------------------------- Herkenning --------------------------- */
+/* Eén geleerde regel: het woord waar de app op let, en waar hij het
+   heen stuurt. De keuzelijsten staan eronder in plaats van ernaast,
+   want naast elkaar worden ze op een telefoon te smal om te lezen. */
+.uitleg__intro { font-size: .88rem; color: var(--tekst-zacht); line-height: 1.55; margin: 0 0 14px; }
+
+.regelrij { padding: 11px 0; border-bottom: 1px solid var(--rand-zacht); }
+.regelrij:first-child { padding-top: 2px; }
+.regelrij:last-child { border-bottom: 0; padding-bottom: 2px; }
+.regelrij__kop { display: flex; align-items: center; gap: 8px; }
+.regelrij__woord {
+  flex: 1; min-width: 0; font-weight: 640; font-size: .93rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.regelrij__keuzes { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
+.regelrij__keuzes select { width: 100%; }
+
+/* Alleen voor schermlezers: zichtbaar label hoeft hier niet, maar een
+   keuzelijst zonder naam is voor wie voorleest onbruikbaar. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
 /* ------------------------------ Dialoog ----------------------------- */
 .dialoog-laag {
   position: fixed; inset: 0; z-index: 100;

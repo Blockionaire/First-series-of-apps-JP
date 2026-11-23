@@ -322,8 +322,18 @@ export async function bewaarTransactie(t) {
     omschrijving: String(t.omschrijving || "").trim(),
   };
   /* Van een omschrijving die je zelf indeelt leert de app een regel, zodat
-     de volgende keer de categorie al klaarstaat. */
-  if (schoon.omschrijving && schoon.categorie) leerRegel(schoon.omschrijving, schoon.categorie);
+     de volgende keer de categorie al klaarstaat.
+
+     Let op de vorm: `leerRegel` wil een object. Hier stond jarenlang de
+     categorie als losse tekst, en dan leverde het uitpakken binnenin
+     niets op — waardoor er bij het opslaan van een boeking nooit iets
+     is geleerd, terwijl de regel hierboven het tegendeel beweerde. */
+  if (schoon.omschrijving && (schoon.categorie || schoon.potje)) {
+    leerRegel(schoon.omschrijving, {
+      categorie: schoon.categorie || null,
+      potje: schoon.potje || null,
+    });
+  }
   return bewaar("transacties", schoon);
 }
 
@@ -505,13 +515,32 @@ export const categorieNaam = id => categorie(id)?.naam || "Zonder categorie";
 /* =====================================================================
    REGELS — omschrijving herkennen en indelen
    ===================================================================== */
-export function raadCategorie(omschrijving, soort = "uitgave") {
-  const tekst = normaliseer(omschrijving);
+/* `erbij` is wat er verder nog over de boeking bekend is — bij een
+   bankboeking de naam van de tegenpartij. Die is vaak schoner dan de
+   omschrijving, waar de bank pasnummers en plaatsnamen in kwijt wil, en
+   het is ook waar we een regel op leren. Zouden we er hier niet naar
+   kijken, dan kon een geleerde regel bij de volgende ronde nog steeds
+   missen. */
+/* Past dit trefwoord op deze tekst?
+
+   Niet als aaneengesloten stuk, maar woord voor woord. Het trefwoord
+   wordt geleerd door kleine woordjes over te slaan: van "Jan de Groot
+   Tuinen" blijft "jan groot" over. Zochten we dat als één stuk tekst,
+   dan kwam die regel nergens meer voor — ook niet in de boeking waar
+   hij van geleerd is. Zo zoeken we elk woord apart, en dan klopt het
+   weer. */
+const regelPast = (trefwoord, tekst) => {
+  const woorden = normaliseer(trefwoord).split(/\s+/).filter(Boolean);
+  return woorden.length > 0 && woorden.every(w => tekst.includes(w));
+};
+
+export function raadCategorie(omschrijving, soort = "uitgave", erbij = "") {
+  const tekst = normaliseer(`${omschrijving || ""} ${erbij || ""}`);
   if (!tekst) return "";
 
   /* Eerst je eigen regels: die winnen altijd van de ingebouwde lijst. */
   const eigen = state.regels
-    .filter(r => r.trefwoord && tekst.includes(normaliseer(r.trefwoord)))
+    .filter(r => r.trefwoord && r.categorie && regelPast(r.trefwoord, tekst))
     .sort((a, b) => b.trefwoord.length - a.trefwoord.length)[0];
   if (eigen && state.categorieen.some(c => c.id === eigen.categorie)) return eigen.categorie;
 
@@ -558,15 +587,15 @@ export function leerRegel(omschrijving, { categorie = null, potje = null } = {})
 
 /* Bij welk potje hoort deze uitgave? Eerst je eigen regels, dan de naam
    van het potje zelf, dan via de categorie. */
-export function raadPotje(omschrijving, categorieId = "") {
+export function raadPotje(omschrijving, categorieId = "", erbij = "") {
   const potjes = state.potjes.filter(p => p.actief !== false);
   if (!potjes.length) return "";
 
-  const tekst = normaliseer(omschrijving);
+  const tekst = normaliseer(`${omschrijving || ""} ${erbij || ""}`);
   if (!tekst) return "";
 
   const eigen = state.regels
-    .filter(r => r.potje && r.trefwoord && tekst.includes(normaliseer(r.trefwoord)))
+    .filter(r => r.potje && r.trefwoord && regelPast(r.trefwoord, tekst))
     .sort((a, b) => b.trefwoord.length - a.trefwoord.length)[0];
   if (eigen && potjes.some(p => p.id === eigen.potje)) return eigen.potje;
 
@@ -584,6 +613,46 @@ export function raadPotje(omschrijving, categorieId = "") {
 
 export const bewaarRegel = r => bewaar("regels", r);
 export const wisRegel = id => wis("regels", id);
+
+/* Alles wat nog niet is ingedeeld alsnog langs de regels halen.
+
+   Dit raakt boekingen aan die er al staan, dus het gebeurt nooit
+   vanzelf — je vraagt erom. En het vult alleen lege plekken: wat jij
+   zelf hebt ingedeeld blijft staan, ook als een regel iets anders
+   zou zeggen. Jouw keuze wint van een vermoeden.
+
+   Met `alleenTellen` verandert er niets; dan hoor je alleen hoeveel er
+   te winnen valt, zodat een knop kan zeggen waar hij over gaat. */
+export async function pasRegelsToe({ alleenTellen = false } = {}) {
+  const gewijzigd = [];
+
+  const bijgewerkt = state.transacties.map(t => {
+    if (t.soort !== "uitgave" && t.soort !== "inkomst") return t;
+
+    const velden = {};
+    if (!t.categorie) {
+      const geraden = raadCategorie(t.omschrijving, t.soort);
+      if (geraden) velden.categorie = geraden;
+    }
+    if (t.soort === "uitgave" && !t.potje) {
+      const geraden = raadPotje(t.omschrijving, velden.categorie || t.categorie);
+      if (geraden) velden.potje = geraden;
+    }
+    if (!Object.keys(velden).length) return t;
+
+    const nieuw = { ...t, ...velden, bijgewerkt: nu() };
+    gewijzigd.push(nieuw);
+    return nieuw;
+  });
+
+  if (alleenTellen || !gewijzigd.length) return gewijzigd.length;
+
+  state.transacties = bijgewerkt;
+  meld();
+  if (opslagWerkt) await dbZetVeel("transacties", gewijzigd);
+  for (const t of gewijzigd) Sync.zetRemote("transacties", t);
+  return gewijzigd.length;
+}
 
 /* =====================================================================
    PERSONEN — wie doen er mee in dit huishouden

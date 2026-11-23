@@ -131,6 +131,16 @@ export function html(params) {
       </span>
       <span class="rij__rechts dof">›</span>
     </a>
+    <a class="rij" href="#/regels">
+      <span class="rij__icoon">🧠</span>
+      <span class="rij__midden">
+        <span class="rij__titel">Herkenning</span>
+        <span class="rij__sub">${state.regels.length
+          ? `${state.regels.length} ${state.regels.length === 1 ? "regel" : "regels"} geleerd`
+          : "Nog niets geleerd"}</span>
+      </span>
+      <span class="rij__rechts dof">›</span>
+    </a>
     <a class="rij" href="#/rekeningen">
       <span class="rij__icoon">🏦</span>
       <span class="rij__midden">

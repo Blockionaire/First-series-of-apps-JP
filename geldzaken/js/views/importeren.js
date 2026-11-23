@@ -614,7 +614,7 @@ async function haalVanBank() {
   voorstellen = uit.transacties.map(r => {
     const soort = r.soort === "inkomst" ? "inkomst" : "uitgave";
     const omschrijving = r.omschrijving || r.tegenpartij || "Bankboeking";
-    const categorie = raadCategorie(omschrijving, soort);
+    const categorie = raadCategorie(omschrijving, soort, r.tegenpartij);
     return {
       transactie: {
         datum: r.datum || vandaagISO(),
@@ -622,7 +622,7 @@ async function haalVanBank() {
         soort,
         omschrijving,
         categorie,
-        potje: soort === "uitgave" ? raadPotje(omschrijving, categorie) : "",
+        potje: soort === "uitgave" ? raadPotje(omschrijving, categorie, r.tegenpartij) : "",
         rekening: rekeningKeuze,
         /* Het kenmerk van de bank. Hierop ontdubbelen we voortaan. */
         bankRef: r.ref || "",
