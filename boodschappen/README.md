@@ -10,6 +10,34 @@ De gedeelde boodschappenlijst van **Huisje OVS**, voor Merel en Jelle samen.
 
 ---
 
+## Huishoudens — de app delen
+
+De app is niet alleen van ons. Wie hem voor het eerst opent, kiest zelf:
+
+- **Nieuw huishouden** — je geeft het een naam en begint met een lege lijst. De app maakt
+  er een **code** van zes tekens bij (bijvoorbeeld `k7m2qp`). Dat is meteen jullie adres:
+  alle gegevens van dat huishouden staan onder die code.
+- **Ik heb een code gekregen** — je vult de code in en staat in dezelfde lijst als degene
+  die hem stuurde.
+
+**Iemand uitnodigen:** *Meer → Huisgenoot uitnodigen*. Daar staan de code en een link
+(`…/boodschappen/#huis=k7m2qp`), met een knop om ze te kopiëren of meteen door te sturen.
+Wie de link opent, zit er direct in — ook als de app al openstond; dan schakelt hij over.
+Werkt de link niet, dan kunnen ze de code met de hand invullen.
+
+**De naam veranderen of overstappen:** *Meer → Huishouden*. Daar pas je de naam aan (die
+zien alle huisgenoten) of ga je naar een ander huishouden. Je wordt dan uitgelogd; het
+oude huishouden blijft gewoon bestaan, dus met de code kun je er zo weer in.
+
+> **De code is een adres, geen slot.** Wie hem heeft, kan bij jullie boodschappen,
+> planning en uitgaven. Stuur hem alleen naar je eigen huisgenoten. Zie ook
+> *[Let op: de database staat open](#let-op-de-database-staat-open)*.
+
+Had je de app al vóór de huishoudens? Dan verandert er niets: je apparaat herkent dat je
+al een account had en houdt je in dezelfde lijst.
+
+---
+
 ## Inloggen
 
 Bij de eerste keer maak je een account: je naam plus een **pincode van 4 cijfers**.
@@ -237,6 +265,10 @@ maar je kunt hem laten resetten op je salarisdatum (zie hieronder).
   erbij hoeveel het er zijn. *Overig* blijft altijd staan, want daar landt alles wat de app
   niet kan thuisbrengen. Verdwijnt een categorie, dan wordt hij ook uit alle looproutes gehaald.
 - **Lijst delen** als bericht, bijvoorbeeld via WhatsApp.
+- **Huisgenoot uitnodigen** — de code en de link van jullie huishouden, met een knop om
+  ze te kopiëren of door te sturen.
+- **Huishouden** — de naam aanpassen (die zien alle huisgenoten) of naar een ander
+  huishouden overstappen.
 - **Huisgenoten** met online-stipje, wie hoeveel toevoegde, haalde en betaalde.
 - **Thema**: licht (warm beige), donker, of automatisch meebewegen met je telefoon.
 
@@ -262,8 +294,9 @@ Eén HTML-bestand, geen bouwstap, geen framework. Openen in een browser is genoe
 
 ### Waar staan de gegevens?
 
-In Firestore, in het bestaande project `geheime-dienst`, onder eigen collecties met het
-voorvoegsel `ovs_`:
+In Firestore, in het bestaande project `geheime-dienst`. Elk huishouden heeft zijn eigen
+collecties, met de **code van dat huishouden** als voorvoegsel. Hieronder `ovs_`, de code
+van ons eigen huisje; bij een huishouden met code `k7m2qp` heet alles `k7m2qp_…`:
 
 ```
 ovs_leden    accounts (naam, kleur, pincode-hash, laatst gezien)
@@ -272,8 +305,8 @@ ovs_fotos    de foto's (verkleind, als data-url; `<id>_k` is de miniatuur)
 ovs_winkels  de winkels
 ovs_vast     de vaste boodschappen
 ovs_bonnen   de uitgaven
-ovs_meta     instellingen: het budget, de namen van eerdere mee-eters en of
-             jullie geld bijhouden
+ovs_meta     instellingen: het budget, de naam van het huishouden, de namen van
+             eerdere mee-eters en of jullie geld bijhouden
 ovs_geleerd  categorieën die jullie zelf hebben rechtgezet (id = de naam)
 ovs_cats     de categorieën zelf (naam, icoon, volgorde)
 ovs_gerechten jullie eigen gerechten, met de ingrediënten erin
@@ -282,8 +315,11 @@ ovs_producten wat jullie hebben gescand, met de streepjescode als id
 ```
 
 De Geheime Dienst-app gebruikt andere collecties, dus de twee apps zitten elkaar niet
-in de weg. Wil je met een schone lijst beginnen? Zet `ruimte` in `firebase-config.js`
-op bijvoorbeeld `"ovs2"`.
+in de weg. Welk huishouden dit apparaat aanhoudt, staat in `localStorage` onder
+`boodschappen_huis`. Wil je met een schone lijst beginnen? Begin gewoon een nieuw
+huishouden via *Meer → Huishouden → Naar een ander huishouden*. `ruimte` in
+`firebase-config.js` is nu alleen nog de terugval voor apparaten van vóór de
+huishoudens.
 
 Foto's worden vóór het versturen verkleind (maximaal 1280 px, JPEG) en er wordt een
 aparte miniatuur van 220 px bewaard, zodat de lijst snel blijft laden.
@@ -316,10 +352,18 @@ zonder de echte lijst te raken. De app zegt zelf in een balkje dat hij in demo-m
 
 ### Let op: de database staat open
 
-De Firestore-regels van dit project staan op "iedereen mag lezen en schrijven". Wie de
-link van de app heeft, kan bij de boodschappen — de pincode regelt alleen *wie je bent
-in huis*, het is geen slot op de database. Voor een boodschappenlijst is dat prima, maar
-zet er geen dingen in die niet gezien mogen worden.
+De Firestore-regels van dit project staan op "iedereen mag lezen en schrijven". Dat
+betekent twee dingen:
+
+- De **pincode** regelt alleen *wie je bent in huis*. Het is geen slot op de database.
+- De **code van het huishouden** is een adres, geen wachtwoord. Hij is wel lastig te
+  raden — zes tekens uit een alfabet van 31, dat zijn bijna 900 miljoen mogelijkheden, en
+  de letters `i`, `l`, `o` en de cijfers `0` en `1` zitten er niet in, zodat niemand ze
+  door de telefoon door elkaar haalt. Maar wie hem heeft, komt binnen, en wie de code van
+  een ánder huishouden kent, kan daar ook bij.
+
+Voor een boodschappenlijst is dat prima, maar zet er geen dingen in die niet gezien
+mogen worden, en deel de code alleen met je eigen huisgenoten.
 
 Wil je het dichttimmeren, dan is de nette route Firebase Authentication (anoniem of met
 e-mail) plus regels die op `request.auth` controleren. Dat is een grotere verbouwing dan

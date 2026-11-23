@@ -1132,6 +1132,13 @@ body.sleepbezig{cursor:grabbing; user-select:none; -webkit-user-select:none;}
 }
 .uitgaverij .eur{font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em;}
 
+.huiscode{
+  text-align:center; font-size:30px; font-weight:800; letter-spacing:.16em;
+  color:var(--accent); background:var(--accent-zacht);
+  padding:14px 10px; border-radius:var(--r-m); text-transform:lowercase;
+  font-variant-numeric:tabular-nums;
+}
+
 /* ---------- rondleiding ---------- */
 .rond{
   position:fixed; inset:0; z-index:130; pointer-events:auto;
@@ -1221,8 +1228,71 @@ const CFG = Object.assign({
   firebase:null, huisNaam:"Huisje OVS", ondertitel:"Boodschappen", ruimte:"ovs"
 }, window.BOODSCHAPPEN_CONFIG || {});
 
-const VERSIE = "1.0.0";
-const P = CFG.ruimte || "ovs";                    // voorvoegsel van alle collecties
+const VERSIE = "1.1.0";
+
+/* =====================================================================
+   HUISHOUDEN
+   =====================================================================
+   Elk huishouden heeft een eigen code; die code is het voorvoegsel van
+   alle collecties, dus twee huishoudens zien elkaars spullen niet. De
+   keuze staat op dit apparaat, zodat je hem maar één keer maakt.
+
+   Let op: een code is geen slot. De databaseregels staan open, dus wie
+   de code heeft kan bij die lijst. Daarom zeggen we dat ook met zoveel
+   woorden waar je hem deelt. */
+const HUISSLEUTEL = "boodschappen_huis";
+/* geen i/l/1/o/0: die haal je door de telefoon door elkaar */
+const CODELETTERS = "abcdefghjkmnpqrstuvwxyz23456789";
+const huisCodeGeldig = c => /^[a-z0-9]{3,12}$/.test(String(c||"").toLowerCase());
+function nieuweHuisCode(){
+  let c = "";
+  const r = crypto.getRandomValues(new Uint8Array(6));
+  for(const n of r) c += CODELETTERS[n % CODELETTERS.length];
+  return c;
+}
+/* LS bestaat hier nog niet, dus we lezen localStorage rechtstreeks */
+function huisUitOpslag(){
+  try{ return localStorage.getItem(HUISSLEUTEL) || null; }catch(e){ return null; }
+}
+function huisBewaren(code, naam){
+  try{
+    localStorage.setItem(HUISSLEUTEL, code);
+    /* De naam kunnen we hier nog niet wegschrijven: de app draait nog op
+       het oude voorvoegsel. We leggen hem klaar en start() doet het. */
+    if(naam) localStorage.setItem(HUISSLEUTEL + "_naam", naam);
+  }catch(e){}
+}
+/* uit de link: .../boodschappen/#huis=7k2m */
+function huisUitLink(){
+  const m = String(location.hash || "").match(/huis=([a-z0-9]+)/i);
+  return m && huisCodeGeldig(m[1]) ? m[1].toLowerCase() : null;
+}
+function bepaalHuis(){
+  const uitLink = huisUitLink();
+  if(uitLink){ huisBewaren(uitLink); return uitLink; }
+  const bewaard = huisUitOpslag();
+  if(bewaard && huisCodeGeldig(bewaard)) return bewaard;
+  /* Draaide de app hier al voordat er huishoudens waren? Dan hoort dit
+     apparaat gewoon bij het oorspronkelijke huis. */
+  const oud = CFG.ruimte || "ovs";
+  try{ if(localStorage.getItem("boodschappen_ik_" + oud)){ huisBewaren(oud); return oud; } }catch(e){}
+  return null;            // nog niets gekozen: we vragen het straks
+}
+
+/* nooit langer dan een paar tellen op de database wachten — de luisteraars
+   vullen alles alsnog aan zodra het binnen is */
+const metGrens = (belofte, terugval, ms = 5000) =>
+  Promise.race([belofte, new Promise(r => setTimeout(() => r(terugval), ms))]);
+
+/* de naam van dit huishouden; tot de database antwoordt de standaard */
+/* CFG.huisNaam is de naam van ónze eigen ruimte, niet van elk huishouden:
+   wie zelf een huishouden begint en geen naam invult, heet gewoon "Thuis". */
+const huisNaam = () => (S && S.huisNaam) ||
+  (P === (CFG.ruimte || "ovs") ? CFG.huisNaam : null) || "Thuis";
+
+const gekozenHuis = bepaalHuis();
+let P = gekozenHuis || (CFG.ruimte || "ovs");     // voorvoegsel van alle collecties
+let huisGekozen = !!gekozenHuis;                  // of de keuze al gemaakt is
 const PAD = {
   leden:  P+"_leden",
   items:  P+"_items",
@@ -1538,7 +1608,14 @@ const LS = {
 };
 
 function demoDB(){
-  const SLEUTEL = "boodschappen_demo_" + P;
+  /* Eén pot voor alles, net als Firestore: het huishouden zit al in de
+     naam van de collectie. Anders kun je een code niet opzoeken vanuit
+     een ander huishouden, en werkt wisselen op één apparaat niet. */
+  const SLEUTEL = "boodschappen_demo";
+  try{
+    const oud = localStorage.getItem("boodschappen_demo_" + P);
+    if(oud && !localStorage.getItem(SLEUTEL)) localStorage.setItem(SLEUTEL, oud);
+  }catch(e){}
   let store = LS.get(SLEUTEL, {});
   const luisteraars = {};
   const bewaar = () => LS.zet(SLEUTEL, store);
@@ -1639,6 +1716,7 @@ const S = {
   maand:null,                    // welke maand het budgetscherm laat zien
   budget:{standaard:0, perMaand:{}, startDag:1},   // startDag: op welke dag de budgetteller reset
   instellingen:{financien:true},   // staat het hele geldgedeelte aan?
+  huisNaam:null,                   // naam van dit huishouden, uit de database
   laatsteItemIds:null,     // om nieuwe items van de ander te herkennen
   sheet:null,
   kijker:null
@@ -2060,6 +2138,127 @@ async function hashPin(naam, pin){
    ===================================================================== */
 const IN = {stap:"kies", lid:null, naam:"", pin:"", pin2:"", fout:false, bezig:false};
 
+/* =====================================================================
+   HUISHOUDEN KIEZEN
+   =====================================================================
+   Komt iemand voor het eerst binnen zonder uitnodigingslink, dan vragen
+   we eerst of hij een eigen huishouden begint of ergens bij aansluit. */
+const HUIS = {stap:"kies", naam:"", code:"", fout:"", bezig:false};
+
+function tekenHuis(){
+  const app = $("#app");
+  app.innerHTML = HUIS.stap === "nieuw" ? huisNieuw()
+                : HUIS.stap === "aansluiten" ? huisAansluiten()
+                : huisKies();
+  bindHuis();
+}
+
+function huisKies(){
+  return `
+  <div class="inlog">
+    ${merkHtml(CFG.huisNaam, "Een boodschappenlijst die je samen bijhoudt.<br>Begin je een eigen huishouden, of sluit je aan?")}
+    <div class="lijst" style="margin-top:8px">
+      <button class="rij" id="h-nieuw">
+        <span class="ik" style="background:var(--accent-zacht); color:var(--accent)">${IK.huis}</span>
+        <div class="tk"><b style="color:var(--ink)">Nieuw huishouden</b>
+          <span>je begint met een lege lijst en nodigt daarna anderen uit</span></div>
+        <span class="na">${IK.pijl}</span>
+      </button>
+      <button class="rij" id="h-mee">
+        <span class="ik">${IK.deel}</span>
+        <div class="tk"><b style="color:var(--ink)">Ik heb een code gekregen</b>
+          <span>sluit aan bij het huishouden van iemand anders</span></div>
+        <span class="na">${IK.pijl}</span>
+      </button>
+    </div>
+  </div>`;
+}
+
+function huisNieuw(){
+  return `
+  <div class="inlog">
+    ${merkHtml("Nieuw huishouden", "Hoe heet het bij jullie thuis?")}
+    <div class="veld">
+      <label>Naam van het huishouden</label>
+      <input class="invoer" id="h-naam" placeholder="Bijv. Thuis of Kamerstraat 12" maxlength="30"
+             autocomplete="off" autocapitalize="words" value="${esc(HUIS.naam)}">
+      ${HUIS.fout ? `<div class="hint" style="color:var(--rood)">${esc(HUIS.fout)}</div>` : ""}
+    </div>
+    <div class="banner info" style="margin-top:4px">${IK.info}<span>Je krijgt hierna een code waarmee je
+      huisgenoten binnenkomen. Wie die code heeft, kan bij jullie lijst — deel hem dus alleen
+      met de mensen die erbij horen.</span></div>
+    <button class="knop vol" id="h-maak" style="margin-top:18px" ${HUIS.bezig?"disabled":""}>
+      ${HUIS.bezig ? `<span class="spinner"></span> Even geduld…` : "Huishouden maken"}</button>
+    <button class="knop stil vol" id="h-terug" style="margin-top:10px">Terug</button>
+  </div>`;
+}
+
+function huisAansluiten(){
+  return `
+  <div class="inlog">
+    ${merkHtml("Aansluiten", "Vul de code in die je van je huisgenoot kreeg.")}
+    <div class="veld">
+      <label>Code van het huishouden</label>
+      <input class="invoer" id="h-code" placeholder="bijv. k7m2qp" maxlength="12"
+             autocomplete="off" autocapitalize="none" spellcheck="false"
+             style="text-align:center; font-size:22px; font-weight:700; letter-spacing:.12em"
+             value="${esc(HUIS.code)}">
+      ${HUIS.fout ? `<div class="hint" style="color:var(--rood)">${esc(HUIS.fout)}</div>`
+                  : `<div class="hint">Of open gewoon de link die je gekregen hebt — dan gaat het vanzelf.</div>`}
+    </div>
+    <button class="knop vol" id="h-aansluit" style="margin-top:14px" ${HUIS.bezig?"disabled":""}>
+      ${HUIS.bezig ? `<span class="spinner"></span> Zoeken…` : "Aansluiten"}</button>
+    <button class="knop stil vol" id="h-terug" style="margin-top:10px">Terug</button>
+  </div>`;
+}
+
+function bindHuis(){
+  const t = $("#h-terug");
+  if(t) t.onclick = () => { HUIS.stap = "kies"; HUIS.fout = ""; tekenHuis(); };
+  const n = $("#h-nieuw");
+  if(n) n.onclick = () => { HUIS.stap = "nieuw"; HUIS.fout = ""; tril(); tekenHuis();
+    setTimeout(() => $("#h-naam")?.focus(), 200); };
+  const m = $("#h-mee");
+  if(m) m.onclick = () => { HUIS.stap = "aansluiten"; HUIS.fout = ""; tril(); tekenHuis();
+    setTimeout(() => $("#h-code")?.focus(), 200); };
+
+  const maak = $("#h-maak");
+  if(maak) maak.onclick = async () => {
+    const naam = eenRegel($("#h-naam").value);
+    if(naam.length < 2){ HUIS.fout = "Vul een naam in."; HUIS.naam = naam; tekenHuis(); return; }
+    HUIS.naam = naam; HUIS.bezig = true; tekenHuis();
+    huisBewaren(nieuweHuisCode(), naam);
+    location.hash = "";
+    location.reload();
+  };
+
+  const aan = $("#h-aansluit");
+  if(aan) aan.onclick = async () => {
+    const code = String($("#h-code").value || "").trim().toLowerCase().replace(/\s/g, "");
+    HUIS.code = code;
+    if(!huisCodeGeldig(code)){ HUIS.fout = "Dat lijkt geen geldige code."; tekenHuis(); return; }
+    HUIS.bezig = true; HUIS.fout = ""; tekenHuis();
+    try{
+      const leden = await metGrens(DB.haalAlles(code + "_leden"), null);
+      const meta  = await metGrens(DB.haal(code + "_meta/huis"), null);
+      if(leden === null && meta === null) throw new Error("geen antwoord");
+      if(!meta && !(leden && leden.length)){
+        HUIS.bezig = false; HUIS.fout = "Geen huishouden met die code gevonden."; tekenHuis(); return;
+      }
+      huisBewaren(code);
+      location.hash = "";
+      location.reload();
+    }catch(e){
+      console.error("aansluiten", e);
+      HUIS.bezig = false; HUIS.fout = "Geen verbinding — probeer het zo nog eens."; tekenHuis();
+    }
+  };
+  const code = $("#h-code");
+  if(code) code.onkeydown = e => { if(e.key === "Enter") $("#h-aansluit").click(); };
+  const nm = $("#h-naam");
+  if(nm) nm.onkeydown = e => { if(e.key === "Enter") $("#h-maak").click(); };
+}
+
 function tekenInlog(){
   const app = $("#app");
   if(IN.stap === "kies")      app.innerHTML = inlogKies();
@@ -2080,7 +2279,7 @@ function merkHtml(titel, onder){
 function inlogKies(){
   const leden = [...S.leden].sort((a,b) => (b.laatstGezien||0) - (a.laatstGezien||0));
   return `<div class="inlog fade">
-    ${merkHtml(CFG.huisNaam, "De boodschappenlijst van het huisje.<br>Kies wie je bent om verder te gaan.")}
+    ${merkHtml(huisNaam(), "De boodschappenlijst van het huisje.<br>Kies wie je bent om verder te gaan.")}
     ${leden.map(l => `
       <button class="persoonkaart" data-lid="${esc(l.id)}">
         ${AV.html(l, "groot", isOnline(l))}
@@ -2301,6 +2500,10 @@ function rondleidingStappen(){
      titel:"Het budget",
      tekst:`Noteer na het winkelen wat je hebt uitgegeven, dan zie je altijd
             wat er deze ${periodeWoord()} nog over is.`});
+  stappen.push({tab:"meer", kies:"#m-uitnodigen", em:"✉️",
+     titel:"Je huisgenoten erbij",
+     tekst:`Stuur ze de link van jullie huishouden. Ze kiezen een naam en een pincode
+            en staan meteen in dezelfde lijst.`});
   stappen.push({tab:"meer", kies:"#m-winkels", em:"🗺️",
      titel:"Nog één ding",
      tekst:`Zet jullie supermarkten klaar en leg per winkel de <b>looproute</b> vast —
@@ -2574,7 +2777,7 @@ function schermLijst(){
         <div class="kop-titel">
           <h1>${kiesModus
             ? (gekozen.length === 0 ? "Niets gekozen" : gekozen.length + " gekozen")
-            : esc(CFG.huisNaam)}</h1>
+            : esc(huisNaam())}</h1>
           <div class="sub">${kiesModus
             ? (gekozen.length === 0
                 ? "Tik de boodschappen aan die je wilt aanpassen"
@@ -4733,7 +4936,7 @@ function schermThuis(){
         ${kaal ? `
         <!-- eerste keer: laat zien waar je begint in plaats van drie lege kaarten -->
         <div class="kaart welkom">
-          <div class="groot">Welkom in ${esc(CFG.huisNaam)} 👋</div>
+          <div class="groot">Welkom in ${esc(huisNaam())} 👋</div>
           <div class="onderschrift">Drie dingen om mee te beginnen. Je hoeft ze niet op volgorde te doen.</div>
           <div class="stappen">
             <button class="stap" id="t-stap1">
@@ -5004,6 +5207,12 @@ function schermMeer(){
                   <span>${isOnline(l) ? "nu online" : (l.laatstGezien ? "laatst gezien " + datumKort(l.laatstGezien) : "nog niet ingelogd")}</span></div>
                 <span class="na">${IK.pijl}</span>
               </button>`).join("")}
+            <button class="rij" id="m-uitnodigen">
+              <span class="ik" style="background:var(--accent-zacht); color:var(--accent)">${IK.deel}</span>
+              <div class="tk"><b>Huisgenoot uitnodigen</b>
+                <span>stuur de link en de code van ${esc(huisNaam())}</span></div>
+              <span class="na">${IK.pijl}</span>
+            </button>
           </div>
         </div>
 
@@ -5028,6 +5237,11 @@ function schermMeer(){
               <div class="tk"><b>${DB && DB.demo ? "Demo-modus" : "Gedeelde lijst"}</b>
                 <span>${DB && DB.demo ? "alles staat alleen op dit apparaat" : "alles loopt live gelijk met je huisgenoten"}</span></div>
             </div>
+            <button class="rij" id="m-huis">
+              <span class="ik">${IK.huis}</span>
+              <div class="tk"><b>Huishouden</b><span>${esc(huisNaam())} · code ${esc(P)}</span></div>
+              <span class="na">${IK.pijl}</span>
+            </button>
             <button class="rij" id="m-intro">
               <span class="ik">${IK.hart}</span>
               <div class="tk"><b>Rondleiding</b><span>nog eens zien hoe de app werkt</span></div>
@@ -5035,14 +5249,14 @@ function schermMeer(){
             </button>
             <button class="rij" id="m-over">
               <span class="ik">${IK.info}</span>
-              <div class="tk"><b>Over deze app</b><span>versie ${VERSIE} · voor ${esc(CFG.huisNaam)}</span></div>
+              <div class="tk"><b>Over deze app</b><span>versie ${VERSIE} · voor ${esc(huisNaam())}</span></div>
               <span class="na">${IK.pijl}</span>
             </button>
           </div>
         </div>
 
         <div class="hint" style="text-align:center; margin-top:26px; opacity:.8">
-          ${esc(CFG.huisNaam)} · Boodschappen${S.leden.length ? `<br>voor ${esc(namenRij(S.leden.map(l => l.naam)))} samen` : ""}
+          ${esc(huisNaam())} · Boodschappen${S.leden.length ? `<br>voor ${esc(namenRij(S.leden.map(l => l.naam)))} samen` : ""}
         </div>
       </div>
     </div>
@@ -5069,6 +5283,8 @@ function bindMeer(){
     toast(aan ? "Geld bijhouden staat weer aan" : "Geld bijhouden staat uit", aan ? "💶" : "🙈");
   };
   const mi = $("#m-intro"); if(mi) mi.onclick = () => { tril(); toonIntro(); };
+  const mu = $("#m-uitnodigen"); if(mu) mu.onclick = () => { tril(); sheetUitnodigen(); };
+  const mh = $("#m-huis"); if(mh) mh.onclick = () => { tril(); sheetHuishouden(); };
   $("#m-over").onclick = sheetOver;
   $$("[data-lidbeheer]").forEach(b => b.onclick = () => sheetLid(lidVan(b.dataset.lidbeheer)));
   const mb = $("#m-budget");
@@ -5578,12 +5794,107 @@ function sheetThema(){
 }
 
 /* ---------- over ---------- */
+/* ---------- huisgenoot uitnodigen ---------- */
+function uitnodigingsLink(){
+  const basis = location.origin + location.pathname.replace(/[^/]*$/, "");
+  return basis + "#huis=" + P;
+}
+
+function sheetUitnodigen(){
+  const link = uitnodigingsLink();
+  const body = `
+    <p style="margin:0 0 16px; color:var(--ink-2); font-size:15px; line-height:1.5">
+      Stuur dit naar wie bij <b>${esc(huisNaam())}</b> hoort. Ze openen de link, kiezen een
+      naam en een pincode, en staan meteen in dezelfde lijst.
+    </p>
+    <div class="veld">
+      <label>Code van jullie huishouden</label>
+      <div class="huiscode" id="u-code">${esc(P)}</div>
+      <div class="hint">Werkt de link niet? Dan kunnen ze deze code invullen bij
+        <i>Ik heb een code gekregen</i>.</div>
+    </div>
+    <div class="veld">
+      <label>Link</label>
+      <div class="invoer" id="u-link"
+           style="word-break:break-all; font-size:13.5px; color:var(--ink-2); line-height:1.45">${esc(link)}</div>
+    </div>
+    <div class="banner" style="margin-top:4px">${IK.waarsch}<span>Wie deze code of link heeft,
+      kan bij jullie boodschappen, planning en uitgaven. Deel hem alleen met je huisgenoten.</span></div>`;
+  const voet = `
+    <button class="knop stil" id="u-kopieer" style="flex:0 0 auto">Kopieer</button>
+    <button class="knop" id="u-deel" style="flex:1">${IK.deel} Versturen</button>`;
+  sheet({titel:"Huisgenoot uitnodigen", body, voet, naTeken:() => {
+    const tekst = `Doe je mee met de boodschappen van ${huisNaam()}?\n${link}\n\n(of vul de code in: ${P})`;
+    $("#u-kopieer").onclick = async () => {
+      try{ await navigator.clipboard.writeText(tekst); toast("Gekopieerd", "📋"); }
+      catch(e){ toast("Kopiëren lukte niet"); }
+    };
+    $("#u-deel").onclick = () => {
+      if(navigator.share) navigator.share({title:huisNaam(), text:tekst}).catch(() => {});
+      else $("#u-kopieer").click();
+    };
+  }});
+}
+
+/* ---------- het huishouden zelf ---------- */
+function sheetHuishouden(){
+  const body = `
+    <div class="veld">
+      <label>Naam</label>
+      <input class="invoer" id="hh-naam" maxlength="30" value="${esc(huisNaam())}"
+             autocomplete="off" autocapitalize="words">
+    </div>
+    <div class="veld">
+      <label>Code</label>
+      <div class="huiscode">${esc(P)}</div>
+      <div class="hint">Hiermee komen huisgenoten binnen. Jullie ${S.leden.length}
+        ${S.leden.length === 1 ? "huisgenoot staat" : "huisgenoten staan"} nu in dit huishouden.</div>
+    </div>
+    <div class="lijst" style="margin-top:16px">
+      <button class="rij" id="hh-uitnodigen">
+        <span class="ik" style="background:var(--accent-zacht); color:var(--accent)">${IK.deel}</span>
+        <div class="tk"><b style="color:var(--ink)">Uitnodigen</b><span>link en code versturen</span></div>
+        <span class="na">${IK.pijl}</span>
+      </button>
+      <button class="rij" id="hh-wissel">
+        <span class="ik">${IK.herhaal}</span>
+        <div class="tk"><b style="color:var(--ink)">Naar een ander huishouden</b>
+          <span>met een code aansluiten, of een nieuw huishouden beginnen</span></div>
+        <span class="na">${IK.pijl}</span>
+      </button>
+    </div>
+    <div class="hint" style="margin-top:12px">Wisselen haalt niets weg: dit huishouden blijft
+      bestaan en je komt er met dezelfde code weer in.</div>`;
+  const voet = `<button class="knop" id="hh-opslaan" style="flex:1">Naam opslaan</button>`;
+  sheet({titel:"Huishouden", body, voet, naTeken:() => {
+    $("#hh-uitnodigen").onclick = () => sheetUitnodigen();
+    $("#hh-wissel").onclick = () => {
+      if(!confirm("Naar een ander huishouden?\n\nJe wordt uitgelogd en kunt daarna aansluiten met een code of een nieuw huishouden beginnen. " + huisNaam() + " blijft gewoon bestaan.")) return;
+      try{ localStorage.removeItem(HUISSLEUTEL); }catch(e){}
+      location.hash = "";
+      location.reload();
+    };
+    $("#hh-opslaan").onclick = async () => {
+      const naam = eenRegel($("#hh-naam").value);
+      if(naam.length < 2){ $("#hh-naam").focus(); return; }
+      const knop = $("#hh-opslaan");
+      knop.disabled = true; knop.innerHTML = `<span class="spinner"></span> Opslaan…`;
+      try{
+        await DB.zet(PAD.meta + "/huis", {naam, gewijzigdDoor:S.ik.id, gewijzigdOp:nu()});
+        S.huisNaam = naam;
+        sluitSheet(); tekenNu(); toast("Huishouden heet nu " + naam, "🏠");
+      }catch(e){ console.error(e); toast("Opslaan lukte niet");
+        knop.disabled = false; knop.innerHTML = "Naam opslaan"; }
+    };
+  }});
+}
+
 function sheetOver(){
   const body = `
     <div style="text-align:center; margin-bottom:20px">
       <div class="logo" style="width:64px;height:64px;border-radius:20px;background:var(--accent);display:grid;place-items:center;margin:0 auto 14px">
         <span style="width:32px;height:32px;color:var(--accent-ink)">${IK.winkel}</span></div>
-      <div style="font-size:19px; font-weight:700; letter-spacing:-.02em">${esc(CFG.huisNaam)} · Boodschappen</div>
+      <div style="font-size:19px; font-weight:700; letter-spacing:-.02em">${esc(huisNaam())} · Boodschappen</div>
       <div style="color:var(--muted); font-size:13.5px; margin-top:3px">versie ${VERSIE}</div>
     </div>
     <p style="color:var(--ink-2); font-size:14.5px; line-height:1.55; margin:0 0 16px">
@@ -5627,7 +5938,7 @@ function sheetOver(){
 /* ---------- delen ---------- */
 function deelLijst(){
   const groepen = groepeer(openItems());
-  let t = "🧺 " + CFG.huisNaam + " — boodschappen\n";
+  let t = "🧺 " + huisNaam() + " — boodschappen\n";
   groepen.forEach(g => {
     t += "\n*" + g.naam + "*\n";
     g.items.forEach(i => {
@@ -6867,6 +7178,7 @@ function tekenNu(){
     app.innerHTML = `<div class="midden"><div class="spinner"></div><span>Boodschappen laden…</span></div>`;
     return;
   }
+  if(!huisGekozen){ tekenHuis(); return; }
   if(!S.ik){ tekenInlog(); return; }
   if(S.ik && !lidVan(S.ik.id)){ uitloggen(); return; }
 
@@ -6974,6 +7286,8 @@ function startLuisteren(){
   DB.luister(PAD.meta, l => {
     const b = l.find(x => x.id === "budget");
     const mn = l.find(x => x.id === "meeEters");
+    const hn = l.find(x => x.id === "huis");
+    S.huisNaam = (hn && hn.naam) ? hn.naam : null;
     const inst = l.find(x => x.id === "instellingen");
     S.instellingen = {financien: !(inst && inst.financien === false)};
     S.meeNamen = (mn && Array.isArray(mn.namen)) ? mn.namen : [];
@@ -7029,11 +7343,6 @@ async function start(){
     S.syncFout = "De gedeelde lijst kon niet geladen worden — de app draait nu op dit apparaat.";
   }
 
-  /* nooit langer dan een paar tellen op de database wachten — de luisteraars
-     vullen alles alsnog aan zodra het binnen is */
-  const metGrens = (belofte, terugval, ms = 5000) =>
-    Promise.race([belofte, new Promise(r => setTimeout(() => r(terugval), ms))]);
-
   try{ await metGrens(zetWinkelsKlaar(), null); }
   catch(e){ console.error(e); S.winkels = STANDAARD_WINKELS.map(w => ({...w})); toonSyncFout(e); }
   try{ await metGrens(zetCatsKlaar(), null); }
@@ -7055,7 +7364,29 @@ async function start(){
     startHartslag();
   }
 
+  /* een net gemaakt huishouden heeft zijn naam nog klaarliggen */
+  try{
+    const wacht = localStorage.getItem(HUISSLEUTEL + "_naam");
+    if(wacht){
+      localStorage.removeItem(HUISSLEUTEL + "_naam");
+      S.huisNaam = wacht;
+      await metGrens(DB.zet(PAD.meta + "/huis", {naam:wacht, gemaakt:nu()}), null, 3000);
+    }
+  }catch(e){ console.error("huisnaam", e); }
+
   S.geladen = true;
+  /* de uitnodigingscode is verwerkt; hem in de adresbalk laten staan
+     helpt niemand en nodigt uit om hem per ongeluk door te sturen */
+  if(huisUitLink()) history.replaceState(null, "", location.pathname + location.search);
+
+  /* Tikt iemand op een uitnodigingslink terwijl de app al openstaat, dan
+     verandert alleen de hash en laadt de pagina niet opnieuw. Dan doen we
+     dat zelf, anders lijkt de link stuk. */
+  window.addEventListener("hashchange", () => {
+    const nieuw = huisUitLink();
+    if(nieuw && nieuw !== P){ huisBewaren(nieuw); location.reload(); }
+    else if(nieuw) history.replaceState(null, "", location.pathname + location.search);
+  });
   /* weergavevoorkeuren staan op dit apparaat, niet in de gedeelde database */
   S.filter.details = !!LS.get("boodschappen_details_" + P, false);
   tekenNu();
