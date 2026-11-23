@@ -310,7 +310,9 @@ function bankBlok() {
         <div class="signaal signaal--${b.proef.gelukt ? "goed" : "let-op"}" style="margin-top:12px">
           <span class="signaal__icoon">${b.proef.gelukt ? "✅" : "⚠️"}</span>
           <span>
-            <span class="signaal__titel">${b.proef.gelukt ? "De dienst antwoordt" : "Geen antwoord van de dienst"}</span>
+            <span class="signaal__titel">${b.proef.gelukt ? "De dienst antwoordt"
+              : b.proef.geenAntwoord ? "Geen antwoord van de dienst"
+              : "De dienst wees het verzoek af"}</span>
             <span class="signaal__tekst">${esc(b.proef.tekst)}
               ${b.proef.gelukt ? "Je kunt je rekening koppelen." : ""}</span>
           </span>

@@ -152,7 +152,9 @@ async function roep(pad, { methode = "GET", lijf = null } = {}) {
     spoorBij(fout?.name === "AbortError"
       ? "na 20 seconden nog geen antwoord"
       : `verzoek kwam niet aan: ${fout?.message || fout?.name || "onbekend"}`);
-    throw new Error(`De dienst antwoordde niet. Klopt het adres, en staat ${location.origin} in HERKOMST?`);
+    const stil = new Error(`De dienst antwoordde niet. Klopt het adres, en staat ${location.origin} in HERKOMST?`);
+    stil.geenAntwoord = true;   // er kwam écht niets terug, zie proefVerbinding
+    throw stil;
   } finally {
     clearTimeout(klok);
   }
@@ -162,7 +164,10 @@ async function roep(pad, { methode = "GET", lijf = null } = {}) {
   try { gegevens = await antwoord.json(); } catch { /* geen JSON */ }
 
   if (!antwoord.ok) {
-    if (antwoord.status === 401) throw new Error("Het woord klopt niet met dat van de dienst.");
+    if (antwoord.status === 401) {
+      throw new Error("Het woord klopt niet met dat van de dienst. "
+        + "Kijk of GELDZAKEN_WOORD in je dienst letterlijk hetzelfde is als hierboven.");
+    }
     if (antwoord.status === 403) throw new Error(gegevens?.fout || "De dienst laat dit adres niet toe.");
     throw new Error(gegevens?.fout || "De bankdienst gaf een fout terug.");
   }
@@ -176,7 +181,10 @@ export async function proefVerbinding() {
     await bewaar();
     return true;
   } catch (fout) {
-    bank.proef = { gelukt: false, tekst: fout.message, tijd: Date.now() };
+    /* Of de dienst zweeg dan wel antwoordde met een weigering is een
+       wezenlijk verschil: het eerste wijst op het adres of HERKOMST, het
+       tweede betekent dat je hem gewoon hebt bereikt. */
+    bank.proef = { gelukt: false, tekst: fout.message, geenAntwoord: !!fout.geenAntwoord, tijd: Date.now() };
     await bewaar();
     throw fout;
   }

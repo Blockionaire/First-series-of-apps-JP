@@ -129,7 +129,16 @@ async function woordKlopt(verzoek, omgeving) {
   const gegeven = kop.startsWith("Bearer ") ? kop.slice(7) : "";
   if (!gegeven) return false;
 
-  const [a, b] = await Promise.all([hash(gegeven), hash(omgeving.GELDZAKEN_WOORD)]);
+  /* Het woord aan beide kanten ontdaan van wat eromheen staat. Een
+     secret wordt geplakt, en een plakbeurt sleept makkelijk een spatie
+     of een regeleinde mee. Dat verschil is onzichtbaar en kost je een
+     middag: het woord lijkt dan precies goed en klopt toch nooit.
+     Veiligheid verliezen we er niet mee — spaties aan de rand dragen
+     niets bij. */
+  const [a, b] = await Promise.all([
+    hash(gegeven.trim()),
+    hash(String(omgeving.GELDZAKEN_WOORD).trim()),
+  ]);
   if (a.length !== b.length) return false;
   let verschil = 0;
   for (let i = 0; i < a.length; i++) verschil |= a[i] ^ b[i];

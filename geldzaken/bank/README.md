@@ -228,7 +228,18 @@ Kosten zijn een paar cent per vraag, rechtstreeks bij Anthropic op jouw account.
 er nog niet. Open het adres eens in je browser: krijg je daar JSON te zien — hoe de
 melding ook luidt — dan draait hij. Zie stap 1 voor welke melding wanneer hoort.
 
-**"Het woord klopt niet met dat van de dienst"** — controleer `GELDZAKEN_WOORD`.
+**"Het woord klopt niet met dat van de dienst"** — goed nieuws, want dit
+betekent dat de dienst bereikbaar is en `HERKOMST` klopt: hij heeft
+geantwoord, alleen met een weigering. Alleen `GELDZAKEN_WOORD` komt niet
+overeen met wat er in de app staat.
+
+Let op het soort verschil dat je niet ziet. Een secret wordt geplakt, en
+daar sluipt zo een spatie of een regeleinde achteraan; het woord ziet er
+dan precies goed uit en klopt toch nooit. De dienst haalt dat er sinds
+v18 zelf af, maar dan moet je hem wel opnieuw hebben neergezet. Twijfel
+je, zet het secret dan gewoon opnieuw: plak het woord, controleer dat er
+geen spatie achter staat, bewaar, en wacht tot Cloudflare meldt dat de
+nieuwe versie live is. Zet daarna in de app hetzelfde woord neer.
 Let op spaties aan het eind bij het plakken.
 
 **"De dienst laat dit adres niet toe"** — `HERKOMST` komt niet overeen met het
