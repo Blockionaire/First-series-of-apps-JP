@@ -53,9 +53,14 @@ export default {
     const herkomst = verzoek.headers.get("Origin") || "";
     const mag = magHerkomst(herkomst, omgeving);
 
-    if (verzoek.method === "OPTIONS") {
-      return voorvraag(mag ? herkomst : instellingenCompleet(omgeving) ? "" : "*");
-    }
+    /* De voorvraag laten we altijd door. Niet omdat iedereen erbij mag —
+       dat regelt `mag` hieronder, en zonder dat komt er geen enkel pad
+       aan bod — maar omdat een geweigerde voorvraag het echte verzoek
+       al tegenhoudt. De app ziet dan geen weigering maar stilte, en
+       stilte leest als "onbereikbaar": je gaat het adres nakijken
+       terwijl HERKOMST de boosdoener is. Laat het verzoek dus komen en
+       antwoord met een zin die ergens op slaat. */
+    if (verzoek.method === "OPTIONS") return voorvraag(herkomst || "*");
 
     try {
       /* Ontbreekt er iets aan de instellingen, dan doen we niets. Liever
@@ -69,7 +74,15 @@ export default {
          hebben meegegeven — zonder die handtekening gebeurt er niets. */
       if (url.pathname === "/klaar") return await terugVanBank(url, omgeving);
 
-      if (!mag) return antwoord({ fout: "Dit adres mag hier niet bij." }, 403, "");
+      /* De weigering gaat terug mét kopteksten, zodat de app hem kan
+         lezen en kan zéggen wat er mis is. Dat geeft niets prijs: wie
+         hier niet bij mag komt langs geen enkel pad, en dit antwoord
+         bevat niets dan die mededeling. */
+      if (!mag) {
+        return antwoord({
+          fout: `Dit adres mag hier niet bij. Zet ${herkomst || "het adres van je app"} in HERKOMST.`,
+        }, 403, herkomst);
+      }
       if (!await woordKlopt(verzoek, omgeving)) {
         return antwoord({ fout: "Verkeerd of ontbrekend woord." }, 401, herkomst);
       }
@@ -137,11 +150,18 @@ function ontbreekt(omgeving) {
 const instellingenCompleet = omgeving =>
   ["EB_APP_ID", "EB_SLEUTEL", "GELDZAKEN_WOORD", "HERKOMST"].every(n => !!omgeving[n]);
 
+/* Een hostnaam kent geen hoofdletters: `Example.com` en `example.com`
+   zijn dezelfde plek. Browsers sturen hun herkomst altijd in kleine
+   letters mee, dus een HERKOMST die met een hoofdletter is ingetikt —
+   en een GitHub-naam heeft die vaak — zou nooit matchen. Dat verschil
+   is niet te zien en kost je een avond, dus halen we het weg. */
+const plat = s => String(s).trim().replace(/\/+$/, "").toLowerCase();
+
 const herkomsten = omgeving =>
-  String(omgeving.HERKOMST || "").split(",").map(s => s.trim().replace(/\/$/, "")).filter(Boolean);
+  String(omgeving.HERKOMST || "").split(",").map(plat).filter(Boolean);
 
 const magHerkomst = (herkomst, omgeving) =>
-  !!herkomst && herkomsten(omgeving).includes(herkomst.replace(/\/$/, ""));
+  !!herkomst && herkomsten(omgeving).includes(plat(herkomst));
 
 /* Het afgesproken woord vergelijken zonder te verraden hoever je zat.
    Een gewone vergelijking stopt bij het eerste verschil, en met genoeg

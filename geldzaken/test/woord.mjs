@@ -92,14 +92,55 @@ for (const weg of ["GELDZAKEN_WOORD", "EB_SLEUTEL", "EB_APP_ID", "HERKOMST"]) {
   else { mis++; console.log(`  MIS  voorvraag geblokkeerd zonder ${weg}`); }
 }
 
-console.log("\nMaar een onbekende herkomst blijft buiten:");
-const vreemd = await worker.fetch(new Request("https://dienst.test/status", {
-  headers: { Origin: "https://kwaadwillend.test", Authorization: "Bearer appelmoes" },
-}), kaal);
-if (vreemd.status === 403 && !vreemd.headers.get("Access-Control-Allow-Origin")) {
-  goed++; console.log("  ok   een vreemde herkomst krijgt 403 zonder kopteksten");
+/* ---------------------------------------------------------------
+   De herkomst
+   ---------------------------------------------------------------
+   Een hostnaam kent geen hoofdletters, en een GitHub-naam vaak wel.
+   Hier staat vast dat dat verschil niets uitmaakt — en dat een
+   weigering leesbaar terugkomt in plaats van als stilte. */
+console.log("\nDe herkomst:");
+
+async function vanaf(origin, herkomstInstelling = HERKOMST) {
+  return worker.fetch(new Request("https://dienst.test/status", {
+    headers: { Origin: origin, Authorization: "Bearer appelmoes" },
+  }), { ...kaal, HERKOMST: herkomstInstelling });
+}
+
+async function herkomstCheck(naam, origin, instelling, binnen) {
+  const r = await vanaf(origin, instelling);
+  const ok = binnen ? r.status === 200 : r.status === 403;
+  if (ok) { goed++; console.log(`  ok   ${naam}`); }
+  else { mis++; console.log(`  MIS  ${naam} — kreeg ${r.status}`); }
+}
+
+await herkomstCheck("gewoon gelijk", HERKOMST, HERKOMST, true);
+await herkomstCheck("hoofdletters in de instelling",
+  "https://blockionaire.github.io", "https://Blockionaire.github.io", true);
+await herkomstCheck("schuine streep aan het eind",
+  "https://blockionaire.github.io", "https://blockionaire.github.io/", true);
+await herkomstCheck("spaties rond een van meerdere",
+  "https://blockionaire.github.io", "https://ergens.test ,  https://Blockionaire.GitHub.io ", true);
+await herkomstCheck("een vreemde plek blijft buiten",
+  "https://kwaadwillend.test", HERKOMST, false);
+
+console.log("\nEn een weigering is leesbaar in plaats van stil:");
+const vreemd = await vanaf("https://kwaadwillend.test");
+const lees = vreemd.headers.get("Access-Control-Allow-Origin");
+const zin = (await vreemd.json()).fout || "";
+if (vreemd.status === 403 && lees === "https://kwaadwillend.test" && zin.includes("HERKOMST")) {
+  goed++; console.log(`  ok   de app kan de weigering lezen — "${zin}"`);
 } else {
-  mis++; console.log(`  MIS  vreemde herkomst kreeg ${vreemd.status}, koptekst ${vreemd.headers.get("Access-Control-Allow-Origin")}`);
+  mis++; console.log(`  MIS  weigering: ${vreemd.status}, koptekst ${lees}, "${zin}"`);
+}
+
+/* Maar lezen is geen binnenkomen: geen enkel pad mag open staan. */
+for (const pad of ["/banken", "/koppel", "/transacties", "/rekeningen", "/vraag"]) {
+  const r = await worker.fetch(new Request(`https://dienst.test${pad}`, {
+    method: pad === "/banken" ? "GET" : "POST",
+    headers: { Origin: "https://kwaadwillend.test", Authorization: "Bearer appelmoes" },
+  }), kaal);
+  if (r.status === 403) { goed++; console.log(`  ok   ${pad} blijft dicht voor een vreemde plek`); }
+  else { mis++; console.log(`  MIS  ${pad} gaf ${r.status} aan een vreemde plek`); }
 }
 
 console.log(`\n${goed} goed, ${mis} mis`);

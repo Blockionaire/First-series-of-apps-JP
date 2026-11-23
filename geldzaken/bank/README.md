@@ -254,9 +254,19 @@ je, zet het secret dan gewoon opnieuw: plak het woord, controleer dat er
 geen spatie achter staat, bewaar, en wacht tot Cloudflare meldt dat de
 nieuwe versie live is. Zet daarna in de app hetzelfde woord neer.
 
-**"De dienst laat dit adres niet toe"** — `HERKOMST` komt niet overeen met het
-adres waarop je de app opent. Het moet exact hetzelfde zijn, inclusief `https://`
-en zonder schuine streep aan het eind.
+**"Dit adres mag hier niet bij"** — `HERKOMST` komt niet overeen met het adres
+waarop je de app opent. De melding noemt sinds v20 het adres dat je erin moet
+zetten, dus je kunt het overnemen. Alleen `https://` hoort erbij, zonder pad
+erachter: `https://jouwnaam.github.io`, niet `https://jouwnaam.github.io/jouw-repo/`.
+
+Een schuine streep aan het eind, spaties en hoofdletters maken niet uit — de
+dienst haalt dat er zelf af. Dat laatste is nieuw sinds v20 en was nodig, want
+een GitHub-naam heeft vaak een hoofdletter terwijl een browser zijn herkomst
+altijd in kleine letters meestuurt. Dat verschil zie je niet en het geeft
+geen enkele melding.
+
+Zie je deze melding als je het adres **zelf in je browser opent**, dan is er
+niets mis: je browser stuurt dan geen herkomst mee. Dat hoort zo.
 
 **"De toestemming bij je bank is verlopen"** — koppel opnieuw onder ⚙️ → Je bank.
 
