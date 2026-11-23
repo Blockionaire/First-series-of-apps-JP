@@ -19,8 +19,19 @@
    ===================================================================== */
 
 import { dbHaal, dbZet, dbWis, LOKAAL } from "./db.js";
+import { meld } from "./store.js";
 
 const SLEUTEL = "bank";
+
+/* Opslag en netwerk mogen nooit blíjven hangen. Safari in een
+   geïnstalleerde app kan een IndexedDB-opdracht laten staan zonder ooit
+   te antwoorden of te falen; wachten we daarop, dan doet een knop
+   zichtbaar niets en weet je niet waarom. Dus zetten we overal een klok
+   op. Liever een eerlijke foutmelding dan een stilte. */
+const metKlok = (belofte, ms, waarover) => Promise.race([
+  belofte,
+  new Promise((_, mislukt) => setTimeout(() => mislukt(new Error(waarover)), ms)),
+]);
 
 export const bank = {
   geladen: false,
@@ -63,7 +74,7 @@ export function dagenGeldig() {
 export async function laad() {
   if (bank.geladen) return bank;
   try {
-    const bewaard = await dbHaal(LOKAAL, SLEUTEL);
+    const bewaard = await metKlok(dbHaal(LOKAAL, SLEUTEL), 3000, "opslag antwoordt niet");
     if (bewaard) Object.assign(bank, bewaard, { bezig: false, fout: null });
     bank.opslag = true;
   } catch {
@@ -78,8 +89,12 @@ export async function laad() {
 
 async function bewaar() {
   const { geladen, bezig, fout, opslag, ...rest } = bank;
-  try { await dbZet(LOKAAL, { id: SLEUTEL, ...rest }); bank.opslag = true; }
+  const voor = bank.opslag;
+  try { await metKlok(dbZet(LOKAAL, { id: SLEUTEL, ...rest }), 3000, "opslag antwoordt niet"); bank.opslag = true; }
   catch { bank.opslag = false; }
+  /* Slaat het om, dan hoort het scherm dat te laten zien. Het antwoord
+     komt vaak pas als de knop zijn werk al heeft gedaan. */
+  if (voor !== bank.opslag) meld();
 }
 
 export async function zetInstellingen({ adres, woord, aiAan }) {
@@ -109,9 +124,14 @@ async function roep(pad, { methode = "GET", lijf = null } = {}) {
   if (!ingesteld()) throw new Error("Vul eerst het adres en het woord van je bankdienst in.");
 
   let antwoord;
+  /* Een verzoek dat nooit antwoordt laat de knop eeuwig op "Bezig…"
+     staan. Twintig seconden is ruim; daarna weet je genoeg. */
+  const afbreken = new AbortController();
+  const klok = setTimeout(() => afbreken.abort(), 20000);
   try {
     antwoord = await fetch(bank.adres + pad, {
       method: methode,
+      signal: afbreken.signal,
       headers: {
         Authorization: `Bearer ${bank.woord}`,
         ...(lijf ? { "Content-Type": "application/json" } : {}),
@@ -125,6 +145,8 @@ async function roep(pad, { methode = "GET", lijf = null } = {}) {
        laat de browser het antwoord niet door en ziet het er hetzelfde
        uit als een verkeerd adres. Dus noemen we ze allebei. */
     throw new Error(`De dienst antwoordde niet. Klopt het adres, en staat ${location.origin} in HERKOMST?`);
+  } finally {
+    clearTimeout(klok);
   }
 
   let gegevens = null;

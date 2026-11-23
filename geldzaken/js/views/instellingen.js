@@ -657,16 +657,22 @@ function koppelCategorieen(wortel) {
 /* Wat je in de velden hebt staan is misschien nog niet opgeslagen — het
    opslaan wacht een halve seconde. Voor een knop die er meteen iets mee
    doet nemen we daarom de veldwaarde zelf. */
-async function bankVeldenNu(wortel) {
+function bankVeldenNu() {
   const adres = document.querySelector("#bankadres")?.value;
   const woord = document.querySelector("#bankwoord")?.value;
-  if (adres !== undefined || woord !== undefined) await Bank.zetInstellingen({ adres, woord });
+  if (adres === undefined && woord === undefined) return;
+  /* Niet afwachten. `zetInstellingen` zet de waarden meteen klaar en
+     bewaart ze daarna; zou het bewaren blijven hangen, dan hoort de
+     knop daar niet op te wachten. */
+  Bank.zetInstellingen({ adres, woord });
 }
 
 async function bankProef() {
-  await bankVeldenNu();
+  /* Eerst zichtbaar reageren, dan pas iets doen. Gaat er daarna iets
+     mis, dan zie je in elk geval dát er iets gebeurde. */
   const knop = document.querySelector("[data-bank-proef]");
   if (knop) { knop.disabled = true; knop.textContent = "Bezig…"; }
+  bankVeldenNu();
   try {
     await Bank.proefVerbinding();
     melding("De dienst antwoordt. Je kunt koppelen.", "goed");
@@ -680,17 +686,24 @@ async function bankProef() {
 
 async function bankKoppelen() {
   if (!eisBewerkrecht()) return;
-  await bankVeldenNu();
+  const knop = document.querySelector("[data-bank-koppel]");
+  if (knop) { knop.disabled = true; knop.textContent = "Bezig…"; }
+  bankVeldenNu();
 
   let banken;
   try {
     banken = await Bank.welkeBanken("NL");
   } catch (fout) {
+    Bank.bank.proef = { gelukt: false, tekst: fout.message, tijd: Date.now() };
     Bank.bank.fout = fout.message;
     melding(fout.message, "fout");
     return meld();
   }
-  if (!banken.length) return melding("De dienst gaf geen banken terug.", "fout");
+  if (!banken.length) {
+    Bank.bank.proef = { gelukt: false, tekst: "De dienst gaf geen banken terug.", tijd: Date.now() };
+    melding("De dienst gaf geen banken terug.", "fout");
+    return meld();
+  }
 
   const keuze = await dialoog({
     titel: "Bij welke bank?",
@@ -720,11 +733,12 @@ async function bankKoppelen() {
     },
   });
 
-  if (!keuze) return;
+  if (!keuze) return meld();                // knop weer aan
   try {
     melding("Je gaat naar je bank…");
     await Bank.koppelStarten(keuze);        // dit verlaat de pagina
   } catch (fout) {
+    Bank.bank.proef = { gelukt: false, tekst: fout.message, tijd: Date.now() };
     Bank.bank.fout = fout.message;
     melding(fout.message, "fout");
     meld();
