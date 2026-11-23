@@ -193,6 +193,11 @@ async function roep(pad, { methode = "GET", lijf = null } = {}) {
   }
   spoorBij(`antwoord ${antwoord.status}`);
 
+  /* Hij antwoordt. Een eerdere klacht dat dat niet zo was is daarmee
+     niet meer waar, en een melding die niet meer waar is hoort weg —
+     anders staat er straks iets roods onder iets groens. */
+  if (antwoord.ok) bank.fout = null;
+
   let gegevens = null;
   try { gegevens = await antwoord.json(); } catch { /* geen JSON */ }
 
@@ -214,9 +219,16 @@ export async function proefVerbinding() {
        app zonder dat iets dat verraadt — en dan zoek je een fout die
        daar allang gerepareerd is. Dus vragen we het gewoon. */
     bank.dienstVersie = uit?.dienst || "";
+    /* Een oude klacht hoort te verdwijnen zodra hij niet meer waar is.
+       Bleef hij staan, dan las je onder een groen vinkje nog steeds dat
+       de dienst niet antwoordde — twee dingen tegelijk, waarvan er één
+       loog, en geen manier om te zien welke. */
+    bank.fout = null;
     bank.proef = {
       gelukt: true,
-      tekst: `De dienst antwoordt${uit?.dienst ? ` (${uit.dienst})` : ""}.`,
+      /* De kop zegt al dat de dienst antwoordt; dat hoeft er niet
+         nóg een keer onder te staan. */
+      tekst: uit?.dienst ? `Hij draait ${uit.dienst}.` : "",
       tijd: Date.now(),
     };
     await bewaar();

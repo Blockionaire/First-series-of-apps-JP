@@ -55,7 +55,7 @@ console.log("\n— een dienst van nu —");
 let p = await proef({ klaar: true, dienst: NU });
 let tekst = await p.locator("#scherm").textContent();
 check("de test slaagt", /De dienst antwoordt/.test(tekst));
-check("en noemt de versie", tekst.includes(`(${NU})`), tekst.match(/De dienst antwoordt[^.]*/)?.[0]);
+check("en noemt de versie", tekst.includes(NU), tekst.match(/De dienst antwoordt[^.]*/)?.[0]);
 check("geen waarschuwing", !/loopt achter/.test(tekst));
 
 console.log("\n— een dienst die achterloopt —");
@@ -71,7 +71,7 @@ console.log("\n— een oude dienst die zijn versie niet noemt —");
 p = await proef({ klaar: true });
 tekst = await p.locator("#scherm").textContent();
 check("de test slaagt", /De dienst antwoordt/.test(tekst));
-check("geen versie tussen haakjes", !/antwoordt \(/.test(tekst));
+check("maar verzint er geen", !/Hij draait/.test(tekst));
 check("en geen loze waarschuwing", !/loopt achter/.test(tekst));
 
 await browser.close();

@@ -360,8 +360,10 @@ function bankBlok() {
               : b.proef.koppelen ? "Het koppelen lukte niet"
               : b.proef.geenAntwoord ? "Geen antwoord van de dienst"
               : "De dienst wees het verzoek af"}</span>
-            <span class="signaal__tekst">${esc(b.proef.tekst)}
-              ${b.proef.gelukt ? "Je kunt je rekening koppelen." : ""}</span>
+            <span class="signaal__tekst">${[
+              esc(b.proef.tekst),
+              b.proef.gelukt && !Bank.gekoppeld() ? "Je kunt je rekening koppelen." : "",
+            ].filter(Boolean).join(" ")}</span>
           </span>
         </div>` : ""}
 
