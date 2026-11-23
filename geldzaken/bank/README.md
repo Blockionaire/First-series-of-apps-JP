@@ -225,9 +225,8 @@ Kosten zijn een paar cent per vraag, rechtstreeks bij Anthropic op jouw account.
 ## Problemen
 
 **"De bankdienst is niet bereikbaar"** — het adres klopt niet, of de dienst staat
-er nog niet. Open het adres eens in je browser: je hoort `{"fout":"Dit adres mag
-hier niet bij."}` te zien, want je browser is dan geen bekende herkomst. Dat is
-goed nieuws: hij draait.
+er nog niet. Open het adres eens in je browser: krijg je daar JSON te zien — hoe de
+melding ook luidt — dan draait hij. Zie stap 1 voor welke melding wanneer hoort.
 
 **"Het woord klopt niet met dat van de dienst"** — controleer `GELDZAKEN_WOORD`.
 Let op spaties aan het eind bij het plakken.
