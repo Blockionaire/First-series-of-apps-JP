@@ -211,6 +211,36 @@ export function melding(tekst, soort = "info") {
 }
 
 /* ---------------------------------------------------------------
+   Spoor
+   ---------------------------------------------------------------
+   In een app op je beginscherm is er geen console om in te kijken.
+   Doet een knop zichtbaar niets, dan valt er zonder spoor dus ook
+   niets vast te stellen: kwam de tik wel aan, liep de code, bleef het
+   antwoord uit? Daarom houdt de app de laatste stappen zelf bij.
+   Het staat op één plek, en elk scherm met een `data-spoor`-vak laat
+   het zien zodra er iets bij komt — ook als dat vak er pas later is.
+   --------------------------------------------------------------- */
+const SPOOR_MAX = 16;
+const spoorRegels = [];
+
+export function spoorBij(tekst) {
+  const nu = new Date();
+  const klok = [nu.getHours(), nu.getMinutes(), nu.getSeconds()]
+    .map(n => String(n).padStart(2, "0")).join(":");
+  spoorRegels.push(`${klok}  ${tekst}`);
+  while (spoorRegels.length > SPOOR_MAX) spoorRegels.shift();
+  /* Rechtstreeks in het vak schrijven, niet via een hertekening: een
+     spoor dat pas zichtbaar wordt als het scherm opnieuw wordt
+     getekend mist precies de stap waar het om gaat. */
+  document.querySelectorAll("[data-spoor]").forEach(vak => {
+    vak.textContent = spoorRegels.join("\n");
+  });
+}
+
+export const spoorTekst = () => spoorRegels.join("\n");
+export const spoorLeeg = () => { spoorRegels.length = 0; spoorBij("spoor gewist"); };
+
+/* ---------------------------------------------------------------
    Dialoogvenster
    ---------------------------------------------------------------
    `inhoud` is HTML. `knoppen` is een lijst {label, waarde, soort}. De

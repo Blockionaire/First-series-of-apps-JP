@@ -9,7 +9,8 @@
    ===================================================================== */
 
 import { esc, geld, melding, bevestig, dialoog, downloadTekst, maandLabel, datumNL,
-         kiesBestand, leesTekst, leesBedrag, debounce } from "../util.js";
+         kiesBestand, leesTekst, leesBedrag, debounce,
+         spoorBij, spoorTekst, spoorLeeg } from "../util.js";
 import { state, zetInstelling, zetKoppeling, Sync, Koppeling, magBewerken, isBeheerder,
          legeCategorie, bewaarCategorie, wisCategorie, alsBackup,
          herstelBackup, alsCSV, wisAlles, duwAllesOmhoog, meld } from "../store.js";
@@ -322,6 +323,16 @@ function bankBlok() {
         komen in deze app terecht, op dit apparaat — en pas nadat jij ze hebt nagekeken.
       </div>
 
+      ${/* Doet een knop hier niets, dan is dit de enige manier om erachter
+            te komen wat er wél gebeurde. Een telefoon heeft geen console,
+            dus staat het hier. Dichtgeklapt, want normaal hoef je het niet
+            te zien. */ ""}
+      <details class="spoorvak" style="margin-top:12px">
+        <summary>Wat deed de app bij je laatste tik?</summary>
+        <pre class="spoorvak__regels" data-spoor>${esc(spoorTekst()) || "nog niets"}</pre>
+        <button class="knop knop--klein" data-spoor-wis>Spoor wissen</button>
+      </details>
+
       <div class="schakelrij" style="margin-top:4px">
         <span class="schakelrij__tekst">
           <span class="schakelrij__titel">Vrij vragen met Claude</span>
@@ -594,7 +605,36 @@ export function koppel(wortel, params) {
 
   toonVersie(wortel);
 
+  /* Elke aanraking optekenen, nog vóór de klik. Een knop die niets doet
+     heeft maar drie mogelijke oorzaken: de tik komt ergens anders aan,
+     de knop staat uit, of de code erachter loopt vast. Dit scheidt de
+     eerste twee van de derde — zonder dat je een console nodig hebt. */
+  const merkVan = el =>
+    [...(el.attributes || [])].map(a => a.name).find(n => n.startsWith("data-"))
+    || el.id || String(el.className || "") || "";
+
+  wortel.addEventListener("pointerdown", e => {
+    const el = e.target.closest("button, a, input, label, .rij, .schakelrij") || e.target;
+    let regel = `tik op ${el.tagName.toLowerCase()}`;
+    const merk = merkVan(el);
+    if (merk) regel += ` ${merk}`;
+
+    /* Een uitgeschakelde knop laat geen enkele aanraking door — de tik
+       landt op het vakje eromheen, en in het spoor zie je dan een `div`
+       waar je een knop verwachtte. Dus kijken we meteen of daar een
+       knop in staat die uit staat. Dat is het antwoord op "er gebeurt
+       niks" dat je anders nooit krijgt. */
+    if (el.disabled) regel += " — die staat uit";
+    else if (!el.matches("button, a, input, label")) {
+      const uit = [...(el.querySelectorAll?.("button:disabled, input:disabled") || [])].map(merkVan);
+      if (uit.length) regel += ` — hierin staat uitgeschakeld: ${uit.join(", ")}`;
+    }
+    spoorBij(regel);
+  }, true);
+
   wortel.addEventListener("click", async e => {
+    if (e.target.closest("[data-spoor-wis]")) return spoorLeeg();
+
     if (e.target.closest("[data-bijwerken]")) return bijwerken();
 
     const thema = e.target.closest("[data-thema]");
@@ -721,6 +761,7 @@ function bankVeldenNu() {
 async function bankProef() {
   /* Eerst zichtbaar reageren, dan pas iets doen. Gaat er daarna iets
      mis, dan zie je in elk geval dát er iets gebeurde. */
+  spoorBij("testen: begonnen");
   const knop = document.querySelector("[data-bank-proef]");
   if (knop) { knop.disabled = true; knop.textContent = "Bezig…"; }
   bankVeldenNu();
@@ -736,7 +777,8 @@ async function bankProef() {
 }
 
 async function bankKoppelen() {
-  if (!eisBewerkrecht()) return;
+  spoorBij("koppelen: begonnen");
+  if (!eisBewerkrecht()) return spoorBij("koppelen: gestopt, alleen leesrechten");
   const knop = document.querySelector("[data-bank-koppel]");
   if (knop) { knop.disabled = true; knop.textContent = "Bezig…"; }
   bankVeldenNu();

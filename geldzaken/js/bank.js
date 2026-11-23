@@ -20,6 +20,7 @@
 
 import { dbHaal, dbZet, dbWis, LOKAAL } from "./db.js";
 import { meld } from "./store.js";
+import { spoorBij } from "./util.js";
 
 const SLEUTEL = "bank";
 
@@ -91,7 +92,7 @@ async function bewaar() {
   const { geladen, bezig, fout, opslag, ...rest } = bank;
   const voor = bank.opslag;
   try { await metKlok(dbZet(LOKAAL, { id: SLEUTEL, ...rest }), 3000, "opslag antwoordt niet"); bank.opslag = true; }
-  catch { bank.opslag = false; }
+  catch { bank.opslag = false; spoorBij("bewaren lukte niet (opslag antwoordt niet)"); }
   /* Slaat het om, dan hoort het scherm dat te laten zien. Het antwoord
      komt vaak pas als de knop zijn werk al heeft gedaan. */
   if (voor !== bank.opslag) meld();
@@ -121,7 +122,11 @@ export async function vergeetAlles() {
    Praten met de dienst
    --------------------------------------------------------------- */
 async function roep(pad, { methode = "GET", lijf = null } = {}) {
-  if (!ingesteld()) throw new Error("Vul eerst het adres en het woord van je bankdienst in.");
+  if (!ingesteld()) {
+    spoorBij(`geen adres of woord bekend (adres ${bank.adres ? "ja" : "nee"}, woord ${bank.woord ? "ja" : "nee"})`);
+    throw new Error("Vul eerst het adres en het woord van je bankdienst in.");
+  }
+  spoorBij(`verzoek ${methode} ${pad}`);
 
   let antwoord;
   /* Een verzoek dat nooit antwoordt laat de knop eeuwig op "Bezig…"
@@ -138,16 +143,20 @@ async function roep(pad, { methode = "GET", lijf = null } = {}) {
       },
       body: lijf ? JSON.stringify(lijf) : undefined,
     });
-  } catch {
+  } catch (fout) {
     /* De browser vertelt niet óf het adres onbereikbaar was óf dat het
        antwoord om een andere reden niet doorkwam. In de praktijk is dat
        tweede bijna altijd HERKOMST: staat dit adres daar niet bij, dan
        laat de browser het antwoord niet door en ziet het er hetzelfde
        uit als een verkeerd adres. Dus noemen we ze allebei. */
+    spoorBij(fout?.name === "AbortError"
+      ? "na 20 seconden nog geen antwoord"
+      : `verzoek kwam niet aan: ${fout?.message || fout?.name || "onbekend"}`);
     throw new Error(`De dienst antwoordde niet. Klopt het adres, en staat ${location.origin} in HERKOMST?`);
   } finally {
     clearTimeout(klok);
   }
+  spoorBij(`antwoord ${antwoord.status}`);
 
   let gegevens = null;
   try { gegevens = await antwoord.json(); } catch { /* geen JSON */ }

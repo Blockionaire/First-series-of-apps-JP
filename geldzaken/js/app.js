@@ -11,7 +11,7 @@
    ===================================================================== */
 
 import { state, abonneer, start, Sync, magBewerken, eenvoudig } from "./store.js";
-import { $, zetValuta, zetPrivacy, melding } from "./util.js";
+import { $, zetValuta, zetPrivacy, melding, spoorBij } from "./util.js";
 import * as Bank from "./bank.js";
 
 import * as Dashboard   from "./views/dashboard.js";
@@ -292,6 +292,21 @@ let laatsteInstellingen = "";
 
 async function opstarten() {
   window.addEventListener("hashchange", teken);
+
+  /* Een scriptfout in een app op je beginscherm is volkomen onzichtbaar:
+     er is geen console waar hij in terechtkomt. Wat je ziet is een knop
+     die niets doet — en wie dat overkomt, zoekt de fout op de verkeerde
+     plek. Dus zegt de app het voortaan zelf. */
+  window.addEventListener("error", e => {
+    const waar = e.filename ? ` (${String(e.filename).split("/").pop()}:${e.lineno})` : "";
+    spoorBij(`scriptfout: ${e.message}${waar}`);
+    melding(`Er ging iets mis in de app: ${e.message}`, "fout");
+  });
+  window.addEventListener("unhandledrejection", e => {
+    const reden = e.reason?.message || String(e.reason ?? "onbekend");
+    spoorBij(`fout zonder vangnet: ${reden}`);
+    melding(`Er ging iets mis in de app: ${reden}`, "fout");
+  });
 
   abonneer(() => {
     const stempel = `${state.instellingen.thema}|${state.instellingen.valuta}|${state.instellingen.privacy}|${state.instellingen.modus}`;
