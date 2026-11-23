@@ -82,6 +82,12 @@ export const dienstVerouderd = () => {
   return n !== null && n < DIENST_NODIG;
 };
 
+/* Draait dit de app vanaf je beginscherm, of gewoon een browser? Die
+   twee delen op iOS hun opslag niet, en dat verschil bepaalt of een
+   koppeling op de goede plek terechtkomt. */
+export const opBeginscherm = () =>
+  (window.matchMedia?.("(display-mode: standalone)")?.matches ?? false) || navigator.standalone === true;
+
 export const ingesteld = () => !!(bank.adres && bank.woord);
 export const gekoppeld = () => ingesteld() && !!bank.sessie;
 
@@ -312,6 +318,21 @@ export async function verwerkTerugkomst() {
 
     try {
       await wisselCodeIn(code);
+
+      /* Gelukt — maar wáár? Koppel je vanuit de app op je beginscherm,
+         dan stuurt je bank je browser terug, en die browser heeft jouw
+         adres en woord ook. Hij wisselt de code dus keurig in en koppelt
+         zichzélf, terwijl je het op je beginscherm wilde. Daar merkte je
+         niets van: het overdrachtskaartje verscheen alleen als het
+         inwisselen hier juist níét kon.
+
+         Dus bieden we het aan zodra dit niet de app op je beginscherm
+         is. Gebruik je alleen de browser, dan gooi je het weg. */
+      if (!opBeginscherm()) {
+        bank.overdracht = "s:" + bank.sessie;
+        await bewaar();
+        spoorBij("gekoppeld in de browser — ook over te dragen");
+      }
       return "gekoppeld";
     } catch (e) {
       bank.fout = e.message;

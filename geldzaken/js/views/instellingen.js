@@ -248,10 +248,17 @@ function bankBlok() {
         <div class="signaal signaal--goed" style="margin:0 0 12px">
           <span class="signaal__icoon">🔑</span>
           <span>
-            <span class="signaal__titel">Het koppelen is gelukt — maar hier in je browser</span>
-            <span class="signaal__tekst">Je bank stuurde je browser terug in plaats van de app op je
-              beginscherm, en die twee delen hun gegevens niet. Neem deze code over in de app op je
-              beginscherm: open daar ⚙️ → Je bank en tik op "Ik heb een code".</span>
+            <span class="signaal__titel">${Bank.gekoppeld()
+              ? "Gekoppeld — gebruik je de app ook vanaf je beginscherm?"
+              : "Het koppelen is gelukt — maar hier in je browser"}</span>
+            <span class="signaal__tekst">${Bank.gekoppeld()
+              ? `Je bent hier klaar. Maar je bank stuurde je browser terug, en die deelt zijn gegevens
+                 niet met de app op je beginscherm — daar is dus nog niets gekoppeld. Neem deze code
+                 daar over: ⚙️ → Je bank → "Ik heb een code". Gebruik je alleen deze browser, dan kun
+                 je hem weggooien.`
+              : `Je bank stuurde je browser terug in plaats van de app op je beginscherm, en die twee
+                 delen hun gegevens niet. Neem deze code over in de app op je beginscherm: open daar
+                 ⚙️ → Je bank en tik op "Ik heb een code".`}</span>
           </span>
         </div>
         <pre class="overdrachtcode" data-overdracht>${esc(b.overdracht)}</pre>
@@ -264,8 +271,8 @@ function bankBlok() {
             ? `Doe dit meteen: zo'n code van je bank is maar een paar minuten geldig.
                Lukt het niet op tijd, begin dan gewoon opnieuw vanuit de app op je beginscherm —
                er gaat niets stuk, je logt alleen nog een keer in bij je bank.`
-            : `De code blijft geldig tot je volgende koppeling. Lukt het overnemen niet, koppel dan
-               opnieuw vanuit de app op je beginscherm.`}
+            : `Deze code blijft geldig zolang de koppeling bij je bank loopt, dus haast heb je niet.
+               Je houdt hem hier ook gewoon — overnemen maakt er een tweede plek bij, geen vervanging.`}
         </div>` : ""}
 
       ${!Bank.gekoppeld() ? `
