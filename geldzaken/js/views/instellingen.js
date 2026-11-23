@@ -191,6 +191,16 @@ export function html(params) {
       <div style="display:flex;justify-content:space-between;font-size:.83rem">
         <span class="dof">Potjes en doelen</span><span>${state.potjes.length + state.doelen.length}</span>
       </div>
+      ${/* Welke versie draait hier eigenlijk? Dat is drie keer een
+            raadsel geweest, dus nu staat het er gewoon. De naam komt
+            uit de cache van de servicewerker zelf, zodat er geen tweede
+            plek is die ernaast kan gaan zitten. */ ""}
+      <div style="display:flex;justify-content:space-between;font-size:.83rem">
+        <span class="dof">Versie</span><span data-versie>…</span>
+      </div>
+      <button class="knop knop--rand knop--breed" data-bijwerken style="margin-top:12px">
+        Controleren op een nieuwe versie
+      </button>
     </div>
 
     <button class="knop knop--rand knop--breed" data-wis-alles style="margin-top:8px;color:var(--fout);border-color:color-mix(in srgb, var(--fout) 40%, transparent)">
@@ -582,7 +592,11 @@ export function koppel(wortel, params) {
     if (e.target.matches("[data-bank-ai]")) Bank.zetInstellingen({ aiAan: e.target.checked });
   });
 
+  toonVersie(wortel);
+
   wortel.addEventListener("click", async e => {
+    if (e.target.closest("[data-bijwerken]")) return bijwerken();
+
     const thema = e.target.closest("[data-thema]");
     if (thema) {
       await zetInstelling({ thema: thema.dataset.thema });
@@ -651,6 +665,43 @@ function koppelCategorieen(wortel) {
     const rij = e.target.closest("[data-categorie]");
     if (rij) bewerkCategorie(state.categorieen.find(c => c.id === rij.dataset.categorie));
   });
+}
+
+/* ---------------------------- Versie -------------------------------- */
+/* De naam van de cache van de servicewerker is de versie. Die staat op
+   één plek — in sw.js — dus er is niets dat ernaast kan gaan lopen. */
+async function toonVersie(wortel) {
+  const vak = wortel.querySelector("[data-versie]");
+  if (!vak) return;
+  try {
+    const namen = await caches.keys();
+    const mijne = namen.filter(n => n.startsWith("geldzaken-"));
+    vak.textContent = mijne.length ? mijne.sort().reverse()[0].replace("geldzaken-", "") : "zonder cache";
+  } catch {
+    vak.textContent = "onbekend";
+  }
+}
+
+async function bijwerken() {
+  if (!("serviceWorker" in navigator)) return melding("Deze browser werkt niet met versies.", "fout");
+  melding("Even kijken of er een nieuwe versie is…");
+  try {
+    const registratie = await navigator.serviceWorker.getRegistration();
+    if (!registratie) return melding("Er draait geen servicewerker; herlaad de pagina eens.", "fout");
+    await registratie.update();
+
+    /* Staat er een nieuwe klaar, dan neemt die het over zodra we
+       herladen. Zo niet, dan draai je al de laatste. */
+    const nieuwe = registratie.installing || registratie.waiting;
+    if (nieuwe) {
+      melding("Nieuwe versie gevonden. Even opnieuw laden…", "goed");
+      setTimeout(() => location.reload(), 900);
+    } else {
+      melding("Je draait al de nieuwste versie.", "goed");
+    }
+  } catch {
+    melding("Het controleren lukte niet. Ben je online?", "fout");
+  }
 }
 
 /* ------------------------- Bank: de knoppen ------------------------- */
