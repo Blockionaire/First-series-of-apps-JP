@@ -178,6 +178,13 @@ function detail(id) {
 
     ${stand.soort === "sparen" ? `
       <div class="cijferrij" style="margin-top:14px">
+        ${/* Alleen tonen als er iets te tonen is: een beginbedrag van
+              nul zegt niets en maakt de rij alleen drukker. */ ""}
+        ${stand.startBedrag ? `
+          <div class="cijfer">
+            <div class="cijfer__waarde op">${geld(stand.startBedrag)}</div>
+            <div class="cijfer__label">Zat er al in</div>
+          </div>` : ""}
         <div class="cijfer">
           <div class="cijfer__waarde op">${geld(stand.automatisch)}</div>
           <div class="cijfer__label">Automatisch erin</div>
@@ -521,7 +528,20 @@ async function bewerkPotje(bestaand) {
       <div class="veld">
         <label for="kstart">Vullen vanaf</label>
         <input type="month" id="kstart" value="${esc(p.startMaand || maandNu())}">
-        <div class="veld__hint">Vanaf deze maand telt de app het maandbedrag mee. Had je al iets gespaard? Zet dan een storting op de datum waarop dat begon.</div>
+        <div class="veld__hint">Vanaf deze maand telt de app het maandbedrag mee.</div>
+      </div>
+      ${/* Zonder dit begint elk potje op nul, en lopen je potjes samen
+            altijd achter op wat er werkelijk op je rekening staat — ook
+            als je verder alles netjes bijhoudt. Alleen bij een
+            spaarpotje van betekenis; de andere twee gaan per maand. */ ""}
+      <div class="veld" data-startbedrag ${potSoort(p) === "sparen" ? "" : "hidden"}>
+        <label for="kstartbedrag">Zat er al iets in?</label>
+        <input type="text" id="kstartbedrag" inputmode="decimal"
+               value="${p.startBedrag ? String(p.startBedrag).replace(".", ",") : ""}" placeholder="0,00">
+        <div class="veld__hint">
+          Het bedrag dat er bij de start al in zat. Hiermee sluit je potje aan op je
+          echte saldo, in plaats van vanaf nul te beginnen.
+        </div>
       </div>
       <div class="veld">
         <span class="veld__label">Icoon</span>
@@ -560,6 +580,7 @@ async function bewerkPotje(bestaand) {
             soort: laag.querySelector("[data-soort][aria-pressed=true]")?.dataset.soort || potSoort(p),
             maandelijks: leesBedrag(laag.querySelector("#kmaand").value) || 0,
             doelBedrag: leesBedrag(laag.querySelector("#kdoel").value),
+            startBedrag: leesBedrag(laag.querySelector("#kstartbedrag").value) || 0,
             startMaand: laag.querySelector("#kstart").value || maandNu(),
             icoon: laag.querySelector("[data-icoon][aria-pressed=true]")?.dataset.icoon || p.icoon,
             kleur: laag.querySelector("[data-kleur][aria-pressed=true]")?.dataset.kleur || p.kleur,
@@ -574,6 +595,14 @@ async function bewerkPotje(bestaand) {
           const knop = e.target.closest(`[${attribuut}]`);
           if (!knop) return;
           laag.querySelectorAll(`[${attribuut}]`).forEach(k => k.setAttribute("aria-pressed", String(k === knop)));
+
+          /* Een beginbedrag heeft alleen bij een spaarpotje betekenis.
+             Het laten staan bij de andere twee zou een vraag stellen
+             waar het antwoord niets doet. */
+          if (attribuut === "data-soort") {
+            const vak = laag.querySelector("[data-startbedrag]");
+            if (vak) vak.hidden = knop.dataset.soort !== "sparen";
+          }
         });
       };
       kiezer("#kiconen", "data-icoon");

@@ -395,10 +395,14 @@ export function potSaldo(state, potje, totMaand = maandNu()) {
   const start = potje.startMaand || maandNu();
   const maanden = automatischAan ? Math.max(0, maandenTussen(start, totMaand) + 1) : 0;
   const automatisch = maanden * maandbedrag;
-  const saldo = automatisch + erbij - eraf;
+  /* Wat er bij de start al in zat. Zonder dit begint elk potje op nul en
+     lopen je potjes samen altijd achter op wat er echt op je rekening
+     staat — ook als je verder alles netjes bijhoudt. */
+  const beginBedrag = Number(potje.startBedrag) || 0;
+  const saldo = beginBedrag + automatisch + erbij - eraf;
 
   return {
-    soort, maandbedrag, saldo, automatisch,
+    soort, maandbedrag, saldo, automatisch, startBedrag: beginBedrag,
     gestort: erbij,
     opgenomen: eraf,
     maandenGevuld: maanden,

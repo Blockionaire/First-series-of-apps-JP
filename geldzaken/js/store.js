@@ -408,6 +408,11 @@ export function legPotje(velden = {}) {
     maandelijks: 0,
     subpotjes: [],       // [{ id, naam, bedrag }] — waaruit het bedrag bestaat
     doelBedrag: null,
+    /* Wat er bij de start al in zat. Zonder dit begint elk potje op nul
+       en lopen je potjes samen altijd achter op wat er werkelijk op je
+       rekening staat. Alleen van betekenis voor een spaarpotje: een
+       vrij potje en een vaste last gaan per maand. */
+    startBedrag: 0,
     startMaand: maandNu(),
     volgorde: state.potjes.length,
     actief: true,
