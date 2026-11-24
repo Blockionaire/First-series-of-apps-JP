@@ -15,7 +15,7 @@ import { dbAlles, dbZet, dbWis, dbZetVeel, dbWisVeel, dbLeeg,
 import * as Sync from "./sync.js";
 import * as Koppeling from "./koppeling.js";
 import { CATEGORIEEN, TREFWOORDEN } from "./data/standaard.js";
-import { maandNu, normaliseer, vandaagISO, maandVan } from "./util.js";
+import { maandNu, normaliseer, vandaagISO, maandVan, spoorBij, melding } from "./util.js";
 
 export { Sync, Koppeling };
 
@@ -77,7 +77,17 @@ export function meld() {
   meldGepland = true;
   queueMicrotask(() => {
     meldGepland = false;
-    luisteraars.forEach(fn => { try { fn(); } catch (e) { console.error(e); } });
+    luisteraars.forEach(fn => {
+      try { fn(); }
+      catch (e) {
+        /* Hier verdween een fout in de console, en op een telefoon is er
+           geen console. Breekt het tekenen af, dan blijft het scherm
+           staan zoals het stond en lijkt elke knop stuk — zonder dat
+           iets verraadt waarom. Dus zeggen we het nu. */
+        spoorBij(`tekenen brak af: ${e?.message || e}`);
+        melding(`Er ging iets mis bij het tekenen: ${e?.message || e}`, "fout");
+      }
+    });
   });
 }
 

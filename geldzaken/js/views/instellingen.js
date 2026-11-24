@@ -737,6 +737,16 @@ export function koppel(wortel, params) {
     e.rechtstreeks = true;
     codePlakken();
   });
+  /* De moduskeuze hangt niet langer van de omweg langs het scherm af.
+     Hij bleef stil terwijl de klik aantoonbaar aankwam, en wachten op
+     de verklaring is geen reden om een knop stuk te laten. */
+  wortel.querySelectorAll("[data-modus]").forEach(knop => {
+    knop.addEventListener("click", e => {
+      e.rechtstreeks = true;
+      wisselModus(knop.dataset.modus);
+    });
+  });
+
   wortel.querySelector("[data-bank-rekening]")?.addEventListener("click", e => {
     e.rechtstreeks = true;
     bankRekeningKiezen();
@@ -751,7 +761,17 @@ export function koppel(wortel, params) {
        scherm dat je voor je hebt? Zo niet, dan verklaart dat een knop
        die zwijgt. */
     const levend = document.querySelector("#scherm");
-    spoorBij(`scherm hoort klik op ${merkVan(e.target)}`
+
+    /* Niet alleen wát je aantikte, maar ook welke knop deze afhandeling
+       daarin herkent. Zonder dat blijft "de klik komt aan maar er
+       gebeurt niets" een raadsel: je ziet niet of de herkenning faalt
+       of het werk erachter. */
+    const herkend = ["data-modus", "data-thema", "data-nieuw-persoon", "data-bijwerken",
+                     "data-bank-proef", "data-bank-koppel", "data-bank-rekening",
+                     "data-code-plak", "data-spoor-wis", "data-wis-alles"]
+      .filter(a => e.target.closest(`[${a}]`));
+
+    spoorBij(`scherm hoort klik op ${merkVan(e.target)} → ${herkend.join(", ") || "geen knop herkend"}`
       + (levend === wortel ? "" : ` — LET OP: dit is ronde ${wortel.dataset.ronde}, levend is ronde ${levend?.dataset.ronde}`));
 
     if (e.target.closest("[data-spoor-wis]")) return spoorLeeg();
@@ -766,11 +786,7 @@ export function koppel(wortel, params) {
     }
 
     const modus = e.target.closest("[data-modus]");
-    if (modus) {
-      await zetInstelling({ modus: modus.dataset.modus });
-      melding(modus.dataset.modus === "eenvoudig" ? "Op hoofdlijnen." : "Alles bijhouden staat aan.", "goed");
-      return ga("#/start");
-    }
+    if (modus) return e.rechtstreeks || wisselModus(modus.dataset.modus);
 
     if (e.target.closest("[data-nieuw-persoon]")) return voegPersoonToe();
 
@@ -1119,6 +1135,26 @@ async function vergeetDeBank() {
   if (!Bank.ingesteld()) return;
   try { await Bank.loskoppelen(); } catch { /* verloopt vanzelf */ }
   await Bank.vergeetAlles();
+}
+
+/* ---------------------------- Modus -------------------------------- */
+/* Eerst zichtbaar reageren, dan pas iets doen — en elke stap in het
+   spoor. Deze knop heeft twee keer stilgestaan, en beide keren was
+   het enige wat ontbrak de wetenschap hoe ver hij kwam. */
+async function wisselModus(naar) {
+  spoorBij(`modus wisselen naar ${naar}`);
+  if (state.instellingen.modus === naar) {
+    return melding(naar === "eenvoudig" ? "Je houdt al op hoofdlijnen bij." : "Je houdt al alles bij.");
+  }
+  try {
+    await zetInstelling({ modus: naar });
+    spoorBij(`modus is nu ${state.instellingen.modus}`);
+    melding(naar === "eenvoudig" ? "Op hoofdlijnen." : "Alles bijhouden staat aan.", "goed");
+    ga("#/start");
+  } catch (fout) {
+    spoorBij(`modus wisselen mislukte: ${fout.message}`);
+    melding(`Het wisselen lukte niet: ${fout.message}`, "fout");
+  }
 }
 
 /* ------------------- Bank: hoe je er weer vanaf komt ---------------- */
