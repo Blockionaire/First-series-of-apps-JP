@@ -341,7 +341,15 @@ function volgAanrakingen() {
      bent.
 
      Wachten kost niets. Een hertekening een halve tel uitstellen ziet
-     niemand; een tik die nergens aankomt wel. */
+     niemand; een tik die nergens aankomt wel.
+
+     Let op wannéér we loslaten. Een klik komt ná het loslaten van de
+     vinger, niet ervoor. Tekenden we al bij `pointerup`, dan viel de
+     hertekening precies in het gaatje ertussen: de klik werd daarna
+     bezorgd bij een scherm dat niet meer in de pagina stond, en de
+     afhandeling daar deed niets meer voor wat je voor je ziet. Dat is
+     precies de kwaal die dit moest verhelpen, één stap later. Dus
+     wachten we tot de klik is afgehandeld. */
   const laatLos = () => {
     vingerNeer = false;
     clearTimeout(noodklok);
@@ -356,8 +364,22 @@ function volgAanrakingen() {
     clearTimeout(noodklok);
     noodklok = setTimeout(laatLos, 1500);
   }, true);
-  document.addEventListener("pointerup", laatLos, true);
+
+  /* Na het loslaten wachten we nog even op de klik. Komt die niet —
+     omdat je scrolde of naast de knop losliet — dan gaat het alsnog. */
+  document.addEventListener("pointerup", () => {
+    clearTimeout(noodklok);
+    noodklok = setTimeout(laatLos, 400);
+  }, true);
   document.addEventListener("pointercancel", laatLos, true);
+
+  /* Zonder `capture` loopt deze als laatste, ná de afhandeling van het
+     scherm: document ligt bovenaan en bubbelen gaat van binnen naar
+     buiten. Dan pas mag er getekend worden. */
+  document.addEventListener("click", () => {
+    clearTimeout(noodklok);
+    noodklok = setTimeout(laatLos, 0);
+  });
 
   document.addEventListener("pointerdown", e => {
     const el = e.target.closest?.("button, summary, a, input, label, .rij, .schakelrij") || e.target;
