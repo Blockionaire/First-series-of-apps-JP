@@ -12,7 +12,7 @@ import { esc, geld, melding, bevestig, dialoog, downloadTekst, maandLabel, datum
          kiesBestand, leesTekst, leesBedrag, debounce,
          spoorBij, spoorTekst, spoorLeeg } from "../util.js";
 import { state, zetInstelling, zetKoppeling, Sync, Koppeling, magBewerken, isBeheerder,
-         legeCategorie, bewaarCategorie, wisCategorie, alsBackup,
+         legeCategorie, bewaarCategorie, wisCategorie, alsBackup, legeRekening, bewaarRekening,
          herstelBackup, alsCSV, wisAlles, duwAllesOmhoog, meld } from "../store.js";
 import * as Bank from "../bank.js";
 import { perCategorie, externeUitgaven, externeMaanden } from "../bereken.js";
@@ -356,6 +356,33 @@ function bankBlok() {
             <a class="knop knop--primair" href="#/importeren">Transacties ophalen</a>
             <button class="knop" data-bank-rekening>Andere rekening</button>
           </div>
+          ${/* Waar komen die boekingen terecht? Zonder deze keuze
+                belandden ze op je standaardrekening, ook als ze van een
+                andere rekening kwamen. Herkent de app de IBAN in je
+                boekhouding, dan staat hij hier al goed. */ ""}
+          <div class="veld" style="margin-top:12px">
+            <label for="bankdoel">Boekingen komen op</label>
+            <select id="bankdoel">
+              <option value="">— kies een rekening —</option>
+              ${state.rekeningen.map(r => `
+                <option value="${esc(r.id)}" ${Bank.boekOpRekening()?.id === r.id ? "selected" : ""}>
+                  ${esc(r.naam)}${r.iban ? ` · ${esc(r.iban)}` : ""}
+                </option>`).join("")}
+            </select>
+            <div class="veld__hint">
+              ${b.iban ? `Je bank noemt deze rekening <strong>${esc(b.iban)}</strong>. ` : ""}
+              ${Bank.rekeningMetIban(b.iban)
+                ? "Die IBAN staat ook in je boekhouding, dus die is alvast gekozen."
+                : b.iban
+                  ? "Die IBAN staat nog niet in je boekhouding. Kies hierboven waar de boekingen heen moeten, of maak er een rekening van."
+                  : "Kies waar de boekingen heen moeten."}
+            </div>
+            ${b.iban && !Bank.rekeningMetIban(b.iban) ? `
+              <button class="knop knop--klein" data-bank-nieuwe-rekening style="margin-top:8px">
+                Rekening aanmaken voor ${esc(b.iban)}
+              </button>` : ""}
+          </div>
+
           <button class="knop knop--rand knop--breed" data-bank-los style="margin-top:9px">Koppeling verbreken</button>
       `}
 
@@ -708,6 +735,7 @@ export function koppel(wortel, params) {
     if (e.target.matches("[data-potjes]")) zetInstelling({ potjesAutomatisch: e.target.checked });
     if (e.target.matches("[data-bank-ai]")) Bank.zetInstellingen({ aiAan: e.target.checked });
     if (e.target.id === "bankritme") Bank.zetInstellingen({ ritme: e.target.value }).then(meld);
+    if (e.target.id === "bankdoel") Bank.koppelAanRekening(e.target.value);
   });
 
   toonVersie(wortel);
@@ -796,6 +824,7 @@ export function koppel(wortel, params) {
     if (e.target.closest("[data-code-kopieer]")) return codeKopieren();
     if (e.target.closest("[data-code-vergeet]")) return codeVergeten();
     if (e.target.closest("[data-code-plak]")) return e.rechtstreeks || codePlakken();
+    if (e.target.closest("[data-bank-nieuwe-rekening]")) return maakRekeningVoorBank();
     if (e.target.closest("[data-bank-uitleg]")) return e.rechtstreeks || bankUitleg();
     if (e.target.closest("[data-bank-vergeet]")) return e.rechtstreeks || bankVergeten();
     if (e.target.closest("[data-bank-rekening]")) return e.rechtstreeks || bankRekeningKiezen();
@@ -1040,7 +1069,7 @@ async function bankRekeningKiezen() {
 
   if (!keuze) return;
   const gekozen = gegevens.rekeningen.find(r => r.id === keuze);
-  await Bank.kiesRekening(keuze, gekozen?.iban || gekozen?.naam || "");
+  await Bank.kiesRekening(keuze, gekozen?.iban || gekozen?.naam || "", gekozen?.iban || "");
   melding("Rekening gekozen.", "goed");
   meld();
 }
@@ -1135,6 +1164,26 @@ async function vergeetDeBank() {
   if (!Bank.ingesteld()) return;
   try { await Bank.loskoppelen(); } catch { /* verloopt vanzelf */ }
   await Bank.vergeetAlles();
+}
+
+/* Van de gekoppelde bankrekening een rekening in je boekhouding maken.
+   Dat scheelt overtikken, en de IBAN klopt dan gegarandeerd — waardoor
+   de koppeling er meteen op aansluit. */
+async function maakRekeningVoorBank() {
+  if (!eisBewerkrecht()) return;
+  const b = Bank.bank;
+  if (!b.iban) return;
+
+  const rekening = legeRekening({
+    naam: b.bankNaam || "Betaalrekening",
+    soort: "betaal",
+    iban: b.iban,
+    standaard: state.rekeningen.length === 0,
+  });
+  await bewaarRekening(rekening);
+  await Bank.koppelAanRekening(rekening.id);
+  melding(`${rekening.naam} toegevoegd en gekoppeld.`, "goed");
+  meld();
 }
 
 /* ---------------------------- Modus -------------------------------- */

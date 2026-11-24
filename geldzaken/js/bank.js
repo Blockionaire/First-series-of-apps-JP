@@ -19,7 +19,7 @@
    ===================================================================== */
 
 import { dbHaal, dbZet, dbWis, LOKAAL } from "./db.js";
-import { meld } from "./store.js";
+import { meld, state, standaardRekening } from "./store.js";
 import { spoorBij } from "./util.js";
 
 const SLEUTEL = "bank";
@@ -53,6 +53,11 @@ export const bank = {
   dienstVersie: "",     // welke versie je eigen dienst draait
   rekening: "",         // welke rekening je volgt
   rekeningNaam: "",
+  iban: "",             // de IBAN van die rekening, zoals je bank hem geeft
+  /* Welke rekening in je boekhouding hierbij hoort. Zonder dit belandt
+     alles wat je inleest op je standaardrekening, ook als dat een
+     andere is dan waar het vandaan komt. */
+  appRekening: "",
   geldigTot: "",        // wanneer de toestemming verloopt
   laatst: 0,            // wanneer er voor het laatst is opgehaald
   laatstVerwerkt: 0,    // wanneer je er voor het laatst echt iets mee deed
@@ -252,7 +257,8 @@ export async function zetInstellingen({ adres, woord, aiAan, overdracht, ritme }
 export async function vergeetAlles() {
   Object.assign(bank, {
     adres: "", woord: "", sessie: "", overdracht: "", bankNaam: "", rekening: "",
-    rekeningNaam: "", geldigTot: "", laatst: 0, aiAan: false, fout: null, proef: null,
+    rekeningNaam: "", iban: "", appRekening: "", geldigTot: "", laatst: 0,
+    aiAan: false, fout: null, proef: null,
   });
   try { await dbWis(LOKAAL, SLEUTEL); } catch { /* niets aan te doen */ }
 }
@@ -512,8 +518,8 @@ async function zetSessie(sessie) {
     if (naam) bank.bankNaam = naam;
     if (geldigTot) bank.geldigTot = geldigTot;
     if (rekeningen.length === 1) {
-      bank.rekening = rekeningen[0].id;
-      bank.rekeningNaam = rekeningen[0].iban || rekeningen[0].naam || "";
+      await kiesRekening(rekeningen[0].id,
+        rekeningen[0].iban || rekeningen[0].naam || "", rekeningen[0].iban);
     }
     await bewaar();
   } catch (e) {
@@ -582,10 +588,43 @@ export async function haalRekeningen() {
   return { rekeningen: uit.rekeningen || [], bank: uit.bank || "", geldigTot: uit.geldigTot || "" };
 }
 
-export async function kiesRekening(id, naam = "") {
+export async function kiesRekening(id, naam = "", iban = "") {
   bank.rekening = id;
   bank.rekeningNaam = naam;
+  bank.iban = iban || (/^[A-Z]{2}\d/i.test(naam) ? naam : "");
+
+  /* Herkennen we deze rekening in je boekhouding, dan knopen we ze
+     meteen aan elkaar. Je hebt die IBAN daar al ingevuld; hem nog een
+     keer aanwijzen is werk dat de app zelf kan doen. */
+  if (!bank.appRekening) {
+    const gevonden = rekeningMetIban(bank.iban);
+    if (gevonden) bank.appRekening = gevonden.id;
+  }
   await bewaar();
+}
+
+/* Een IBAN zonder spaties en in hoofdletters: zo staat hij nooit twee
+   keer net anders in de weg. */
+const kaalIban = s => String(s || "").replace(/\s+/g, "").toUpperCase();
+
+export const rekeningMetIban = iban => {
+  const kaal = kaalIban(iban);
+  if (kaal.length < 8) return null;
+  return state.rekeningen.find(r => kaalIban(r.iban) === kaal) || null;
+};
+
+/* Op welke rekening in je boekhouding horen deze boekingen? Eerst wat
+   je zelf koos, dan de IBAN, en anders je standaardrekening. */
+export function boekOpRekening() {
+  const gekozen = state.rekeningen.find(r => r.id === bank.appRekening);
+  if (gekozen) return gekozen;
+  return rekeningMetIban(bank.iban) || standaardRekening() || null;
+}
+
+export async function koppelAanRekening(rekeningId) {
+  bank.appRekening = rekeningId || "";
+  await bewaar();
+  meld();
 }
 
 export async function loskoppelen() {

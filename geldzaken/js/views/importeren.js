@@ -49,7 +49,13 @@ let voorstellen = [];     // { transactie, dubbel, kies }
 let rekeningKeuze = "";
 
 export function opBinnenkomst() {
-  if (stap === "kies") rekeningKeuze = standaardRekening()?.id || "";
+  /* De rekening waar je bankkoppeling aan hangt gaat voor. Pas als die
+     er niet is valt hij terug op je standaardrekening — anders belandt
+     alles daarop, ook als het ergens anders vandaan komt. */
+  if (stap === "kies") {
+    rekeningKeuze = (Bank.gekoppeld() ? Bank.boekOpRekening()?.id : null)
+      || standaardRekening()?.id || "";
+  }
 }
 
 /* ---------------------------------------------------------------
