@@ -76,7 +76,9 @@ function kiesScherm() {
             : `De eerste keer halen we zoveel historie op als je bank geeft — meestal negentig dagen.`}
         </p>
         <button class="knop knop--primair knop--breed" data-bank-haal ${b.bezig ? "disabled" : ""}>
-          ${b.bezig ? "Bezig met ophalen…" : "Transacties ophalen"}
+          ${b.bezig ? "Bezig met ophalen…"
+            : b.wachtend.length ? `${b.wachtend.length} opgehaalde ${b.wachtend.length === 1 ? "boeking" : "boekingen"} nakijken`
+            : "Transacties ophalen"}
         </button>
         ${b.fout ? `<div class="veld__fout">${esc(b.fout)}</div>` : ""}
       </div>
@@ -599,11 +601,19 @@ async function haalVanBank() {
 
   meld();
   let uit;
-  try {
-    uit = await Bank.haalTransacties({ vanaf, alles: !Bank.bank.laatst });
-  } catch (fout) {
-    melding(fout.message, "fout");
-    return meld();
+
+  /* Heeft de app zelf al opgehaald, dan gebruiken we dat. Nog een ronde
+     bij je bank zou niets nieuws opleveren en telt wel mee in het
+     handjevol rondes dat je per dag krijgt. */
+  if (Bank.bank.wachtend.length) {
+    uit = { transacties: Bank.bank.wachtend, afgekapt: false };
+  } else {
+    try {
+      uit = await Bank.haalTransacties({ vanaf, alles: !Bank.bank.laatst });
+    } catch (fout) {
+      melding(fout.message, "fout");
+      return meld();
+    }
   }
 
   if (!uit.transacties.length) {
@@ -700,7 +710,14 @@ async function toevoegen() {
   if (!lijst.length) return;
 
   await bewaarVeelTransacties(lijst);
+
+  /* Nu is er écht iets met die boekingen gebeurd. Dat is het moment dat
+     telt voor "je hebt al zoveel dagen niets opgehaald" — ophalen
+     alleen zegt niets als het daarna blijft liggen. En wat klaarstond
+     is daarmee afgehandeld. */
+  await Bank.zetVerwerkt();
+
   melding(`${lijst.length} boekingen toegevoegd.`, "goed");
   herstart();
-  ga("#/maand");
+  ga(eenvoudig() ? "#/start" : "#/maand");
 }

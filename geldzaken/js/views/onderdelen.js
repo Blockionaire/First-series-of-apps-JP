@@ -201,15 +201,21 @@ export function potKaart(pot) {
     </button>`;
 }
 
+/* Hoort er iets te gebeuren naar aanleiding van een signaal, dan moet je
+   er ook heen kunnen. Een melding die zegt wat je moet doen en je daar
+   niet brengt, laat het werk bij jou. */
 export function signaalHtml(s) {
-  return `
-    <div class="signaal signaal--${esc(s.soort)}">
-      <span class="signaal__icoon" aria-hidden="true">${esc(s.icoon)}</span>
-      <span>
-        <span class="signaal__titel">${esc(s.titel)}</span>
-        <span class="signaal__tekst">${esc(s.tekst)}</span>
-      </span>
-    </div>`;
+  const binnen = `
+    <span class="signaal__icoon" aria-hidden="true">${esc(s.icoon)}</span>
+    <span>
+      <span class="signaal__titel">${esc(s.titel)}</span>
+      <span class="signaal__tekst">${esc(s.tekst)}</span>
+    </span>
+    ${s.route ? `<span class="signaal__pijl dof" aria-hidden="true">›</span>` : ""}`;
+
+  return s.route
+    ? `<a class="signaal signaal--${esc(s.soort)} signaal--klik" href="${esc(s.route)}">${binnen}</a>`
+    : `<div class="signaal signaal--${esc(s.soort)}">${binnen}</div>`;
 }
 
 /* Maanden waarin iets geboekt is, nieuwste eerst — voor keuzelijsten. */

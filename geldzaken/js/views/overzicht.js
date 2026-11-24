@@ -14,7 +14,8 @@ import { esc, geld, procent, maandLabel, maandNu, maandPlus, ring, voortgang } f
 import { state, zetInstelling, meld, Sync, Koppeling } from "../store.js";
 import { verdeling, POTSOORTEN, maandOverzicht, externeUitgaven,
          externeMaanden, doelenMetStand, heeftSubpotjes, subpotjesVan } from "../bereken.js";
-import { maandkiezer, koppelMaandkiezer, leeg } from "./onderdelen.js";
+import { maandkiezer, koppelMaandkiezer, leeg, signaalHtml } from "./onderdelen.js";
+import * as Bank from "../bank.js";
 import { ga } from "../app.js";
 
 /* Welke schijf van de taart is aangetikt. Leeg betekent: geen. Blijft
@@ -55,11 +56,20 @@ export function html() {
       ${maandkiezer(state.maand, { maxMaand: maandPlus(maandNu(), 12) })}
     </div>`;
 
-  if (!ingericht) return kiezer + welkom();
-  if (!v.inkomen && !v.posten.length) return kiezer + legeMaand();
+  /* Vraagt je bank om aandacht, dan hoort dat bovenaan — en boven elke
+     afslag hieronder. Ook op een lege maand of een scherm dat nog
+     uitlegt hoe de app werkt: dat jij nog niets hebt ingericht zegt
+     niets over wat er bij je bank klaarstaat. */
+  const bankbericht = Bank.signaal();
+  const bericht = bankbericht
+    ? `<div style="margin-bottom:14px">${signaalHtml(bankbericht)}</div>` : "";
+
+  if (!ingericht) return kiezer + bericht + welkom();
+  if (!v.inkomen && !v.posten.length) return kiezer + bericht + legeMaand();
 
   return `
     ${kiezer}
+    ${bericht}
 
     ${inkomenBlok(v)}
     ${taart(v)}

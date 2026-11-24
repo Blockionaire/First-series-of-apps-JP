@@ -14,6 +14,7 @@ import { maandOverzicht, signalen, aankomend, budgetten, perCategorie,
 import { maandkiezer, koppelMaandkiezer, signaalHtml, transactieRij,
          leeg, potKaart } from "./onderdelen.js";
 import { ga, eisBewerkrecht } from "../app.js";
+import * as Bank from "../bank.js";
 
 export const titel = () => state.instellingen.huisNaam || "Geldzaken";
 export const ondertitel = () => {
@@ -47,7 +48,9 @@ function syncTitel() {
 export function html() {
   const maand = state.maand;
   const o = maandOverzicht(state, maand);
-  const lijst = signalen(state, maand);
+  /* Het bankbericht voorop: dat vraagt iets van je en de rest beschrijft
+     alleen hoe het ervoor staat. */
+  const lijst = [Bank.signaal(), ...signalen(state, maand)].filter(Boolean);
 
   return `
     <div style="display:flex;justify-content:center;margin-bottom:14px">

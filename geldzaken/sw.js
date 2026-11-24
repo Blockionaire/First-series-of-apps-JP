@@ -16,7 +16,7 @@
      een schrijfactie in de cache hangen.
    ===================================================================== */
 
-const CACHE = "geldzaken-v34";
+const CACHE = "geldzaken-v35";
 
 const SCHIL = [
   "./",

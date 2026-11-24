@@ -123,12 +123,20 @@ let vorigSchermNaam = null;
 let vorigePoort = null;
 let laatsteHtml = null;      // wat er nu op het scherm staat
 let ronde = 0;               // hoeveelste hertekening dit is
+let vingerNeer = false;      // staat er op dit moment een vinger op het scherm?
+let wachtendeTekening = false;
 const scrollGeheugen = {};
 let opruimen = null;
 
 function teken() {
   const app = $("#app");
   if (!app) return;
+
+  /* Raakt iemand op dit moment het scherm aan, dan wachten we. Het
+     element onder een vinger weghalen betekent dat die tik nergens
+     aankomt — zie `volgAanrakingen`. Zodra de vinger loslaat gebeurt
+     dit alsnog. */
+  if (vingerNeer) { wachtendeTekening = true; return; }
 
   /* Eerst de poort: mag deze bezoeker überhaupt naar binnen? */
   const poort = poortStatus();
@@ -322,6 +330,35 @@ export const merkVan = el => {
 function volgAanrakingen() {
   let ingedrukt = null;
 
+  /* Zolang je vinger op het scherm staat tekenen we niet opnieuw.
+
+     Een klik ontstaat pas als indrukken én loslaten op hetzelfde
+     element gebeuren. Hertekent de app daartussenin, dan is dat element
+     weg en komt er geen klik — de knop lijkt stuk. Dat is hier
+     herhaaldelijk gebeurd, en het was nooit de knop: de boodschappen-
+     koppeling haalt bij het openen zijn gegevens op, en dat antwoord
+     landt een seconde of twee later. Precies wanneer je aan het tikken
+     bent.
+
+     Wachten kost niets. Een hertekening een halve tel uitstellen ziet
+     niemand; een tik die nergens aankomt wel. */
+  const laatLos = () => {
+    vingerNeer = false;
+    clearTimeout(noodklok);
+    if (wachtendeTekening) { wachtendeTekening = false; teken(); }
+  };
+  let noodklok = 0;
+
+  document.addEventListener("pointerdown", () => {
+    vingerNeer = true;
+    /* Komt er geen loslaten — het gebeurt — dan gaat het na een tel
+       gewoon door. Liever een late hertekening dan een bevroren app. */
+    clearTimeout(noodklok);
+    noodklok = setTimeout(laatLos, 1500);
+  }, true);
+  document.addEventListener("pointerup", laatLos, true);
+  document.addEventListener("pointercancel", laatLos, true);
+
   document.addEventListener("pointerdown", e => {
     const el = e.target.closest?.("button, summary, a, input, label, .rij, .schakelrij") || e.target;
     ingedrukt = el;
@@ -404,6 +441,11 @@ async function opstarten() {
   /* Eén regel met de omstandigheden. Zonder dit is elk antwoord op
      "waarom doet die knop niets" een gok over welke app, welke versie en
      welk startscherm er eigenlijk draait. */
+  /* Mag de app zelf ophalen, en is het lang genoeg geleden? Niet
+     afwachten: het scherm hoort er niet op te blijven staan, en zodra
+     er iets binnen is meldt het zich vanzelf. */
+  Bank.haalZelfOp().then(aantal => { if (aantal) teken(); });
+
   spoorBij([
     `start · ${window.matchMedia("(display-mode: standalone)").matches || navigator.standalone ? "vanaf beginscherm" : "in de browser"}`,
     `scherm ${window.innerWidth}×${window.innerHeight}`,

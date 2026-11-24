@@ -421,6 +421,20 @@ function bankBlok() {
         <button class="knop knop--klein" data-spoor-wis>Spoor wissen</button>
       </div>
 
+      ${Bank.gekoppeld() ? `
+        <div class="veld" style="margin-top:14px">
+          <label for="bankritme">Zelf ophalen</label>
+          <select id="bankritme">
+            ${Object.entries(Bank.RITMES).map(([id, r]) =>
+              `<option value="${esc(id)}" ${b.ritme === id ? "selected" : ""}>${esc(r.label)}</option>`).join("")}
+          </select>
+          <div class="veld__hint">
+            ${esc(Bank.RITMES[b.ritme]?.uitleg || "")}
+            Ophalen gebeurt bij het openen van de app — een app in een browser draait niet op
+            de achtergrond. Er komt niets in je boekhouding zonder dat jij het hebt nagekeken.
+          </div>
+        </div>` : ""}
+
       <div class="schakelrij" style="margin-top:4px">
         <span class="schakelrij__tekst">
           <span class="schakelrij__titel">Vrij vragen met Claude</span>
@@ -693,6 +707,7 @@ export function koppel(wortel, params) {
     if (e.target.id === "koppelpot") zetKoppeling({ potje: e.target.value });
     if (e.target.matches("[data-potjes]")) zetInstelling({ potjesAutomatisch: e.target.checked });
     if (e.target.matches("[data-bank-ai]")) Bank.zetInstellingen({ aiAan: e.target.checked });
+    if (e.target.id === "bankritme") Bank.zetInstellingen({ ritme: e.target.value }).then(meld);
   });
 
   toonVersie(wortel);

@@ -43,12 +43,25 @@ export const bank = {
      praktijk: je bank stuurde je browser terug in plaats van de app op
      je beginscherm. Over te dragen met een code. */
   overdracht: "",
+  /* Wat de app zelf ophaalde en jij nog niet hebt nagekeken. Dit gaat
+     niet de opslag in: raak je het kwijt, dan haalt de volgende ronde
+     dezelfde boekingen gewoon opnieuw op — het venster begint een week
+     vóór de vorige keer en dubbel kan niet. Bewaren zou dus alleen een
+     tweede waarheid opleveren die kan gaan afwijken. */
+  wachtend: [],
   bankNaam: "",
   dienstVersie: "",     // welke versie je eigen dienst draait
   rekening: "",         // welke rekening je volgt
   rekeningNaam: "",
   geldigTot: "",        // wanneer de toestemming verloopt
   laatst: 0,            // wanneer er voor het laatst is opgehaald
+  laatstVerwerkt: 0,    // wanneer je er voor het laatst echt iets mee deed
+  /* Hoe vaak de app uit zichzelf mag ophalen bij het openen: uit, week
+     of dag. Vaker dan eens per dag heeft geen zin — je bank staat maar
+     een paar rondes per dag toe, en je afschrift verandert niet sneller
+     dan je uitgeeft. */
+  ritme: "uit",
+  laatstGeprobeerd: 0,  // ook een mislukte poging telt, anders blijft hij hameren
   aiAan: false,         // mag een niet-herkende vraag naar Claude?
   bezig: false,
   fout: null,
@@ -89,6 +102,95 @@ export const opBeginscherm = () =>
   (window.matchMedia?.("(display-mode: standalone)")?.matches ?? false) || navigator.standalone === true;
 
 export const ingesteld = () => !!(bank.adres && bank.woord);
+
+/* ---------------------------------------------------------------
+   Zelf ophalen
+   ---------------------------------------------------------------
+   Een app in een browser draait niet op de achtergrond, dus "zelf
+   ophalen" betekent hier: bij het openen, als het lang genoeg geleden
+   is. Verder dan eens per dag gaan we niet — je bank staat maar een
+   paar rondes toe, en je afschrift verandert niet sneller dan je
+   uitgeeft.
+   --------------------------------------------------------------- */
+export const RITMES = {
+  uit:  { label: "Nooit",          tussen: 0,            uitleg: "Je haalt zelf op wanneer je wil." },
+  week: { label: "Eens per week",  tussen: 7 * 86400_000, uitleg: "Bij het openen, als het een week geleden is." },
+  dag:  { label: "Eens per dag",   tussen: 86400_000,     uitleg: "Bij het openen, als het een dag geleden is. Vaker mag je bank niet." },
+};
+
+/* Niet blijven hameren als het misgaat: na een mislukte poging wachten
+   we een paar uur, ook bij "eens per dag". */
+const RUST_NA_POGING = 4 * 3600_000;
+
+export async function haalZelfOp() {
+  const ritme = RITMES[bank.ritme];
+  if (!ritme?.tussen) return null;
+  if (!gekoppeld() || !bank.rekening) return null;
+  if (bank.wachtend.length) return null;          // er ligt al iets te wachten
+  if (Date.now() - (bank.laatst || 0) < ritme.tussen) return null;
+  if (Date.now() - (bank.laatstGeprobeerd || 0) < RUST_NA_POGING) return null;
+
+  bank.laatstGeprobeerd = Date.now();
+  await bewaar();
+  spoorBij(`zelf ophalen (${bank.ritme})`);
+
+  try {
+    /* Een week terug vanaf de vorige keer, net als wanneer je zelf op
+       de knop drukt: banken boeken wel eens met vertraging. */
+    const vanaf = bank.laatst
+      ? new Date(bank.laatst - 7 * 86400_000).toISOString().slice(0, 10)
+      : null;
+    const uit = await haalTransacties({ vanaf, alles: !bank.laatst });
+    bank.wachtend = uit.transacties || [];
+    spoorBij(`zelf opgehaald: ${bank.wachtend.length}`);
+    return bank.wachtend.length;
+  } catch (e) {
+    /* Niet schreeuwen: je vroeg hier niet om en je bent met iets anders
+       bezig. Het staat in het spoor, en de volgende ronde probeert het
+       opnieuw. */
+    spoorBij(`zelf ophalen lukte niet: ${e.message}`);
+    return null;
+  }
+}
+
+/* Je hebt de boekingen nagekeken en toegevoegd. Daarmee is wat
+   klaarstond afgehandeld, en begint het tellen opnieuw. */
+export async function zetVerwerkt() {
+  bank.laatstVerwerkt = Date.now();
+  bank.wachtend = [];
+  await bewaar();
+}
+
+/* Hoe lang is het geleden dat je er echt iets mee deed? */
+export const dagenStil = () => {
+  const sinds = bank.laatstVerwerkt || bank.laatst;
+  if (!sinds) return null;
+  return Math.floor((Date.now() - sinds) / 86400_000);
+};
+
+/* Het signaal voor je startscherm, of niets als er niets te melden is. */
+export function signaal() {
+  if (!gekoppeld()) return null;
+
+  if (bank.wachtend.length) {
+    const n = bank.wachtend.length;
+    return {
+      soort: "goed", icoon: "📥", route: "#/importeren",
+      titel: `${n} ${n === 1 ? "boeking staat" : "boekingen staan"} klaar`,
+      tekst: "Opgehaald bij je bank en nog niet nagekeken. Tik om ze in te delen.",
+    };
+  }
+
+  const dagen = dagenStil();
+  if (dagen !== null && dagen >= 7) {
+    return {
+      soort: "let-op", icoon: "🏦", route: "#/importeren",
+      titel: `Al ${dagen} dagen geen boekingen opgehaald`,
+      tekst: "Hoe langer je wacht, hoe meer er in één keer na te kijken is. Tik om nu op te halen.",
+    };
+  }
+  return null;
+}
 export const gekoppeld = () => ingesteld() && !!bank.sessie;
 
 /* Hoeveel dagen is de toestemming nog geldig? Null als we het niet
@@ -108,6 +210,7 @@ export async function laad() {
   try {
     const bewaard = await metKlok(dbHaal(LOKAAL, SLEUTEL), 3000, "opslag antwoordt niet");
     if (bewaard) Object.assign(bank, bewaard, { bezig: false, fout: null });
+    bank.wachtend = [];   // staat nooit in de opslag; zie `bewaar`
     bank.opslag = true;
   } catch {
     /* Geen opslag — bijvoorbeeld een database die nog op de oude versie
@@ -120,7 +223,10 @@ export async function laad() {
 }
 
 async function bewaar() {
-  const { geladen, bezig, fout, opslag, ...rest } = bank;
+  /* `wachtend` blijft hier bewust buiten: dat is wat er deze keer is
+     opgehaald en nog niet nagekeken, en dat halen we desnoods opnieuw
+     op. Bewaren zou een tweede waarheid maken die kan gaan afwijken. */
+  const { geladen, bezig, fout, opslag, wachtend, ...rest } = bank;
   const voor = bank.opslag;
   try { await metKlok(dbZet(LOKAAL, { id: SLEUTEL, ...rest }), 3000, "opslag antwoordt niet"); bank.opslag = true; }
   catch { bank.opslag = false; spoorBij("bewaren lukte niet (opslag antwoordt niet)"); }
@@ -129,12 +235,13 @@ async function bewaar() {
   if (voor !== bank.opslag) meld();
 }
 
-export async function zetInstellingen({ adres, woord, aiAan, overdracht }) {
+export async function zetInstellingen({ adres, woord, aiAan, overdracht, ritme }) {
   const voor = bank.adres + "|" + bank.woord;
   if (adres !== undefined) bank.adres = String(adres).trim().replace(/\/+$/, "");
   if (woord !== undefined) bank.woord = String(woord).trim();
   if (aiAan !== undefined) bank.aiAan = !!aiAan;
   if (overdracht !== undefined) bank.overdracht = String(overdracht).trim();
+  if (ritme !== undefined && RITMES[ritme]) bank.ritme = ritme;
   bank.fout = null;
   /* Verander je adres of woord, dan zegt een oude uitslag niets meer. */
   if (voor !== bank.adres + "|" + bank.woord) bank.proef = null;
