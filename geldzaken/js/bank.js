@@ -54,10 +54,17 @@ export const bank = {
   rekening: "",         // welke rekening je volgt
   rekeningNaam: "",
   iban: "",             // de IBAN van die rekening, zoals je bank hem geeft
-  /* Welke rekening in je boekhouding hierbij hoort. Zonder dit belandt
-     alles wat je inleest op je standaardrekening, ook als dat een
-     andere is dan waar het vandaan komt. */
   appRekening: "",
+  /* De rekeningen die je volgt, elk met de rekening in je boekhouding
+     waar hun boekingen heen gaan:
+       [{ id, iban, naam, appRekening }]
+
+     Dit was eerst één rekening. Wie er twee uitleest kon de tweede
+     nergens kwijt, en alles belandde op dezelfde plek — stil, want
+     niets in het scherm verraadde dat er een tweede bestond. De velden
+     hierboven blijven staan om een bestaande koppeling over te zetten;
+     zie `laad`. */
+  rekeningen: [],
   geldigTot: "",        // wanneer de toestemming verloopt
   laatst: 0,            // wanneer er voor het laatst is opgehaald
   laatstVerwerkt: 0,    // wanneer je er voor het laatst echt iets mee deed
@@ -130,7 +137,7 @@ const RUST_NA_POGING = 4 * 3600_000;
 export async function haalZelfOp() {
   const ritme = RITMES[bank.ritme];
   if (!ritme?.tussen) return null;
-  if (!gekoppeld() || !bank.rekening) return null;
+  if (!gekoppeld() || !bank.rekeningen.length) return null;
   if (bank.wachtend.length) return null;          // er ligt al iets te wachten
   if (Date.now() - (bank.laatst || 0) < ritme.tussen) return null;
   if (Date.now() - (bank.laatstGeprobeerd || 0) < RUST_NA_POGING) return null;
@@ -216,6 +223,19 @@ export async function laad() {
     const bewaard = await metKlok(dbHaal(LOKAAL, SLEUTEL), 3000, "opslag antwoordt niet");
     if (bewaard) Object.assign(bank, bewaard, { bezig: false, fout: null });
     bank.wachtend = [];   // staat nooit in de opslag; zie `bewaar`
+
+    /* Eén gekozen rekening uit een oudere versie wordt er hier één in
+       de lijst. Zonder dit zou je koppeling bij het bijwerken stil
+       verdwijnen. */
+    if (!Array.isArray(bank.rekeningen)) bank.rekeningen = [];
+    if (!bank.rekeningen.length && bank.rekening) {
+      bank.rekeningen = [{
+        id: bank.rekening,
+        iban: bank.iban || "",
+        naam: bank.rekeningNaam || "",
+        appRekening: bank.appRekening || "",
+      }];
+    }
     bank.opslag = true;
   } catch {
     /* Geen opslag — bijvoorbeeld een database die nog op de oude versie
@@ -518,8 +538,8 @@ async function zetSessie(sessie) {
     if (naam) bank.bankNaam = naam;
     if (geldigTot) bank.geldigTot = geldigTot;
     if (rekeningen.length === 1) {
-      await kiesRekening(rekeningen[0].id,
-        rekeningen[0].iban || rekeningen[0].naam || "", rekeningen[0].iban);
+      /* Is er maar één, dan hoef je niets te kiezen. */
+      await kiesRekeningen([rekeningen[0]]);
     }
     await bewaar();
   } catch (e) {
@@ -588,21 +608,6 @@ export async function haalRekeningen() {
   return { rekeningen: uit.rekeningen || [], bank: uit.bank || "", geldigTot: uit.geldigTot || "" };
 }
 
-export async function kiesRekening(id, naam = "", iban = "") {
-  bank.rekening = id;
-  bank.rekeningNaam = naam;
-  bank.iban = iban || (/^[A-Z]{2}\d/i.test(naam) ? naam : "");
-
-  /* Herkennen we deze rekening in je boekhouding, dan knopen we ze
-     meteen aan elkaar. Je hebt die IBAN daar al ingevuld; hem nog een
-     keer aanwijzen is werk dat de app zelf kan doen. */
-  if (!bank.appRekening) {
-    const gevonden = rekeningMetIban(bank.iban);
-    if (gevonden) bank.appRekening = gevonden.id;
-  }
-  await bewaar();
-}
-
 /* Een IBAN zonder spaties en in hoofdletters: zo staat hij nooit twee
    keer net anders in de weg. */
 const kaalIban = s => String(s || "").replace(/\s+/g, "").toUpperCase();
@@ -613,18 +618,58 @@ export const rekeningMetIban = iban => {
   return state.rekeningen.find(r => kaalIban(r.iban) === kaal) || null;
 };
 
-/* Op welke rekening in je boekhouding horen deze boekingen? Eerst wat
-   je zelf koos, dan de IBAN, en anders je standaardrekening. */
-export function boekOpRekening() {
-  const gekozen = state.rekeningen.find(r => r.id === bank.appRekening);
-  if (gekozen) return gekozen;
-  return rekeningMetIban(bank.iban) || standaardRekening() || null;
-}
+/* Welke rekeningen volg je? Wat je al had gekoppeld blijft staan; wat
+   er nieuw bij komt zoeken we op IBAN op in je boekhouding. */
+export async function kiesRekeningen(lijst) {
+  bank.rekeningen = lijst.map(r => {
+    const bestond = bank.rekeningen.find(b => b.id === r.id);
+    const iban = r.iban || bestond?.iban || "";
+    return {
+      id: r.id,
+      iban,
+      naam: r.naam || bestond?.naam || "",
+      appRekening: bestond?.appRekening || rekeningMetIban(iban)?.id || "",
+    };
+  });
 
-export async function koppelAanRekening(rekeningId) {
-  bank.appRekening = rekeningId || "";
+  /* De oude velden meenemen, zodat een scherm dat ze nog leest niets
+     geks laat zien. */
+  const eerste = bank.rekeningen[0];
+  bank.rekening = eerste?.id || "";
+  bank.rekeningNaam = eerste?.iban || eerste?.naam || "";
+  bank.iban = eerste?.iban || "";
+  bank.appRekening = eerste?.appRekening || "";
+
   await bewaar();
   meld();
+}
+
+/* Waar horen de boekingen van déze bankrekening heen? Eerst wat je
+   koos, dan de IBAN, en anders je standaardrekening. */
+export function boekOpRekening(bankRekeningId = null) {
+  const r = bankRekeningId
+    ? bank.rekeningen.find(x => x.id === bankRekeningId)
+    : bank.rekeningen[0];
+  if (!r) return standaardRekening() || null;
+  return state.rekeningen.find(a => a.id === r.appRekening)
+    || rekeningMetIban(r.iban)
+    || standaardRekening()
+    || null;
+}
+
+/* Eén bankrekening aan een rekening in je boekhouding hangen.
+
+   Hier wordt met opzet niet hertekend. Je bent op dat moment net een
+   keuzelijst aan het bedienen, en het scherm onder je handen vervangen
+   maakt van een gemaakte keuze een keuze die lijkt te zijn
+   teruggesprongen. Wat je koos staat er al; alleen de uitleg eronder
+   loopt een moment achter. */
+export async function koppelAanRekening(bankRekeningId, appRekeningId) {
+  const r = bank.rekeningen.find(x => x.id === bankRekeningId);
+  if (!r) return;
+  r.appRekening = appRekeningId || "";
+  if (bank.rekeningen[0] === r) bank.appRekening = r.appRekening;
+  await bewaar();
 }
 
 export async function loskoppelen() {
@@ -643,18 +688,33 @@ export async function loskoppelen() {
    --------------------------------------------------------------- */
 export async function haalTransacties({ vanaf = null, alles = false } = {}) {
   if (!gekoppeld()) throw new Error("Er is nog geen bankrekening gekoppeld.");
-  if (!bank.rekening) throw new Error("Kies eerst welke rekening je wilt volgen.");
+  if (!bank.rekeningen.length) throw new Error("Kies eerst welke rekeningen je wilt volgen.");
 
   bank.bezig = true;
   bank.fout = null;
   try {
-    const uit = await roep("/transacties", {
-      methode: "POST",
-      lijf: { sessie: bank.sessie, rekening: bank.rekening, vanaf, alles },
-    });
+    const alle = [];
+    let afgekapt = false;
+
+    /* Elke rekening apart: je bank geeft ze niet samen. Ze komen hier
+       wel op één hoop, maar met hun herkomst erbij — anders weet het
+       nakijkscherm niet waar een boeking vandaan kwam en belandt alles
+       op dezelfde rekening. */
+    for (const r of bank.rekeningen) {
+      spoorBij(`ophalen voor ${r.iban || r.naam || r.id}`);
+      const uit = await roep("/transacties", {
+        methode: "POST",
+        lijf: { sessie: bank.sessie, rekening: r.id, vanaf, alles },
+      });
+      afgekapt = afgekapt || !!uit.afgekapt;
+      for (const t of uit.transacties || []) {
+        alle.push({ ...t, bron: r.id, appRekening: r.appRekening || "" });
+      }
+    }
+
     bank.laatst = Date.now();
     await bewaar();
-    return { transacties: uit.transacties || [], afgekapt: !!uit.afgekapt };
+    return { transacties: alle, afgekapt };
   } catch (e) {
     bank.fout = e.message;
     throw e;

@@ -51,7 +51,10 @@ let rekeningKeuze = "";
 export function opBinnenkomst() {
   /* De rekening waar je bankkoppeling aan hangt gaat voor. Pas als die
      er niet is valt hij terug op je standaardrekening — anders belandt
-     alles daarop, ook als het ergens anders vandaan komt. */
+     alles daarop, ook als het ergens anders vandaan komt.
+
+     Dit is de keuze voor een bestand dat je zelf kiest. Komt het van je
+     bankkoppeling, dan weet elke boeking zelf al waar hij heen moet. */
   if (stap === "kies") {
     rekeningKeuze = (Bank.gekoppeld() ? Bank.boekOpRekening()?.id : null)
       || standaardRekening()?.id || "";
@@ -75,7 +78,9 @@ function kiesScherm() {
       <div class="kaart">
         <div class="kaart__kop"><h2>🏦 Rechtstreeks van je bank</h2></div>
         <p style="font-size:.86rem;color:var(--tekst-zacht);margin:0 0 12px">
-          ${esc(b.bankNaam || "Je bank")}${b.rekeningNaam ? ` · ${esc(b.rekeningNaam)}` : ""}.
+          ${esc(b.bankNaam || "Je bank")}${b.rekeningen.length === 1 && b.rekeningen[0].iban
+            ? ` · ${esc(b.rekeningen[0].iban)}`
+            : b.rekeningen.length > 1 ? ` · ${b.rekeningen.length} rekeningen` : ""}.
           ${b.laatst
             ? `Laatst opgehaald op ${esc(datumNL(new Date(b.laatst).toISOString().slice(0, 10), { kort: true }))}.
                We beginnen een week daarvóór, zodat er niets tussenuit valt.`
@@ -639,7 +644,9 @@ async function haalVanBank() {
         omschrijving,
         categorie,
         potje: soort === "uitgave" ? raadPotje(omschrijving, categorie, r.tegenpartij) : "",
-        rekening: rekeningKeuze,
+        /* Elke boeking op de rekening waar hij vandaan komt. Lees je er
+           twee uit, dan is één gezamenlijke keuze voor allebei fout. */
+        rekening: r.appRekening || rekeningKeuze,
         /* Het kenmerk van de bank. Hierop ontdubbelen we voortaan. */
         bankRef: r.ref || "",
       },

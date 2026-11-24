@@ -327,8 +327,10 @@ function bankBlok() {
             <strong>${esc(b.bankNaam || "je bank")}</strong>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:.85rem">
-            <span class="dof">Rekening</span>
-            <strong>${esc(b.rekeningNaam || "nog niet gekozen")}</strong>
+            <span class="dof">${b.rekeningen.length === 1 ? "Rekening" : "Rekeningen"}</span>
+            <strong>${b.rekeningen.length
+              ? esc(`${b.rekeningen.length} gevolgd`)
+              : "nog niet gekozen"}</strong>
           </div>
           ${dagen != null ? `
             <div style="display:flex;justify-content:space-between;font-size:.85rem">
@@ -354,34 +356,36 @@ function bankBlok() {
 
           <div class="knoprij knoprij--gelijk" style="margin-top:12px">
             <a class="knop knop--primair" href="#/importeren">Transacties ophalen</a>
-            <button class="knop" data-bank-rekening>Andere rekening</button>
+            <button class="knop" data-bank-rekening>Rekeningen kiezen</button>
           </div>
-          ${/* Waar komen die boekingen terecht? Zonder deze keuze
-                belandden ze op je standaardrekening, ook als ze van een
-                andere rekening kwamen. Herkent de app de IBAN in je
-                boekhouding, dan staat hij hier al goed. */ ""}
-          <div class="veld" style="margin-top:12px">
-            <label for="bankdoel">Boekingen komen op</label>
-            <select id="bankdoel">
-              <option value="">— kies een rekening —</option>
-              ${state.rekeningen.map(r => `
-                <option value="${esc(r.id)}" ${Bank.boekOpRekening()?.id === r.id ? "selected" : ""}>
-                  ${esc(r.naam)}${r.iban ? ` · ${esc(r.iban)}` : ""}
-                </option>`).join("")}
-            </select>
-            <div class="veld__hint">
-              ${b.iban ? `Je bank noemt deze rekening <strong>${esc(b.iban)}</strong>. ` : ""}
-              ${Bank.rekeningMetIban(b.iban)
-                ? "Die IBAN staat ook in je boekhouding, dus die is alvast gekozen."
-                : b.iban
-                  ? "Die IBAN staat nog niet in je boekhouding. Kies hierboven waar de boekingen heen moeten, of maak er een rekening van."
-                  : "Kies waar de boekingen heen moeten."}
-            </div>
-            ${b.iban && !Bank.rekeningMetIban(b.iban) ? `
-              <button class="knop knop--klein" data-bank-nieuwe-rekening style="margin-top:8px">
-                Rekening aanmaken voor ${esc(b.iban)}
-              </button>` : ""}
-          </div>
+
+          ${/* Waar komen de boekingen terecht? Per rekening, want wie er
+                twee uitleest wil ze niet op één hoop. Herkent de app de
+                IBAN in je boekhouding, dan staat het hier al goed. */ ""}
+          ${b.rekeningen.length ? `
+            <div class="sectiekop" style="margin:16px 2px 8px"><h2 style="font-size:.9rem">Boekingen komen op</h2></div>
+            ${b.rekeningen.map(r => `
+              <div class="veld" data-bankrek="${esc(r.id)}">
+                <label for="doel-${esc(r.id)}">${esc(r.iban || r.naam || "Rekening")}</label>
+                <select id="doel-${esc(r.id)}" data-bank-doel="${esc(r.id)}">
+                  <option value="">— kies een rekening —</option>
+                  ${state.rekeningen.map(a => `
+                    <option value="${esc(a.id)}" ${Bank.boekOpRekening(r.id)?.id === a.id ? "selected" : ""}>
+                      ${esc(a.naam)}${a.iban ? ` · ${esc(a.iban)}` : ""}
+                    </option>`).join("")}
+                </select>
+                ${r.iban && !Bank.rekeningMetIban(r.iban) ? `
+                  <button class="knop knop--klein" data-bank-nieuwe-rekening="${esc(r.id)}" style="margin-top:7px">
+                    Rekening aanmaken voor ${esc(r.iban)}
+                  </button>` : ""}
+              </div>`).join("")}
+            <div class="veld__hint" style="margin-bottom:12px">
+              Staat de IBAN al in je boekhouding, dan kiest de app hem zelf. Anders maak je er
+              met één tik een rekening van.
+            </div>` : `
+            <div class="veld__hint" style="margin:12px 0">
+              Je volgt nog geen rekeningen. Kies er hierboven een of meer.
+            </div>`}
 
           <button class="knop knop--rand knop--breed" data-bank-los style="margin-top:9px">Koppeling verbreken</button>
       `}
@@ -735,7 +739,9 @@ export function koppel(wortel, params) {
     if (e.target.matches("[data-potjes]")) zetInstelling({ potjesAutomatisch: e.target.checked });
     if (e.target.matches("[data-bank-ai]")) Bank.zetInstellingen({ aiAan: e.target.checked });
     if (e.target.id === "bankritme") Bank.zetInstellingen({ ritme: e.target.value }).then(meld);
-    if (e.target.id === "bankdoel") Bank.koppelAanRekening(e.target.value);
+    if (e.target.matches("[data-bank-doel]")) {
+      Bank.koppelAanRekening(e.target.dataset.bankDoel, e.target.value);
+    }
   });
 
   toonVersie(wortel);
@@ -824,7 +830,8 @@ export function koppel(wortel, params) {
     if (e.target.closest("[data-code-kopieer]")) return codeKopieren();
     if (e.target.closest("[data-code-vergeet]")) return codeVergeten();
     if (e.target.closest("[data-code-plak]")) return e.rechtstreeks || codePlakken();
-    if (e.target.closest("[data-bank-nieuwe-rekening]")) return maakRekeningVoorBank();
+    const nieuweRek = e.target.closest("[data-bank-nieuwe-rekening]");
+    if (nieuweRek) return maakRekeningVoorBank(nieuweRek.dataset.bankNieuweRekening);
     if (e.target.closest("[data-bank-uitleg]")) return e.rechtstreeks || bankUitleg();
     if (e.target.closest("[data-bank-vergeet]")) return e.rechtstreeks || bankVergeten();
     if (e.target.closest("[data-bank-rekening]")) return e.rechtstreeks || bankRekeningKiezen();
@@ -1044,34 +1051,49 @@ async function bankRekeningKiezen() {
     return meld();
   }
 
-  const keuze = await dialoog({
-    titel: "Welke rekening volgen?",
+  const gekozen = new Set(Bank.bank.rekeningen.map(r => r.id));
+
+  const klaar = await dialoog({
+    titel: "Welke rekeningen volgen?",
     inhoud: `
+      <p class="dialoog__tekst">
+        Lees je er meer dan één uit, dan kun je ze straks elk aan hun eigen rekening
+        in je boekhouding hangen.
+      </p>
       <div class="lijst">
         ${gegevens.rekeningen.map(r => `
-          <button class="rij" data-kies="${esc(r.id)}">
+          <button class="rij" data-kies="${esc(r.id)}" aria-pressed="${gekozen.has(r.id)}">
             <span class="rij__icoon">💳</span>
             <span class="rij__midden">
               <span class="rij__titel">${esc(r.naam || r.iban || "Rekening")}</span>
               ${r.iban ? `<span class="rij__sub">${esc(r.iban)}</span>` : ""}
             </span>
-            <span class="rij__rechts dof">${Bank.bank.rekening === r.id ? "✓" : "›"}</span>
+            <span class="rij__rechts" data-vink>${gekozen.has(r.id) ? "✓" : ""}</span>
           </button>`).join("")}
       </div>`,
-    knoppen: [{ label: "Annuleren", waarde: null }],
-    opOpenen: (laag, sluit) => {
+    knoppen: [
+      { label: "Annuleren", waarde: null },
+      { label: "Klaar", soort: "primair", waardeUit: () => [...gekozen] },
+    ],
+    opOpenen: laag => {
       laag.addEventListener("click", e => {
-        const kies = e.target.closest("[data-kies]");
-        if (kies) sluit(kies.dataset.kies);
+        const rij = e.target.closest("[data-kies]");
+        if (!rij) return;
+        const id = rij.dataset.kies;
+        if (gekozen.has(id)) gekozen.delete(id); else gekozen.add(id);
+        rij.setAttribute("aria-pressed", String(gekozen.has(id)));
+        rij.querySelector("[data-vink]").textContent = gekozen.has(id) ? "✓" : "";
       });
     },
   });
 
-  if (!keuze) return;
-  const gekozen = gegevens.rekeningen.find(r => r.id === keuze);
-  await Bank.kiesRekening(keuze, gekozen?.iban || gekozen?.naam || "", gekozen?.iban || "");
-  melding("Rekening gekozen.", "goed");
-  meld();
+  if (!klaar) return;
+  if (!klaar.length) {
+    melding("Kies minstens één rekening, anders valt er niets op te halen.", "fout");
+    return;
+  }
+  await Bank.kiesRekeningen(gegevens.rekeningen.filter(r => klaar.includes(r.id)));
+  melding(klaar.length === 1 ? "Rekening gekozen." : `${klaar.length} rekeningen gekozen.`, "goed");
 }
 
 async function bankLoskoppelen() {
@@ -1169,19 +1191,19 @@ async function vergeetDeBank() {
 /* Van de gekoppelde bankrekening een rekening in je boekhouding maken.
    Dat scheelt overtikken, en de IBAN klopt dan gegarandeerd — waardoor
    de koppeling er meteen op aansluit. */
-async function maakRekeningVoorBank() {
+async function maakRekeningVoorBank(bankRekeningId) {
   if (!eisBewerkrecht()) return;
-  const b = Bank.bank;
-  if (!b.iban) return;
+  const bron = Bank.bank.rekeningen.find(r => r.id === bankRekeningId);
+  if (!bron?.iban) return;
 
   const rekening = legeRekening({
-    naam: b.bankNaam || "Betaalrekening",
+    naam: bron.naam || Bank.bank.bankNaam || "Betaalrekening",
     soort: "betaal",
-    iban: b.iban,
+    iban: bron.iban,
     standaard: state.rekeningen.length === 0,
   });
   await bewaarRekening(rekening);
-  await Bank.koppelAanRekening(rekening.id);
+  await Bank.koppelAanRekening(bankRekeningId, rekening.id);
   melding(`${rekening.naam} toegevoegd en gekoppeld.`, "goed");
   meld();
 }

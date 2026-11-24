@@ -69,12 +69,14 @@ check("de keuzelijst opent", await p.locator(".dialoog").count() === 1);
 const venster = await p.locator(".dialoog").textContent();
 check("met beide rekeningen", /Betaalrekening/.test(venster) && /Spaarrekening/.test(venster));
 
+/* Aantikken selecteert; "Klaar" bevestigt. Je kunt er meerdere kiezen. */
 await p.locator("[data-kies='b']").click();
+await p.getByText("Klaar", { exact: true }).click();
 await p.waitForTimeout(900);
 const na = await p.locator("#scherm").textContent();
 check("de gekozen rekening staat er", /NL00RABO0222222222/.test(na), na.slice(0, 200));
 check("en de knop is weer normaal",
-  /Andere rekening/.test(await p.locator("[data-bank-rekening]").textContent()));
+  /Rekeningen kiezen/.test(await p.locator("[data-bank-rekening]").textContent()));
 
 console.log("\n— geen rekeningen: dat moet blijven staan —");
 p = await metRekeningen([]);

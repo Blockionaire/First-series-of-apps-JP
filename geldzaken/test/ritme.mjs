@@ -52,7 +52,7 @@ async function app({ ritme, laatst, laatstVerwerkt, aantal = 3 }) {
     const B = await import("./js/bank.js");
     Object.assign(B.bank, {
       adres: "https://dienst.test", woord: "geheim", sessie: "s1",
-      rekening: "a", rekeningNaam: "NL00RABO0111111111", bankNaam: "Rabobank",
+      rekeningen: [{ id: "a", iban: "NL00RABO0111111111", naam: "Betaal", appRekening: "" }], bankNaam: "Rabobank",
       ritme: o.ritme, laatst: o.laatst, laatstVerwerkt: o.laatstVerwerkt, geladen: true,
     });
   }, { ritme, laatst, laatstVerwerkt });
@@ -111,7 +111,7 @@ await p.goto("http://127.0.0.1:8123/index.html#/start", { waitUntil: "networkidl
 await p.evaluate(async () => {
   const B = await import("./js/bank.js"); const S = await import("./js/store.js");
   Object.assign(B.bank, { adres: "https://dienst.test", woord: "geheim", sessie: "s1",
-    rekening: "a", laatst: Date.now() - 9 * 86400000, laatstVerwerkt: Date.now() - 9 * 86400000 });
+    rekeningen: [{ id: "a", iban: "", naam: "", appRekening: "" }], laatst: Date.now() - 9 * 86400000, laatstVerwerkt: Date.now() - 9 * 86400000 });
   S.meld();
 });
 await p.waitForTimeout(600);
